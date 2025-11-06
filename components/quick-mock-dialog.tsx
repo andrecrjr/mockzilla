@@ -45,7 +45,7 @@ export function QuickMockDialog({ folders }: QuickMockDialogProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
-  const [path, setPath] = useState("")
+  const [path, setPath] = useState("/")
   const [method, setMethod] = useState<HttpMethod>("GET")
   const [jsonData, setJsonData] = useState("")
   const [statusCode, setStatusCode] = useState("200")
@@ -121,7 +121,7 @@ export function QuickMockDialog({ folders }: QuickMockDialogProps) {
 
       setOpen(false)
       setName("")
-      setPath("")
+      setPath("/")
       setMethod("GET")
       setJsonData("")
       setStatusCode("200")

@@ -38,7 +38,7 @@ const STATUS_CODES = [
 
 export function MockFormInline({ folder, onSuccess, onError }: MockFormInlineProps) {
   const [name, setName] = useState("")
-  const [path, setPath] = useState("")
+  const [path, setPath] = useState("/")
   const [method, setMethod] = useState<HttpMethod>("GET")
   const [jsonData, setJsonData] = useState("")
   const [statusCode, setStatusCode] = useState("200")
