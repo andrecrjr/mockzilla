@@ -10,13 +10,13 @@ import type { Mock, Folder, HttpMethod } from "@/lib/types"
 import { ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
 import { MockCard } from "@/components/mock-card"
+import { copyToClipboard } from "@/lib/utils"
 import { MockFormInline } from "@/components/mock-form-inline"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function FolderPage() {
   const params = useParams()
-  const router = useRouter()
   const slug = params.slug as string
 
   const { data: folders = [] } = useSWR<Folder[]>("/api/folders", fetcher)
@@ -82,11 +82,17 @@ export default function FolderPage() {
     }
   }
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success("Copied", {
-      description: "URL copied to clipboard",
-    })
+  const handleCopy = async (text: string) => {
+    const ok = await copyToClipboard(text)
+    if (ok) {
+      toast.success("Copied", {
+        description: "URL copied to clipboard",
+      })
+    } else {
+      toast.error("Copy failed", {
+        description: "Could not copy to clipboard"
+      })
+    }
   }
 
   if (!folder) {

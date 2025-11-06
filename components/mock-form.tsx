@@ -45,6 +45,12 @@ export function MockForm({ folders, onSuccess, onError }: MockFormProps) {
   const [folderId, setFolderId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
+  const selectedFolder = folders.find((f) => f.id === folderId)
+  const previewUrl = selectedFolder && path.startsWith("/") && path.length > 1
+    ? `${origin}/api/mock/${selectedFolder.slug}${path}`
+    : null
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -203,6 +209,11 @@ export function MockForm({ folders, onSuccess, onError }: MockFormProps) {
             className="font-mono"
           />
           <p className="text-xs text-muted-foreground">Must start with /. Example: /api/users</p>
+          {previewUrl && (
+            <p className="text-xs text-muted-foreground font-mono">
+              Preview: <span className="text-foreground">{previewUrl}</span>
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -216,7 +227,7 @@ export function MockForm({ folders, onSuccess, onError }: MockFormProps) {
             onChange={(e) => setJsonData(e.target.value)}
             required
             rows={10}
-            className="font-mono text-sm"
+            className="font-mono text-sm max-h-[40vh] overflow-auto"
           />
         </div>
 

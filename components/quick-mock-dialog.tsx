@@ -52,6 +52,12 @@ export function QuickMockDialog({ folders }: QuickMockDialogProps) {
   const [folderId, setFolderId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
+  const selectedFolder = folders.find((f) => f.id === folderId)
+  const previewUrl = selectedFolder && path.startsWith("/") && path.length > 1
+    ? `${origin}/api/mock/${selectedFolder.slug}${path}`
+    : null
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -218,6 +224,11 @@ export function QuickMockDialog({ folders }: QuickMockDialogProps) {
                 placeholder="/users"
                 required
               />
+              {previewUrl && (
+                <p className="text-xs text-muted-foreground font-mono">
+                  Preview: <span className="text-foreground">{previewUrl}</span>
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -227,7 +238,7 @@ export function QuickMockDialog({ folders }: QuickMockDialogProps) {
                 value={jsonData}
                 onChange={(e) => setJsonData(e.target.value)}
                 placeholder='{"message": "Hello World"}'
-                className="font-mono text-sm"
+                className="font-mono text-sm max-h-[60vh] overflow-auto"
                 rows={8}
                 required
               />

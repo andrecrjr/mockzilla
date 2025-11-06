@@ -61,7 +61,7 @@ export function EditMockDialog({ mock, onUpdate }: EditMockDialogProps) {
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit Mock</DialogTitle>
@@ -133,6 +133,11 @@ export function EditMockDialog({ mock, onUpdate }: EditMockDialogProps) {
                 placeholder="/users"
                 required
               />
+              {typeof window !== "undefined" && path.startsWith("/") && path.length > 1 && (
+                <p className="text-xs text-muted-foreground font-mono">
+                  Preview: <span className="text-foreground">{`${window.location.origin}/api/mock/${mock.folderId ? '' : ''}`}</span>
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -142,7 +147,7 @@ export function EditMockDialog({ mock, onUpdate }: EditMockDialogProps) {
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
                 placeholder='{"message": "Hello World"}'
-                className="font-mono text-sm"
+                className="font-mono text-sm max-h-[60vh] overflow-auto"
                 rows={8}
                 required
               />

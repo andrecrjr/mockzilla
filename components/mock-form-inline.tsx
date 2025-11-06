@@ -44,6 +44,9 @@ export function MockFormInline({ folder, onSuccess, onError }: MockFormInlinePro
   const [statusCode, setStatusCode] = useState("200")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
+  const previewUrl = path.startsWith("/") && path.length > 1 ? `${origin}/api/mock/${folder.slug}${path}` : null
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -166,6 +169,11 @@ export function MockFormInline({ folder, onSuccess, onError }: MockFormInlinePro
             className="font-mono"
           />
           <p className="text-xs text-muted-foreground">Must start with /. Example: /api/users</p>
+          {previewUrl && (
+            <p className="text-xs text-muted-foreground font-mono">
+              Preview: <span className="text-foreground">{previewUrl}</span>
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -179,7 +187,7 @@ export function MockFormInline({ folder, onSuccess, onError }: MockFormInlinePro
             onChange={(e) => setJsonData(e.target.value)}
             required
             rows={10}
-            className="font-mono text-sm"
+            className="font-mono text-sm max-h-[40vh] overflow-auto"
           />
         </div>
 
