@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { mockzillaAPI } from "@/lib/api-client"
 
-// Helper to get mocks and folders
+// Helper to get mocks and folders directly via the API client
 async function getMocks() {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/mocks`)
-    return await response.json()
+    return await mockzillaAPI.mocks.list()
   } catch {
     return []
   }
@@ -12,8 +12,7 @@ async function getMocks() {
 
 async function getFolders() {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/folders`)
-    return await response.json()
+    return await mockzillaAPI.folders.list()
   } catch {
     return []
   }
@@ -67,5 +66,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  return handleRequest(request, await params)
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  return handleRequest(request, await params)
+}
+
+export async function HEAD(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  return handleRequest(request, await params)
+}
+
+export async function OPTIONS(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return handleRequest(request, await params)
 }
