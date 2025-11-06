@@ -12,7 +12,7 @@ RUN bun install
 COPY . .
 
 
-EXPOSE 3000
+EXPOSE 36666
 
 # Use entrypoint script to handle DB setup before starting app
 CMD ["bun", "run", "start"]
