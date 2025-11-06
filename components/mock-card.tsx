@@ -55,8 +55,6 @@ export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardP
 
   const mockUrl = getMockUrl(folder?.slug || "", mock.path)
 
-
-
   return (
     <Card className="border-border bg-card p-6 transition-colors hover:bg-accent/5">
       <div className="space-y-4">
