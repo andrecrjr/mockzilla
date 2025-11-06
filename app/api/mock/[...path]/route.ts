@@ -78,5 +78,6 @@ export async function HEAD(request: NextRequest, { params }: { params: Promise<{
 }
 
 export async function OPTIONS(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
-  return handleRequest(request, await params)
+  // Respond to preflight with 204; actual CORS headers are set by middleware
+  return new NextResponse(null, { status: 204 })
 }
