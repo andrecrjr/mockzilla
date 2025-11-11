@@ -4,5 +4,5 @@ docker-build:
 nexus-deploy:
 	@echo "$(GREEN)🐳 Construindo imagem Docker sem cache...$(NC)"
 	make docker-build
-	docker tag mockzilla:latest 10.230.43.182:5000/mockzilla:latest
-	docker push 10.230.43.182:5000/mockzilla:latest
+	docker tag mockzilla:latest 10.230.43.182:5001/mockzilla:latest
+	docker push 10.230.43.182:5001/mockzilla:latest
