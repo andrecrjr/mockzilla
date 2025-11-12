@@ -163,8 +163,8 @@ export default function MockzillaAdmin() {
         <div className="mb-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent mockzilla-glow">
-                <Skull className="h-7 w-7 text-primary-foreground" />
+              <div className="flex h-14 w-26 items-center justify-center rounded-xl">
+                <img src="/mockzilla-logo.png" alt="Mockzilla Logo" />
               </div>
               <div>
                 <h1 className="text-5xl font-black tracking-tighter text-foreground">Mockzilla</h1>

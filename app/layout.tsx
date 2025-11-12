@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: "Mockzilla - Powerful API Mocking",
   description: "Create and manage custom API mock endpoints with lightning-fast responses",
   generator: "v0.app",
+  icons: {
+    icon: "/mockzilla-logo.png",
+  },
 }
 
 export default function RootLayout({
