@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import type { ExportData, LegacyImportFormat, Mock, Folder } from "@/lib/types"
+import type { ExportData, LegacyImportFormat, Mock, Folder, CreateFolderRequest, CreateMockRequest } from "@/lib/types"
 import { mockzillaAPI } from "@/lib/api-client"
 
 function generateId() {
@@ -121,20 +121,41 @@ export async function POST(request: NextRequest) {
       mocks: 0,
     }
 
-    // Import folders
+    // Create a map to track old IDs to new IDs for folders
+    const folderIdMap = new Map<string, string>()
+
+    // Import folders first and store the ID mappings
     for (const folder of exportData.folders) {
       try {
-        await mockzillaAPI.folders.create(folder)
+        // Map Folder to CreateFolderRequest format
+        const createFolderRequest: CreateFolderRequest = {
+          name: folder.name,
+          description: folder.description
+        }
+        const newFolder = await mockzillaAPI.folders.create(createFolderRequest)
+        folderIdMap.set(folder.id, newFolder.id) // Map old ID to new ID
         results.folders++
       } catch (error) {
         console.error("[v0] Failed to import folder:", error)
       }
     }
 
-    // Import mocks
+    // Import mocks, updating folderId to use the new folder IDs
     for (const mock of exportData.mocks) {
       try {
-        await mockzillaAPI.mocks.create(mock)
+        // Map Mock to CreateMockRequest format, using the mapped folder ID
+        const createMockRequest: CreateMockRequest = {
+          name: mock.name,
+          path: mock.path,
+          method: mock.method,
+          response: mock.response,
+          statusCode: mock.statusCode,
+          folderId: folderIdMap.get(mock.folderId) || mock.folderId, // Use mapped ID or original if not found
+          matchType: mock.matchType,
+          bodyType: mock.bodyType,
+          enabled: mock.enabled
+        }
+        await mockzillaAPI.mocks.create(createMockRequest)
         results.mocks++
       } catch (error) {
         console.error("[v0] Failed to import mock:", error)

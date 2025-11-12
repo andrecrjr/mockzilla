@@ -6,6 +6,8 @@ import type {
   CreateMockRequest,
   UpdateMockRequest,
   HttpMethod,
+  MatchType,
+  BodyType,
 } from "./types"
 
 // Allow configuring the external Mockzilla API base URL via environment variables.
@@ -34,7 +36,8 @@ function mapServerFolderToFolder(server: any): Folder {
   return {
     id: server.id,
     name: server.name,
-    slug: slugify(server.name || ""),
+    slug: server.slug || slugify(server.name || ""),
+    description: server.description,
     createdAt: server.created_at ?? new Date().toISOString(),
     updatedAt: server.updated_at ?? undefined,
   }
@@ -49,6 +52,9 @@ function mapServerMockToMock(server: any): Mock {
     response: server.response,
     statusCode: server.status_code,
     folderId: server.folder,
+    matchType: server.match_type as MatchType,
+    bodyType: server.body_type as BodyType,
+    enabled: server.enabled ?? true,
     createdAt: server.created_at ?? new Date().toISOString(),
     updatedAt: server.updated_at ?? undefined,
   }
@@ -67,7 +73,7 @@ export const mockzillaAPI = {
       const response = await fetch(`${API_BASE_URL}/folders/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: data.name }),
+        body: JSON.stringify({ name: data.name, description: data.description }),
       })
       const json = await handleResponse(response)
       return mapServerFolderToFolder(json)
@@ -83,7 +89,7 @@ export const mockzillaAPI = {
       const response = await fetch(`${API_BASE_URL}/folders/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: data.name }),
+        body: JSON.stringify({ name: data.name, description: data.description }),
       })
       const json = await handleResponse(response)
       return mapServerFolderToFolder(json)
@@ -122,6 +128,9 @@ export const mockzillaAPI = {
           status_code: data.statusCode,
           response: data.response,
           folder: data.folderId,
+          match_type: data.matchType,
+          body_type: data.bodyType,
+          enabled: data.enabled,
         }),
       })
       const json = await handleResponse(response)
@@ -144,6 +153,9 @@ export const mockzillaAPI = {
           method: data.method,
           status_code: data.statusCode,
           response: data.response,
+          match_type: data.matchType,
+          body_type: data.bodyType,
+          enabled: data.enabled,
         }),
       })
       const json = await handleResponse(response)

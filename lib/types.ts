@@ -35,6 +35,7 @@ export interface CreateMockRequest {
   folderId: string
   matchType?: MatchType
   bodyType?: BodyType
+  enabled?: boolean
 }
 
 export interface CreateFolderRequest {
@@ -55,6 +56,7 @@ export interface UpdateMockRequest {
   statusCode: number
   matchType?: MatchType
   bodyType?: BodyType
+  enabled?: boolean
 }
 
 export interface ExportData {
