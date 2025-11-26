@@ -1,12 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import type { ExportData, LegacyImportFormat, Mock, Folder, CreateFolderRequest, CreateMockRequest } from "@/lib/types"
-import { mockzillaAPI } from "@/lib/api-client"
+import { db } from "@/lib/db"
+import { folders, mockResponses } from "@/lib/db/schema"
+import type { ExportData, LegacyImportFormat, Mock, Folder } from "@/lib/types"
 
-function generateId() {
-  return Math.random().toString(36).substr(2, 9)
-}
-
-function generateSlug(name: string) {
+function generateSlug(name: string): string {
   return name
     .toLowerCase()
     .trim()
@@ -38,7 +35,7 @@ function convertLegacyFormat(data: LegacyImportFormat): ExportData {
     }
   }
 
-  // Convert groups to folders, and create folders for any referenced groups
+  // Convert groups to folders
   if (data.groups) {
     for (const group of data.groups) {
       const folder: Folder = {
@@ -53,7 +50,7 @@ function convertLegacyFormat(data: LegacyImportFormat): ExportData {
   }
 
   for (const groupId of groupIds) {
-    if (!folderMap.has(groupId) && data.groups) {
+    if (!folderMap.has(groupId)) {
       const folder: Folder = {
         id: groupId,
         name: `Group ${groupId}`,
@@ -67,9 +64,8 @@ function convertLegacyFormat(data: LegacyImportFormat): ExportData {
   // Convert rules to mocks
   if (data.rules) {
     for (const rule of data.rules) {
-      const folderId = rule.group || generateId()
+      const folderId = rule.group || crypto.randomUUID()
 
-      // Ensure folder exists for ungrouped mocks
       if (!folderMap.has(folderId)) {
         folderMap.set(folderId, {
           id: folderId,
@@ -124,50 +120,57 @@ export async function POST(request: NextRequest) {
     // Create a map to track old IDs to new IDs for folders
     const folderIdMap = new Map<string, string>()
 
-    // Import folders first and store the ID mappings
-    for (const folder of exportData.folders) {
-      try {
-        // Map Folder to CreateFolderRequest format
-        const createFolderRequest: CreateFolderRequest = {
-          name: folder.name,
-          description: folder.description
-        }
-        const newFolder = await mockzillaAPI.folders.create(createFolderRequest)
-        folderIdMap.set(folder.id, newFolder.id) // Map old ID to new ID
-        results.folders++
-      } catch (error) {
-        console.error("[v0] Failed to import folder:", error)
-      }
-    }
+    // Use a transaction for atomic imports
+    await db.transaction(async (tx) => {
+      // Import folders first
+      for (const folder of exportData.folders) {
+        try {
+          const [newFolder] = await tx
+            .insert(folders)
+            .values({
+              name: folder.name,
+              slug: folder.slug,
+              description: folder.description || null,
+            })
+            .returning()
 
-    // Import mocks, updating folderId to use the new folder IDs
-    for (const mock of exportData.mocks) {
-      try {
-        // Map Mock to CreateMockRequest format, using the mapped folder ID
-        const createMockRequest: CreateMockRequest = {
-          name: mock.name,
-          path: mock.path,
-          method: mock.method,
-          response: mock.response,
-          statusCode: mock.statusCode,
-          folderId: folderIdMap.get(mock.folderId) || mock.folderId, // Use mapped ID or original if not found
-          matchType: mock.matchType,
-          bodyType: mock.bodyType,
-          enabled: mock.enabled
+          folderIdMap.set(folder.id, newFolder.id)
+          results.folders++
+        } catch (error) {
+          console.error("[API] Failed to import folder:", error)
         }
-        await mockzillaAPI.mocks.create(createMockRequest)
-        results.mocks++
-      } catch (error) {
-        console.error("[v0] Failed to import mock:", error)
       }
-    }
+
+      // Import mocks with updated folder IDs
+      for (const mock of exportData.mocks) {
+        try {
+          const mappedFolderId = folderIdMap.get(mock.folderId) || mock.folderId
+
+          await tx.insert(mockResponses).values({
+            name: mock.name,
+            endpoint: mock.path,
+            method: mock.method,
+            statusCode: mock.statusCode,
+            response: mock.response,
+            folderId: mappedFolderId,
+            matchType: mock.matchType || "exact",
+            bodyType: mock.bodyType || "json",
+            enabled: mock.enabled ?? true,
+          })
+
+          results.mocks++
+        } catch (error) {
+          console.error("[API] Failed to import mock:", error)
+        }
+      }
+    })
 
     return NextResponse.json({
       success: true,
       imported: results,
     })
   } catch (error: any) {
-    console.error("[v0] Import error:", error)
+    console.error("[API] Import error:", error)
     return NextResponse.json({ error: error.message || "Failed to import data" }, { status: 500 })
   }
 }

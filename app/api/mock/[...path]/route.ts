@@ -1,22 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { mockzillaAPI } from "@/lib/api-client"
-
-// Helper to get mocks and folders directly via the API client
-async function getMocks() {
-  try {
-    return await mockzillaAPI.mocks.list()
-  } catch {
-    return []
-  }
-}
-
-async function getFolders() {
-  try {
-    return await mockzillaAPI.folders.list()
-  } catch {
-    return []
-  }
-}
+import { db } from "@/lib/db"
+import { folders, mockResponses } from "@/lib/db/schema"
+import { eq, and } from "drizzle-orm"
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
   const pathSegments = params.path
@@ -30,27 +15,59 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
   const folderSlug = pathSegments[0]
   const mockPath = "/" + pathSegments.slice(1).join("/")
 
-  // Get all folders and mocks
-  const [allFolders, allMocks] = await Promise.all([getFolders(), getMocks()])
+  try {
+    // Find the folder by slug
+    const [folder] = await db.select().from(folders).where(eq(folders.slug, folderSlug)).limit(1)
 
-  // Find the folder by slug
-  const folder = allFolders.find((f: any) => f.slug === folderSlug)
-  if (!folder) {
-    return NextResponse.json({ error: "Folder not found", folderSlug }, { status: 404 })
+    if (!folder) {
+      return NextResponse.json({ error: "Folder not found", folderSlug }, { status: 404 })
+    }
+
+    // Find matching mock by folderId, endpoint, and method
+    const [mock] = await db
+      .select()
+      .from(mockResponses)
+      .where(
+        and(
+          eq(mockResponses.folderId, folder.id),
+          eq(mockResponses.endpoint, mockPath),
+          eq(mockResponses.method, method as any)
+        )
+      )
+      .limit(1)
+
+    if (!mock) {
+      return NextResponse.json(
+        { error: "Mock endpoint not found", folder: folderSlug, path: mockPath, method },
+        { status: 404 }
+      )
+    }
+
+    // Return the mock response with the configured status code
+    const contentType = mock.bodyType === "json" ? "application/json" : "text/plain"
+
+    // Try to parse as JSON if bodyType is json
+    let responseBody = mock.response
+    if (mock.bodyType === "json") {
+      try {
+        return NextResponse.json(JSON.parse(mock.response), { status: mock.statusCode })
+      } catch {
+        // If parsing fails, return as text
+        return new NextResponse(mock.response, {
+          status: mock.statusCode,
+          headers: { "Content-Type": contentType },
+        })
+      }
+    }
+
+    return new NextResponse(responseBody, {
+      status: mock.statusCode,
+      headers: { "Content-Type": contentType },
+    })
+  } catch (error: any) {
+    console.error("[API] Error serving mock:", error.message)
+    return NextResponse.json({ error: "Failed to serve mock response" }, { status: 500 })
   }
-
-  // Find matching mock by folderId, path, and method
-  const mock = allMocks.find((m: any) => m.folderId === folder.id && m.path === mockPath && m.method === method)
-
-  if (!mock) {
-    return NextResponse.json(
-      { error: "Mock endpoint not found", folder: folderSlug, path: mockPath, method },
-      { status: 404 },
-    )
-  }
-
-  // Return the mock response with the configured status code
-  return NextResponse.json(JSON.parse(mock.response), { status: mock.statusCode || 200 })
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

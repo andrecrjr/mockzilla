@@ -1,13 +1,43 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { mockzillaAPI } from "@/lib/api-client"
+import { db } from "@/lib/db"
+import { mockResponses } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 import type { CreateMockRequest, UpdateMockRequest } from "@/lib/types"
 
 export async function GET(request: NextRequest) {
   try {
     const folderId = request.nextUrl.searchParams.get("folderId")
-    const mocks = await mockzillaAPI.mocks.list(folderId || undefined)
-    return NextResponse.json(mocks)
+    
+    let mocks
+    if (folderId) {
+      mocks = await db
+        .select()
+        .from(mockResponses)
+        .where(eq(mockResponses.folderId, folderId))
+        .orderBy(mockResponses.createdAt)
+    } else {
+      mocks = await db.select().from(mockResponses).orderBy(mockResponses.createdAt)
+    }
+    
+    // Map database fields to API format
+    const formattedMocks = mocks.map((mock) => ({
+      id: mock.id,
+      name: mock.name,
+      path: mock.endpoint,
+      method: mock.method,
+      response: mock.response,
+      statusCode: mock.statusCode,
+      folderId: mock.folderId,
+      matchType: mock.matchType || "exact",
+      bodyType: mock.bodyType || "json",
+      enabled: mock.enabled,
+      createdAt: mock.createdAt.toISOString(),
+      updatedAt: mock.updatedAt?.toISOString(),
+    }))
+    
+    return NextResponse.json(formattedMocks)
   } catch (error: any) {
+    console.error("[API] Error fetching mocks:", error.message)
     return NextResponse.json({ error: error.message || "Failed to fetch mocks" }, { status: 500 })
   }
 }
@@ -15,9 +45,41 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body: CreateMockRequest = await request.json()
-    const mock = await mockzillaAPI.mocks.create(body)
-    return NextResponse.json(mock, { status: 201 })
+    
+    const [newMock] = await db
+      .insert(mockResponses)
+      .values({
+        name: body.name,
+        endpoint: body.path,
+        method: body.method,
+        statusCode: body.statusCode,
+        response: body.response,
+        folderId: body.folderId,
+        matchType: body.matchType || "exact",
+        bodyType: body.bodyType || "json",
+        enabled: body.enabled ?? true,
+      })
+      .returning()
+    
+    return NextResponse.json(
+      {
+        id: newMock.id,
+        name: newMock.name,
+        path: newMock.endpoint,
+        method: newMock.method,
+        response: newMock.response,
+        statusCode: newMock.statusCode,
+        folderId: newMock.folderId,
+        matchType: newMock.matchType || "exact",
+        bodyType: newMock.bodyType || "json",
+        enabled: newMock.enabled,
+        createdAt: newMock.createdAt.toISOString(),
+        updatedAt: newMock.updatedAt?.toISOString(),
+      },
+      { status: 201 }
+    )
   } catch (error: any) {
+    console.error("[API] Error creating mock:", error.message)
     return NextResponse.json({ error: error.message || "Failed to create mock" }, { status: 500 })
   }
 }
@@ -30,9 +92,43 @@ export async function PUT(request: NextRequest) {
     }
 
     const body: UpdateMockRequest = await request.json()
-    const mock = await mockzillaAPI.mocks.update(id, body)
-    return NextResponse.json(mock)
+    
+    const [updatedMock] = await db
+      .update(mockResponses)
+      .set({
+        name: body.name,
+        endpoint: body.path,
+        method: body.method,
+        statusCode: body.statusCode,
+        response: body.response,
+        matchType: body.matchType || "exact",
+        bodyType: body.bodyType || "json",
+        enabled: body.enabled ?? true,
+        updatedAt: new Date(),
+      })
+      .where(eq(mockResponses.id, id))
+      .returning()
+    
+    if (!updatedMock) {
+      return NextResponse.json({ error: "Mock not found" }, { status: 404 })
+    }
+    
+    return NextResponse.json({
+      id: updatedMock.id,
+      name: updatedMock.name,
+      path: updatedMock.endpoint,
+      method: updatedMock.method,
+      response: updatedMock.response,
+      statusCode: updatedMock.statusCode,
+      folderId: updatedMock.folderId,
+      matchType: updatedMock.matchType || "exact",
+      bodyType: updatedMock.bodyType || "json",
+      enabled: updatedMock.enabled,
+      createdAt: updatedMock.createdAt.toISOString(),
+      updatedAt: updatedMock.updatedAt?.toISOString(),
+    })
   } catch (error: any) {
+    console.error("[API] Error updating mock:", error.message)
     return NextResponse.json({ error: error.message || "Failed to update mock" }, { status: 500 })
   }
 }
@@ -44,9 +140,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Mock ID is required" }, { status: 400 })
     }
 
-    await mockzillaAPI.mocks.delete(id)
+    await db.delete(mockResponses).where(eq(mockResponses.id, id))
+    
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    console.error("[API] Error deleting mock:", error.message)
     return NextResponse.json({ error: error.message || "Failed to delete mock" }, { status: 500 })
   }
 }

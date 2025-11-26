@@ -1,23 +1,66 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { mockzillaAPI } from "@/lib/api-client"
+import { db } from "@/lib/db"
+import { folders } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 import type { CreateFolderRequest, UpdateFolderRequest } from "@/lib/types"
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+}
 
 export async function GET() {
   try {
-    const folders = await mockzillaAPI.folders.list()
-    return NextResponse.json(Array.isArray(folders) ? folders : [])
+    const allFolders = await db.select().from(folders).orderBy(folders.createdAt)
+    
+    // Map database fields to API format
+    const formattedFolders = allFolders.map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      slug: folder.slug,
+      description: folder.description || undefined,
+      createdAt: folder.createdAt.toISOString(),
+      updatedAt: folder.updatedAt?.toISOString(),
+    }))
+    
+    return NextResponse.json(formattedFolders)
   } catch (error: any) {
-    console.log("[v0] Error fetching folders:", error.message)
-    return NextResponse.json([])
+    console.error("[API] Error fetching folders:", error.message)
+    return NextResponse.json({ error: "Failed to fetch folders" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CreateFolderRequest = await request.json()
-    const folder = await mockzillaAPI.folders.create(body)
-    return NextResponse.json(folder, { status: 201 })
+    
+    const slug = generateSlug(body.name)
+    
+    const [newFolder] = await db
+      .insert(folders)
+      .values({
+        name: body.name,
+        slug,
+        description: body.description || null,
+      })
+      .returning()
+    
+    return NextResponse.json(
+      {
+        id: newFolder.id,
+        name: newFolder.name,
+        slug: newFolder.slug,
+        description: newFolder.description || undefined,
+        createdAt: newFolder.createdAt.toISOString(),
+        updatedAt: newFolder.updatedAt?.toISOString(),
+      },
+      { status: 201 }
+    )
   } catch (error: any) {
+    console.error("[API] Error creating folder:", error.message)
     return NextResponse.json({ error: error.message || "Failed to create folder" }, { status: 500 })
   }
 }
@@ -30,9 +73,33 @@ export async function PUT(request: NextRequest) {
     }
 
     const body: UpdateFolderRequest = await request.json()
-    const folder = await mockzillaAPI.folders.update(id, body)
-    return NextResponse.json(folder)
+    const slug = generateSlug(body.name)
+    
+    const [updatedFolder] = await db
+      .update(folders)
+      .set({
+        name: body.name,
+        slug,
+        description: body.description || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(folders.id, id))
+      .returning()
+    
+    if (!updatedFolder) {
+      return NextResponse.json({ error: "Folder not found" }, { status: 404 })
+    }
+    
+    return NextResponse.json({
+      id: updatedFolder.id,
+      name: updatedFolder.name,
+      slug: updatedFolder.slug,
+      description: updatedFolder.description || undefined,
+      createdAt: updatedFolder.createdAt.toISOString(),
+      updatedAt: updatedFolder.updatedAt?.toISOString(),
+    })
   } catch (error: any) {
+    console.error("[API] Error updating folder:", error.message)
     return NextResponse.json({ error: error.message || "Failed to update folder" }, { status: 500 })
   }
 }
@@ -44,9 +111,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Folder ID is required" }, { status: 400 })
     }
 
-    await mockzillaAPI.folders.delete(id)
+    await db.delete(folders).where(eq(folders.id, id))
+    
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    console.error("[API] Error deleting folder:", error.message)
     return NextResponse.json({ error: error.message || "Failed to delete folder" }, { status: 500 })
   }
 }

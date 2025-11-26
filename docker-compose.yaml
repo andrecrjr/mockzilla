@@ -1,11 +1,45 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: mockzilla-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mockzilla}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mockzilla}
+      POSTGRES_DB: ${POSTGRES_DB:-mockzilla}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mockzilla}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mockzilla-network
+
   front-moggzila:
     build: 
       context: .
       dockerfile: Dockerfile
+    container_name: mockzilla-frontend
     ports:
       - "36666:36666"
     environment:
       - PORT=36666
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-mockzilla}:${POSTGRES_PASSWORD:-mockzilla}@postgres:5432/${POSTGRES_DB:-mockzilla}
+      - NODE_ENV=production
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mockzilla-network
+
+volumes:
+  postgres_data:
+
+networks:
+  mockzilla-network:
+    driver: bridge
