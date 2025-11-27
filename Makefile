@@ -25,10 +25,10 @@ help:
 
 # Development commands
 dev-up:
-	docker compose -f docker-compose.dev.yaml up -d
+	docker compose -f docker-compose.dev.yaml up -d --remove-orphans
 
 dev-down:
-	docker compose -f docker-compose.dev.yaml down
+	docker compose -f docker-compose.dev.yaml down --remove-orphans
 
 dev-logs:
 	docker compose -f docker-compose.dev.yaml logs -f
@@ -41,14 +41,14 @@ dev-restart:
 
 # Start Drizzle Studio
 db-studio:
-	docker compose -f docker-compose.dev.yaml --profile tools up drizzle-studio
+	docker compose -f docker-compose.dev.yaml --profile tools up drizzle-studio --remove-orphans
 
 # Production commands
 prod-up:
-	docker compose up -d
+	docker compose up -d --remove-orphans
 
 prod-down:
-	docker compose down
+	docker compose down --remove-orphans
 
 prod-logs:
 	docker compose logs -f
@@ -58,8 +58,8 @@ prod-build:
 
 # Utility commands
 clean:
-	docker compose -f docker-compose.dev.yaml down -v
-	docker compose down -v
+	docker compose -f docker-compose.dev.yaml down -v --remove-orphans
+	docker compose down -v --remove-orphans
 	docker system prune -f
 
 db-shell:
