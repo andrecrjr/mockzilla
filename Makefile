@@ -60,7 +60,6 @@ prod-build:
 clean:
 	docker compose -f docker-compose.dev.yaml down -v --remove-orphans
 	docker compose down -v --remove-orphans
-	docker system prune -f
 
 db-shell:
 	docker exec -it mockzilla-postgres-dev psql -U mockzilla -d mockzilla

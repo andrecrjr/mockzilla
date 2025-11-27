@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { EditMockDialog } from "./edit-mock-dialog"
-import { Copy, Trash2, ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { Copy, Trash2, ExternalLink, Pencil } from "lucide-react"
 import type { Mock, Folder, HttpMethod } from "@/lib/types"
 
 interface MockCardProps {
@@ -74,7 +74,11 @@ export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardP
             </div>
           </div>
           <div className="flex gap-1">
-            <EditMockDialog mock={mock} onUpdate={onUpdate} />
+            <Button variant="ghost" size="icon" asChild>
+              <Link href={`/folder/${folder?.slug}/mock/${mock.id}`}>
+                <Pencil className="h-4 w-4" />
+              </Link>
+            </Button>
             <Button
               variant="ghost"
               size="icon"

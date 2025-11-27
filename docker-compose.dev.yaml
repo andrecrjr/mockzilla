@@ -76,7 +76,7 @@ services:
         condition: service_healthy
     networks:
       - mockzilla-dev-network
-    command: bun run db:studio
+    command: bunx drizzle-kit studio --host 0.0.0.0
     profiles:
       - tools
 
