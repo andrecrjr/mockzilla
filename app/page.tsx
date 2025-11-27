@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { FolderForm } from "@/components/folder-form"
-import { QuickMockDialog } from "@/components/quick-mock-dialog"
+import { CreateMockDialog } from "@/components/create-mock-dialog"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import useSWR, { mutate } from "swr"
 import type { Folder } from "@/lib/types"
@@ -195,7 +195,7 @@ export default function MockzillaAdmin() {
             </div>
             <div className="flex gap-2">
               <ThemeSwitcher />
-              <QuickMockDialog folders={allFolders} />
+              <CreateMockDialog folders={allFolders} />
               <Button variant="outline" onClick={handleExport} className="mockzilla-border bg-card/50 backdrop-blur-sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export

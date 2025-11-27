@@ -25,15 +25,14 @@ export default function EditMockPage() {
   const slug = params.slug as string
   const mockId = params.mockId as string
 
-  const { data: folders = [] } = useSWR<Folder[]>("/api/folders", fetcher)
-  const folder = folders.find((f) => f.slug === slug)
-
-  const { data: mocks = [] } = useSWR<Mock[]>(
-    folder ? `/api/mocks?folderId=${folder.id}` : null,
+  const { data: folder } = useSWR<Folder>(slug ? `/api/folders?slug=${slug}` : null, fetcher)
+  
+  const { data: mock } = useSWR<Mock>(
+    mockId ? `/api/mocks?id=${mockId}` : null,
     fetcher
   )
 
-  const mock = mocks.find((m) => m.id === mockId)
+
 
   const [name, setName] = useState("")
   const [path, setPath] = useState("")
@@ -90,7 +89,7 @@ export default function EditMockPage() {
     }
   }
 
-  if (!folder || (!mock && mocks.length > 0)) {
+  if (!folder || !mock) {
     return (
       <div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

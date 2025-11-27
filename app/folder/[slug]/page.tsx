@@ -11,7 +11,7 @@ import { ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
 import { MockCard } from "@/components/mock-card"
 import { copyToClipboard } from "@/lib/utils"
-import { MockFormInline } from "@/components/mock-form-inline"
+import { CreateMockDialog } from "@/components/create-mock-dialog"
 import { PaginationControls } from "@/components/pagination-controls"
 import { useState } from "react"
 
@@ -141,19 +141,21 @@ export default function FolderPage() {
               <h1 className="text-4xl font-bold tracking-tight text-foreground">{folder.name}</h1>
               <p className="mt-1 text-muted-foreground">/{folder.slug}</p>
             </div>
-            <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-medium text-primary mockzilla-border">
-              {meta.total} {meta.total === 1 ? "mock" : "mocks"}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-medium text-primary mockzilla-border">
+                {meta.total} {meta.total === 1 ? "mock" : "mocks"}
+              </span>
+              <CreateMockDialog 
+                folders={[folder]} 
+                defaultFolderId={folder.id} 
+                onSuccess={handleMockSuccess}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Left Column - Create Mock Form */}
-          <div>
-            <MockFormInline folder={folder} onSuccess={handleMockSuccess} onError={handleError} />
-          </div>
-
-          {/* Right Column - Mocks List */}
+        <div className="grid gap-8">
+          {/* Mocks List */}
           <div>
             <h2 className="mb-4 text-2xl font-semibold text-foreground">Mock Endpoints</h2>
 

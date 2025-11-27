@@ -17,6 +17,25 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const all = searchParams.get("all") === "true"
     
+    const slug = searchParams.get("slug")
+    
+    if (slug) {
+      const [folder] = await db.select().from(folders).where(eq(folders.slug, slug))
+      
+      if (!folder) {
+        return NextResponse.json({ error: "Folder not found" }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        id: folder.id,
+        name: folder.name,
+        slug: folder.slug,
+        description: folder.description || undefined,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt?.toISOString(),
+      })
+    }
+
     if (all) {
       const allFolders = await db.select().from(folders).orderBy(folders.createdAt)
       return NextResponse.json(allFolders.map((folder) => ({

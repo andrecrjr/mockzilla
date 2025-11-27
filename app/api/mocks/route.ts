@@ -8,10 +8,34 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const folderId = searchParams.get("folderId")
+    const id = searchParams.get("id")
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "10")
     const offset = (page - 1) * limit
     
+    if (id) {
+      const [mock] = await db.select().from(mockResponses).where(eq(mockResponses.id, id))
+      
+      if (!mock) {
+        return NextResponse.json({ error: "Mock not found" }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        id: mock.id,
+        name: mock.name,
+        path: mock.endpoint,
+        method: mock.method,
+        response: mock.response,
+        statusCode: mock.statusCode,
+        folderId: mock.folderId,
+        matchType: mock.matchType || "exact",
+        bodyType: mock.bodyType || "json",
+        enabled: mock.enabled,
+        createdAt: mock.createdAt.toISOString(),
+        updatedAt: mock.updatedAt?.toISOString(),
+      })
+    }
+
     let mocks
     let total
 
