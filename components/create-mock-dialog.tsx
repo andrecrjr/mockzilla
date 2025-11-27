@@ -161,7 +161,7 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="min-w-[800px] max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-[80%] max-w-6xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{defaultFolderId ? "Create New Mock" : "Quick Create Mock"}</DialogTitle>
