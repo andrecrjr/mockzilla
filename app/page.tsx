@@ -14,6 +14,8 @@ import { useRef } from "react"
 import Link from "next/link"
 import { EditFolderDialog } from "@/components/edit-folder-dialog"
 import { Trash2 } from "lucide-react"
+import { PaginationControls } from "@/components/pagination-controls"
+import { useState } from "react"
 
 const fetcher = (url: string) =>
   fetch(url)
@@ -25,20 +27,35 @@ const fetcher = (url: string) =>
 
 export default function MockzillaAdmin() {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { data: folders = [], isLoading: foldersLoading } = useSWR<Folder[]>("/api/folders", fetcher, {
-    onError: (error) => {
-      console.log("[v0] SWR error:", error)
-      toast.error("Failed to load folders", {
-        description: "There was an error connecting to the server",
-      })
-    },
-  })
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+
+  const { data, isLoading: foldersLoading } = useSWR<{ data: Folder[], meta: { total: number, page: number, limit: number, totalPages: number } }>(
+    `/api/folders?page=${page}&limit=${limit}`,
+    fetcher,
+    {
+      onError: (error) => {
+        console.log("[v0] SWR error:", error)
+        toast.error("Failed to load folders", {
+          description: "There was an error connecting to the server",
+        })
+      },
+    }
+  )
+
+  const folders = data?.data || []
+  const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 }
+
+  // Fetch all folders for QuickMockDialog
+  const { data: allFoldersData } = useSWR<Folder[]>("/api/folders?all=true", fetcher)
+  const allFolders = allFoldersData || []
 
   const handleFolderSuccess = () => {
     toast.success("Folder Created", {
       description: "Your folder has been created successfully",
     })
-    mutate("/api/folders")
+    mutate(`/api/folders?page=${page}&limit=${limit}`)
+    mutate("/api/folders?all=true")
   }
 
   const handleError = (message: string) => {
@@ -49,7 +66,9 @@ export default function MockzillaAdmin() {
 
   const handleDeleteFolder = async (id: string) => {
     const response = await fetch(`/api/mocks?folderId=${id}`)
-    const mocks = await response.json()
+    const mocksData = await response.json()
+    // Handle both paginated and non-paginated responses just in case, though mocks endpoint is now paginated
+    const mocks = Array.isArray(mocksData) ? mocksData : mocksData.data || []
 
     if (mocks.length > 0) {
       toast.error("Cannot Delete Folder", {
@@ -63,7 +82,8 @@ export default function MockzillaAdmin() {
       toast.success("Folder Deleted", {
         description: "Folder has been removed",
       })
-      mutate("/api/folders")
+      mutate(`/api/folders?page=${page}&limit=${limit}`)
+      mutate("/api/folders?all=true")
     } catch {
       toast.error("Error", {
         description: "Failed to delete folder",
@@ -87,7 +107,8 @@ export default function MockzillaAdmin() {
       toast.success("Folder Updated", {
         description: "Folder has been updated successfully",
       })
-      mutate("/api/folders")
+      mutate(`/api/folders?page=${page}&limit=${limit}`)
+      mutate("/api/folders?all=true")
     } catch (error: any) {
       toast.error("Error", {
         description: error.message || "Failed to update folder",
@@ -145,7 +166,8 @@ export default function MockzillaAdmin() {
         description: `Imported ${result.imported.folders} folders and ${result.imported.mocks} mocks`,
       })
 
-      mutate("/api/folders")
+      mutate(`/api/folders?page=${page}&limit=${limit}`)
+      mutate("/api/folders?all=true")
     } catch {
       toast.error("Import Failed", {
         description: "Failed to import data. Please check the file format.",
@@ -173,7 +195,7 @@ export default function MockzillaAdmin() {
             </div>
             <div className="flex gap-2">
               <ThemeSwitcher />
-              <QuickMockDialog folders={folders} />
+              <QuickMockDialog folders={allFolders} />
               <Button variant="outline" onClick={handleExport} className="mockzilla-border bg-card/50 backdrop-blur-sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export
@@ -205,7 +227,7 @@ export default function MockzillaAdmin() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-foreground">Folders</h2>
               <span className="rounded-lg bg-primary/20 px-3 py-1 text-sm font-semibold text-primary mockzilla-border">
-                {folders.length} {folders.length === 1 ? "folder" : "folders"}
+                {meta.total} {meta.total === 1 ? "folder" : "folders"}
               </span>
             </div>
 
@@ -224,43 +246,53 @@ export default function MockzillaAdmin() {
                 </div>
               </Card>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {folders.map((folder) => (
-                  <Link href={`/folder/${folder.slug}`} key={folder.id}>
-                    <Card className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
-                      <div className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
-                              <FolderIcon className="h-6 w-6 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-semibold text-card-foreground group-hover:text-primary transition-colors truncate">
-                                {folder.name}
-                              </h3>
-                              <p className="text-sm text-muted-foreground truncate">/{folder.slug}</p>
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {folders.map((folder) => (
+                    <Link href={`/folder/${folder.slug}`} key={folder.id}>
+                      <Card className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
+                        <div className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
+                                <FolderIcon className="h-6 w-6 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-semibold text-card-foreground group-hover:text-primary transition-colors truncate">
+                                  {folder.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground truncate">/{folder.slug}</p>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex gap-1 border-t border-border mt-4 pt-3">
+                            <EditFolderDialog folder={folder} onUpdate={handleUpdateFolder} />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleDeleteFolder(folder.id)
+                              }}
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex gap-1 border-t border-border mt-4 pt-3">
-                          <EditFolderDialog folder={folder} onUpdate={handleUpdateFolder} />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              handleDeleteFolder(folder.id)
-                            }}
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+                <PaginationControls
+                  currentPage={page}
+                  totalPages={meta.totalPages}
+                  onPageChange={setPage}
+                  limit={limit}
+                  onLimitChange={setLimit}
+                  totalItems={meta.total}
+                />
+              </>
             )}
           </div>
         </div>

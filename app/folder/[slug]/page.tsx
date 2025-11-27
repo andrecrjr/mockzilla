@@ -12,26 +12,33 @@ import Link from "next/link"
 import { MockCard } from "@/components/mock-card"
 import { copyToClipboard } from "@/lib/utils"
 import { MockFormInline } from "@/components/mock-form-inline"
+import { PaginationControls } from "@/components/pagination-controls"
+import { useState } from "react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function FolderPage() {
   const params = useParams()
   const slug = params.slug as string
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
 
-  const { data: folders = [] } = useSWR<Folder[]>("/api/folders", fetcher)
+  const { data: folders = [] } = useSWR<Folder[]>("/api/folders?all=true", fetcher)
   const folder = folders.find((f) => f.slug === slug)
 
-  const { data: mocks = [], isLoading: mocksLoading } = useSWR<Mock[]>(
-    folder ? `/api/mocks?folderId=${folder.id}` : null,
+  const { data, isLoading: mocksLoading } = useSWR<{ data: Mock[], meta: { total: number, page: number, limit: number, totalPages: number } }>(
+    folder ? `/api/mocks?folderId=${folder.id}&page=${page}&limit=${limit}` : null,
     fetcher,
   )
+
+  const mocks = data?.data || []
+  const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 }
 
   const handleMockSuccess = () => {
     toast.success("Mock Created", {
       description: "Your mock endpoint has been created successfully",
     })
-    mutate(`/api/mocks?folderId=${folder?.id}`)
+    mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`)
   }
 
   const handleError = (message: string) => {
@@ -46,7 +53,7 @@ export default function FolderPage() {
       toast.success("Mock Deleted", {
         description: "Mock endpoint has been removed",
       })
-      mutate(`/api/mocks?folderId=${folder?.id}`)
+      mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`)
     } catch {
       toast.error("Error", {
         description: "Failed to delete mock",
@@ -73,7 +80,7 @@ export default function FolderPage() {
       toast.success("Mock Updated", {
         description: "Mock endpoint has been updated successfully",
       })
-      mutate(`/api/mocks?folderId=${folder?.id}`)
+      mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`)
     } catch (error: any) {
       toast.error("Error", {
         description: error.message || "Failed to update mock",
@@ -135,7 +142,7 @@ export default function FolderPage() {
               <p className="mt-1 text-muted-foreground">/{folder.slug}</p>
             </div>
             <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-medium text-primary mockzilla-border">
-              {mocks.length} {mocks.length === 1 ? "mock" : "mocks"}
+              {meta.total} {meta.total === 1 ? "mock" : "mocks"}
             </span>
           </div>
         </div>
@@ -163,18 +170,28 @@ export default function FolderPage() {
                 </div>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {mocks.map((mock) => (
-                  <MockCard
-                    key={mock.id}
-                    mock={mock}
-                    folder={folder}
-                    onDelete={handleDeleteMock}
-                    onUpdate={handleUpdateMock}
-                    onCopy={handleCopy}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="space-y-4">
+                  {mocks.map((mock) => (
+                    <MockCard
+                      key={mock.id}
+                      mock={mock}
+                      folder={folder}
+                      onDelete={handleDeleteMock}
+                      onUpdate={handleUpdateMock}
+                      onCopy={handleCopy}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  currentPage={page}
+                  totalPages={meta.totalPages}
+                  onPageChange={setPage}
+                  limit={limit}
+                  onLimitChange={setLimit}
+                  totalItems={meta.total}
+                />
+              </>
             )}
           </div>
         </div>

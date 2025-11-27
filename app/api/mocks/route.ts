@@ -1,23 +1,48 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { mockResponses } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import type { CreateMockRequest, UpdateMockRequest } from "@/lib/types"
 
 export async function GET(request: NextRequest) {
   try {
-    const folderId = request.nextUrl.searchParams.get("folderId")
+    const searchParams = request.nextUrl.searchParams
+    const folderId = searchParams.get("folderId")
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const offset = (page - 1) * limit
     
     let mocks
+    let total
+
     if (folderId) {
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(mockResponses)
+        .where(eq(mockResponses.folderId, folderId))
+      
+      total = Number(totalResult.count)
+
       mocks = await db
         .select()
         .from(mockResponses)
         .where(eq(mockResponses.folderId, folderId))
         .orderBy(mockResponses.createdAt)
+        .limit(limit)
+        .offset(offset)
     } else {
-      mocks = await db.select().from(mockResponses).orderBy(mockResponses.createdAt)
+      const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(mockResponses)
+      total = Number(totalResult.count)
+
+      mocks = await db
+        .select()
+        .from(mockResponses)
+        .orderBy(mockResponses.createdAt)
+        .limit(limit)
+        .offset(offset)
     }
+    
+    const totalPages = Math.ceil(total / limit)
     
     // Map database fields to API format
     const formattedMocks = mocks.map((mock) => ({
@@ -35,7 +60,15 @@ export async function GET(request: NextRequest) {
       updatedAt: mock.updatedAt?.toISOString(),
     }))
     
-    return NextResponse.json(formattedMocks)
+    return NextResponse.json({
+      data: formattedMocks,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      }
+    })
   } catch (error: any) {
     console.error("[API] Error fetching mocks:", error.message)
     return NextResponse.json({ error: error.message || "Failed to fetch mocks" }, { status: 500 })

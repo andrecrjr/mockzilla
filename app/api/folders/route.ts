@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { folders } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import type { CreateFolderRequest, UpdateFolderRequest } from "@/lib/types"
 
 function generateSlug(name: string): string {
@@ -12,12 +12,40 @@ function generateSlug(name: string): string {
     .replace(/[^a-z0-9-]/g, "")
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const allFolders = await db.select().from(folders).orderBy(folders.createdAt)
+    const searchParams = request.nextUrl.searchParams
+    const all = searchParams.get("all") === "true"
+    
+    if (all) {
+      const allFolders = await db.select().from(folders).orderBy(folders.createdAt)
+      return NextResponse.json(allFolders.map((folder) => ({
+        id: folder.id,
+        name: folder.name,
+        slug: folder.slug,
+        description: folder.description || undefined,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt?.toISOString(),
+      })))
+    }
+
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const offset = (page - 1) * limit
+
+    const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(folders)
+    const total = Number(totalResult.count)
+    const totalPages = Math.ceil(total / limit)
+
+    const paginatedFolders = await db
+      .select()
+      .from(folders)
+      .orderBy(folders.createdAt)
+      .limit(limit)
+      .offset(offset)
     
     // Map database fields to API format
-    const formattedFolders = allFolders.map((folder) => ({
+    const formattedFolders = paginatedFolders.map((folder) => ({
       id: folder.id,
       name: folder.name,
       slug: folder.slug,
@@ -26,7 +54,15 @@ export async function GET() {
       updatedAt: folder.updatedAt?.toISOString(),
     }))
     
-    return NextResponse.json(formattedFolders)
+    return NextResponse.json({
+      data: formattedFolders,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      }
+    })
   } catch (error: any) {
     console.error("[API] Error fetching folders:", error.message)
     return NextResponse.json({ error: "Failed to fetch folders" }, { status: 500 })
