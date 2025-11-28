@@ -42,8 +42,6 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
         { status: 404 }
       )
     }
-    console.log("mock", mock)
-
     // Check if this mock uses dynamic schema-based responses
     if (mock.useDynamicResponse && mock.jsonSchema) {
       try {
