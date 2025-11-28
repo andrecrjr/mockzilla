@@ -17,10 +17,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Zap } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
+import { Plus, Zap, Sparkles } from "lucide-react"
 import type { HttpMethod, CreateMockRequest, Folder } from "@/lib/types"
 import { toast } from "sonner"
 import { mutate } from "swr"
+import { generateFromSchemaString, validateSchema } from "@/lib/schema-generator"
 
 interface CreateMockDialogProps {
   folders: Folder[]
@@ -58,8 +61,14 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
   const [folderId, setFolderId] = useState(defaultFolderId || "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   
+  // Schema generator state
+  const [activeTab, setActiveTab] = useState<"manual" | "schema">("manual")
+  const [schemaInput, setSchemaInput] = useState("")
+  const [useDynamicResponse, setUseDynamicResponse] = useState(false)
+  
   // Use ref for JSON data to avoid re-renders on every keystroke
   const jsonRef = useRef<HTMLTextAreaElement>(null)
+  const schemaRef = useRef<HTMLTextAreaElement>(null)
 
   const origin = typeof window !== "undefined" ? window.location.origin : ""
   const selectedFolder = folders.find((f) => f.id === (defaultFolderId || folderId))
@@ -73,6 +82,7 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
 
     const targetFolderId = defaultFolderId || folderId
     const jsonData = jsonRef.current?.value || ""
+    const schemaData = schemaRef.current?.value || ""
 
     if (!targetFolderId) {
       toast.error("Error", {
@@ -83,7 +93,11 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
     }
 
     try {
-      JSON.parse(jsonData)
+      if(useDynamicResponse) {
+        JSON.parse(schemaData)
+      } else {
+        JSON.parse(jsonData)
+      }
     } catch {
       toast.error("Error", {
         description: "Please provide valid JSON data",
@@ -100,6 +114,7 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
       return
     }
 
+
     try {
       const payload: CreateMockRequest = {
         name,
@@ -108,6 +123,8 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
         response: jsonData,
         statusCode: Number.parseInt(statusCode),
         folderId: targetFolderId,
+        jsonSchema: schemaData,
+        useDynamicResponse,
       }
 
       const response = await fetch("/api/mocks", {
@@ -140,8 +157,12 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
       setPath("/")
       setMethod("GET")
       if (jsonRef.current) jsonRef.current.value = ""
+      if (schemaRef.current) schemaRef.current.value = ""
       setStatusCode("200")
       if (!defaultFolderId) setFolderId("")
+      setSchemaInput("")
+      setUseDynamicResponse(false)
+      setActiveTab("manual")
     } catch (error) {
       toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to create mock",
@@ -257,14 +278,37 @@ export function CreateMockDialog({ folders, defaultFolderId, trigger, onSuccess 
 
             {/* Right Column - JSON Response */}
             <div className="space-y-2 flex flex-col col-span-3">
-              <Label htmlFor="create-json">JSON Response</Label>
-              <Textarea
-                id="create-json"
-                ref={jsonRef}
-                placeholder='{"message": "Hello World"}'
-                className="font-mono text-sm flex-1 min-h-[300px]"
-                required
-              />
+              <Tabs value={activeTab} onValueChange={setActiveTab as any}>
+                <TabsList>
+                  <TabsTrigger value="manual">Manual JSON</TabsTrigger>
+                  <TabsTrigger value="schema">From Schema</TabsTrigger>
+                </TabsList>
+              
+              <TabsContent value="manual">
+                <Label htmlFor="create-json">JSON Response</Label>
+                <Textarea
+                  id="create-json"
+                  ref={jsonRef}
+                  placeholder='{"message": "Hello World"}'
+                  className="font-mono text-sm flex-1 min-h-[300px]"
+                  required
+                  />
+                </TabsContent>
+                <TabsContent value="schema">
+                    {/* New schema input UI */}
+                    <Textarea ref={schemaRef} id="schema" className="font-mono text-sm flex-1 min-h-[300px]" placeholder="Paste JSON Schema here..." required />
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        checked={useDynamicResponse} 
+                        onCheckedChange={setUseDynamicResponse}
+                      />
+                      <Label>Dynamic Response (new data each request)</Label>
+                    </div>
+                    {/* <Button onClick={handleGenerateFromSchema}>
+                      Generate JSON Preview
+                    </Button> */}
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
 

@@ -25,7 +25,7 @@ help:
 
 # Development commands
 dev-up:
-	docker compose -f docker-compose.dev.yaml up -d --remove-orphans
+	docker compose -f docker-compose.dev.yaml up --remove-orphans
 
 dev-down:
 	docker compose -f docker-compose.dev.yaml down --remove-orphans

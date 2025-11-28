@@ -42,6 +42,31 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
         { status: 404 }
       )
     }
+    console.log("mock", mock)
+
+    // Check if this mock uses dynamic schema-based responses
+    if (mock.useDynamicResponse && mock.jsonSchema) {
+      try {
+        // Import the schema generator utility
+        const { generateFromSchema } = await import("@/lib/schema-generator")
+        
+        // Generate fresh JSON from the schema on each request
+        const generatedJson = generateFromSchema(JSON.parse(mock.jsonSchema))
+        
+        return NextResponse.json(JSON.parse(generatedJson), { status: mock.statusCode })
+      } catch (error) {
+        console.error("[API] Error generating from schema:", error)
+        // Fallback to static response if generation fails
+        try {
+          return NextResponse.json(JSON.parse(mock.response), { status: mock.statusCode })
+        } catch {
+          return new NextResponse(mock.response, {
+            status: mock.statusCode,
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+      }
+    }
 
     // Return the mock response with the configured status code
     const contentType = mock.bodyType === "json" ? "application/json" : "text/plain"

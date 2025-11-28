@@ -22,6 +22,8 @@ export interface Mock {
   matchType?: MatchType
   bodyType?: BodyType
   enabled?: boolean
+  jsonSchema?: string
+  useDynamicResponse?: boolean
   createdAt: string
   updatedAt?: string
 }
@@ -36,6 +38,8 @@ export interface CreateMockRequest {
   matchType?: MatchType
   bodyType?: BodyType
   enabled?: boolean
+  jsonSchema?: string
+  useDynamicResponse?: boolean
 }
 
 export interface CreateFolderRequest {
@@ -57,6 +61,8 @@ export interface UpdateMockRequest {
   matchType?: MatchType
   bodyType?: BodyType
   enabled?: boolean
+  jsonSchema?: string
+  useDynamicResponse?: boolean
 }
 
 export interface ExportData {
