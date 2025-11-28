@@ -84,27 +84,27 @@ export function MockEditor({
   const hydratedRef = useRef<boolean>(false)
 
   useEffect(() => {
-    const hasInitial = Boolean(
-      initial && (
-        (initial.name && initial.name.length > 0) ||
-        (initial.path && initial.path.length > 0) ||
-        (initial.response && initial.response.length > 0) ||
-        (initial.jsonSchema && initial.jsonSchema.length > 0)
-      )
-    )
+    const hasInitial = Boolean(initial)
     if (mode === "edit" && hasInitial && !hydratedRef.current) {
-      setName(initial!.name ?? "")
-      setPath(initial!.path ?? "")
-      setMethod((initial!.method ?? "GET") as HttpMethod)
-      setStatusCode(initial!.statusCode ?? "200")
-      setFolderId(initial!.folderId ?? (defaultFolderId ?? ""))
-      setResponse(initial!.response ?? "")
-      setJsonSchema(initial!.jsonSchema ?? "")
-      setUseDynamicResponse(Boolean(initial!.useDynamicResponse))
-      setActiveTab(initial!.jsonSchema ? "schema" : "manual")
+      console.log(initial)
+      setName(initial?.name ?? "")
+      setPath(initial?.path ?? "")
+      setMethod((initial?.method ?? "GET") as HttpMethod)
+      setStatusCode(String(initial?.statusCode ?? "200"))
+      setFolderId(initial?.folderId ?? (defaultFolderId ?? ""))
+      setResponse(initial?.response ?? "")
+      setJsonSchema(initial?.jsonSchema ?? "")
+      setUseDynamicResponse(Boolean(initial?.useDynamicResponse))
+      setActiveTab(initial?.jsonSchema ? "schema" : "manual")
       hydratedRef.current = true
     }
   }, [initial, mode, defaultFolderId])
+
+  useEffect(() => {
+    if (mode !== "edit" || !initial) return
+    setMethod((initial.method ?? method) as HttpMethod)
+    setStatusCode(String(initial.statusCode ?? statusCode))
+  }, [initial?.method, initial?.statusCode, mode])
 
   const origin = typeof window !== "undefined" ? window.location.origin : ""
   const selectedFolder = useMemo(() => {

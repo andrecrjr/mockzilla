@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card"
 import { ArrowLeft, Save, Loader2 } from "lucide-react"
 import Link from "next/link"
 import useSWR, { mutate } from "swr"
-import type { Mock, HttpMethod, Folder } from "@/lib/types"
+import type { Mock, Folder } from "@/lib/types"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { MockEditor } from "@/components/mock-editor"
 import { validateSchema } from "@/lib/schema-generator"
@@ -23,39 +23,14 @@ export default function EditMockPage() {
   const slug = params.slug as string
   const mockId = params.mockId as string
 
-  const { data: folder } = useSWR<Folder>(slug ? `/api/folders?slug=${slug}` : null, fetcher)
+  const { data: folder, isLoading: isFolderLoading } = useSWR<Folder>(slug ? `/api/folders?slug=${slug}` : null, fetcher)
   
-  const { data: mock } = useSWR<Mock>(
+  const { data: mock, isLoading: isMockLoading } = useSWR<Mock>(
     mockId ? `/api/mocks?id=${mockId}` : null,
     fetcher
   )
 
-  const [name, setName] = useState("")
-  const [path, setPath] = useState("")
-  const [method, setMethod] = useState<HttpMethod>("GET")
-  const [response, setResponse] = useState("")
-  const [statusCode, setStatusCode] = useState("200")
   const [isLoading, setIsLoading] = useState(false)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [activeTab, setActiveTab] = useState<"manual" | "schema">("manual")
-  const [jsonSchema, setJsonSchema] = useState("")
-  const [useDynamicResponse, setUseDynamicResponse] = useState(false)
-
-  useEffect(() => {
-    if (mock && !isInitialized) {
-      setName(mock.name)
-      setPath(mock.path)
-      setMethod(mock.method)
-      setResponse(mock.response)
-      setStatusCode(mock.statusCode.toString())
-      setJsonSchema(mock.jsonSchema || "")
-      setUseDynamicResponse(Boolean(mock.useDynamicResponse))
-      if ((mock.useDynamicResponse && mock.jsonSchema) || (mock.jsonSchema && mock.jsonSchema.length > 0)) {
-        setActiveTab("schema")
-      }
-      setIsInitialized(true)
-    }
-  }, [mock, isInitialized])
 
   const handleUpdate = async (values: {
     name: string
@@ -82,7 +57,7 @@ export default function EditMockPage() {
           }
           JSON.parse(values.jsonSchema || "")
         } else {
-          JSON.parse(values.response)
+            JSON.parse(values.response)
         }
       } catch {
         toast.error("Error", { description: "Please provide valid JSON" })
@@ -147,30 +122,22 @@ export default function EditMockPage() {
         </div>
 
         <div className="grid gap-8">
-          {/* Left Column - Configuration */}
           <Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 overflow-y-auto">
             <MockEditor
               mode="edit"
-              initial={{
-                name,
-                path,
-                method,
-                statusCode,
-                response,
-                jsonSchema,
-                useDynamicResponse,
-              }}
+              initial={mock ? {
+                name: mock.name,
+                path: mock.path,
+                method: mock.method,
+                statusCode: mock.statusCode.toString(),
+                response: mock.response,
+                jsonSchema: mock.jsonSchema || "",
+                useDynamicResponse: Boolean(mock.useDynamicResponse),
+              } : undefined}
               submitLabel="Save Changes"
               previewSlug={slug as string}
               isSubmitting={isLoading}
               onSubmit={async (values) => {
-                setName(values.name)
-                setPath(values.path)
-                setMethod(values.method as HttpMethod)
-                setStatusCode(values.statusCode)
-                setResponse(values.response)
-                setJsonSchema(values.jsonSchema || "")
-                setUseDynamicResponse(Boolean(values.useDynamicResponse))
                 await handleUpdate(values)
               }}
             />
