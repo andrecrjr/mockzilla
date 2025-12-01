@@ -153,3 +153,25 @@
     @apply transition-all hover:shadow-md hover:border-primary/50;
   }
 }
+
+@layer utilities {
+      .scrollbar-thin {
+        scrollbar-width: thin; /* Firefox */
+        scrollbar-color: theme('colors.gray.400') theme('colors.gray.100'); /* Firefox */
+      }
+
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 8px; /* For Webkit browsers */
+      }
+
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: theme('colors.gray.100');
+        border-radius: 100vh;
+      }
+
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: theme('colors.gray.400');
+        border-radius: 100vh;
+        border: 3px solid theme('colors.gray.100'); /* Adjust border color as needed */
+      }
+}

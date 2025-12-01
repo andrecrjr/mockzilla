@@ -31,6 +31,9 @@ export async function GET(request: NextRequest) {
         matchType: mock.matchType || "exact",
         bodyType: mock.bodyType || "json",
         enabled: mock.enabled,
+        jsonSchema: mock.jsonSchema,
+        useDynamicResponse: mock.useDynamicResponse,
+        echoRequestBody: mock.echoRequestBody,
         createdAt: mock.createdAt.toISOString(),
         updatedAt: mock.updatedAt?.toISOString(),
       })
@@ -81,6 +84,9 @@ export async function GET(request: NextRequest) {
       bodyType: mock.bodyType || "json",
       enabled: mock.enabled,
       createdAt: mock.createdAt.toISOString(),
+      jsonSchema: mock.jsonSchema,
+      useDynamicResponse: mock.useDynamicResponse,
+      echoRequestBody: mock.echoRequestBody,
       updatedAt: mock.updatedAt?.toISOString(),
     }))
     
@@ -115,6 +121,9 @@ export async function POST(request: NextRequest) {
         matchType: body.matchType || "exact",
         bodyType: body.bodyType || "json",
         enabled: body.enabled ?? true,
+        jsonSchema: body.jsonSchema,
+        useDynamicResponse: body.useDynamicResponse,
+        echoRequestBody: body.echoRequestBody,
       })
       .returning()
     
@@ -129,6 +138,9 @@ export async function POST(request: NextRequest) {
         folderId: newMock.folderId,
         matchType: newMock.matchType || "exact",
         bodyType: newMock.bodyType || "json",
+        jsonSchema: newMock.jsonSchema,
+        useDynamicResponse: newMock.useDynamicResponse,
+        echoRequestBody: newMock.echoRequestBody,
         enabled: newMock.enabled,
         createdAt: newMock.createdAt.toISOString(),
         updatedAt: newMock.updatedAt?.toISOString(),
@@ -159,6 +171,10 @@ export async function PUT(request: NextRequest) {
         statusCode: body.statusCode,
         response: body.response,
         matchType: body.matchType || "exact",
+        jsonSchema: body.jsonSchema,
+        useDynamicResponse: body.useDynamicResponse,
+        echoRequestBody: body.echoRequestBody,
+        
         bodyType: body.bodyType || "json",
         enabled: body.enabled ?? true,
         updatedAt: new Date(),
@@ -179,6 +195,9 @@ export async function PUT(request: NextRequest) {
       statusCode: updatedMock.statusCode,
       folderId: updatedMock.folderId,
       matchType: updatedMock.matchType || "exact",
+      jsonSchema: updatedMock.jsonSchema,
+      useDynamicResponse: updatedMock.useDynamicResponse,
+      echoRequestBody: updatedMock.echoRequestBody,
       bodyType: updatedMock.bodyType || "json",
       enabled: updatedMock.enabled,
       createdAt: updatedMock.createdAt.toISOString(),

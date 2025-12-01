@@ -9,7 +9,7 @@ import { CreateMockDialog } from "@/components/create-mock-dialog"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import useSWR, { mutate } from "swr"
 import type { Folder } from "@/lib/types"
-import { Download, Upload, FolderIcon, Skull } from "lucide-react"
+import { Download, Upload, FolderIcon, Skull, BookOpen } from "lucide-react"
 import { useRef } from "react"
 import Link from "next/link"
 import { EditFolderDialog } from "@/components/edit-folder-dialog"
@@ -194,6 +194,12 @@ export default function MockzillaAdmin() {
               </div>
             </div>
             <div className="flex gap-2">
+              <Link href="/docs">
+                <Button variant="outline" className="mockzilla-border bg-card/50 backdrop-blur-sm">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Docs
+                </Button>
+              </Link>
               <ThemeSwitcher />
               <CreateMockDialog folders={allFolders} />
               <Button variant="outline" onClick={handleExport} className="mockzilla-border bg-card/50 backdrop-blur-sm">
