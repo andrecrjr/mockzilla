@@ -33,7 +33,7 @@ export function PaginationControls({
             <SelectValue placeholder={limit} />
           </SelectTrigger>
           <SelectContent side="top">
-            {[10, 20, 30, 40, 50, 60].map((pageSize) => (
+            {[5, 10, 20, 30, 40, 50, 60].map((pageSize) => (
               <SelectItem key={pageSize} value={`${pageSize}`}>
                 {pageSize}
               </SelectItem>

@@ -41,6 +41,7 @@ export const mockResponses = pgTable("mock_responses", {
   enabled: boolean("enabled").default(true).notNull(),
   jsonSchema: text("json_schema"),
   useDynamicResponse: boolean("use_dynamic_response").default(false).notNull(),
+  echoRequestBody: boolean("echo_request_body").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at"),
 })

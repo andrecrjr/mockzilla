@@ -23,6 +23,7 @@ type MockFormValues = {
   response: string
   jsonSchema?: string
   useDynamicResponse?: boolean
+  echoRequestBody?: boolean
 }
 
 interface MockEditorProps {
@@ -81,6 +82,7 @@ export function MockEditor({
   const [response, setResponse] = useState(initial?.response ?? "")
   const [jsonSchema, setJsonSchema] = useState(initial?.jsonSchema ?? "")
   const [useDynamicResponse, setUseDynamicResponse] = useState<boolean>(Boolean(initial?.useDynamicResponse))
+  const [echoRequestBody, setEchoRequestBody] = useState<boolean>(Boolean(initial?.echoRequestBody))
   const previewJson = useRef<HTMLTextAreaElement>(null)
   const hydratedRef = useRef<boolean>(false)
 
@@ -96,6 +98,7 @@ export function MockEditor({
       setResponse(initial?.response ?? "")
       setJsonSchema(initial?.jsonSchema ?? "")
       setUseDynamicResponse(Boolean(initial?.useDynamicResponse))
+      setEchoRequestBody(Boolean(initial?.echoRequestBody))
       setActiveTab(initial?.jsonSchema ? "schema" : "manual")
       hydratedRef.current = true
     }
@@ -185,6 +188,7 @@ export function MockEditor({
       response,
       jsonSchema,
       useDynamicResponse,
+      echoRequestBody,
     }
     await onSubmit(values)
   }
@@ -274,7 +278,22 @@ export function MockEditor({
         </div>
 
         <div className="space-y-2 flex flex-col col-span-3">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "manual" | "schema") }>
+          {["POST", "PUT", "PATCH"].includes(method) && (
+            <div className="flex items-center space-x-2 mb-2 p-3 border border-border rounded-lg bg-card/50">
+              <Switch checked={echoRequestBody} onCheckedChange={setEchoRequestBody} />
+              <div className="space-y-0.5">
+                <Label className="cursor-pointer font-medium" onClick={() => setEchoRequestBody(!echoRequestBody)}>
+                  Echo Request Body
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  The response will be exactly what was sent in the request body.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className={echoRequestBody ? "opacity-40 pointer-events-none select-none transition-opacity" : "transition-opacity"}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "manual" | "schema") }>
             <TabsList>
               <TabsTrigger value="manual">Manual JSON</TabsTrigger>
               <TabsTrigger value="schema">From Schema</TabsTrigger>
@@ -330,6 +349,7 @@ export function MockEditor({
               />
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       </div>
 

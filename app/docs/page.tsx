@@ -291,6 +291,24 @@ export default function DocsPage() {
 
           {/* Advanced Tab */}
           <TabsContent value="advanced" className="space-y-6">
+            <Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+              <h2 className="text-2xl font-bold text-card-foreground mb-4">Echo Request Body</h2>
+              <p className="text-muted-foreground mb-4">
+                For POST, PUT, and PATCH methods, you can enable "Echo Request Body" to return exactly what was sent in the request.
+              </p>
+              <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <div className="flex gap-3">
+                  <Lightbulb className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-foreground mb-1">JSON Handling</p>
+                    <p className="text-sm text-muted-foreground">
+                      If the request Content-Type is <code>application/json</code>, the body will be parsed and returned as a proper JSON object.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             <Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
               <h2 className="text-2xl font-bold text-card-foreground mb-4">Custom Formats</h2>
               <p className="text-muted-foreground mb-4">

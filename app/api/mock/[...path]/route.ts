@@ -42,6 +42,31 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
         { status: 404 }
       )
     }
+    // Check if we should echo the request body
+    if (mock.echoRequestBody) {
+      const contentType = request.headers.get("content-type") || "text/plain"
+      
+      if (contentType.includes("application/json")) {
+        try {
+          const body = await request.json()
+          return NextResponse.json(body, { status: mock.statusCode })
+        } catch {
+          // If JSON parsing fails, fall back to text
+          const body = await request.text()
+          return new NextResponse(body, {
+            status: mock.statusCode,
+            headers: { "Content-Type": contentType },
+          })
+        }
+      } else {
+        const body = await request.text()
+        return new NextResponse(body, {
+          status: mock.statusCode,
+          headers: { "Content-Type": contentType },
+        })
+      }
+    }
+
     // Check if this mock uses dynamic schema-based responses
     if (mock.useDynamicResponse && mock.jsonSchema) {
       try {

@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         enabled: mock.enabled,
         jsonSchema: mock.jsonSchema,
         useDynamicResponse: mock.useDynamicResponse,
+        echoRequestBody: mock.echoRequestBody,
         createdAt: mock.createdAt.toISOString(),
         updatedAt: mock.updatedAt?.toISOString(),
       })
@@ -85,6 +86,7 @@ export async function GET(request: NextRequest) {
       createdAt: mock.createdAt.toISOString(),
       jsonSchema: mock.jsonSchema,
       useDynamicResponse: mock.useDynamicResponse,
+      echoRequestBody: mock.echoRequestBody,
       updatedAt: mock.updatedAt?.toISOString(),
     }))
     
@@ -121,6 +123,7 @@ export async function POST(request: NextRequest) {
         enabled: body.enabled ?? true,
         jsonSchema: body.jsonSchema,
         useDynamicResponse: body.useDynamicResponse,
+        echoRequestBody: body.echoRequestBody,
       })
       .returning()
     
@@ -137,6 +140,7 @@ export async function POST(request: NextRequest) {
         bodyType: newMock.bodyType || "json",
         jsonSchema: newMock.jsonSchema,
         useDynamicResponse: newMock.useDynamicResponse,
+        echoRequestBody: newMock.echoRequestBody,
         enabled: newMock.enabled,
         createdAt: newMock.createdAt.toISOString(),
         updatedAt: newMock.updatedAt?.toISOString(),
@@ -169,6 +173,7 @@ export async function PUT(request: NextRequest) {
         matchType: body.matchType || "exact",
         jsonSchema: body.jsonSchema,
         useDynamicResponse: body.useDynamicResponse,
+        echoRequestBody: body.echoRequestBody,
         
         bodyType: body.bodyType || "json",
         enabled: body.enabled ?? true,
@@ -192,6 +197,7 @@ export async function PUT(request: NextRequest) {
       matchType: updatedMock.matchType || "exact",
       jsonSchema: updatedMock.jsonSchema,
       useDynamicResponse: updatedMock.useDynamicResponse,
+      echoRequestBody: updatedMock.echoRequestBody,
       bodyType: updatedMock.bodyType || "json",
       enabled: updatedMock.enabled,
       createdAt: updatedMock.createdAt.toISOString(),

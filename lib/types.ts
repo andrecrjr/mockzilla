@@ -24,6 +24,7 @@ export interface Mock {
   enabled?: boolean
   jsonSchema?: string
   useDynamicResponse?: boolean
+  echoRequestBody?: boolean
   createdAt: string
   updatedAt?: string
 }
@@ -40,6 +41,7 @@ export interface CreateMockRequest {
   enabled?: boolean
   jsonSchema?: string
   useDynamicResponse?: boolean
+  echoRequestBody?: boolean
 }
 
 export interface CreateFolderRequest {
@@ -63,6 +65,7 @@ export interface UpdateMockRequest {
   enabled?: boolean
   jsonSchema?: string
   useDynamicResponse?: boolean
+  echoRequestBody?: boolean
 }
 
 export interface ExportData {
