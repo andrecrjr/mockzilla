@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import type { Folder, HttpMethod } from "@/lib/types"
 import { validateSchema, generateFromSchemaString } from "@/lib/schema-generator"
 import { toast } from "sonner"
+import { Info as InfoIcon } from "lucide-react"
 
 type MockFormValues = {
   name: string
@@ -300,7 +301,23 @@ export function MockEditor({
               />
               <div className="flex items-center space-x-2 my-2">
                 <Switch checked={useDynamicResponse} onCheckedChange={setUseDynamicResponse} required={activeTab === "schema"} />
-                <Label>Dynamic Response (new data each request) {activeTab === "schema" && "*"}</Label>
+                <Label className="cursor-pointer" onClick={() => setUseDynamicResponse(!useDynamicResponse)}>
+                  Dynamic Response (new data each request) {activeTab === "schema" && "*"}
+                </Label>
+                <div className="group relative inline-block">
+                  <InfoIcon className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help" />
+                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-popover border border-border rounded-lg shadow-lg z-50 text-sm">
+                    <p className="text-foreground font-semibold mb-1">String Interpolation Supported!</p>
+                    <p className="text-muted-foreground mb-2">
+                      Use <code className="bg-muted px-1 py-0.5 rounded text-xs">{"{$.field}"}</code> to reference other generated fields.
+                    </p>
+                    <p className="text-xs text-primary">
+                      <a href="/docs" target="_blank" className="underline hover:text-primary/80">
+                        Learn more in the docs →
+                      </a>
+                    </p>
+                  </div>
+                </div>
               </div>
               <Button type="button" variant="secondary" onClick={handleGenerateFromSchema}>
                 Generate JSON Preview
