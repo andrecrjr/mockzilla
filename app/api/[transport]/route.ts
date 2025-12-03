@@ -708,7 +708,6 @@ const handler = createMcpHandler(
 							text: `${JSON.stringify(result)}`,
 						},
 					],
-					structuredContent: result,
 				};
 			},
 		);
@@ -811,100 +810,6 @@ const handler = createMcpHandler(
 						},
 					],
 					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerPrompt(
-			'create_mock_prompt',
-			{
-				title: 'Create Mock Prompt',
-				description:
-					'Guide for creating mocks using schema with interpolation or manual JSON',
-				argsSchema: z.object({
-					mode: z.enum(['manual', 'schema']),
-					name: z.string(),
-					path: z.string(),
-					method: z.enum([
-						'GET',
-						'POST',
-						'PUT',
-						'PATCH',
-						'DELETE',
-						'HEAD',
-						'OPTIONS',
-					]),
-					statusCode: z.number().int(),
-					folderSlug: z.string().nullable().optional(),
-					folderId: z.string().nullable().optional(),
-					response: z.string().optional(),
-					jsonSchema: z.string().optional(),
-					useDynamicResponse: z.boolean().optional(),
-					echoRequestBody: z.boolean().optional(),
-				}),
-			},
-			async (
-				{
-					mode,
-					name,
-					path,
-					method,
-					statusCode,
-					folderSlug,
-					folderId,
-					response,
-					jsonSchema,
-					useDynamicResponse,
-					echoRequestBody,
-				},
-				_extra,
-			) => {
-				const hint =
-					mode === 'schema'
-						? 'Use {$.path} or {{$.path}} to interpolate generated fields as shown in /app/docs.'
-						: 'Manual JSON mode returns static content; choose schema for interpolation.';
-				const docsUrl = '/docs';
-				const payload =
-					mode === 'schema'
-						? {
-								tool: 'create_schema_mock',
-								args: {
-									name,
-									path,
-									method,
-									statusCode,
-									folderSlug,
-									folderId,
-									jsonSchema: jsonSchema ?? '',
-									enabled: true,
-									matchType: 'exact',
-									echoRequestBody: echoRequestBody ?? false,
-								},
-							}
-						: {
-								tool: 'create_mock',
-								args: {
-									name,
-									path,
-									method,
-									statusCode,
-									folderId: folderId ?? '',
-									response: response ?? '{}',
-									matchType: 'exact',
-									bodyType: 'json',
-									enabled: true,
-								},
-							};
-				return {
-					messages: [
-						{
-							role: 'user',
-							content: {
-								type: 'text',
-								text: `${hint}\nSee: ${docsUrl}\n${JSON.stringify(payload)}`,
-							},
-						},
-					],
 				};
 			},
 		);
