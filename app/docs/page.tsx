@@ -44,11 +44,12 @@ export default function DocsPage() {
 
 				{/* Main Content */}
 				<Tabs defaultValue="overview" className="space-y-6">
-					<TabsList className="grid w-full grid-cols-4 mockzilla-border bg-card/50 backdrop-blur-sm">
+					<TabsList className="grid w-full grid-cols-5 mockzilla-border bg-card/50 backdrop-blur-sm">
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="syntax">Syntax</TabsTrigger>
 						<TabsTrigger value="examples">Examples</TabsTrigger>
 						<TabsTrigger value="advanced">Advanced</TabsTrigger>
+						<TabsTrigger value="mcp">MCP</TabsTrigger>
 					</TabsList>
 
 					{/* Overview Tab */}
@@ -777,6 +778,199 @@ export default function DocsPage() {
 								</AccordionContent>
 							</AccordionItem>
 						</Accordion>
+					</TabsContent>
+
+					{/* MCP Tab */}
+					<TabsContent value="mcp" className="space-y-6">
+						<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
+							<h2 className="text-2xl font-bold text-card-foreground mb-4">
+								Model Context Protocol (MCP)
+							</h2>
+							<p className="text-muted-foreground mb-4">
+								Interact with Mockzilla via MCP tools at{' '}
+								<code className="bg-muted px-1 py-0.5 rounded">/mcp</code>.
+								Tools support folder browsing, mock creation, schema-driven
+								generation, and preview.
+							</p>
+							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4 mb-6">
+								<h3 className="text-xl font-bold text-foreground mb-2">
+									Installation & Setup
+								</h3>
+								<ul className="list-disc pl-5 text-sm text-muted-foreground">
+									<li>
+										Start app:{' '}
+										<code className="bg-muted px-1 py-0.5 rounded">
+											npm run dev
+										</code>{' '}
+										(port 36666)
+									</li>
+									<li>
+										List tools: GET{' '}
+										<code className="bg-muted px-1 py-0.5 rounded">
+											http://localhost:36666/mcp
+										</code>
+									</li>
+									<li>
+										Call a tool: POST JSON to{' '}
+										<code className="bg-muted px-1 py-0.5 rounded">/mcp</code>
+									</li>
+									<li>
+										HTTP servers can log to stdout/stderr; avoid stdout only for
+										STDIO servers
+									</li>
+								</ul>
+								<Accordion type="single" collapsible className="space-y-4 mt-4">
+									<AccordionItem value="install-json">
+										<AccordionTrigger>JSON Requests</AccordionTrigger>
+										<AccordionContent>
+											<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
+												<p className="text-sm text-muted-foreground mb-2">
+													List tools:
+												</p>
+												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+													{
+														'curl -s -X POST \\\n-H \'Content-Type: application/json\' \\\n-d \'{"action":"list_tools"}\' \\\nhttp://localhost:36666/mcp'
+													}
+												</pre>
+												<p className="text-sm text-muted-foreground mt-4 mb-2">
+													Create schema mock:
+												</p>
+												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+													{
+														'curl -s -X POST \\\n-H \'Content-Type: application/json\' \\\n-d \'{\n  "action":"call_tool",\n  "toolName":"create_schema_mock",\n  "args":{\n    "name":"Tickets",\n    "path":"/tickets",\n    "method":"GET",\n    "statusCode":200,\n    "folderSlug":"support",\n    "jsonSchema":"{\\"type\\":\\"object\\",\\"properties\\":{\\"id\\":{\\"type\\":\\"string\\",\\"format\\":\\"uuid\\"},\\"message\\":{\\"const\\":\\"Your ticket {$.id} has been created\\"}}}"\n  }\n}\' \\\nhttp://localhost:36666/mcp'
+													}
+												</pre>
+											</Card>
+										</AccordionContent>
+									</AccordionItem>
+									<AccordionItem value="install-claude">
+										<AccordionTrigger>Claude Desktop</AccordionTrigger>
+										<AccordionContent>
+											<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
+												<p className="text-sm text-muted-foreground mb-3">
+													Point the MCP host to the HTTP endpoint:
+												</p>
+												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+													{
+														'{\n  "mcpServers": {\n    "mockzilla": {\n      "transport": "http",\n      "url": "http://localhost:36666/mcp"\n    }\n  }\n}'
+													}
+												</pre>
+												<p className="text-xs text-muted-foreground mt-2">
+													Start Mockzilla first; approve tool execution when
+													prompted.
+												</p>
+											</Card>
+										</AccordionContent>
+									</AccordionItem>
+									<AccordionItem value="install-vscode">
+										<AccordionTrigger>VS Code</AccordionTrigger>
+										<AccordionContent>
+											<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
+												<p className="text-sm text-muted-foreground mb-3">
+													Add an MCP server entry in your MCP-enabled client
+													settings:
+												</p>
+												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+													{
+														'{\n  "mcpServers": {\n    "mockzilla": {\n      "transport": "http",\n      "url": "http://localhost:36666/mcp",\n      "capabilities": { "tools": true }\n    }\n  }\n}'
+													}
+												</pre>
+												<p className="text-xs text-muted-foreground mt-2">
+													Use the client’s UI to call tools or send JSON POSTs.
+												</p>
+											</Card>
+										</AccordionContent>
+									</AccordionItem>
+								</Accordion>
+							</Card>
+
+							<div className="grid gap-4 md:grid-cols-3">
+								<div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+									<h3 className="font-semibold text-foreground mb-2">
+										list_folders
+									</h3>
+									<p className="text-sm text-muted-foreground mb-2">
+										Paginate folders for selection.
+									</p>
+									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
+	"action": "call_tool",
+	"toolName": "list_folders",
+	"args": { "page": 1, "limit": 10 }
+}`}</pre>
+								</div>
+								<div className="p-4 rounded-lg bg-accent/5 border border-accent/20">
+									<h3 className="font-semibold text-foreground mb-2">
+										create_mock
+									</h3>
+									<p className="text-sm text-muted-foreground mb-2">
+										Create a static or echo mock in a folder.
+									</p>
+									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
+	"action": "call_tool",
+	"toolName": "create_mock",
+	"args": {
+		"name": "Users Index",
+		"path": "/users",
+		"method": "GET",
+		"statusCode": 200,
+		"folderId": "<folder-id>",
+		"response": "{\\"data\\":[]}",
+		"bodyType": "json"
+	}
+}`}</pre>
+								</div>
+								<div className="p-4 rounded-lg bg-secondary/20 border border-border">
+									<h3 className="font-semibold text-foreground mb-2">
+										create_schema_mock
+									</h3>
+									<p className="text-sm text-muted-foreground mb-2">
+										Create a mock using JSON Schema + Faker with interpolation.
+									</p>
+									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
+	"action": "call_tool",
+	"toolName": "create_schema_mock",
+	"args": {
+		"name": "Tickets",
+		"path": "/tickets",
+		"method": "GET",
+		"statusCode": 200,
+		"folderSlug": "support",
+		"jsonSchema": "{\\"type\\":\\"object\\",\\"properties\\":{\\"id\\":{\\"type\\":\\"string\\",\\"format\\":\\"uuid\\"},\\"message\\":{\\"const\\":\\"Your ticket {$.id} has been created\\"}}}"
+	}
+}`}</pre>
+								</div>
+							</div>
+
+							<div className="mt-6 grid gap-4 md:grid-cols-2">
+								<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
+									<h3 className="font-semibold mb-2">preview_mock</h3>
+									<p className="text-sm text-muted-foreground mb-2">
+										Preview resolved response (dynamic schema or echo aware).
+									</p>
+									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
+	"action": "call_tool",
+	"toolName": "preview_mock",
+	"args": { "folderSlug": "support", "path": "/tickets", "method": "GET" }
+}`}</pre>
+								</Card>
+								<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
+									<h3 className="font-semibold mb-2">Server Info</h3>
+									<p className="text-sm text-muted-foreground mb-2">
+										The MCP endpoint returns tool catalog and server
+										capabilities.
+									</p>
+									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`GET /mcp -> { tools, server }`}</pre>
+									<ul className="list-disc pl-5 text-sm text-muted-foreground">
+										<li>
+											Methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+										</li>
+										<li>Body types: json, text</li>
+										<li>Dynamic schema responses</li>
+										<li>Echo request body</li>
+									</ul>
+								</Card>
+							</div>
+						</Card>
 					</TabsContent>
 				</Tabs>
 
