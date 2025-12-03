@@ -331,7 +331,7 @@ export function MockEditor({
                       Use <code className="bg-muted px-1 py-0.5 rounded text-xs">{"{$.field}"}</code> to reference other generated fields.
                     </p>
                     <p className="text-xs text-primary">
-                      <a href="/docs" target="_blank" className="underline hover:text-primary/80">
+                      <a href="/docs" target="_blank" className="underline hover:text-primary/80" rel="noopener">
                         Learn more in the docs →
                       </a>
                     </p>

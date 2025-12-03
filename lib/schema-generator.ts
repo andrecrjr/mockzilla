@@ -170,7 +170,7 @@ function processTemplates(data: any, visited = new WeakSet()): any {
   if (typeof data === "string") {
     // Replace template syntax: {$.field} or {{$.field}}
     // Regex: matches {$.path} or {{$.path}} where path can include dots, brackets, and numbers
-    return data.replace(/\{\{?\$\.([\w.\[\]]+)\}?\}/g, (match, path) => {
+    return data.replace(/\{\{?\$\.([\w.[\]]+)\}?\}/g, (match, path) => {
       const value = resolveJSONPath("$." + path, data)
       
       if (value === undefined) {
@@ -185,7 +185,7 @@ function processTemplates(data: any, visited = new WeakSet()): any {
   } else if (data && typeof data === "object") {
     const processed: any = {}
     for (const key in data) {
-      if (data.hasOwnProperty(key)) {
+      if (Object.hasOwn(data, key)) {
         processed[key] = processTemplates(data[key], visited)
       }
     }
@@ -215,7 +215,7 @@ function deepReplaceTemplates(rootData: any, currentData: any = rootData, visite
 
   if (typeof currentData === "string") {
     // Replace template syntax: {$.field} or {{$.field}}
-    return currentData.replace(/\{\{?\$\.([\w.\[\]]+)\}?\}/g, (match, path) => {
+    return currentData.replace(/\{\{?\$\.([\w.[\]]+)\}?\}/g, (match, path) => {
       const value = resolveJSONPath("$." + path, rootData)
       
       if (value === undefined) {
@@ -230,7 +230,7 @@ function deepReplaceTemplates(rootData: any, currentData: any = rootData, visite
   } else if (currentData && typeof currentData === "object") {
     const processed: any = {}
     for (const key in currentData) {
-      if (currentData.hasOwnProperty(key)) {
+      if (Object.hasOwn(currentData, key)) {
         processed[key] = deepReplaceTemplates(rootData, currentData[key], visited)
       }
     }

@@ -95,7 +95,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
     const contentType = mock.bodyType === "json" ? "application/json" : "text/plain"
 
     // Try to parse as JSON if bodyType is json
-    let responseBody = mock.response
+    const responseBody = mock.response
     if (mock.bodyType === "json") {
       try {
         return NextResponse.json(JSON.parse(mock.response), { status: mock.statusCode })
