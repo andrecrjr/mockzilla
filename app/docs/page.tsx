@@ -24,7 +24,7 @@ export default function DocsPage() {
 			<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
 				{/* Header */}
 				<div className="mb-8">
-					<Link href="/">
+					<Link href="/" className="underline underline-offset-4">
 						<Button variant="ghost" className="mb-4 -ml-4">
 							<ArrowLeft className="mr-2 h-4 w-4" />
 							Back to Home
@@ -68,6 +68,8 @@ export default function DocsPage() {
 								powered by{' '}
 								<a
 									href="https://github.com/json-schema-faker/json-schema-faker"
+									className="underline underline-offset-4 hover:text-primary"
+									target="_blank"
 									rel="noopener noreferrer"
 								>
 									JSON Schema Faker
@@ -159,6 +161,95 @@ export default function DocsPage() {
 												<p className="text-xs text-primary mt-2">
 													✨ Notice how the message contains the actual
 													generated ID!
+												</p>
+											</div>
+										</div>
+									</Card>
+								</AccordionContent>
+							</AccordionItem>
+							<AccordionItem value="syntax-custom-formats">
+								<AccordionTrigger>
+									Custom Formats: x-store-as, x-ref, x-template
+								</AccordionTrigger>
+								<AccordionContent>
+									<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
+										<div className="space-y-6">
+											<div>
+												<h3 className="text-lg font-semibold text-foreground mb-2">
+													x-store-as: generate and store
+												</h3>
+												<p className="text-muted-foreground mb-3">
+													Generate a value and store it under a key to reuse
+													later.
+												</p>
+												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "format": "x-store-as",
+      "x-key": "mainUserId"
+    }
+  }
+}`}</pre>
+											</div>
+
+											<div>
+												<h3 className="text-lg font-semibold text-foreground mb-2">
+													x-ref: reuse stored value
+												</h3>
+												<p className="text-muted-foreground mb-3">
+													Reference a previously stored value by key.
+												</p>
+												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+  "type": "object",
+  "properties": {
+    "createdBy": {
+      "type": "string",
+      "format": "x-ref",
+      "x-key": "mainUserId"
+    },
+    "modifiedBy": {
+      "type": "string",
+      "format": "x-ref",
+      "x-key": "mainUserId"
+    }
+  }
+}`}</pre>
+											</div>
+
+											<div>
+												<h3 className="text-lg font-semibold text-foreground mb-2">
+													x-template: inline templating
+												</h3>
+												<p className="text-muted-foreground mb-3">
+													Use stored values inside strings. Supports{' '}
+													<code>{'{{key}}'}</code> and <code>{'{key}'}</code>.
+												</p>
+												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "format": "x-store-as",
+      "x-key": "mainUserId"
+    },
+    "summary": {
+      "type": "string",
+      "format": "x-template",
+      "template": "Action by {{mainUserId}}"
+    }
+  }
+}`}</pre>
+											</div>
+
+											<div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+												<p className="text-sm text-muted-foreground">
+													<strong>When to use:</strong> Use{' '}
+													<code>x-store-as</code> when a value must be generated
+													once and reused; use <code>x-ref</code> to mirror that
+													value elsewhere; use <code>x-template</code> to embed
+													stored values directly into strings.
 												</p>
 											</div>
 										</div>
@@ -469,6 +560,50 @@ export default function DocsPage() {
 										</div>
 									</AccordionContent>
 								</AccordionItem>
+								<AccordionItem value="ex-fixed-array">
+									<AccordionTrigger>
+										Fixed-Length Arrays (n items)
+									</AccordionTrigger>
+									<AccordionContent>
+										<div className="border-l-4 border-primary pl-4">
+											<p className="text-sm text-muted-foreground mb-3">
+												Generate an array with exactly 3 items; set{' '}
+												<code>minItems</code> and <code>maxItems</code> to the
+												same number.
+											</p>
+											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+  "type": "array",
+  "minItems": 3,
+  "maxItems": 3,
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "faker": "person.fullName" }
+    }
+  }
+}`}</pre>
+											<p className="text-xs text-primary mt-2">
+												Tip: reference items by index like{' '}
+												<code>{`{$.users[0].id}`}</code>
+											</p>
+											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+  "type": "object",
+  "properties": {
+    "users": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" } } }
+    },
+    "summary": {
+      "const": "First user is {$.users[0].id}"
+    }
+  }
+}`}</pre>
+										</div>
+									</AccordionContent>
+								</AccordionItem>
 							</Accordion>
 						</Card>
 					</TabsContent>
@@ -645,6 +780,69 @@ export default function DocsPage() {
 					</TabsContent>
 				</Tabs>
 
+				<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 mt-8">
+					<h3 className="text-xl font-bold text-foreground mb-3">
+						Reference Links
+					</h3>
+					<ul className="list-disc pl-6 space-y-2 text-sm">
+						<li>
+							<a
+								href="https://json-schema.org/understanding-json-schema/structuring.html"
+								className="underline underline-offset-4 hover:text-primary"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								JSON Schema — Structuring and modular combination
+							</a>
+						</li>
+						<li>
+							<a
+								href="https://json-schema.org/understanding-json-schema/reference/"
+								className="underline underline-offset-4 hover:text-primary"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								JSON Schema — Reference
+							</a>
+						</li>
+						<li>
+							<a
+								href="https://datatracker.ietf.org/doc/html/rfc6901"
+								className="underline underline-offset-4 hover:text-primary"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								RFC6901 — JSON Pointer
+							</a>
+						</li>
+						<li>
+							<a
+								href="https://spec.openapis.org/oas/latest.html#reference-object"
+								className="underline underline-offset-4 hover:text-primary"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								OpenAPI — Reference Object
+							</a>
+						</li>
+						<li>
+							<a
+								href="https://github.com/json-schema-faker/json-schema-faker"
+								className="underline underline-offset-4 hover:text-primary"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								JSON Schema Faker
+							</a>
+						</li>
+						<li>
+							<Link href="/" className="underline underline-offset-4">
+								Mockzilla Home
+							</Link>
+						</li>
+					</ul>
+				</Card>
+
 				{/* Footer CTA */}
 				<Card className="mockzilla-border mockzilla-glow mt-8 border-2 bg-gradient-to-br from-primary/10 to-accent/10 p-6">
 					<div className="text-center">
@@ -655,7 +853,7 @@ export default function DocsPage() {
 							Create a new mock with "Dynamic Response" enabled and use string
 							interpolation in your JSON Schema.
 						</p>
-						<Link href="/">
+						<Link href="/" className="underline underline-offset-4">
 							<Button className="bg-primary hover:bg-primary/90">
 								Create Your First Mock
 							</Button>
