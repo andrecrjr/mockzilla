@@ -1,34 +1,35 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter, JetBrains_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
-import { ThemeProvider } from "@/components/theme-provider"
-import "./globals.css"
-import { Toaster } from "sonner"
+import { Analytics } from '@vercel/analytics/next';
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import type React from 'react';
+import { ThemeProvider } from '@/components/theme-provider';
+import './globals.css';
+import { Toaster } from 'sonner';
 
-const _inter = Inter({ subsets: ["latin"] })
-const _jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
+const _inter = Inter({ subsets: ['latin'] });
+const _jetbrainsMono = JetBrains_Mono({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Mockzilla - Powerful API Mocking",
-  description: "Create and manage custom API mock endpoints with lightning-fast responses",
-  generator: "v0.app",
-  icons: {
-    icon: "/mockzilla-logo.png",
-  },
-}
+	title: 'Mockzilla - Powerful API Mocking',
+	description:
+		'Create and manage custom API mock endpoints with lightning-fast responses',
+	generator: 'v0.app',
+	icons: {
+		icon: '/mockzilla-logo.png',
+	},
+};
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+	return (
+		<html lang="en" suppressHydrationWarning>
+			<head>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
               (function() {
                 const theme = localStorage.getItem('mockzilla-theme') || 'system';
                 const isDark = theme === 'dark' || 
@@ -40,14 +41,14 @@ export default function RootLayout({
                 }
               })();
             `,
-          }}
-        />
-      </head>
-      <body className={`font-sans antialiased`} suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
-        <Toaster theme="system" />
-        <Analytics />
-      </body>
-    </html>
-  )
+					}}
+				/>
+			</head>
+			<body className={`font-sans antialiased`} suppressHydrationWarning>
+				<ThemeProvider>{children}</ThemeProvider>
+				<Toaster theme="system" />
+				<Analytics />
+			</body>
+		</html>
+	);
 }
