@@ -10,6 +10,11 @@ const ListFoldersArgs = z.object({
 	limit: z.number().int().min(1).max(100).optional(),
 });
 
+const CreateFolderArgs = z.object({
+	name: z.string(),
+	description: z.string().optional(),
+});
+
 const CreateMockArgs = z.object({
 	name: z.string(),
 	path: z.string(),
@@ -58,6 +63,34 @@ async function callListFolders(args: z.infer<typeof ListFoldersArgs>) {
 		updatedAt: folder.updatedAt?.toISOString() || null,
 	}));
 	return { data, meta: { total, page, limit, totalPages } };
+}
+
+function generateSlug(name: string): string {
+	return name
+		.toLowerCase()
+		.trim()
+		.replace(/\s+/g, '-')
+		.replace(/[^a-z0-9-]/g, '');
+}
+
+async function callCreateFolder(args: z.infer<typeof CreateFolderArgs>) {
+	const slug = generateSlug(args.name);
+	const [row] = await db
+		.insert(folders)
+		.values({
+			name: args.name,
+			slug,
+			description: args.description ?? null,
+		})
+		.returning();
+	return {
+		id: row.id,
+		name: row.name,
+		slug: row.slug,
+		description: row.description ?? null,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt?.toISOString() ?? null,
+	};
 }
 
 async function callCreateMock(args: z.infer<typeof CreateMockArgs>) {
@@ -319,7 +352,36 @@ const handler = createMcpHandler(
 			},
 			async ({ page, limit }, _extra) => {
 				const result = await callListFolders({ page, limit });
-				return { content: [], structuredContent: result };
+				return {
+					content: [
+						{
+							type: 'text',
+							text: `${JSON.stringify(result)}`,
+						},
+					],
+					structuredContent: result,
+				};
+			},
+		);
+
+		server.registerTool(
+			'create_folder',
+			{
+				title: 'Create Folder',
+				description: 'Create a folder to group mocks',
+				inputSchema: CreateFolderArgs,
+			},
+			async (args: z.infer<typeof CreateFolderArgs>, _extra) => {
+				const result = await callCreateFolder(args);
+				return {
+					content: [
+						{
+							type: 'text',
+							text: `${JSON.stringify(result)}`,
+						},
+					],
+					structuredContent: result,
+				};
 			},
 		);
 
@@ -332,7 +394,15 @@ const handler = createMcpHandler(
 			},
 			async (args: z.infer<typeof CreateMockArgs>, _extra) => {
 				const result = await callCreateMock(args);
-				return { content: [], structuredContent: result };
+				return {
+					content: [
+						{
+							type: 'text',
+							text: `${JSON.stringify(result)}`,
+						},
+					],
+					structuredContent: result,
+				};
 			},
 		);
 
@@ -378,7 +448,15 @@ const handler = createMcpHandler(
 			},
 			async (args: z.infer<typeof PreviewMockArgs>, _extra) => {
 				const result = await callPreviewMock(args);
-				return { content: [], structuredContent: result };
+				return {
+					content: [
+						{
+							type: 'text',
+							text: `${JSON.stringify(result)}`,
+						},
+					],
+					structuredContent: result,
+				};
 			},
 		);
 	},
