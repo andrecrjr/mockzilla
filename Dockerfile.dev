@@ -15,6 +15,7 @@ RUN bun install
 
 # Copy the rest of the application
 COPY . .
+RUN chmod +x ./docker-entrypoint.sh
 
 # Expose the development port
 EXPOSE 36666
@@ -24,7 +25,8 @@ ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=36666
+ENV START_CMD="bun dev"
 
 
-# Start the development server with hot-reloading
-CMD ["bun", "dev"]
+# Run database migrations first, then start the dev server
+ENTRYPOINT ["./docker-entrypoint.sh"]

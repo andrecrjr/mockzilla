@@ -1,55 +1,57 @@
 # syntax = docker/dockerfile:1
 
-FROM oven/bun:latest AS base
+FROM oven/bun:1-alpine AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Install dependencies
 FROM base AS deps
 COPY package.json ./
-COPY .env ./
-RUN bun install
+RUN bun install --frozen-lockfile
 
 # Build the Next.js app (standalone output)
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/.env ./
 COPY . .
 
 ENV NODE_ENV=production
 RUN bun run build
 
-# Production runner with standalone output
-FROM node:24-alpine AS runner
+# Production runner with Bun on Alpine
+FROM oven/bun:1-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=36666
 
-# Install PostgreSQL client for migrations
+# Install PostgreSQL client for migration health checks
 RUN apk add --no-cache postgresql-client
 
 # Create non-root user
 RUN addgroup -S nodejs -g 1001 && adduser -S nextjs -u 1001
-RUN mkdir .next && chown nextjs:nodejs .next
+RUN mkdir -p .next && chown nextjs:nodejs .next
 
-# Copy only the necessary runtime assets
-COPY --from=builder /app/public ./public
+# Copy standalone output as application root
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy migration files and scripts
-COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=builder /app/lib/db ./lib/db
-COPY --from=builder /app/package.json ./package.json
+# Copy node_modules from deps stage (contains drizzle-kit and dependencies)
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# Install drizzle-kit for migrations (as root)
-USER root
-RUN npm install -g drizzle-kit@0.28.1
+# Copy migration files and configuration
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
+
+# Copy migration runner script and entrypoint
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/migrate.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 USER nextjs
 
 EXPOSE 36666
 
-# Run startup script
-CMD ["node", "server.js"]
+# Run migrations on container start, then start the server
+ENV START_CMD="bun ./server.js"
+ENTRYPOINT ["./docker-entrypoint.sh"]
