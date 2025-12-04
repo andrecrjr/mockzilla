@@ -25,18 +25,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=36666
 
-# Create a startup script that waits for DB and runs migrations
-RUN echo '#!/bin/sh\n\
-echo "Waiting for database..."\n\
-while ! pg_isready -h postgres -U ${POSTGRES_USER:-mockzilla} > /dev/null 2>&1; do\n\
-  sleep 1\n\
-done\n\
-echo "Database is ready!"\n\
-echo "Running migrations..."\n\
-bun run db:push || echo "Migration failed, continuing..."\n\
-echo "Starting development server..."\n\
-exec bun run dev\n\
-' > /app/start-dev.sh && chmod +x /app/start-dev.sh
 
 # Start the development server with hot-reloading
-CMD ["/app/start-dev.sh"]
+CMD ["bun", "dev"]
