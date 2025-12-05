@@ -21,7 +21,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: mockzilla-app-dev
     ports:
       - "36666:36666"
@@ -59,7 +59,7 @@ services:
   drizzle-studio:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: mockzilla-drizzle-studio
     ports:
       - "4983:4983"
