@@ -46,10 +46,24 @@ db-studio:
 prod-build:
 	docker build -f Dockerfile.prd --no-cache -t mockzilla:latest .
 
+prod-up:
+	docker run -d --env-file .env -p 36666:36666 --name mockzilla-prod mockzilla:latest
+
+prod-down:
+	docker stop mockzilla-prod 2>/dev/null || true
+	docker rm mockzilla-prod 2>/dev/null || true
+
+prod-logs:
+	docker logs -f mockzilla-prod
+
+prod-run: prod-build prod-up
+
 # Utility commands
 clean:
 	docker compose down -v --remove-orphans
 	docker rmi mockzilla:latest
+	docker stop mockzilla-prod 2>/dev/null || true
+	docker rm mockzilla-prod 2>/dev/null || true
 
 db-shell:
 	docker exec -it mockzilla-postgres-dev psql -U mockzilla -d mockzilla
