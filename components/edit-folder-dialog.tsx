@@ -64,7 +64,7 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 					variant="ghost"
 					size="sm"
 					className="h-9 w-9 p-0"
-					onClick={(e) => e.preventDefault()}
+					onClick={(e) => e.stopPropagation()}
 				>
 					<Pencil className="h-4 w-4" />
 				</Button>
