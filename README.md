@@ -15,15 +15,15 @@ cp .env.example .env
 # Start development environment
 make dev-up
 
-# Or use the interactive helper
-./docker-helper.sh
+# Or use the Makefile commands
+make help
 ```
 
 Your application will be available at:
 - **Application**: http://localhost:36666
 - **Database**: localhost:5432
 
-📖 **For detailed Docker documentation, see [DOCKER.md](./DOCKER.md)**
+📖 **For detailed Docker documentation, see [documentation/DOCKER.md](./documentation/DOCKER.md)**
 
 ### Option 2: Local Development (Without Docker)
 
@@ -88,10 +88,10 @@ Open [http://localhost:36666](http://localhost:36666) with your browser to see t
 
 This project includes optimized Docker configurations for both development and production:
 
-- **Development** (`docker-compose.dev.yaml`): Hot-reloading, volume mounting, Drizzle Studio
-- **Production** (`docker-compose.yaml`): Optimized builds, standalone output, minimal runtime
+- **Development** (`docker-compose.yaml`): Hot-reloading, volume mounting, Drizzle Studio
+- **Production** (`docker-compose.prd.yaml`): Optimized builds, standalone output, minimal runtime
 
-See [DOCKER.md](./DOCKER.md) for comprehensive Docker documentation.
+See [documentation/DOCKER.md](./documentation/DOCKER.md) for comprehensive Docker documentation.
 
 ## 📁 Project Structure
 

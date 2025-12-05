@@ -6,7 +6,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Install dependencies
 FROM base AS deps
-COPY package.json ./
+COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
 # Build the Next.js app (standalone output)

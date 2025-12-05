@@ -18,7 +18,7 @@ This project includes Docker configurations for both **development** and **produ
    
    Or using docker compose directly:
    ```bash
-   docker compose -f docker-compose.dev.yaml up -d
+   docker compose -f docker-compose.yaml up -d
    ```
 
 3. **Access your application:**
@@ -65,7 +65,7 @@ Run `make help` to see all available commands:
 
 ## Key Differences: Development vs Production
 
-### Development Setup (`docker-compose.dev.yaml`)
+### Development Setup (`docker-compose.yaml`)
 - ✅ **Hot-reloading**: Changes to your code are immediately reflected
 - ✅ **Volume mounting**: Your local files are mounted into the container
 - ✅ **Faster iteration**: No need to rebuild containers for code changes
@@ -150,7 +150,7 @@ docker exec -it mockzilla-frontend drizzle-kit migrate
 If port 36666 or 5432 is already in use, you can either:
 
 1. Stop the conflicting service
-2. Change the port mapping in `docker-compose.dev.yaml` or `docker-compose.yaml`
+2. Change the port mapping in `docker-compose.yaml`
 
 ### Database Connection Issues
 

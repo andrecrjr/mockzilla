@@ -131,7 +131,7 @@ async function callCreateFolder(args: z.infer<typeof CreateFolderArgs>) {
 }
 
 async function callGetFolder(args: z.infer<typeof GetFolderArgs>) {
-	let row;
+	let row: typeof folders.$inferSelect | null = null;
 	if (args.id) {
 		[row] = await db.select().from(folders).where(eq(folders.id, args.id));
 	} else if (args.slug) {
@@ -204,8 +204,8 @@ async function callCreateMock(args: z.infer<typeof CreateMockArgs>) {
 			bodyType: body.bodyType || 'json',
 			enabled: body.enabled ?? true,
 			jsonSchema: body.jsonSchema,
-			useDynamicResponse: body.useDynamicResponse,
-			echoRequestBody: body.echoRequestBody,
+			useDynamicResponse: body.useDynamicResponse ?? false,
+			echoRequestBody: body.echoRequestBody ?? false,
 		})
 		.returning();
 
@@ -221,8 +221,8 @@ async function callCreateMock(args: z.infer<typeof CreateMockArgs>) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		jsonSchema: row.jsonSchema || null,
-		useDynamicResponse: row.useDynamicResponse ?? null,
-		echoRequestBody: row.echoRequestBody ?? null,
+		useDynamicResponse: row.useDynamicResponse,
+		echoRequestBody: row.echoRequestBody,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -233,7 +233,7 @@ async function callListMocks(args: z.infer<typeof ListMocksArgs>) {
 	const limit = args.limit ?? 10;
 	const offset = (page - 1) * limit;
 	let total = 0;
-	let rows;
+	let rows: (typeof mockResponses.$inferSelect)[] = [];
 	if (args.folderId) {
 		const [countRow] = await db
 			.select({ count: sql<number>`count(*)` })
@@ -318,8 +318,8 @@ async function callUpdateMock(args: z.infer<typeof UpdateMockArgs>) {
 			bodyType: args.bodyType || 'json',
 			enabled: args.enabled ?? true,
 			jsonSchema: args.jsonSchema ?? null,
-			useDynamicResponse: args.useDynamicResponse ?? null,
-			echoRequestBody: args.echoRequestBody ?? null,
+			useDynamicResponse: args.useDynamicResponse ?? false,
+			echoRequestBody: args.echoRequestBody ?? false,
 			updatedAt: new Date(),
 		})
 		.where(eq(mockResponses.id, args.id))
@@ -418,8 +418,8 @@ async function callCreateSchemaMock(args: {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		jsonSchema: row.jsonSchema || null,
-		useDynamicResponse: row.useDynamicResponse ?? null,
-		echoRequestBody: row.echoRequestBody ?? null,
+		useDynamicResponse: row.useDynamicResponse,
+		echoRequestBody: row.echoRequestBody,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
