@@ -25,34 +25,31 @@ help:
 
 # Development commands
 dev-up:
-	docker compose -f docker-compose.yaml up --remove-orphans
+	docker compose up --remove-orphans
 
 dev-down:
-	docker compose -f docker-compose.yaml down --remove-orphans
+	docker compose down --remove-orphans
 
 dev-logs:
-	docker compose -f docker-compose.yaml logs -f
+	docker compose logs -f
 
 dev-build:
-	docker compose -f docker-compose.yaml build --no-cache
+	docker compose build --no-cache
 
 dev-restart:
-	docker compose -f docker-compose.yaml restart
+	docker compose restart
 
 # Start Drizzle Studio
 db-studio:
-	docker compose -f docker-compose.yaml --profile tools up drizzle-studio --remove-orphans
-
-prod-logs:
-	docker compose logs -f
+	docker compose --profile tools up drizzle-studio --remove-orphans
 
 prod-build:
-	docker build --no-cache -t mockzilla:latest .
+	docker build -f Dockerfile.prd --no-cache -t mockzilla:latest .
 
 # Utility commands
 clean:
-	docker compose -f docker-compose.yaml down -v --remove-orphans
 	docker compose down -v --remove-orphans
+	docker rmi mockzilla:latest
 
 db-shell:
 	docker exec -it mockzilla-postgres-dev psql -U mockzilla -d mockzilla
