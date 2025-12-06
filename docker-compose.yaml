@@ -1,45 +1,88 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: mockzilla-postgres
+    container_name: mockzilla-postgres-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mockzilla}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mockzilla}
       POSTGRES_DB: ${POSTGRES_DB:-mockzilla}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_dev_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5432:5433"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mockzilla}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - mockzilla-network
+      - mockzilla-dev-network
 
-  front-moggzila:
-    build: 
+  app:
+    build:
       context: .
       dockerfile: Dockerfile
-    container_name: mockzilla-frontend
+    container_name: mockzilla-app-dev
     ports:
       - "36666:36666"
     environment:
       - PORT=36666
       - DATABASE_URL=postgresql://${POSTGRES_USER:-mockzilla}:${POSTGRES_PASSWORD:-mockzilla}@postgres:5432/${POSTGRES_DB:-mockzilla}
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
     env_file:
       - .env
+    volumes:
+      # Mount source code for hot-reloading
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./lib:/app/lib
+      - ./public:/app/public
+      - ./drizzle:/app/drizzle
+      - ./middleware.ts:/app/middleware.ts
+      - ./next.config.ts:/app/next.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./drizzle.config.ts:/app/drizzle.config.ts
+      # Exclude node_modules and .next from mounting to avoid conflicts
+      - /app/node_modules
+      - /app/.next
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - mockzilla-network
+      - mockzilla-dev-network
+    stdin_open: true
+    tty: true
+
+  # Optional: Drizzle Studio for database management
+  drizzle-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mockzilla-drizzle-studio
+    ports:
+      - "4983:4983"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-mockzilla}:${POSTGRES_PASSWORD:-mockzilla}@postgres:5432/${POSTGRES_DB:-mockzilla}
+    env_file:
+      - .env
+    volumes:
+      - ./drizzle:/app/drizzle
+      - ./lib:/app/lib
+      - ./drizzle.config.ts:/app/drizzle.config.ts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mockzilla-dev-network
+    command: bunx drizzle-kit studio --host 0.0.0.0
+    profiles:
+      - tools
 
 volumes:
-  postgres_data:
+  postgres_dev_data:
 
 networks:
-  mockzilla-network:
+  mockzilla-dev-network:
     driver: bridge

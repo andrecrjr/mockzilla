@@ -18,7 +18,7 @@ This project includes Docker configurations for both **development** and **produ
    
    Or using docker compose directly:
    ```bash
-   docker compose -f docker-compose.dev.yaml up -d
+   docker compose -f docker-compose.yaml up -d
    ```
 
 3. **Access your application:**
@@ -34,8 +34,13 @@ This project includes Docker configurations for both **development** and **produ
 
 1. **Build and start production:**
    ```bash
-   make prod-build
-   make prod-up
+   make prod-run
+   ```
+
+   Or build and run separately:
+   ```bash
+   make prod-build  # Build the production image
+   make prod-up     # Start the production container
    ```
 
 2. **Access your application:**
@@ -54,10 +59,11 @@ Run `make help` to see all available commands:
 - `make db-studio` - Start Drizzle Studio for database management (http://localhost:4983)
 
 ### Production Commands
-- `make prod-up` - Start production environment
-- `make prod-down` - Stop production environment
+- `make prod-run` - Build and run production container using Dockerfile.prd
+- `make prod-build` - Build production container using Dockerfile.prd
+- `make prod-up` - Start production container
+- `make prod-down` - Stop production container
 - `make prod-logs` - View production logs
-- `make prod-build` - Rebuild production containers
 
 ### Utility Commands
 - `make clean` - Remove all containers, volumes, and images
@@ -65,7 +71,7 @@ Run `make help` to see all available commands:
 
 ## Key Differences: Development vs Production
 
-### Development Setup (`docker-compose.dev.yaml`)
+### Development Setup (`docker-compose.yaml`)
 - ✅ **Hot-reloading**: Changes to your code are immediately reflected
 - ✅ **Volume mounting**: Your local files are mounted into the container
 - ✅ **Faster iteration**: No need to rebuild containers for code changes
@@ -73,7 +79,7 @@ Run `make help` to see all available commands:
 - ✅ **Uses Bun**: Faster package installation and dev server
 - ⚠️ **Larger container size**: Includes all dev dependencies
 
-### Production Setup (`docker-compose.yaml`)
+### Production Setup (`Dockerfile.prd`)
 - ✅ **Optimized build**: Multi-stage build for smaller image size
 - ✅ **Standalone output**: Next.js standalone mode for minimal runtime
 - ✅ **Security**: Runs as non-root user
@@ -150,7 +156,7 @@ docker exec -it mockzilla-frontend drizzle-kit migrate
 If port 36666 or 5432 is already in use, you can either:
 
 1. Stop the conflicting service
-2. Change the port mapping in `docker-compose.dev.yaml` or `docker-compose.yaml`
+2. Change the port mapping in `docker-compose.yaml`
 
 ### Database Connection Issues
 
@@ -242,6 +248,6 @@ This will remove all containers, volumes, and cached images.
 2. Make changes to your code
 3. See changes reflected immediately at http://localhost:36666
 4. Use Drizzle Studio for database management: `make db-studio`
-5. When ready for production: `make prod-build && make prod-up`
+5. When ready for production: `make prod-run` or `make prod-build && make prod-up`
 
 Happy coding! 🚀

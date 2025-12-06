@@ -288,10 +288,10 @@ export default function MockzillaAdmin() {
 							<>
 								<div className="grid gap-4 sm:grid-cols-2">
 									{folders.map((folder) => (
-										<Link href={`/folder/${folder.slug}`} key={folder.id}>
-											<Card className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
+										<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
 												<div className="p-6">
 													<div className="flex items-start justify-between">
+														<Link href={`/folder/${folder.slug}`} key={folder.id}>
 														<div className="flex items-center gap-3 flex-1">
 															<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
 																<FolderIcon className="h-6 w-6 text-primary" />
@@ -305,6 +305,7 @@ export default function MockzillaAdmin() {
 																</p>
 															</div>
 														</div>
+														</Link>
 													</div>
 													<div className="flex gap-1 border-t border-border mt-4 pt-3">
 														<EditFolderDialog
@@ -325,7 +326,6 @@ export default function MockzillaAdmin() {
 													</div>
 												</div>
 											</Card>
-										</Link>
 									))}
 								</div>
 								<PaginationControls

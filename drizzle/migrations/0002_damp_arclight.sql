@@ -1,0 +1,1 @@
+ALTER TABLE "mock_responses" ADD COLUMN "echo_request_body" boolean DEFAULT false NOT NULL;
