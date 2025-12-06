@@ -5,6 +5,10 @@ import type React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { Toaster } from 'sonner';
+import { ThemeSwitcher } from '@/components/theme-switcher';
+import { BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 const _inter = Inter({ subsets: ['latin'] });
 const _jetbrainsMono = JetBrains_Mono({ subsets: ['latin'] });
@@ -45,7 +49,42 @@ export default function RootLayout({
 				/>
 			</head>
 			<body className={`font-sans antialiased`} suppressHydrationWarning>
-				<ThemeProvider>{children}</ThemeProvider>
+				<ThemeProvider>
+					<nav className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+						<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+							<div className="flex h-16 items-center justify-between">
+								<div className="flex items-center gap-8">
+									<Link href="/" className="flex items-center gap-2 font-bold text-xl">
+										<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
+											<span className="text-primary">M</span>
+										</div>
+										<span className="text-foreground">Mockzilla</span>
+									</Link>
+									<div className="hidden md:block">
+										<div className="flex items-baseline space-x-2">
+											<Link href="/" className="text-foreground/80 hover:text-foreground hover:bg-accent px-3 py-2 rounded-md text-sm font-medium transition-colors">
+												Mocks
+											</Link>
+											<Link href="/workflows" className="text-foreground/80 hover:text-foreground hover:bg-accent px-3 py-2 rounded-md text-sm font-medium transition-colors">
+												Workflows
+											</Link>
+										</div>
+									</div>
+								</div>
+								<div className="flex items-center gap-2">
+									<Link href="/docs">
+										<Button variant="ghost" size="sm" className="gap-2">
+											<BookOpen className="h-4 w-4" />
+											<span className="hidden sm:inline">Docs</span>
+										</Button>
+									</Link>
+									<ThemeSwitcher />
+								</div>
+							</div>
+						</div>
+					</nav>
+					{children}
+				</ThemeProvider>
 				<Toaster theme="system" />
 				<Analytics />
 			</body>

@@ -2,7 +2,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { folders, mockResponses } from '@/lib/db/schema';
+import { folders, mockResponses, scenarioState, transitions, scenarios } from '@/lib/db/schema';
 import type { CreateMockRequest, HttpMethod } from '@/lib/types';
 
 const ListFoldersArgs = z.object({
@@ -75,6 +75,99 @@ const UpdateMockArgs = z.object({
 });
 
 const DeleteMockArgs = z.object({ id: z.string() });
+
+const ConditionSchema = z.object({
+	type: z.enum(['eq', 'neq', 'exists', 'gt', 'lt', 'contains']),
+	field: z.string(),
+	value: z.any().optional(),
+});
+
+// Helper to parse JSON strings or pass through objects
+const parseJsonOrPassthrough = (val: unknown) => {
+	if (typeof val === 'string') {
+		try {
+			return JSON.parse(val);
+		} catch {
+			return val;
+		}
+	}
+	return val;
+};
+
+const CreateWorkflowTransitionArgs = z.object({
+	scenarioId: z.string(),
+	name: z.string(),
+	title: z.string().optional(),
+	description: z.string().optional(),
+	path: z.string(),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+	conditions: z.preprocess(
+		parseJsonOrPassthrough,
+		z.union([z.record(z.any()), z.array(ConditionSchema)]).optional()
+	),
+	effects: z.preprocess(
+		parseJsonOrPassthrough,
+		z.union([z.record(z.any()), z.array(z.any())]).optional()
+	),
+	response: z.preprocess(
+		parseJsonOrPassthrough,
+		z.record(z.any())
+	),
+	meta: z.preprocess(
+		parseJsonOrPassthrough,
+		z.record(z.any()).optional()
+	),
+});
+
+const ResetWorkflowStateArgs = z.object({
+	scenarioId: z.string(),
+});
+
+const InspectWorkflowStateArgs = z.object({
+	scenarioId: z.string(),
+});
+
+const UpdateWorkflowTransitionArgs = z.object({
+	id: z.number().int(),
+	name: z.string().optional(),
+	title: z.string().optional(),
+	description: z.string().optional(),
+	path: z.string().optional(),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
+	conditions: z.preprocess(
+		parseJsonOrPassthrough,
+		z.union([z.record(z.any()), z.array(ConditionSchema)]).optional()
+	),
+	effects: z.preprocess(
+		parseJsonOrPassthrough,
+		z.union([z.record(z.any()), z.array(z.any())]).optional()
+	),
+	response: z.preprocess(
+		parseJsonOrPassthrough,
+		z.record(z.any()).optional()
+	),
+	meta: z.preprocess(
+		parseJsonOrPassthrough,
+		z.record(z.any()).optional()
+	),
+});
+
+const DeleteWorkflowTransitionArgs = z.object({
+	id: z.number().int(),
+});
+
+const ListWorkflowTransitionsArgs = z.object({
+	scenarioId: z.string(),
+});
+
+const TestWorkflowArgs = z.object({
+	scenarioId: z.string(),
+	path: z.string(),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+	body: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
+	query: z.record(z.string()).optional(),
+	headers: z.preprocess(parseJsonOrPassthrough, z.record(z.string()).optional()),
+});
 
 async function callListFolders(args: z.infer<typeof ListFoldersArgs>) {
 	const page = args.page ?? 1;
@@ -542,6 +635,194 @@ async function callPreviewMock(args: z.infer<typeof PreviewMockArgs>) {
 	};
 }
 
+async function callCreateWorkflowTransition(args: z.infer<typeof CreateWorkflowTransitionArgs>) {
+	// Ensure scenario exists (auto-create if not)
+	const [existingScenario] = await db
+		.select()
+		.from(scenarios)
+		.where(eq(scenarios.id, args.scenarioId));
+	
+	if (!existingScenario) {
+		// Auto-create scenario with scenarioId as both id and name
+		await db.insert(scenarios).values({
+			id: args.scenarioId,
+			name: args.scenarioId,
+			description: `Auto-created scenario for ${args.scenarioId}`,
+		}).onConflictDoNothing();
+	}
+
+	const [row] = await db
+		.insert(transitions)
+		.values({
+			scenarioId: args.scenarioId,
+			name: args.name,
+			title: args.title ?? null,
+			description: args.description ?? null,
+			path: args.path,
+			method: args.method,
+			conditions: args.conditions ?? {},
+			effects: args.effects ?? [],
+			response: args.response,
+			meta: args.meta ?? {},
+		})
+		.returning();
+	
+	return row;
+}
+
+async function callResetWorkflowState(args: z.infer<typeof ResetWorkflowStateArgs>) {
+	await db.delete(scenarioState).where(eq(scenarioState.scenarioId, args.scenarioId));
+	return { success: true };
+}
+
+async function callInspectWorkflowState(args: z.infer<typeof InspectWorkflowStateArgs>) {
+	const [row] = await db
+		.select()
+		.from(scenarioState)
+		.where(eq(scenarioState.scenarioId, args.scenarioId));
+	return row ? row.data : { tables: {}, state: {} };
+}
+
+async function callUpdateWorkflowTransition(args: z.infer<typeof UpdateWorkflowTransitionArgs>) {
+	const updateData: Record<string, unknown> = { updatedAt: new Date() };
+	if (args.name !== undefined) updateData.name = args.name;
+	if (args.title !== undefined) updateData.title = args.title;
+	if (args.description !== undefined) updateData.description = args.description;
+	if (args.path !== undefined) updateData.path = args.path;
+	if (args.method !== undefined) updateData.method = args.method;
+	if (args.conditions !== undefined) updateData.conditions = args.conditions;
+	if (args.effects !== undefined) updateData.effects = args.effects;
+	if (args.response !== undefined) updateData.response = args.response;
+	if (args.meta !== undefined) updateData.meta = args.meta;
+
+	const [row] = await db
+		.update(transitions)
+		.set(updateData)
+		.where(eq(transitions.id, args.id))
+		.returning();
+	
+	if (!row) return { error: 'Transition not found' };
+	return row;
+}
+
+async function callDeleteWorkflowTransition(args: z.infer<typeof DeleteWorkflowTransitionArgs>) {
+	await db.delete(transitions).where(eq(transitions.id, args.id));
+	return { success: true };
+}
+
+async function callListWorkflowTransitions(args: z.infer<typeof ListWorkflowTransitionsArgs>) {
+	const rows = await db
+		.select()
+		.from(transitions)
+		.where(eq(transitions.scenarioId, args.scenarioId))
+		.orderBy(transitions.createdAt);
+	return rows;
+}
+
+async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
+	const { processWorkflowRequest } = await import('@/lib/engine/processor');
+	
+	// Build the full path for the workflow
+	const fullPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
+	
+	// Query the database directly for the transition within the scenario
+	const matchingTransitions = await db
+		.select()
+		.from(transitions)
+		.where(
+			and(
+				eq(transitions.scenarioId, args.scenarioId),
+				eq(transitions.path, fullPath),
+				eq(transitions.method, args.method)
+			)
+		);
+	
+	if (matchingTransitions.length === 0) {
+		// Try pattern matching for parameterized routes like /users/:id
+		const allTransitions = await db
+			.select()
+			.from(transitions)
+			.where(
+				and(
+					eq(transitions.scenarioId, args.scenarioId),
+					eq(transitions.method, args.method)
+				)
+			);
+		
+		// Simple pattern matcher for :param style routes
+		const matchRoute = (pattern: string, actual: string): Record<string, string> | null => {
+			const patternParts = pattern.split('/');
+			const actualParts = actual.split('/');
+			if (patternParts.length !== actualParts.length) return null;
+			
+			const params: Record<string, string> = {};
+			for (let i = 0; i < patternParts.length; i++) {
+				if (patternParts[i].startsWith(':')) {
+					params[patternParts[i].slice(1)] = actualParts[i];
+				} else if (patternParts[i] !== actualParts[i]) {
+					return null;
+				}
+			}
+			return params;
+		};
+		
+		for (const t of allTransitions) {
+			const params = matchRoute(t.path, fullPath);
+			if (params) {
+				// Found a matching parameterized route
+				try {
+					const result = await processWorkflowRequest(t, params, args.body || {}, args.query || {}, args.headers || {});
+					return {
+						success: true,
+						transitionId: t.id,
+						transitionName: t.name,
+						matchedParams: params,
+						response: result,
+					};
+				} catch (error) {
+					return {
+						success: false,
+						error: error instanceof Error ? error.message : 'Unknown error',
+					};
+				}
+			}
+		}
+		
+		return {
+			success: false,
+			error: 'No matching transition found',
+			scenarioId: args.scenarioId,
+			path: fullPath,
+			method: args.method,
+		};
+	}
+	
+	const transition = matchingTransitions[0];
+	
+	// Process the request
+	try {
+		const result = await processWorkflowRequest(
+			transition,
+			{}, // No URL params for exact match
+			args.body || {},
+			args.query || {},
+			args.headers || {}
+		);
+		
+		return {
+			success: true,
+			transitionId: transition.id,
+			transitionName: transition.name,
+			response: result,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : 'Unknown error',
+		};
+	}
+}
+
 const handler = createMcpHandler(
 	async (server) => {
 		server.registerTool(
@@ -813,6 +1094,112 @@ const handler = createMcpHandler(
 				};
 			},
 		);
+
+		server.registerTool(
+			'create_workflow_transition',
+			{
+				title: 'Create Workflow Transition',
+				description: 'Create a stateful transition for a workflow scenario',
+				inputSchema: CreateWorkflowTransitionArgs,
+			},
+			async (args: z.infer<typeof CreateWorkflowTransitionArgs>, _extra) => {
+				const result = await callCreateWorkflowTransition(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'reset_workflow_state',
+			{
+				title: 'Reset Workflow State',
+				description: 'Reset the state and DB of a scenario',
+				inputSchema: ResetWorkflowStateArgs,
+			},
+			async (args: z.infer<typeof ResetWorkflowStateArgs>, _extra) => {
+				const result = await callResetWorkflowState(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'inspect_workflow_state',
+			{
+				title: 'Inspect Workflow State',
+				description: 'View the current state and DB of a scenario',
+				inputSchema: InspectWorkflowStateArgs,
+			},
+			async (args: z.infer<typeof InspectWorkflowStateArgs>, _extra) => {
+				const result = await callInspectWorkflowState(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'update_workflow_transition',
+			{
+				title: 'Update Workflow Transition',
+				description: 'Update an existing workflow transition by ID',
+				inputSchema: UpdateWorkflowTransitionArgs,
+			},
+			async (args: z.infer<typeof UpdateWorkflowTransitionArgs>, _extra) => {
+				const result = await callUpdateWorkflowTransition(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'delete_workflow_transition',
+			{
+				title: 'Delete Workflow Transition',
+				description: 'Delete a workflow transition by ID',
+				inputSchema: DeleteWorkflowTransitionArgs,
+			},
+			async (args: z.infer<typeof DeleteWorkflowTransitionArgs>, _extra) => {
+				const result = await callDeleteWorkflowTransition(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'list_workflow_transitions',
+			{
+				title: 'List Workflow Transitions',
+				description: 'List all transitions for a scenario',
+				inputSchema: ListWorkflowTransitionsArgs,
+			},
+			async (args: z.infer<typeof ListWorkflowTransitionsArgs>, _extra) => {
+				const result = await callListWorkflowTransitions(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'test_workflow',
+			{
+				title: 'Test Workflow',
+				description: 'Test a workflow transition by simulating a request to a path',
+				inputSchema: TestWorkflowArgs,
+			},
+			async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
+				const result = await callTestWorkflow(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
 	},
 	{
 		serverInfo: { name: 'Mockzilla', version: '1.0.0' },

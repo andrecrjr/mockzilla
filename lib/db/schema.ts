@@ -2,8 +2,10 @@ import { relations } from 'drizzle-orm';
 import {
 	boolean,
 	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
+	serial,
 	text,
 	timestamp,
 	uuid,
@@ -65,3 +67,35 @@ export const mockResponsesRelations = relations(mockResponses, ({ one }) => ({
 		references: [folders.id],
 	}),
 }));
+// Workflow Tables
+export const transitions = pgTable('transitions', {
+	id: serial('id').primaryKey(),
+	scenarioId: text('scenario_id').notNull(),
+	name: text('name').notNull(),
+	title: text('title'),
+	description: text('description'),
+	path: text('path').notNull(),
+	method: text('method').notNull(),
+	conditions: jsonb('conditions').default('{}'),
+	effects: jsonb('effects').default('[]'),
+	response: jsonb('response').notNull(),
+	meta: jsonb('meta').default('{}'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at'),
+});
+
+export const scenarioState = pgTable('scenario_state', {
+	scenarioId: text('scenario_id').primaryKey(),
+	data: jsonb('data').default('{"tables": {}, "state": {}}').notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Scenarios table for explicit scenario management
+export const scenarios = pgTable('scenarios', {
+	id: text('id').primaryKey(), // slug-based ID
+	name: text('name').notNull(),
+	description: text('description'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at'),
+});
+

@@ -22,6 +22,27 @@
       "when": 1764875838964,
       "tag": "0002_damp_arclight",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765022224201,
+      "tag": "0003_lonely_joshua_kane",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765031502201,
+      "tag": "0004_cold_justin_hammer",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765035732944,
+      "tag": "0005_boring_frog_thor",
+      "breakpoints": true
     }
   ]
 }

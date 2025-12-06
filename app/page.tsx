@@ -1,10 +1,8 @@
 'use client';
 
 import {
-	BookOpen,
 	Download,
 	FolderIcon,
-	Skull,
 	Trash2,
 	Upload,
 } from 'lucide-react';
@@ -17,7 +15,6 @@ import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
 import { FolderForm } from '@/components/folder-form';
 import { PaginationControls } from '@/components/pagination-controls';
-import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { Folder } from '@/lib/types';
@@ -194,53 +191,32 @@ export default function MockzillaAdmin() {
 				<div className="mb-12">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
-							<div className="flex h-14 w-26 items-center justify-center rounded-xl">
-								<img src="/mockzilla-logo.png" alt="Mockzilla Logo" />
-							</div>
-							<div>
-								<h1 className="text-5xl font-black tracking-tighter text-foreground">
-									Mockzilla
-								</h1>
-								<p className="mt-1 text-sm font-medium text-primary/80">
-									Powerful API Mocking Unleashed
-								</p>
-							</div>
-						</div>
-						<div className="flex gap-2">
-							<Link href="/docs">
+							<div className="flex gap-2">
+								<CreateMockDialog folders={allFolders} />
 								<Button
 									variant="outline"
+									onClick={handleExport}
 									className="mockzilla-border bg-card/50 backdrop-blur-sm"
 								>
-									<BookOpen className="mr-2 h-4 w-4" />
-									Docs
+									<Download className="mr-2 h-4 w-4" />
+									Export
 								</Button>
-							</Link>
-							<ThemeSwitcher />
-							<CreateMockDialog folders={allFolders} />
-							<Button
-								variant="outline"
-								onClick={handleExport}
-								className="mockzilla-border bg-card/50 backdrop-blur-sm"
-							>
-								<Download className="mr-2 h-4 w-4" />
-								Export
-							</Button>
-							<Button
-								variant="outline"
-								onClick={() => fileInputRef.current?.click()}
-								className="mockzilla-border bg-card/50 backdrop-blur-sm"
-							>
-								<Upload className="mr-2 h-4 w-4" />
-								Import
-							</Button>
-							<input
-								ref={fileInputRef}
-								type="file"
-								accept=".json"
-								onChange={handleImport}
-								className="hidden"
-							/>
+								<Button
+									variant="outline"
+									onClick={() => fileInputRef.current?.click()}
+									className="mockzilla-border bg-card/50 backdrop-blur-sm"
+								>
+									<Upload className="mr-2 h-4 w-4" />
+									Import
+								</Button>
+								<input
+									ref={fileInputRef}
+									type="file"
+									accept=".json"
+									onChange={handleImport}
+									className="hidden"
+								/>
+							</div>
 						</div>
 					</div>
 				</div>
