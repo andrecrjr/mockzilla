@@ -29,6 +29,7 @@ export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardP
     navigator.clipboard.writeText(curl);
     toast.success('cURL Command Copied');
   };
+  console.log(transition)
 
   return (
     <Card className="p-4 group hover:border-primary/50 transition-colors">

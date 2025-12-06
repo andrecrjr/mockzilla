@@ -72,7 +72,6 @@ export const transitions = pgTable('transitions', {
 	id: serial('id').primaryKey(),
 	scenarioId: text('scenario_id').notNull(),
 	name: text('name').notNull(),
-	title: text('title'),
 	description: text('description'),
 	path: text('path').notNull(),
 	method: text('method').notNull(),
