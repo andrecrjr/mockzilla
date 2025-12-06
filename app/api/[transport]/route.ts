@@ -97,22 +97,21 @@ const parseJsonOrPassthrough = (val: unknown) => {
 const CreateWorkflowTransitionArgs = z.object({
 	scenarioId: z.string(),
 	name: z.string(),
-	title: z.string().optional(),
 	description: z.string().optional(),
 	path: z.string(),
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
 	conditions: z.preprocess(
 		parseJsonOrPassthrough,
 		z.union([z.record(z.any()), z.array(ConditionSchema)]).optional()
-	),
+	).describe('Defines when this transition should trigger. Two formats supported: 1. Simplified Object (Equality): { "input.body.status": "active" } checks if field equals value. 2. Explicit Rule Array: [ { "type": "eq", "field": "input.body.id", "value": 123 } ]. Supported types: "eq", "neq", "exists", "gt", "lt", "contains" DONT USE PURE JS, ONLY STATIC DATA.'),
 	effects: z.preprocess(
 		parseJsonOrPassthrough,
 		z.union([z.record(z.any()), z.array(z.any())]).optional()
-	),
+	).describe('Defines side effects. Supported types: state.set, db.push, db.update, db.remove. Interpolation supported ONLY for: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}, {{ input.params }}. Random generation (Faker) is NOT supported. DONT USE PURE JS, ONLY STATIC DATA'),
 	response: z.preprocess(
 		parseJsonOrPassthrough,
 		z.record(z.any())
-	),
+	).describe('Response to return. Supports interpolation ONLY for this: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}. No random generation DONT USE PURE JS, ONLY STATIC DATA.'),
 	meta: z.preprocess(
 		parseJsonOrPassthrough,
 		z.record(z.any()).optional()
@@ -130,26 +129,39 @@ const InspectWorkflowStateArgs = z.object({
 const UpdateWorkflowTransitionArgs = z.object({
 	id: z.number().int(),
 	name: z.string().optional(),
-	title: z.string().optional(),
 	description: z.string().optional(),
 	path: z.string().optional(),
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
 	conditions: z.preprocess(
 		parseJsonOrPassthrough,
 		z.union([z.record(z.any()), z.array(ConditionSchema)]).optional()
-	),
+	).describe('Defines when this transition should trigger. Two formats supported: 1. Simplified Object (Equality): { "input.body.status": "active" } checks if field equals value. 2. Explicit Rule Array: [ { "type": "eq", "field": "input.body.id", "value": 123 } ]. Supported types: "eq", "neq", "exists", "gt", "lt", "contains".'),
 	effects: z.preprocess(
 		parseJsonOrPassthrough,
 		z.union([z.record(z.any()), z.array(z.any())]).optional()
-	),
+	).describe('Defines side effects. Supported types: state.set, db.push, db.update, db.remove. Interpolation supported for: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}, {{ input.params }}. Random generation (Faker) is NOT supported.'),
 	response: z.preprocess(
 		parseJsonOrPassthrough,
 		z.record(z.any()).optional()
-	),
+	).describe('Response to return. Supports interpolation: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}. No random generation.'),
 	meta: z.preprocess(
 		parseJsonOrPassthrough,
 		z.record(z.any()).optional()
 	),
+});
+
+const CreateWorkflowScenarioArgs = z.object({
+	name: z.string().describe('Name of the scenario (e.g. "auth-flow"). Slug will be generated automatically if ID not provided.'),
+	description: z.string().optional(),
+});
+
+const ListWorkflowScenariosArgs = z.object({
+	page: z.number().int().min(1).optional(),
+	limit: z.number().int().min(1).max(100).optional(),
+});
+
+const DeleteWorkflowScenarioArgs = z.object({
+	id: z.string().describe('The ID (slug) of the scenario to delete.'),
 });
 
 const DeleteWorkflowTransitionArgs = z.object({
@@ -656,7 +668,6 @@ async function callCreateWorkflowTransition(args: z.infer<typeof CreateWorkflowT
 		.values({
 			scenarioId: args.scenarioId,
 			name: args.name,
-			title: args.title ?? null,
 			description: args.description ?? null,
 			path: args.path,
 			method: args.method,
@@ -686,7 +697,6 @@ async function callInspectWorkflowState(args: z.infer<typeof InspectWorkflowStat
 async function callUpdateWorkflowTransition(args: z.infer<typeof UpdateWorkflowTransitionArgs>) {
 	const updateData: Record<string, unknown> = { updatedAt: new Date() };
 	if (args.name !== undefined) updateData.name = args.name;
-	if (args.title !== undefined) updateData.title = args.title;
 	if (args.description !== undefined) updateData.description = args.description;
 	if (args.path !== undefined) updateData.path = args.path;
 	if (args.method !== undefined) updateData.method = args.method;
@@ -717,6 +727,43 @@ async function callListWorkflowTransitions(args: z.infer<typeof ListWorkflowTran
 		.where(eq(transitions.scenarioId, args.scenarioId))
 		.orderBy(transitions.createdAt);
 	return rows;
+}
+
+async function callCreateWorkflowScenario(args: z.infer<typeof CreateWorkflowScenarioArgs>) {
+	const id = generateSlug(args.name);
+	const [row] = await db
+		.insert(scenarios)
+		.values({
+			id,
+			name: args.name,
+			description: args.description ?? null,
+		})
+		.returning();
+	return row;
+}
+
+async function callListWorkflowScenarios(args: z.infer<typeof ListWorkflowScenariosArgs>) {
+	const page = args.page ?? 1;
+	const limit = args.limit ?? 10;
+	const offset = (page - 1) * limit;
+
+	const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(scenarios);
+	const total = Number(totalResult.count);
+	const totalPages = Math.ceil(total / limit);
+
+	const rows = await db
+		.select()
+		.from(scenarios)
+		.orderBy(scenarios.createdAt)
+		.limit(limit)
+		.offset(offset);
+	
+	return { data: rows, meta: { total, page, limit, totalPages } };
+}
+
+async function callDeleteWorkflowScenario(args: z.infer<typeof DeleteWorkflowScenarioArgs>) {
+	await db.delete(scenarios).where(eq(scenarios.id, args.id));
+	return { success: true };
 }
 
 async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
@@ -1186,10 +1233,55 @@ const handler = createMcpHandler(
 		);
 
 		server.registerTool(
+			'create_workflow_scenario',
+			{
+				title: 'Create Workflow Scenario',
+				description: 'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
+				inputSchema: CreateWorkflowScenarioArgs,
+			},
+			async (args: z.infer<typeof CreateWorkflowScenarioArgs>, _extra) => {
+				const result = await callCreateWorkflowScenario(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'list_workflow_scenarios',
+			{
+				title: 'List Workflow Scenarios',
+				description: 'List existing workflow scenarios.',
+				inputSchema: ListWorkflowScenariosArgs,
+			},
+			async (args: z.infer<typeof ListWorkflowScenariosArgs>, _extra) => {
+				const result = await callListWorkflowScenarios(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
+			'delete_workflow_scenario',
+			{
+				title: 'Delete Workflow Scenario',
+				description: 'Delete a workflow scenario by ID.',
+				inputSchema: DeleteWorkflowScenarioArgs,
+			},
+			async (args: z.infer<typeof DeleteWorkflowScenarioArgs>, _extra) => {
+				const result = await callDeleteWorkflowScenario(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			}
+		);
+
+		server.registerTool(
 			'test_workflow',
 			{
 				title: 'Test Workflow',
-				description: 'Test a workflow transition by simulating a request to a path',
+				description: 'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
 				inputSchema: TestWorkflowArgs,
 			},
 			async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {

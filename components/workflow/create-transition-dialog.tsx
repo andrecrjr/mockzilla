@@ -26,7 +26,6 @@ import useSWRMutation from 'swr/mutation';
 // --- Schema ---
 const transitionSchema = z.object({
   name: z.string().optional(),
-  title: z.string().optional(),
   description: z.string().optional(),
   path: z.string().min(1, "Path is required").startsWith("/", "Path must start with /"),
   method: z.enum(["GET", "POST", "PUT", "DELETE"]),
@@ -41,7 +40,6 @@ export interface Transition {
   id: number;
   scenarioId: string;
   name: string;
-  title?: string;
   description?: string;
   path: string;
   method: string;
@@ -125,7 +123,6 @@ export function TransitionDialog({
     resolver: zodResolver(transitionSchema),
     defaultValues: {
       name: '',
-      title: '',
       description: '',
       path: '',
       method: 'POST',
@@ -140,7 +137,6 @@ export function TransitionDialog({
     if (open && isEditMode && transition) {
       form.reset({
         name: transition.name || '',
-        title: transition.title || '',
         description: transition.description || '',
         path: transition.path,
         method: transition.method as "GET" | "POST" | "PUT" | "DELETE",
@@ -315,7 +311,6 @@ export function TransitionDialog({
     const payload = {
       scenarioId,
       name: data.name,
-      title: data.title || null,
       description: data.description || null,
       path: data.path,
       method: data.method,
@@ -387,16 +382,10 @@ export function TransitionDialog({
             </div>
           </div>
 
-          {/* Title and Description */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Title <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input {...form.register('title')} placeholder="e.g. Add item to cart" />
-            </div>
-            <div className="space-y-2">
-              <Label>Description <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input {...form.register('description')} placeholder="Adds an item to the shopping cart" />
-            </div>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label>Description <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <Input {...form.register('description')} placeholder="Adds an item to the shopping cart" />
           </div>
           
           <div className="space-y-2">

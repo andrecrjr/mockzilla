@@ -45,7 +45,7 @@ export async function PUT(
 
     try {
         const body = await request.json();
-        const { name, path, method, conditions, effects, response, meta } = body;
+        const { name, description, path, method, conditions, effects, response, meta } = body;
 
         // Validate required fields
         if (!path || !method || !response) {
@@ -59,6 +59,7 @@ export async function PUT(
             .update(transitions)
             .set({
                 name: name || '',
+                description: description || null,
                 path,
                 method,
                 conditions: conditions || {},

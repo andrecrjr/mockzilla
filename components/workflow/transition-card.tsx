@@ -63,16 +63,10 @@ export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardP
         </DropdownMenu>
       </div>
 
-      {/* Title and Description */}
-      {(transition.title || transition.description) && (
-        <div className="mb-3">
-          {transition.title && (
-            <h4 className="font-medium text-sm">{transition.title}</h4>
-          )}
-          {transition.description && (
-            <p className="text-xs text-muted-foreground mt-0.5">{transition.description}</p>
-          )}
-        </div>
+      {/* Description */}
+        <p className="text-xl font-semibold">{transition.name}</p>
+      {transition.description && (
+          <p className="text-xs">{transition.description}</p>
       )}
 
       <div className="flex items-center gap-2 mb-4">

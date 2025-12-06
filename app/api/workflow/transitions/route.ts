@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
 		const {
 			scenarioId,
 			name,
+			description,
 			path,
 			method,
 			conditions,
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
 			.values({
 				scenarioId,
 				name: name || '', // Default to empty string if not provided
+				description: description || null,
 				path,
 				method,
 				conditions: conditions || {},
