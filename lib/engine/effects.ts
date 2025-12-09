@@ -2,10 +2,40 @@
 import { type MatchContext } from './match';
 
 type Effect = 
-  | { type: 'state.set'; key: string; value: any }
-  | { type: 'db.push'; table: string; value: any }
-  | { type: 'db.update'; table: string; match: Record<string, any>; set: Record<string, any> }
-  | { type: 'db.remove'; table: string; match: Record<string, any> };
+  | { 
+      /** Set state variables explicitly. */
+      type: 'state.set'; 
+      /** Key to set in scenario state. */
+      key: string; 
+      /** Value to set (interplation supported). */
+      value: any 
+    }
+  | { 
+      /** Append a row to a mini-db table. */
+      type: 'db.push'; 
+      /** Table name. */
+      table: string; 
+      /** Row object to append. */
+      value: any 
+    }
+  | { 
+      /** Update existing rows in a mini-db table. */
+      type: 'db.update'; 
+      /** Table name. */
+      table: string; 
+      /** Fields to match against (e.g. { id: "{{input.body.id}}" }). */
+      match: Record<string, any>; 
+      /** Fields to update. */
+      set: Record<string, any> 
+    }
+  | { 
+      /** Remove rows from a mini-db table. */
+      type: 'db.remove'; 
+      /** Table name. */
+      table: string; 
+      /** Fields to match for removal. */
+      match: Record<string, any> 
+    };
 
 /**
  * Interpolates a string value using context.

@@ -1,7 +1,22 @@
 
 export type Condition = {
+	/**
+	 * Operator type:
+	 * - eq: Equals (strict or loose)
+	 * - neq: Not Equals
+	 * - exists: Field is not undefined/null
+	 * - gt: Greater than (numeric)
+	 * - lt: Less than (numeric)
+	 * - contains: Array includes value OR String includes substring
+	 */
 	type: 'eq' | 'neq' | 'exists' | 'gt' | 'lt' | 'contains';
+	/**
+	 * Path to field (e.g., "input.body.id", "state.status", "db.users").
+	 */
 	field: string;
+	/**
+	 * Value to compare against.
+	 */
 	value?: any;
 };
 

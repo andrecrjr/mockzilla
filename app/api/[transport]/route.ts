@@ -2,7 +2,14 @@ import { and, eq, sql } from 'drizzle-orm';
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { folders, mockResponses, scenarioState, transitions, scenarios } from '@/lib/db/schema';
+import {
+	folders,
+	mockResponses,
+	scenarioState,
+	scenarios,
+	transitions,
+} from '@/lib/db/schema';
+import { matches } from '@/lib/engine/match';
 import type { CreateMockRequest, HttpMethod } from '@/lib/types';
 
 const ListFoldersArgs = z.object({
@@ -98,24 +105,34 @@ const CreateWorkflowTransitionArgs = z.object({
 	scenarioId: z.string(),
 	name: z.string(),
 	description: z.string().optional(),
-	path: z.string(),
+	path: z
+		.string()
+		.describe(
+			'The URL path (e.g. "/users" or "/users/:id"). Supports :param syntax.',
+		),
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
-	conditions: z.preprocess(
-		parseJsonOrPassthrough,
-		z.union([z.record(z.any()), z.array(ConditionSchema)]).optional()
-	).describe('Defines when this transition should trigger. Two formats supported: 1. Simplified Object (Equality): { "input.body.status": "active" } checks if field equals value. 2. Explicit Rule Array: [ { "type": "eq", "field": "input.body.id", "value": 123 } ]. Supported types: "eq", "neq", "exists", "gt", "lt", "contains" DONT USE PURE JS, ONLY STATIC DATA.'),
-	effects: z.preprocess(
-		parseJsonOrPassthrough,
-		z.union([z.record(z.any()), z.array(z.any())]).optional()
-	).describe('Defines side effects. Supported types: state.set, db.push, db.update, db.remove. Interpolation supported ONLY for: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}, {{ input.params }}. Random generation (Faker) is NOT supported. DONT USE PURE JS, ONLY STATIC DATA'),
-	response: z.preprocess(
-		parseJsonOrPassthrough,
-		z.record(z.any())
-	).describe('Response to return. Supports interpolation ONLY for this: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}. No random generation DONT USE PURE JS, ONLY STATIC DATA.'),
-	meta: z.preprocess(
-		parseJsonOrPassthrough,
-		z.record(z.any()).optional()
-	),
+	conditions: z
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.union([z.record(z.any()), z.array(ConditionSchema)]).optional(),
+		)
+		.describe(
+			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).\n\nEXAMPLE:\n[\n  { "type": "eq", "field": "input.body.type", "value": "admin" },\n  { "type": "exists", "field": "input.headers.authorization" }\n]\n\nSupported Types:\n- eq: Equals\n- neq: Not Equals\n- exists: Field exists\n- gt: Greater Than\n- lt: Less Than\n- contains: String/Array contains value\n\nAllowed Fields:\n- input.body.*\n- input.query.*\n- input.params.*\n- input.headers.*\n- state.*\n- db.*',
+		),
+	effects: z
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.union([z.record(z.any()), z.array(z.any())]).optional(),
+		)
+		.describe(
+			'Side effects to execute.\nFormat: Array of effect objects.\n\nEXAMPLE:\n[\n  { "type": "state.set", "raw": { "isLoggedIn": true } },\n  { "type": "db.push", "table": "users", "value": "{{input.body}}" }\n]\n\nSupported Actions:\n- state.set: Set state variables ({ type: "state.set", raw: { key: value } })\n- db.push: Add row to table ({ type: "db.push", table: "name", value: obj })\n- db.update: Update rows ({ type: "db.update", table: "name", match: { id: "{{input.params.id}}" }, set: { status: "active" } })\n- db.remove: Remove rows ({ type: "db.remove", table: "name", match: { id: 123 } })\n\nNOTE: NO Random/Faker. Use {{input.*}}, {{state.*}} for values.',
+		),
+	response: z
+		.preprocess(parseJsonOrPassthrough, z.record(z.any()))
+		.describe(
+			'Response configuration.\n\nEXAMPLE:\n{\n  "status": 201,\n  "body": { "id": "{{input.body.id}}", "status": "created" }\n}\n\nInterpolation supported for body values: {{input.*}}, {{state.*}}, {{db.*}}',
+		),
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
 });
 
 const ResetWorkflowStateArgs = z.object({
@@ -131,27 +148,39 @@ const UpdateWorkflowTransitionArgs = z.object({
 	name: z.string().optional(),
 	description: z.string().optional(),
 	path: z.string().optional(),
-	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
-	conditions: z.preprocess(
-		parseJsonOrPassthrough,
-		z.union([z.record(z.any()), z.array(ConditionSchema)]).optional()
-	).describe('Defines when this transition should trigger. Two formats supported: 1. Simplified Object (Equality): { "input.body.status": "active" } checks if field equals value. 2. Explicit Rule Array: [ { "type": "eq", "field": "input.body.id", "value": 123 } ]. Supported types: "eq", "neq", "exists", "gt", "lt", "contains".'),
-	effects: z.preprocess(
-		parseJsonOrPassthrough,
-		z.union([z.record(z.any()), z.array(z.any())]).optional()
-	).describe('Defines side effects. Supported types: state.set, db.push, db.update, db.remove. Interpolation supported for: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}, {{ input.params }}. Random generation (Faker) is NOT supported.'),
-	response: z.preprocess(
-		parseJsonOrPassthrough,
-		z.record(z.any()).optional()
-	).describe('Response to return. Supports interpolation: {{ state.var }}, {{ db.table }}, {{ input.body }}, {{ input.query }}. No random generation.'),
-	meta: z.preprocess(
-		parseJsonOrPassthrough,
-		z.record(z.any()).optional()
-	),
+	method: z
+		.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+		.optional(),
+	conditions: z
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.union([z.record(z.any()), z.array(ConditionSchema)]).optional(),
+		)
+		.describe(
+			'Update conditions. See CreateWorkflowTransitionArgs for allowed formats and rules.',
+		),
+	effects: z
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.union([z.record(z.any()), z.array(z.any())]).optional(),
+		)
+		.describe(
+			'Update effects. See CreateWorkflowTransitionArgs for allowed formats and rules.',
+		),
+	response: z
+		.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional())
+		.describe(
+			'Update response configuration. See CreateWorkflowTransitionArgs for rules.',
+		),
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
 });
 
 const CreateWorkflowScenarioArgs = z.object({
-	name: z.string().describe('Name of the scenario (e.g. "auth-flow"). Slug will be generated automatically if ID not provided.'),
+	name: z
+		.string()
+		.describe(
+			'Name of the scenario (e.g. "auth-flow"). Slug will be generated automatically if ID not provided.',
+		),
 	description: z.string().optional(),
 });
 
@@ -178,7 +207,10 @@ const TestWorkflowArgs = z.object({
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
 	body: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
 	query: z.record(z.string()).optional(),
-	headers: z.preprocess(parseJsonOrPassthrough, z.record(z.string()).optional()),
+	headers: z.preprocess(
+		parseJsonOrPassthrough,
+		z.record(z.string()).optional(),
+	),
 });
 
 async function callListFolders(args: z.infer<typeof ListFoldersArgs>) {
@@ -647,20 +679,25 @@ async function callPreviewMock(args: z.infer<typeof PreviewMockArgs>) {
 	};
 }
 
-async function callCreateWorkflowTransition(args: z.infer<typeof CreateWorkflowTransitionArgs>) {
+async function callCreateWorkflowTransition(
+	args: z.infer<typeof CreateWorkflowTransitionArgs>,
+) {
 	// Ensure scenario exists (auto-create if not)
 	const [existingScenario] = await db
 		.select()
 		.from(scenarios)
 		.where(eq(scenarios.id, args.scenarioId));
-	
+
 	if (!existingScenario) {
 		// Auto-create scenario with scenarioId as both id and name
-		await db.insert(scenarios).values({
-			id: args.scenarioId,
-			name: args.scenarioId,
-			description: `Auto-created scenario for ${args.scenarioId}`,
-		}).onConflictDoNothing();
+		await db
+			.insert(scenarios)
+			.values({
+				id: args.scenarioId,
+				name: args.scenarioId,
+				description: `Auto-created scenario for ${args.scenarioId}`,
+			})
+			.onConflictDoNothing();
 	}
 
 	const [row] = await db
@@ -677,16 +714,22 @@ async function callCreateWorkflowTransition(args: z.infer<typeof CreateWorkflowT
 			meta: args.meta ?? {},
 		})
 		.returning();
-	
+
 	return row;
 }
 
-async function callResetWorkflowState(args: z.infer<typeof ResetWorkflowStateArgs>) {
-	await db.delete(scenarioState).where(eq(scenarioState.scenarioId, args.scenarioId));
+async function callResetWorkflowState(
+	args: z.infer<typeof ResetWorkflowStateArgs>,
+) {
+	await db
+		.delete(scenarioState)
+		.where(eq(scenarioState.scenarioId, args.scenarioId));
 	return { success: true };
 }
 
-async function callInspectWorkflowState(args: z.infer<typeof InspectWorkflowStateArgs>) {
+async function callInspectWorkflowState(
+	args: z.infer<typeof InspectWorkflowStateArgs>,
+) {
 	const [row] = await db
 		.select()
 		.from(scenarioState)
@@ -694,7 +737,9 @@ async function callInspectWorkflowState(args: z.infer<typeof InspectWorkflowStat
 	return row ? row.data : { tables: {}, state: {} };
 }
 
-async function callUpdateWorkflowTransition(args: z.infer<typeof UpdateWorkflowTransitionArgs>) {
+async function callUpdateWorkflowTransition(
+	args: z.infer<typeof UpdateWorkflowTransitionArgs>,
+) {
 	const updateData: Record<string, unknown> = { updatedAt: new Date() };
 	if (args.name !== undefined) updateData.name = args.name;
 	if (args.description !== undefined) updateData.description = args.description;
@@ -710,17 +755,21 @@ async function callUpdateWorkflowTransition(args: z.infer<typeof UpdateWorkflowT
 		.set(updateData)
 		.where(eq(transitions.id, args.id))
 		.returning();
-	
+
 	if (!row) return { error: 'Transition not found' };
 	return row;
 }
 
-async function callDeleteWorkflowTransition(args: z.infer<typeof DeleteWorkflowTransitionArgs>) {
+async function callDeleteWorkflowTransition(
+	args: z.infer<typeof DeleteWorkflowTransitionArgs>,
+) {
 	await db.delete(transitions).where(eq(transitions.id, args.id));
 	return { success: true };
 }
 
-async function callListWorkflowTransitions(args: z.infer<typeof ListWorkflowTransitionsArgs>) {
+async function callListWorkflowTransitions(
+	args: z.infer<typeof ListWorkflowTransitionsArgs>,
+) {
 	const rows = await db
 		.select()
 		.from(transitions)
@@ -729,7 +778,9 @@ async function callListWorkflowTransitions(args: z.infer<typeof ListWorkflowTran
 	return rows;
 }
 
-async function callCreateWorkflowScenario(args: z.infer<typeof CreateWorkflowScenarioArgs>) {
+async function callCreateWorkflowScenario(
+	args: z.infer<typeof CreateWorkflowScenarioArgs>,
+) {
 	const id = generateSlug(args.name);
 	const [row] = await db
 		.insert(scenarios)
@@ -742,12 +793,16 @@ async function callCreateWorkflowScenario(args: z.infer<typeof CreateWorkflowSce
 	return row;
 }
 
-async function callListWorkflowScenarios(args: z.infer<typeof ListWorkflowScenariosArgs>) {
+async function callListWorkflowScenarios(
+	args: z.infer<typeof ListWorkflowScenariosArgs>,
+) {
 	const page = args.page ?? 1;
 	const limit = args.limit ?? 10;
 	const offset = (page - 1) * limit;
 
-	const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(scenarios);
+	const [totalResult] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(scenarios);
 	const total = Number(totalResult.count);
 	const totalPages = Math.ceil(total / limit);
 
@@ -757,117 +812,124 @@ async function callListWorkflowScenarios(args: z.infer<typeof ListWorkflowScenar
 		.orderBy(scenarios.createdAt)
 		.limit(limit)
 		.offset(offset);
-	
+
 	return { data: rows, meta: { total, page, limit, totalPages } };
 }
 
-async function callDeleteWorkflowScenario(args: z.infer<typeof DeleteWorkflowScenarioArgs>) {
+async function callDeleteWorkflowScenario(
+	args: z.infer<typeof DeleteWorkflowScenarioArgs>,
+) {
 	await db.delete(scenarios).where(eq(scenarios.id, args.id));
 	return { success: true };
 }
 
 async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 	const { processWorkflowRequest } = await import('@/lib/engine/processor');
-	
-	// Build the full path for the workflow
 	const fullPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
-	
-	// Query the database directly for the transition within the scenario
-	const matchingTransitions = await db
+	const body = args.body || {};
+	const query = args.query || {};
+	const headers = args.headers || {};
+
+	const [stateRow] = await db
+		.select()
+		.from(scenarioState)
+		.where(eq(scenarioState.scenarioId, args.scenarioId));
+
+	const baseState = stateRow
+		? (stateRow.data as any)
+		: { state: {}, tables: {} };
+
+	const exactCandidates = await db
 		.select()
 		.from(transitions)
 		.where(
 			and(
 				eq(transitions.scenarioId, args.scenarioId),
 				eq(transitions.path, fullPath),
-				eq(transitions.method, args.method)
-			)
-		);
-	
-	if (matchingTransitions.length === 0) {
-		// Try pattern matching for parameterized routes like /users/:id
-		const allTransitions = await db
-			.select()
-			.from(transitions)
-			.where(
-				and(
-					eq(transitions.scenarioId, args.scenarioId),
-					eq(transitions.method, args.method)
-				)
-			);
-		
-		// Simple pattern matcher for :param style routes
-		const matchRoute = (pattern: string, actual: string): Record<string, string> | null => {
-			const patternParts = pattern.split('/');
-			const actualParts = actual.split('/');
-			if (patternParts.length !== actualParts.length) return null;
-			
-			const params: Record<string, string> = {};
-			for (let i = 0; i < patternParts.length; i++) {
-				if (patternParts[i].startsWith(':')) {
-					params[patternParts[i].slice(1)] = actualParts[i];
-				} else if (patternParts[i] !== actualParts[i]) {
-					return null;
-				}
-			}
-			return params;
+				eq(transitions.method, args.method),
+			),
+		)
+		.orderBy(transitions.createdAt);
+
+	for (const t of exactCandidates) {
+		const ctx = {
+			state: baseState.state || {},
+			db: baseState.tables || {},
+			input: { body, query, params: {}, headers },
 		};
-		
-		for (const t of allTransitions) {
-			const params = matchRoute(t.path, fullPath);
-			if (params) {
-				// Found a matching parameterized route
-				try {
-					const result = await processWorkflowRequest(t, params, args.body || {}, args.query || {}, args.headers || {});
-					return {
-						success: true,
-						transitionId: t.id,
-						transitionName: t.name,
-						matchedParams: params,
-						response: result,
-					};
-				} catch (error) {
-					return {
-						success: false,
-						error: error instanceof Error ? error.message : 'Unknown error',
-					};
-				}
+		if (matches(t.conditions || {}, ctx)) {
+			const result = await processWorkflowRequest(t, {}, body, query, headers);
+			return {
+				success: true,
+				transitionId: t.id,
+				transitionName: t.name,
+				response: result,
+			};
+		}
+	}
+
+	const allCandidates = await db
+		.select()
+		.from(transitions)
+		.where(
+			and(
+				eq(transitions.scenarioId, args.scenarioId),
+				eq(transitions.method, args.method),
+			),
+		)
+		.orderBy(transitions.createdAt);
+
+	const matchRoute = (
+		pattern: string,
+		actual: string,
+	): Record<string, string> | null => {
+		const patternParts = pattern.split('/');
+		const actualParts = actual.split('/');
+		if (patternParts.length !== actualParts.length) return null;
+		const params: Record<string, string> = {};
+		for (let i = 0; i < patternParts.length; i++) {
+			if (patternParts[i].startsWith(':')) {
+				params[patternParts[i].slice(1)] = actualParts[i];
+			} else if (patternParts[i] !== actualParts[i]) {
+				return null;
 			}
 		}
-		
-		return {
-			success: false,
-			error: 'No matching transition found',
-			scenarioId: args.scenarioId,
-			path: fullPath,
-			method: args.method,
+		return params;
+	};
+
+	for (const t of allCandidates) {
+		const params = matchRoute(t.path, fullPath);
+		if (!params) continue;
+		const ctx = {
+			state: baseState.state || {},
+			db: baseState.tables || {},
+			input: { body, query, params, headers },
 		};
+		if (matches(t.conditions || {}, ctx)) {
+			const result = await processWorkflowRequest(
+				t,
+				params,
+				body,
+				query,
+				headers,
+			);
+			return {
+				success: true,
+				transitionId: t.id,
+				transitionName: t.name,
+				matchedParams: params,
+				response: result,
+			};
+		}
 	}
-	
-	const transition = matchingTransitions[0];
-	
-	// Process the request
-	try {
-		const result = await processWorkflowRequest(
-			transition,
-			{}, // No URL params for exact match
-			args.body || {},
-			args.query || {},
-			args.headers || {}
-		);
-		
-		return {
-			success: true,
-			transitionId: transition.id,
-			transitionName: transition.name,
-			response: result,
-		};
-	} catch (error) {
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : 'Unknown error',
-		};
-	}
+
+	return {
+		success: false,
+		error: 'No matching transition found',
+		scenarioId: args.scenarioId,
+		path: fullPath,
+		method: args.method,
+	};
 }
 
 const handler = createMcpHandler(
@@ -1154,7 +1216,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1169,7 +1231,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1184,7 +1246,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1199,7 +1261,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1214,7 +1276,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1229,14 +1291,15 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
 			'create_workflow_scenario',
 			{
 				title: 'Create Workflow Scenario',
-				description: 'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
+				description:
+					'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
 				inputSchema: CreateWorkflowScenarioArgs,
 			},
 			async (args: z.infer<typeof CreateWorkflowScenarioArgs>, _extra) => {
@@ -1244,7 +1307,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1259,7 +1322,7 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
@@ -1274,14 +1337,15 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
 
 		server.registerTool(
 			'test_workflow',
 			{
 				title: 'Test Workflow',
-				description: 'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
+				description:
+					'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
 				inputSchema: TestWorkflowArgs,
 			},
 			async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
@@ -1289,9 +1353,8 @@ const handler = createMcpHandler(
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
-			}
+			},
 		);
-
 	},
 	{
 		serverInfo: { name: 'Mockzilla', version: '1.0.0' },

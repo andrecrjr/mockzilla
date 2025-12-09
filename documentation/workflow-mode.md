@@ -219,15 +219,48 @@ curl http://localhost:3000/api/workflow/users
 
 ## MCP Integration
 
-Use AI assistants with MCP tools:
+Use AI assistants to interact with the Workflow engine via the MCP server at `app/api/[transport]/route.ts`.
+
+### Available Tools
 
 | Tool | Description |
 |------|-------------|
-| `create_workflow_transition` | Create transitions programmatically |
+| `create_workflow_scenario` | Create a new workflow scenario container |
+| `list_workflow_scenarios` | List all existing scenarios |
+| `delete_workflow_scenario` | Delete a scenario by ID |
+| `create_workflow_transition` | Create a transition rule for a scenario |
 | `update_workflow_transition` | Update an existing transition by ID |
 | `delete_workflow_transition` | Delete a transition by ID |
 | `list_workflow_transitions` | List all transitions for a scenario |
-| `test_workflow` | Test a workflow by simulating a request |
-| `reset_workflow_state` | Reset scenario state |
-| `inspect_workflow_state` | View current state |
+| `inspect_workflow_state` | View current state and DB tables for a scenario |
+| `reset_workflow_state` | Clear state and DB for a scenario |
+| `test_workflow` | Simulate a request to test a workflow path |
+
+### LLM Rules & Constraints
+
+When using `create_workflow_transition` or `update_workflow_transition`, you MUST follow these validation rules. **Failure to follow these rules will result in validation errors.**
+
+#### 1. Conditions
+- **Format**: use the explicit rule array format for clarity.
+  ```json
+  [{"type": "eq", "field": "input.body.status", "value": "active"}]
+  ```
+- **Allowed Types**: `eq`, `neq`, `exists`, `gt`, `lt`, `contains`.
+- ❌ **NO Pure JS**: Do not attempt to write JavaScript functions or expressions.
+- ❌ **NO Dynamic Logic**: Logic must be expressed via the structured JSON conditions.
+
+#### 2. Effects
+- **Allowed Types**: `state.set`, `db.push`, `db.update`, `db.remove`.
+- **Interpolation**: You may ONLY interpolate:
+  - `{{state.var}}`
+  - `{{db.table}}`
+  - `{{input.body}}` inside value fields
+  - `{{input.query}}`
+  - `{{input.params}}`
+- ❌ **NO Faker/Random**: Random value generation is NOT supported in effects.
+- ❌ **NO Pure JS**: Transitions define data transformations, not code execution.
+
+#### 3. Response
+- **Interpolation**: Supported for `{{state}}`, `{{db}}`, `{{input}}`.
+- ❌ **NO Faker/Random**: Responses must be deterministic based on state/inputs.
 
