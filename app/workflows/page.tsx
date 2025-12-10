@@ -1,6 +1,6 @@
 'use client';
 
-import { GitBranch, Loader2, Plus } from 'lucide-react';
+import { Download, GitBranch, Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { ImportWorkflowDialog } from '@/components/workflow/import-dialog';
 
 interface Scenario {
 	id: string;
@@ -92,6 +93,10 @@ export default function WorkflowsPage() {
 		});
 	};
 
+	const handleExportAll = () => {
+		window.location.href = '/api/workflow/export';
+	};
+
 	return (
 		<div className="container mx-auto py-8 max-w-7xl">
 			<div className="flex items-center justify-between mb-8">
@@ -101,61 +106,71 @@ export default function WorkflowsPage() {
 						Manage stateful scenarios and complex transition rules.
 					</p>
 				</div>
-				<Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-					<DialogTrigger asChild>
-						<Button>
-							<Plus className="mr-2 h-4 w-4" />
-							New Scenario
-						</Button>
-					</DialogTrigger>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Create Scenario</DialogTitle>
-							<DialogDescription>
-								Start a new workflow scenario to define transitions.
-							</DialogDescription>
-						</DialogHeader>
-						<div className="grid gap-4 py-4">
-							<div className="grid gap-2">
-								<Label htmlFor="name">Name *</Label>
-								<Input
-									id="name"
-									value={newScenarioName}
-									onChange={(e) => setNewScenarioName(e.target.value)}
-									placeholder="e.g. Checkout Flow"
-								/>
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="description">Description</Label>
-								<Textarea
-									id="description"
-									value={newScenarioDescription}
-									onChange={(e) => setNewScenarioDescription(e.target.value)}
-									placeholder="Optional description of this scenario..."
-									rows={3}
-								/>
-							</div>
-						</div>
-						<DialogFooter>
-							<Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-								Cancel
+				<div className="flex gap-2">
+					<Button variant="outline" onClick={handleExportAll}>
+						<Download className="mr-2 h-4 w-4" />
+						Export All
+					</Button>
+					<ImportWorkflowDialog onSuccess={() => mutate()} />
+					<Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+						<DialogTrigger asChild>
+							<Button>
+								<Plus className="mr-2 h-4 w-4" />
+								New Scenario
 							</Button>
-							<Button onClick={handleCreate} disabled={isMutating}>
-								{isMutating && (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								)}
-								Create
-							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Create Scenario</DialogTitle>
+								<DialogDescription>
+									Start a new workflow scenario to define transitions.
+								</DialogDescription>
+							</DialogHeader>
+							<div className="grid gap-4 py-4">
+								<div className="grid gap-2">
+									<Label htmlFor="name">Name *</Label>
+									<Input
+										id="name"
+										value={newScenarioName}
+										onChange={(e) => setNewScenarioName(e.target.value)}
+										placeholder="e.g. Checkout Flow"
+									/>
+								</div>
+								<div className="grid gap-2">
+									<Label htmlFor="description">Description</Label>
+									<Textarea
+										id="description"
+										value={newScenarioDescription}
+										onChange={(e) => setNewScenarioDescription(e.target.value)}
+										placeholder="Optional description of this scenario..."
+										rows={3}
+									/>
+								</div>
+							</div>
+							<DialogFooter>
+								<Button
+									variant="outline"
+									onClick={() => setIsCreateOpen(false)}
+								>
+									Cancel
+								</Button>
+								<Button onClick={handleCreate} disabled={isMutating}>
+									{isMutating && (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									)}
+									Create
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
+				</div>
 			</div>
 
 			{/* Loading State */}
 			{isLoading && (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{[...Array(3)].map((k, i) => (
-						<Card key={i + k} className="p-6">
+					{[...Array(3)].map((k) => (
+						<Card key={k} className="p-6">
 							<Skeleton className="h-10 w-10 rounded-lg mb-4" />
 							<Skeleton className="h-6 w-3/4 mb-2" />
 							<Skeleton className="h-4 w-1/2" />

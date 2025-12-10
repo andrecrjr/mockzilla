@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -917,7 +917,6 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 				success: true,
 				transitionId: t.id,
 				transitionName: t.name,
-				matchedParams: params,
 				response: result,
 			};
 		}
@@ -925,10 +924,145 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 
 	return {
 		success: false,
-		error: 'No matching transition found',
-		scenarioId: args.scenarioId,
-		path: fullPath,
-		method: args.method,
+		message: 'No matching transition found',
+	};
+}
+
+const ImportWorkflowArgs = z.object({
+	data: z
+		.any()
+		.describe('The JSON data to import (WorkflowExportData structure)'),
+});
+
+const ExportWorkflowArgs = z.object({
+	scenarioId: z
+		.string()
+		.optional()
+		.describe('Optional scenario ID to export only one scenario'),
+});
+
+async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
+	const { scenarioId } = args;
+	let scenariosList: any[] = [];
+	let transitionsList: any[] = [];
+
+	if (scenarioId) {
+		const [scenario] = await db
+			.select()
+			.from(scenarios)
+			.where(eq(scenarios.id, scenarioId));
+
+		if (!scenario) throw new Error('Scenario not found');
+
+		scenariosList = [
+			{
+				...scenario,
+				createdAt: scenario.createdAt.toISOString(),
+				updatedAt: scenario.updatedAt?.toISOString(),
+			},
+		];
+
+		const transitionsData = await db
+			.select()
+			.from(transitions)
+			.where(eq(transitions.scenarioId, scenarioId));
+
+		transitionsList = transitionsData.map((t) => ({
+			...t,
+			createdAt: t.createdAt.toISOString(),
+			updatedAt: t.updatedAt?.toISOString(),
+		}));
+	} else {
+		const scenariosData = await db.select().from(scenarios);
+		scenariosList = scenariosData.map((s) => ({
+			...s,
+			createdAt: s.createdAt.toISOString(),
+			updatedAt: s.updatedAt?.toISOString(),
+		}));
+
+		const transitionsData = await db.select().from(transitions);
+		transitionsList = transitionsData.map((t) => ({
+			...t,
+			createdAt: t.createdAt.toISOString(),
+			updatedAt: t.updatedAt?.toISOString(),
+		}));
+	}
+
+	return {
+		version: 1,
+		exportedAt: new Date().toISOString(),
+		scenarios: scenariosList,
+		transitions: transitionsList,
+	};
+}
+
+async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
+	const data = args.data;
+	if (!data.scenarios || !Array.isArray(data.scenarios)) {
+		throw new Error('Invalid format: scenarios array missing');
+	}
+
+	const importedScenarios = [];
+	for (const scenario of data.scenarios) {
+		const [existing] = await db
+			.select()
+			.from(scenarios)
+			.where(eq(scenarios.id, scenario.id));
+
+		if (existing) {
+			const [updated] = await db
+				.update(scenarios)
+				.set({
+					name: scenario.name,
+					description: scenario.description,
+					updatedAt: new Date(),
+				})
+				.where(eq(scenarios.id, scenario.id))
+				.returning();
+			importedScenarios.push(updated);
+		} else {
+			const [inserted] = await db
+				.insert(scenarios)
+				.values({
+					id: scenario.id,
+					name: scenario.name,
+					description: scenario.description,
+				})
+				.returning();
+			importedScenarios.push(inserted);
+		}
+	}
+
+	const scenarioIds = data.scenarios.map((s: any) => s.id);
+	if (scenarioIds.length > 0) {
+		await db
+			.delete(transitions)
+			.where(inArray(transitions.scenarioId, scenarioIds));
+
+		if (
+			data.transitions &&
+			Array.isArray(data.transitions) &&
+			data.transitions.length > 0
+		) {
+			const transitionsToInsert = data.transitions.map((t: any) => ({
+				scenarioId: t.scenarioId,
+				name: t.name,
+				description: t.description,
+				path: t.path,
+				method: t.method,
+				conditions: t.conditions,
+				effects: t.effects,
+				response: t.response,
+				meta: t.meta,
+			}));
+			await db.insert(transitions).values(transitionsToInsert);
+		}
+	}
+
+	return {
+		success: true,
+		importedScenarios: importedScenarios.length,
+		importedTransitions: data.transitions?.length || 0,
 	};
 }
 
@@ -1350,6 +1484,36 @@ const handler = createMcpHandler(
 			},
 			async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
 				const result = await callTestWorkflow(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			},
+		);
+
+		server.registerTool(
+			'export_workflow',
+			{
+				title: 'Export Workflow',
+				description: 'Export one or all workflow scenarios to JSON',
+				inputSchema: ExportWorkflowArgs,
+			},
+			async (args: z.infer<typeof ExportWorkflowArgs>, _extra) => {
+				const result = await callExportWorkflow(args);
+				return {
+					content: [{ type: 'text', text: JSON.stringify(result) }],
+				};
+			},
+		);
+
+		server.registerTool(
+			'import_workflow',
+			{
+				title: 'Import Workflow',
+				description: 'Import workflow scenarios from JSON',
+				inputSchema: ImportWorkflowArgs,
+			},
+			async (args: z.infer<typeof ImportWorkflowArgs>, _extra) => {
+				const result = await callImportWorkflow(args);
 				return {
 					content: [{ type: 'text', text: JSON.stringify(result) }],
 				};
