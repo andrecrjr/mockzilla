@@ -3,12 +3,14 @@
 import {
 	AlertCircle,
 	BookOpen,
+	Braces,
 	Code2,
-	Lightbulb,
 	Database,
+	Lightbulb,
 	Workflow,
 } from 'lucide-react';
 import Link from 'next/link';
+import { WorkflowDocs } from '@/components/docs/workflow-docs';
 import {
 	Accordion,
 	AccordionContent,
@@ -17,63 +19,68 @@ import {
 } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WorkflowDocs } from '@/components/docs/workflow-docs';
 
 export default function DocsPage() {
 	return (
 		<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
-            {/* ... */}
+			{/* ... */}
 
 			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-				<Tabs defaultValue="overview" className="flex flex-col md:flex-row gap-8" orientation="vertical">
+				<Tabs
+					defaultValue="overview"
+					className="flex flex-col md:flex-row gap-8"
+					orientation="vertical"
+				>
 					{/* Sidebar Navigation */}
 					<div className="w-full md:w-64 flex-shrink-0">
 						<div className="sticky top-24">
 							<div className="flex items-center gap-2 mb-6">
 								<BookOpen className="h-5 w-5 text-primary" />
-								<h1 className="text-xl font-bold tracking-tight">Documentation</h1>
+								<h1 className="text-xl font-bold tracking-tight">
+									Documentation
+								</h1>
 							</div>
-							
+
 							<TabsList className="bg-transparent p-0 flex flex-col h-auto items-stretch space-y-1">
 								<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
 									Getting Started
 								</div>
-								<TabsTrigger 
-									value="overview" 
+								<TabsTrigger
+									value="overview"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
 									Overview
 								</TabsTrigger>
-								<TabsTrigger 
-									value="syntax" 
+								<TabsTrigger
+									value="syntax"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
 									Syntax Guide
 								</TabsTrigger>
-								<TabsTrigger 
-									value="examples" 
+								<TabsTrigger
+									value="examples"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
 									Examples
 								</TabsTrigger>
-								
+
 								<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-4">
 									Advanced
 								</div>
-								<TabsTrigger 
-									value="workflows" 
+								<TabsTrigger
+									value="workflows"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
 									Workflow Mode
 								</TabsTrigger>
-								<TabsTrigger 
-									value="advanced" 
+								<TabsTrigger
+									value="advanced"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
 									Advanced Features
 								</TabsTrigger>
-								<TabsTrigger 
-									value="mcp" 
+								<TabsTrigger
+									value="mcp"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
 									MCP Integration
@@ -90,10 +97,11 @@ export default function DocsPage() {
 									Overview
 								</h2>
 								<p className="text-muted-foreground mb-4">
-									Mockzilla is a powerful API mocking tool designed for modern development workflows.
-									It supports dynamic response generation, stateful workflows, and AI integration via MCP.
+									Mockzilla is a powerful API mocking tool designed for modern
+									development workflows. It supports dynamic response
+									generation, stateful workflows, and AI integration via MCP.
 								</p>
-								
+
 								<div className="grid gap-6 md:grid-cols-2 mt-8">
 									<div className="p-4 rounded-lg bg-card border border-border">
 										<h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
@@ -101,7 +109,8 @@ export default function DocsPage() {
 											Dynamic Mocks
 										</h3>
 										<p className="text-sm text-muted-foreground">
-											Generate realistic data using JSON Schema + Faker. Ensure your UI handles varied data correctly.
+											Generate realistic data using JSON Schema + Faker. Ensure
+											your UI handles varied data correctly.
 										</p>
 									</div>
 									<div className="p-4 rounded-lg bg-card border border-border">
@@ -110,7 +119,8 @@ export default function DocsPage() {
 											Stateful Workflows
 										</h3>
 										<p className="text-sm text-muted-foreground">
-											Simulate complex user flows (Cart &rarr; Checkout) with persistent state and logic.
+											Simulate complex user flows (Cart &rarr; Checkout) with
+											persistent state and logic.
 										</p>
 									</div>
 									<div className="p-4 rounded-lg bg-card border border-border">
@@ -119,7 +129,8 @@ export default function DocsPage() {
 											Mini-Database
 										</h3>
 										<p className="text-sm text-muted-foreground">
-											Each scenario gets a transient database to push, update, and query items during a session.
+											Each scenario gets a transient database to push, update,
+											and query items during a session.
 										</p>
 									</div>
 									<div className="p-4 rounded-lg bg-card border border-border">
@@ -128,27 +139,35 @@ export default function DocsPage() {
 											MCP Support
 										</h3>
 										<p className="text-sm text-muted-foreground">
-											First-class support for AI agents. Let Claude or other LLMs control your mocks directly.
+											First-class support for AI agents. Let Claude or other
+											LLMs control your mocks directly.
 										</p>
 									</div>
 								</div>
 							</Card>
 
-                            <Accordion type="single" collapsible className="space-y-4">
-                                <AccordionItem value="faq-1">
-                                    <AccordionTrigger>Why use Mockzilla over straightforward mocks?</AccordionTrigger>
-                                    <AccordionContent>
-                                        Mockzilla allows for dynamic responses and stateful scenarios, which lets you test complex interactions even when backend APIs aren't ready.
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
+							<Accordion type="single" collapsible className="space-y-4">
+								<AccordionItem value="faq-1">
+									<AccordionTrigger>
+										Why use Mockzilla over straightforward mocks?
+									</AccordionTrigger>
+									<AccordionContent>
+										Mockzilla allows for dynamic responses and stateful
+										scenarios, which lets you test complex interactions even
+										when backend APIs aren't ready.
+									</AccordionContent>
+								</AccordionItem>
+							</Accordion>
 						</TabsContent>
 
 						<TabsContent value="syntax" className="mt-0 space-y-6">
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-								<h2 className="text-2xl font-bold text-foreground mb-4">Syntax Guide</h2>
+								<h2 className="text-2xl font-bold text-foreground mb-4">
+									Syntax Guide
+								</h2>
 								<p className="text-muted-foreground mb-6">
-									Reference for dynamic value generation and string interpolation.
+									Reference for dynamic value generation and string
+									interpolation.
 								</p>
 
 								<Accordion type="single" collapsible className="space-y-4">
@@ -157,10 +176,11 @@ export default function DocsPage() {
 										<AccordionContent>
 											<div className="space-y-4">
 												<p className="text-sm text-muted-foreground">
-													Access other fields in your generated JSON using <code>{`{$.path.to.field}`}</code>.
+													Access other fields in your generated JSON using{' '}
+													<code>{`{$.path.to.field}`}</code>.
 												</p>
 												<pre className="bg-muted p-3 rounded text-xs font-mono">
-{`"message": "Hello {$.user.name}"`}
+													{`"message": "Hello {$.user.name}"`}
 												</pre>
 											</div>
 										</AccordionContent>
@@ -170,10 +190,19 @@ export default function DocsPage() {
 										<AccordionContent>
 											<div className="space-y-4">
 												<p className="text-sm text-muted-foreground">
-													Use any method from <a href="https://fakerjs.dev" target="_blank" className="underline hover:text-primary" rel="noopener">Faker.js</a>.
+													Use any method from{' '}
+													<a
+														href="https://fakerjs.dev"
+														target="_blank"
+														className="underline hover:text-primary"
+														rel="noopener"
+													>
+														Faker.js
+													</a>
+													.
 												</p>
 												<pre className="bg-muted p-3 rounded text-xs font-mono">
-{`{
+													{`{
   "properties": {
     "name": { "type": "string", "faker": "person.fullName" },
     "email": { "type": "string", "faker": "internet.email" }
@@ -183,36 +212,42 @@ export default function DocsPage() {
 											</div>
 										</AccordionContent>
 									</AccordionItem>
-                                    <AccordionItem value="syntax-custom">
-                                        <AccordionTrigger>Custom Formats</AccordionTrigger>
-                                        <AccordionContent>
-                                            <div className="space-y-4">
-                                                <p className="text-sm text-muted-foreground">
-                                                    Use <code>x-store-as</code> and <code>x-ref</code> to generate a value once and reuse it across the document.
-                                                </p>
-                                                <pre className="bg-muted p-3 rounded text-xs font-mono">
-{`{
+									<AccordionItem value="syntax-custom">
+										<AccordionTrigger>Custom Formats</AccordionTrigger>
+										<AccordionContent>
+											<div className="space-y-4">
+												<p className="text-sm text-muted-foreground">
+													Use <code>x-store-as</code> and <code>x-ref</code> to
+													generate a value once and reuse it across the
+													document.
+												</p>
+												<pre className="bg-muted p-3 rounded text-xs font-mono">
+													{`{
     "id": { "type": "string", "format": "x-store-as", "x-key": "userId" },
     "ref": { "type": "string", "format": "x-ref", "x-key": "userId" }
 }`}
-                                                </pre>
-                                            </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
+												</pre>
+											</div>
+										</AccordionContent>
+									</AccordionItem>
 								</Accordion>
 							</Card>
 						</TabsContent>
 
 						<TabsContent value="examples" className="mt-0 space-y-6">
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-								<h2 className="text-2xl font-bold text-foreground mb-4">Examples</h2>
-								<p className="text-muted-foreground mb-6">Common patterns for mock responses.</p>
-								
+								<h2 className="text-2xl font-bold text-foreground mb-4">
+									Examples
+								</h2>
+								<p className="text-muted-foreground mb-6">
+									Common patterns for mock responses.
+								</p>
+
 								<div className="space-y-6">
 									<div className="border rounded-lg p-4">
 										<h3 className="font-semibold mb-2">List of Users</h3>
 										<pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
-{`{
+											{`{
   "type": "array",
   "minItems": 3,
   "maxItems": 5,
@@ -228,47 +263,106 @@ export default function DocsPage() {
 }`}
 										</pre>
 									</div>
-                                    
-                                    <div className="border rounded-lg p-4">
-                                        <h3 className="font-semibold mb-2">Nested Object with Refs</h3>
-                                        <pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
-{`{
+
+									<div className="border rounded-lg p-4">
+										<h3 className="font-semibold mb-2">
+											Nested Object with Refs
+										</h3>
+										<pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
+											{`{
   "type": "object",
   "properties": {
     "orderId": { "type": "string", "format": "uuid" },
     "summary": { "const": "Order {$.orderId} confirmed" }
   }
 }`}
-                                        </pre>
-                                    </div>
+										</pre>
+									</div>
 								</div>
 							</Card>
 						</TabsContent>
 
 						<TabsContent value="workflows" className="mt-0 space-y-6">
-                            <WorkflowDocs />
+							<WorkflowDocs />
 						</TabsContent>
 
 						<TabsContent value="advanced" className="mt-0">
 							<Card className="p-6 border-dashed">
-								<p className="text-center text-muted-foreground">Advanced documentation is being updated.</p>
+								<p className="text-center text-muted-foreground">
+									Advanced documentation is being updated.
+								</p>
 							</Card>
 						</TabsContent>
 
 						<TabsContent value="mcp" className="mt-0">
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-								<h2 className="text-2xl font-bold text-foreground mb-4">MCP Integration</h2>
+								<h2 className="text-2xl font-bold text-foreground mb-4">
+									MCP Integration
+								</h2>
 								<p className="text-muted-foreground mb-4">
-									Mockzilla exposes a Model Context Protocol server, allowing AI agents to fully control mocking.
+									Mockzilla exposes a Model Context Protocol server, allowing AI
+									agents to fully control mocking.
 								</p>
 								<div className="bg-muted p-4 rounded-lg">
 									<h3 className="font-bold text-sm mb-2">Available Tools</h3>
 									<ul className="list-disc pl-4 text-sm space-y-1">
-										<li><code>create_mock</code> - Create new endpoints</li>
-										<li><code>create_workflow_transition</code> - Define workflow rules</li>
-										<li><code>inspect_workflow_state</code> - Read scenario state</li>
-										<li><code>reset_workflow_state</code> - Clear scenario data</li>
+										<li>
+											<code>create_mock</code> - Create new endpoints
+										</li>
+										<li>
+											<code>create_workflow_transition</code> - Define workflow
+											rules
+										</li>
+										<li>
+											<code>inspect_workflow_state</code> - Read scenario state
+										</li>
+										<li>
+											<code>reset_workflow_state</code> - Clear scenario data
+										</li>
 									</ul>
+								</div>
+							</Card>
+							{/* Installation Section */}
+							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 mt-3">
+								<div className="flex items-center gap-3 mb-6">
+									<div className="p-2 bg-primary/10 rounded-lg">
+										<Braces className="h-6 w-6 text-primary" />
+									</div>
+									<div>
+										<h2 className="text-2xl font-bold text-foreground">
+											Installation & Setup
+										</h2>
+										<p className="text-muted-foreground">
+											Configure Mockzilla with MCP server for advanced workflow
+											capabilities.
+										</p>
+									</div>
+								</div>
+
+								<div className="space-y-4">
+									<h3 className="font-semibold text-lg text-foreground">
+										MCP Server Configuration
+									</h3>
+									<p className="text-sm text-muted-foreground">
+										Add this configuration to your project's settings to connect
+										Mockzilla with the MCP server:
+									</p>
+									<pre className="bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
+										{`{
+  "mockzilla": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "mcp-remote",
+      "http://localhost:36666/api/mcp" # MCP server endpoint
+    ]
+  }
+}`}
+									</pre>
+									<p className="text-sm text-muted-foreground">
+										This configuration enables the MCP server to handle advanced
+										tools with AI on port 36666 (locally) or using your own DNS.
+									</p>
 								</div>
 							</Card>
 						</TabsContent>
