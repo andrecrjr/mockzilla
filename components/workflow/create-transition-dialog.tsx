@@ -328,22 +328,22 @@ export function TransitionDialog({
 		}
 		if (example === 'loggedIn') {
 			form.setValue(
-				'conditions' as any,
+				'conditions',
 				'[\n  { "type": "eq", "field": "state.isLoggedIn", "value": true }\n]',
 			);
 		} else if (example === 'queryPage') {
 			form.setValue(
-				'conditions' as any,
+				'conditions',
 				'[\n  { "type": "exists", "field": "input.query.page" },\n  { "type": "gt", "field": "input.query.page", "value": 1 }\n]',
 			);
 		} else if (example === 'headerAuth') {
 			form.setValue(
-				'conditions' as any,
+				'conditions',
 				'[\n  { "type": "exists", "field": "input.headers.authorization" }\n]',
 			);
 		} else if (example === 'paramEq') {
 			form.setValue(
-				'conditions' as any,
+				'conditions',
 				'[\n  { "type": "eq", "field": "input.params.id", "value": "42" }\n]',
 			);
 		}
@@ -397,19 +397,19 @@ export function TransitionDialog({
 	) => {
 		if (example === 'successUser') {
 			form.setValue(
-				'responseBody' as any,
+				'responseBody',
 				JSON.stringify({ success: true, user: '{{ state.userId }}' }, null, 2),
 			);
 		} else if (example === 'usersTable') {
-			form.setValue('responseBody' as any, '{{ db.users }}');
+			form.setValue('responseBody', '{{ db.users }}');
 		} else if (example === 'echoName') {
 			form.setValue(
-				'responseBody' as any,
+				'responseBody',
 				JSON.stringify({ echo: '{{ input.body.name }}' }, null, 2),
 			);
 		} else if (example === 'cartCount') {
 			form.setValue(
-				'responseBody' as any,
+				'responseBody',
 				JSON.stringify(
 					{ success: true, count: '{{ db.cart.length }}' },
 					null,
@@ -418,7 +418,7 @@ export function TransitionDialog({
 			);
 		} else if (example === 'paramIdResponse') {
 			form.setValue(
-				'responseBody' as any,
+				'responseBody',
 				JSON.stringify({ id: '{{ input.params.id }}' }, null, 2),
 			);
 		}
@@ -443,7 +443,7 @@ export function TransitionDialog({
 		}
 
 		// 2. Process Response Body
-		let finalResponseBody;
+		let finalResponseBody: string;
 		try {
 			finalResponseBody = JSON.parse(data.responseBody);
 		} catch {
@@ -690,7 +690,7 @@ export function TransitionDialog({
 								<div className="space-y-3 border rounded-md p-4 bg-muted/10">
 									{conditionsList.map((cond, idx) => (
 										<div
-											key={`cond-${idx}`}
+											key={`cond-${idx + cond.type}`}
 											className="grid grid-cols-12 gap-3 items-center"
 										>
 											<Input
