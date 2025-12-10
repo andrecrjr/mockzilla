@@ -1,5 +1,5 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scenarioState } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';

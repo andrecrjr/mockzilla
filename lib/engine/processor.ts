@@ -19,7 +19,7 @@ export async function processWorkflowRequest(
 	// 1. Load State
 	const stateRow = await db.select().from(scenarioState).where(eq(scenarioState.scenarioId, scenarioId));
 	
-	let scenarioData: MatchContext = {
+	const scenarioData: MatchContext = {
 		state: {},
 		db: {},
 		input: { body, query, params, headers }
@@ -116,7 +116,7 @@ function interpolate(template: any, context: MatchContext): any {
 // Simple get helper
 function get(obj: any, path: string) {
     const parts = path.split('.');
-    let current = obj;
+    const current = obj;
     
     // Special handling for "db.tableName" - default to [] if not found
     if (parts[0] === 'db' && parts.length === 2) {

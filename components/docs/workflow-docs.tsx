@@ -273,6 +273,154 @@ state.get('token')`}
             </div>
           </div>
       </Card>
+      <Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+        <h2 className="text-xl font-bold text-foreground mb-4">Baby Steps: JSON Templates</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">Conditions</h3>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`[
+  { "type": "eq", "field": "state.isLoggedIn", "value": true }
+]`}
+            </div>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`[
+  { "type": "exists", "field": "input.query.page" },
+  { "type": "gt", "field": "input.query.page", "value": 1 }
+]`}
+            </div>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`[
+  { "type": "exists", "field": "input.headers.authorization" }
+]`}
+            </div>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`[
+  { "type": "eq", "field": "input.params.id", "value": "42" }
+]`}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">Effects</h3>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "type": "state.set", "raw": { "isLoggedIn": true, "userId": "{{ input.body.id }}" } }`}
+            </div>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "type": "db.push", "table": "users", "value": "{{ input.body }}" }`}
+            </div>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "type": "db.update", "table": "users", "match": { "id": "{{ input.params.id }}" }, "set": { "role": "admin" } }`}
+            </div>
+            <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "type": "db.remove", "table": "cart", "match": { "sku": "{{ input.params.sku }}" } }`}
+            </div>
+          </div>
+
+          <div className="space-y-3 md:col-span-2">
+            <h3 className="font-semibold text-sm">Response Body</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "success": true, "user": "{{ state.userId }}" }`}
+              </div>
+              <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "success": true, "count": "{{ db.cart.length }}" }`}
+              </div>
+              <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{{ db.users }}`}
+              </div>
+              <div className="bg-muted p-3 rounded text-[10px] font-mono">
+{`{ "echo": "{{ input.body.name }}" }`}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+        <h2 className="text-xl font-bold text-foreground mb-4">Users CRUD Journey</h2>
+        <div className="space-y-4">
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <h4 className="font-bold text-sm mb-2">Create User</h4>
+            <p className="text-xs text-muted-foreground mb-2">POST /users</p>
+            <div className="grid md:grid-cols-2 gap-2 text-xs font-mono">
+              <div className="bg-background p-2 rounded border">
+                <span className="text-muted-foreground block">Conditions:</span>
+{`[]`}
+              </div>
+              <div className="bg-background p-2 rounded border">
+                <span className="text-muted-foreground block">Effect:</span>
+{`{ "type": "db.push", "table": "users", "value": "{{ input.body }}" }`}
+              </div>
+              <div className="bg-background p-2 rounded border md:col-span-2">
+                <span className="text-muted-foreground block">Response:</span>
+{`{ "id": "{{ input.body.id }}", "created": true }`}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <h4 className="font-bold text-sm mb-2">List Users</h4>
+            <p className="text-xs text-muted-foreground mb-2">GET /users</p>
+            <div className="bg-background p-2 rounded border text-xs font-mono">
+              <span className="text-muted-foreground block">Response:</span>
+{`{{ db.users }}`}
+            </div>
+          </div>
+
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <h4 className="font-bold text-sm mb-2">Update User</h4>
+            <p className="text-xs text-muted-foreground mb-2">PUT /users/:id</p>
+            <div className="grid md:grid-cols-2 gap-2 text-xs font-mono">
+              <div className="bg-background p-2 rounded border">
+                <span className="text-muted-foreground block">Effect:</span>
+{`{ "type": "db.update", "table": "users", "match": { "id": "{{ input.params.id }}" }, "set": "{{ input.body }}" }`}
+              </div>
+              <div className="bg-background p-2 rounded border">
+                <span className="text-muted-foreground block">Response:</span>
+{`{ "updated": true, "id": "{{ input.params.id }}" }`}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <h4 className="font-bold text-sm mb-2">Delete User</h4>
+            <p className="text-xs text-muted-foreground mb-2">DELETE /users/:id</p>
+            <div className="grid md:grid-cols-2 gap-2 text-xs font-mono">
+              <div className="bg-background p-2 rounded border">
+                <span className="text-muted-foreground block">Effect:</span>
+{`{ "type": "db.remove", "table": "users", "match": { "id": "{{ input.params.id }}" } }`}
+              </div>
+              <div className="bg-background p-2 rounded border">
+                <span className="text-muted-foreground block">Response:</span>
+{`{ "deleted": true, "id": "{{ input.params.id }}" }`}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+        <h2 className="text-xl font-bold text-foreground mb-2">Path Matching Examples</h2>
+        <p className="text-xs text-muted-foreground mb-3">Use colon parameters to capture values into <code className="bg-muted px-1 rounded">input.params</code>.</p>
+        <div className="grid md:grid-cols-3 gap-3 text-[10px] font-mono">
+          <div className="bg-muted p-3 rounded">
+{`Path: /users/:id`}
+            <br/>
+{`Response Body: { "id": "{{ input.params.id }}" }`}
+          </div>
+          <div className="bg-muted p-3 rounded">
+{`Path: /cart/:sku/add`}
+            <br/>
+{`Effect: { "type": "db.push", "table": "cart", "value": { "sku": "{{ input.params.sku }}" } }`}
+          </div>
+          <div className="bg-muted p-3 rounded">
+{`Path: /orders/:orderId/items/:itemId`}
+            <br/>
+{`Response Body: { "order": "{{ input.params.orderId }}", "item": "{{ input.params.itemId }}" }`}
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

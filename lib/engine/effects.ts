@@ -1,5 +1,5 @@
 
-import { type MatchContext } from './match';
+import type { MatchContext } from './match';
 
 type Effect = 
   | { 

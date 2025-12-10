@@ -1,5 +1,5 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { findTransition } from '@/lib/engine/router';
 import { processWorkflowRequest } from '@/lib/engine/processor';
 

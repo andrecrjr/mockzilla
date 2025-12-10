@@ -170,7 +170,7 @@ export default function DocsPage() {
 										<AccordionContent>
 											<div className="space-y-4">
 												<p className="text-sm text-muted-foreground">
-													Use any method from <a href="https://fakerjs.dev" target="_blank" className="underline hover:text-primary">Faker.js</a>.
+													Use any method from <a href="https://fakerjs.dev" target="_blank" className="underline hover:text-primary" rel="noopener">Faker.js</a>.
 												</p>
 												<pre className="bg-muted p-3 rounded text-xs font-mono">
 {`{

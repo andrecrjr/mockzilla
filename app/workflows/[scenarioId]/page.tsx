@@ -11,7 +11,7 @@ import useSWRMutation from 'swr/mutation';
 import { Button } from '@/components/ui/button';
 import { TransitionCard } from '@/components/workflow/transition-card';
 import { StateInspector } from '@/components/workflow/state-inspector';
-import { TransitionDialog, Transition } from '@/components/workflow/create-transition-dialog';
+import { TransitionDialog, type Transition } from '@/components/workflow/create-transition-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
