@@ -84,9 +84,17 @@ const UpdateMockArgs = z.object({
 const DeleteMockArgs = z.object({ id: z.string() });
 
 const ConditionSchema = z.object({
-	type: z.enum(['eq', 'neq', 'exists', 'gt', 'lt', 'contains']),
-	field: z.string(),
-	value: z.any().optional(),
+	type: z
+		.enum(['eq', 'neq', 'exists', 'gt', 'lt', 'contains'])
+		.describe(
+			'Operator type: eq (equals), neq (not equals), exists (not null/undefined), gt (greater than), lt (less than), contains (array includes or string substring)',
+		),
+	field: z
+		.string()
+		.describe(
+			'Path to field in context (e.g., "input.body.id", "state.status", "db.users")',
+		),
+	value: z.any().optional().describe('Value to compare against'),
 });
 
 // Helper to parse JSON strings or pass through objects
@@ -928,10 +936,72 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 	};
 }
 
+const WorkflowScenarioSchema = z.object({
+	id: z.string().describe('Unique identifier for the scenario (slug format)'),
+	name: z.string().describe('Display name of the scenario'),
+	description: z
+		.string()
+		.optional()
+		.describe('Description of the scenario flow'),
+});
+
+const WorkflowTransitionSchema = z.object({
+	scenarioId: z
+		.string()
+		.describe('ID of the scenario this transition belongs to'),
+	name: z.string().describe('Name of the transition step'),
+	description: z
+		.string()
+		.optional()
+		.describe('Description of what this step does'),
+	path: z
+		.string()
+		.describe(
+			'The URL path (e.g. "/users" or "/users/:id"). Supports :param syntax.',
+		),
+	method: z
+		.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+		.describe('HTTP method for this transition'),
+	conditions: z
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.union([z.record(z.any()), z.array(ConditionSchema)]).optional(),
+		)
+		.describe(
+			'Rules to trigger this transition. Can be an array of Condition objects (preferred) or a key-value object (legacy). Supported operators: eq, neq, exists, gt, lt, contains. Context fields: input.body.*, input.query.*, input.params.*, input.headers.*, state.*, db.*',
+		),
+	effects: z
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.union([z.record(z.any()), z.array(z.any())]).optional(),
+		)
+		.describe(
+			'Side effects to execute. Array of effect objects. Supported types: "state.set" (sets state variables), "db.push" (adds to table), "db.update" (updates rows), "db.remove" (removes rows). Examples: { "type": "state.set", "raw": { "isLoggedIn": true } }, { "type": "db.push", "table": "users", "value": "{{input.body}}" }',
+		),
+	response: z
+		.preprocess(parseJsonOrPassthrough, z.record(z.any()))
+		.describe(
+			'Response configuration to return to the client. Can use interpolation like {{input.body.id}} or {{state.token}}.',
+		),
+	meta: z
+		.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional())
+		.describe('Additional metadata'),
+});
+
 const ImportWorkflowArgs = z.object({
 	data: z
-		.any()
-		.describe('The JSON data to import (WorkflowExportData structure)'),
+		.object({
+			scenarios: z
+				.array(WorkflowScenarioSchema)
+				.describe('List of scenarios to import'),
+			transitions: z
+				.array(WorkflowTransitionSchema)
+				.optional()
+				.describe('List of transitions associated with the scenarios'),
+		})
+		.describe(
+			'The complete workflow data structure containing scenarios and their transitions. Use this structure to generate valid import data.',
+		),
 });
 
 const ExportWorkflowArgs = z.object({
@@ -993,13 +1063,18 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 		exportedAt: new Date().toISOString(),
 		scenarios: scenariosList,
 		transitions: transitionsList,
+		description:
+			'This export contains full workflow data including scenarios and transitions, suitable for LLM analysis and re-import.',
 	};
 }
 
 async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 	const data = args.data;
+	// Validate structure before processing
 	if (!data.scenarios || !Array.isArray(data.scenarios)) {
-		throw new Error('Invalid format: scenarios array missing');
+		throw new Error(
+			'Invalid format: scenarios array missing. Please ensure you are importing a valid Mockzilla workflow export.',
+		);
 	}
 
 	const importedScenarios = [];
@@ -1063,6 +1138,8 @@ async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 		success: true,
 		importedScenarios: importedScenarios.length,
 		importedTransitions: data.transitions?.length || 0,
+		message:
+			'Workflow imported successfully. The LLM can now use these scenarios for testing and simulation.',
 	};
 }
 
