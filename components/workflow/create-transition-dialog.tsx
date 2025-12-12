@@ -116,6 +116,8 @@ export function TransitionDialog({
 }: TransitionDialogProps) {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [useConditionBuilder, setUseConditionBuilder] = useState(true);
+	const [useEffectsBuilder, setUseEffectsBuilder] = useState(true);
+	const [rawEffectsJson, setRawEffectsJson] = useState('');
 
 	// Use controlled state if provided, otherwise use internal state
 	const isControlled = controlledOpen !== undefined;
@@ -180,41 +182,43 @@ export function TransitionDialog({
 
 			// Populate effects
 			if (Array.isArray(transition.effects)) {
-				setEffectsList(
-					transition.effects.map((e: any) => {
-						if (e.type === 'state.set') {
-							return {
-								type: 'state.set',
-								raw: typeof e.raw === 'object' ? e.raw : e.raw || {},
-							};
-						}
-						if (e.type === 'db.push') {
-							return {
-								type: 'db.push',
-								table: e.table || '',
-								value: typeof e.value === 'object' ? e.value : e.value || '',
-							};
-						}
-						if (e.type === 'db.update') {
-							return {
-								type: 'db.update',
-								table: e.table || '',
-								match: typeof e.match === 'object' ? e.match : e.match || '',
-								set: typeof e.set === 'object' ? e.set : e.set || '',
-							};
-						}
-						if (e.type === 'db.remove') {
-							return {
-								type: 'db.remove',
-								table: e.table || '',
-								match: typeof e.match === 'object' ? e.match : e.match || '',
-							};
-						}
-						return e as EffectItem;
-					}),
-				);
+				const parsedEffects = transition.effects.map((e: any) => {
+					if (e.type === 'state.set') {
+						return {
+							type: 'state.set',
+							raw: typeof e.raw === 'object' ? e.raw : e.raw || {},
+						};
+					}
+					if (e.type === 'db.push') {
+						return {
+							type: 'db.push',
+							table: e.table || '',
+							value: typeof e.value === 'object' ? e.value : e.value || '',
+						};
+					}
+					if (e.type === 'db.update') {
+						return {
+							type: 'db.update',
+							table: e.table || '',
+							match: typeof e.match === 'object' ? e.match : e.match || '',
+							set: typeof e.set === 'object' ? e.set : e.set || '',
+						};
+					}
+					if (e.type === 'db.remove') {
+						return {
+							type: 'db.remove',
+							table: e.table || '',
+							match: typeof e.match === 'object' ? e.match : e.match || '',
+						};
+					}
+					return e as EffectItem;
+				});
+
+				setEffectsList(parsedEffects);
+				setRawEffectsJson(JSON.stringify(transition.effects, null, 2));
 			} else {
 				setEffectsList([]);
+				setRawEffectsJson('[]');
 			}
 		}
 	}, [open, isEditMode, transition, form]);
@@ -225,8 +229,19 @@ export function TransitionDialog({
 			form.reset();
 			setConditionsList([]);
 			setEffectsList([]);
+			setRawEffectsJson('[]');
 		}
 	}, [open, isEditMode, form]);
+
+	// Sync effectsList and raw JSON when switching modes
+	useEffect(() => {
+		if (useEffectsBuilder) {
+			// When switching to builder mode, effectsList is already properly formatted
+		} else {
+			// When switching to JSON mode, ensure rawEffectsJson reflects the current effectsList
+			setRawEffectsJson(JSON.stringify(effectsList, null, 2));
+		}
+	}, [useEffectsBuilder, effectsList]);
 
 	const { trigger: triggerCreate, isMutating: isCreating } = useSWRMutation(
 		'/api/workflow/transitions',
@@ -451,11 +466,14 @@ export function TransitionDialog({
 		}
 
 		// 3. Process Effects
-		// EffectsEditor returns correctly typed objects/strings, so we can pass them directly.
-		// However, we still need to ensure consistency if the user manually messed with state.
-		// For EffectsEditor, effectsList is already EffectItem[] which matches payload expectations mostly.
-		// The only thing is to make sure we don't send extra UI fields if any.
-		const finalEffects = effectsList;
+		let finalEffects: any;
+		if (useEffectsBuilder) {
+			// When using the builder, effectsList is already properly formatted
+			finalEffects = effectsList;
+		} else {
+			// When in JSON mode, effectsList is already updated from the textarea via onChange
+			finalEffects = effectsList;
+		}
 
 		const payload = {
 			scenarioId,
@@ -767,7 +785,18 @@ export function TransitionDialog({
 						{/* Effects Builder */}
 						<div className="border rounded-md p-4 bg-muted/10 w-full">
 							<div className="flex items-center justify-between mb-4">
-								<Label>Effects</Label>
+								<Label className="flex items-center gap-2">
+									Effects
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										className="h-5 px-2 text-[10px] text-muted-foreground bg-muted/50 hover:bg-muted"
+										onClick={() => setUseEffectsBuilder(!useEffectsBuilder)}
+									>
+										{useEffectsBuilder ? 'Switch to JSON' : 'Switch to Builder'}
+									</Button>
+								</Label>
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
 										<Button
@@ -804,11 +833,32 @@ export function TransitionDialog({
 								</DropdownMenu>
 							</div>
 
-							<EffectsEditor
-								effects={effectsList}
-								onChange={setEffectsList}
-								scenarioId={scenarioId}
-							/>
+							{useEffectsBuilder ? (
+								<EffectsEditor
+									effects={effectsList}
+									onChange={setEffectsList}
+									scenarioId={scenarioId}
+								/>
+							) : (
+								<>
+									<Textarea
+										value={JSON.stringify(effectsList, null, 2)}
+										onChange={(e) => {
+											try {
+												const parsed = JSON.parse(e.target.value);
+												if (Array.isArray(parsed)) {
+													setEffectsList(parsed);
+												}
+											} catch {
+												// If JSON is invalid, we won't update the state
+												// But we should allow the user to continue typing
+											}
+										}}
+										className="font-mono text-xs"
+										rows={8}
+									/>
+								</>
+							)}
 						</div>
 					</div>
 
