@@ -840,24 +840,22 @@ export function TransitionDialog({
 									scenarioId={scenarioId}
 								/>
 							) : (
-								<>
-									<Textarea
-										value={JSON.stringify(effectsList, null, 2)}
-										onChange={(e) => {
-											try {
-												const parsed = JSON.parse(e.target.value);
-												if (Array.isArray(parsed)) {
-													setEffectsList(parsed);
-												}
-											} catch {
-												// If JSON is invalid, we won't update the state
-												// But we should allow the user to continue typing
+								<Textarea
+									value={JSON.stringify(effectsList, null, 2)}
+									onChange={(e) => {
+										try {
+											const parsed = JSON.parse(e.target.value);
+											if (Array.isArray(parsed)) {
+												setEffectsList(parsed);
 											}
-										}}
-										className="font-mono text-xs"
-										rows={8}
-									/>
-								</>
+										} catch {
+											// If JSON is invalid, we won't update the state
+											// But we should allow the user to continue typing
+										}
+									}}
+									className="font-mono text-xs"
+									rows={8}
+								/>
 							)}
 						</div>
 					</div>
