@@ -69,6 +69,7 @@ export default function ScenarioDetailPage() {
 				toast.success('Transition deleted');
 				setDeleteId(null);
 				mutateTransitions();
+				mutateState();
 			},
 			onError: (err) => {
 				toast.error(err.message || 'Failed to delete transition');

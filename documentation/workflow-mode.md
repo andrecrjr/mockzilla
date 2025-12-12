@@ -145,7 +145,7 @@ Effects modify state or mini-db when a transition fires.
 
 ### Trigger Transitions
 ```http
-POST /api/workflow/users
+POST /api/workflow/exec/my-scenario/users
 Content-Type: application/json
 
 {"name": "John", "email": "john@example.com"}
@@ -205,13 +205,13 @@ DELETE /api/workflow/transitions/{id}            # Delete
 
 ### Testing
 ```bash
-# Register a user
-curl -X POST http://localhost:3000/api/workflow/register \
+# Register a user in the 'auth' scenario
+curl -X POST http://localhost:3000/api/workflow/exec/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Alice", "email":"alice@test.com"}'
 
-# List users
-curl http://localhost:3000/api/workflow/users
+# List users in the 'users' scenario
+curl http://localhost:3000/api/workflow/exec/users/list
 # Returns: [{"name":"Alice", "email":"alice@test.com"}]
 ```
 

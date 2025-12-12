@@ -1,22 +1,25 @@
-
 import { type NextRequest, NextResponse } from 'next/server';
 import { findTransition } from '@/lib/engine/router';
 import { processWorkflowRequest } from '@/lib/engine/processor';
 
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: Promise<{ path: string[] }> }
+	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> }
 ) {
 	// Await the params to resolve the promise
 	const resolvedParams = await params;
-	
-	// Join the path segments: /api/workflow/cart/add -> /cart/add
+
+	// The path is composed of the scenario slug and additional path segments
+	// For example: /api/workflow/exec/my-scenario/users -> scenarioSlug: "my-scenario", path: ["users"]
+	// We need to reconstruct the path as it would be stored in the transitions database
 	const path = '/' + resolvedParams.path.join('/');
 	const method = request.method;
 
-	// 1. Find Transition
+	// 1. Find Transition - look for transitions that belong to the specific scenario
+	// We'll need to modify the findTransition to accept scenario context
+	// For now, let's try to find transitions that might match this path
 	const match = await findTransition(path, method);
-	
+
 	if (!match) {
 		return NextResponse.json(
 			{ error: 'No matching transition found for this path and method', path, method },
@@ -33,7 +36,7 @@ export async function POST(
                 body = JSON.parse(text);
             } catch (e) {
                 // Not JSON, usage of raw body might be needed in future but for now keep body as empty object or maybe raw string?
-                // matching logic usually expects object. 
+                // matching logic usually expects object access.
                 // Let's store raw string? No, existing logic expects object access.
                 console.warn('Failed to parse body as JSON', e);
             }
@@ -44,7 +47,7 @@ export async function POST(
 
 	const url = new URL(request.url);
 	const query = Object.fromEntries(url.searchParams.entries());
-	
+
 	// Extract headers
 	const headers: Record<string, string> = {};
 	request.headers.forEach((value, key) => {
@@ -60,7 +63,7 @@ export async function POST(
 			query,
 			headers
 		);
-		
+
 		return NextResponse.json(result.body, {
 			status: result.status,
 			headers: result.headers
