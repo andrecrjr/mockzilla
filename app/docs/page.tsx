@@ -10,6 +10,7 @@ import {
 	Workflow,
 } from 'lucide-react';
 import Link from 'next/link';
+import { SchemaDocs } from '@/components/docs/schema-docs';
 import { WorkflowDocs } from '@/components/docs/workflow-docs';
 import {
 	Accordion,
@@ -55,7 +56,7 @@ export default function DocsPage() {
 									value="syntax"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
 								>
-									Syntax Guide
+									Schema & Data
 								</TabsTrigger>
 								<TabsTrigger
 									value="examples"
@@ -161,77 +162,7 @@ export default function DocsPage() {
 						</TabsContent>
 
 						<TabsContent value="syntax" className="mt-0 space-y-6">
-							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-								<h2 className="text-2xl font-bold text-foreground mb-4">
-									Syntax Guide
-								</h2>
-								<p className="text-muted-foreground mb-6">
-									Reference for dynamic value generation and string
-									interpolation.
-								</p>
-
-								<Accordion type="single" collapsible className="space-y-4">
-									<AccordionItem value="syntax-ref">
-										<AccordionTrigger>Field References</AccordionTrigger>
-										<AccordionContent>
-											<div className="space-y-4">
-												<p className="text-sm text-muted-foreground">
-													Access other fields in your generated JSON using{' '}
-													<code>{`{$.path.to.field}`}</code>.
-												</p>
-												<pre className="bg-muted p-3 rounded text-xs font-mono">
-													{`"message": "Hello {$.user.name}"`}
-												</pre>
-											</div>
-										</AccordionContent>
-									</AccordionItem>
-									<AccordionItem value="syntax-faker">
-										<AccordionTrigger>Faker Integration</AccordionTrigger>
-										<AccordionContent>
-											<div className="space-y-4">
-												<p className="text-sm text-muted-foreground">
-													Use any method from{' '}
-													<a
-														href="https://fakerjs.dev"
-														target="_blank"
-														className="underline hover:text-primary"
-														rel="noopener"
-													>
-														Faker.js
-													</a>
-													.
-												</p>
-												<pre className="bg-muted p-3 rounded text-xs font-mono">
-													{`{
-  "properties": {
-    "name": { "type": "string", "faker": "person.fullName" },
-    "email": { "type": "string", "faker": "internet.email" }
-  }
-}`}
-												</pre>
-											</div>
-										</AccordionContent>
-									</AccordionItem>
-									<AccordionItem value="syntax-custom">
-										<AccordionTrigger>Custom Formats</AccordionTrigger>
-										<AccordionContent>
-											<div className="space-y-4">
-												<p className="text-sm text-muted-foreground">
-													Use <code>x-store-as</code> and <code>x-ref</code> to
-													generate a value once and reuse it across the
-													document.
-												</p>
-												<pre className="bg-muted p-3 rounded text-xs font-mono">
-													{`{
-    "id": { "type": "string", "format": "x-store-as", "x-key": "userId" },
-    "ref": { "type": "string", "format": "x-ref", "x-key": "userId" }
-}`}
-												</pre>
-											</div>
-										</AccordionContent>
-									</AccordionItem>
-								</Accordion>
-							</Card>
+							<SchemaDocs />
 						</TabsContent>
 
 						<TabsContent value="examples" className="mt-0 space-y-6">

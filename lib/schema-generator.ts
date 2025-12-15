@@ -318,6 +318,53 @@ export function generateFromSchema(schema: object): string {
 }
 
 /**
+ * Pre-processes the schema to handle special cases before generation
+ * 1. Converts 'pattern' fields with template syntax {$.path} to x-template format
+ *    This prevents json-schema-faker from interpreting them as regex
+ */
+function preprocessSchema(schema: any, visited = new WeakSet()): any {
+	// Prevent circular reference infinite loops
+	if (schema && typeof schema === 'object') {
+		if (visited.has(schema)) {
+			return schema;
+		}
+		visited.add(schema);
+	}
+
+	if (Array.isArray(schema)) {
+		return schema.map((item) => preprocessSchema(item, visited));
+	} else if (schema && typeof schema === 'object') {
+		const processed: any = {};
+		
+		// Check if this node has a pattern that looks like a template
+		if (
+			typeof schema.pattern === 'string' && 
+			(schema.pattern.includes('{$.') || schema.pattern.includes('{{$.'))
+		) {
+			// Convert to x-template
+			processed.format = 'x-template';
+			processed.template = schema.pattern;
+			// Copy other properties but exclude pattern
+			for (const key in schema) {
+				if (key !== 'pattern' && Object.hasOwn(schema, key)) {
+					processed[key] = preprocessSchema(schema[key], visited);
+				}
+			}
+			return processed;
+		}
+
+		for (const key in schema) {
+			if (Object.hasOwn(schema, key)) {
+				processed[key] = preprocessSchema(schema[key], visited);
+			}
+		}
+		return processed;
+	}
+
+	return schema;
+}
+
+/**
  * Generates sample JSON data from a JSON Schema string
  */
 export function generateFromSchemaString(schemaString: string): string {
@@ -328,5 +375,7 @@ export function generateFromSchemaString(schemaString: string): string {
 	}
 
 	const schema = JSON.parse(schemaString);
-	return generateFromSchema(schema);
+	const preprocessedSchema = preprocessSchema(schema);
+	
+	return generateFromSchema(preprocessedSchema);
 }
