@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scenarios, transitions } from '@/lib/db/schema';
-import { WorkflowExportData } from '@/lib/types';
+import type { WorkflowExportData } from '@/lib/types';
 import { eq, inArray } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
