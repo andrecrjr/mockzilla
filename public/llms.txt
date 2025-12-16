@@ -1,0 +1,117 @@
+# Mockzilla Documentation
+> Server-rendered documentation for Mockzilla, a Next.js-based API mocking and workflow simulation tool. This index is optimized for LLMs and tools using llms.txt so they can quickly locate the right sections of the docs UI.
+
+Mockzilla provides a docs UI at `/docs` that explains how to configure mocks, JSON Schema–based dynamic data, workflow mode, and MCP integration. Use the sections below to decide which part of the docs to consult based on the user’s goal.
+
+When using this file as an LLM:
+
+- Prefer following the links and reading the actual docs pages before answering detailed questions.
+- Do not invent endpoints or fields; instead, infer from the patterns and examples described here.
+- For *actions* (creating mocks, workflows, importing/exporting), use the MCP tools exposed by Mockzilla, and treat this file only as conceptual guidance.
+- For *explanations* (how schema interpolation works, how workflows behave), answer from these summaries and the linked `/docs` sections.
+
+## Overview
+
+- [Overview](/docs#overview)
+
+The overview section introduces Mockzilla as:
+
+- An API mocking tool built on Next.js with PostgreSQL.
+- Supporting dynamic response generation via JSON Schema + Faker.
+- Providing stateful workflows (scenarios, transitions, mini-DB) to simulate complex flows like cart → checkout.
+- Exposing MCP integration so AI agents can manage mocks and workflows directly.
+
+It also highlights four pillars:
+
+- Dynamic mocks (JSON Schema-driven data).
+- Workflow mode (stateful flows).
+- Mini-database per scenario.
+- MCP support for AI-driven control.
+
+## Schema & Data
+
+- [Schema & Data](/docs#syntax)
+
+This section (rendered via `SchemaDocs`) explains how Mockzilla uses JSON Schema with json-schema-faker and Faker:
+
+- Core concepts:
+  - JSON Schema as the base format for mock bodies.
+  - `faker` keyword, e.g. `"faker": "internet.email"` to generate realistic values.
+  - Integration with Faker.js for names, emails, avatars, products, etc.
+- Interpolation and references:
+  - `{$.path.to.field}` and `{{$.path}}` patterns to reuse generated values across the same document.
+  - `pattern` used as a template when containing `{$.` or `{{$.`.
+- Examples described in the docs:
+  - Referencing nested fields, e.g. greeting a user by `$.user.firstName`.
+  - Reusing IDs like `transactionId` across `orderId` and `receiptId`.
+  - Building human-readable summaries from multiple fields, e.g. `"Order {$.orderId} is currently {$.status}"`.
+
+## Schema Examples
+
+- [Schema Examples](/docs#examples)
+
+This section provides copy‑pasteable JSON Schema recipes for common API shapes:
+
+- Simple Faker-powered list:
+  - Arrays of users with `id`, `name`, and `avatar`, using Faker for realistic values.
+- Referencing another field with `{$.path}`:
+  - Generate `orderId` once and embed it in strings like `"Order {$.orderId} confirmed"`.
+- Coherent user profile:
+  - Generate `firstName` and `lastName` with Faker and derive:
+    - `username`: `"{{$.firstName}}.{{$.lastName}}"`
+    - `email`: `"{{$.firstName}}.{{$.lastName}}@example.com"`
+    - `bio` built from the same names.
+- Reuse a stored ID:
+  - Single `userId` used for fields like `createdBy` and `modifiedBy`.
+- Paginated list endpoint:
+  - Typical `GET /users`/`GET /orders` response with `items`, `page`, `pageSize`, `total`, and `hasNext`.
+- Error envelope:
+  - Structured error object with stable `code` enums, Faker-generated `message`, and `requestId` plus trace text that references the request ID.
+
+These examples are intended to be pasted into the JSON Schema field of a mock when dynamic responses are enabled.
+
+## Workflow Mode
+
+- [Workflow Mode](/docs#workflows)
+
+The workflow documentation (rendered via `WorkflowDocs`) explains:
+
+- Motivation:
+  - Difference between static mocks (same JSON, no memory) and workflow mode (stateful, dynamic, input-driven).
+- Core concepts:
+  - Scenario:
+    - Named container (e.g. `"auth-flow"`) that isolates all state and data.
+  - Transition:
+    - Rule of the form “WHEN request matches X, THEN do Y and return Z”.
+  - Mini-DB:
+    - Per-scenario in-memory database to push, query, update, and remove items.
+- Conditions:
+  - Selectors such as `input.body.field`, `input.query.param`, `input.headers.auth`, `input.params.id`.
+  - Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `exists`, `contains`.
+  - Shorthand: `amount > 100` is equivalent to `input.body.amount > 100`.
+- Interpolation in responses:
+  - Expressions like `{{ input.body.id }}`, `{{ state.token }}`, `{{ db.users }}`, `{{ db.cart.length }}`.
+- Users CRUD journey example:
+  - POST `/users` using `db.push` to store the user.
+  - GET `/users` returning `{{ db.users }}`.
+  - PUT `/users/:id` using `db.update` with `match` on `{{ input.params.id }}`.
+  - DELETE `/users/:id` using `db.remove` with `match` on `{{ input.params.id }}`.
+
+## MCP Integration
+
+- [MCP Integration](/docs#mcp)
+
+This section explains how Mockzilla integrates with the Model Context Protocol (MCP) so AI agents can control mocks and workflows:
+
+- What MCP is used for:
+  - Allowing tools like Claude or other LLM-based agents to manage mocks and workflows programmatically.
+  - Providing high-level tools instead of requiring direct HTTP calls from the agent.
+- Conceptual list of tools:
+  - `create_mock`: Define new mocks with schema-based or static responses.
+  - `create_workflow_transition`: Register transitions for workflow scenarios.
+  - `inspect_workflow_state`: Inspect scenario state and mini-DB tables.
+  - `reset_workflow_state`: Clear state and data for a scenario.
+- Configuration:
+  - The docs show a JSON configuration snippet that points an MCP client at the Mockzilla MCP endpoint exposed by the app.
+
+Use this section when explaining to users how to connect their MCP-compatible client to Mockzilla and which kinds of operations the MCP tools are designed for. For exact configuration details, refer to the snippet rendered in `/docs#mcp`.
