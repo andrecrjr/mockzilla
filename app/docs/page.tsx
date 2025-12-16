@@ -1,5 +1,3 @@
-'use client';
-
 import {
 	AlertCircle,
 	BookOpen,
@@ -10,78 +8,16 @@ import {
 	Workflow,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { SchemaDocs } from '@/components/docs/schema-docs';
 import { SchemaTesterDialog } from '@/components/docs/schema-tester-dialog';
 import { WorkflowDocs } from '@/components/docs/workflow-docs';
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function DocsPage() {
-	const tabKeys = [
-		'overview',
-		'syntax',
-		'examples',
-		'workflows',
-		'advanced',
-		'mcp',
-	] as const;
-	type TabKey = (typeof tabKeys)[number];
-
-	const [activeTab, setActiveTab] = useState<TabKey>('overview');
-
-	useEffect(() => {
-		if (typeof window === 'undefined') return;
-
-		const readHash = (): TabKey | null => {
-			const raw = window.location.hash.replace('#', '');
-			return tabKeys.includes(raw as TabKey) ? (raw as TabKey) : null;
-		};
-
-		const initial = readHash();
-		if (initial) {
-			setActiveTab(initial);
-		}
-
-		const handleHashChange = () => {
-			const next = readHash();
-			if (next) {
-				setActiveTab(next);
-			}
-		};
-
-		window.addEventListener('hashchange', handleHashChange);
-		return () => window.removeEventListener('hashchange', handleHashChange);
-	}, []);
-
-	const handleTabChange = (value: string) => {
-		const next = value as TabKey;
-		setActiveTab(next);
-		if (typeof window !== 'undefined') {
-			const target = `#${next}`;
-			if (window.location.hash !== target) {
-				window.history.replaceState(null, '', target);
-			}
-		}
-	};
-
 	return (
 		<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
-			{/* ... */}
-
 			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-				<Tabs
-					value={activeTab}
-					onValueChange={handleTabChange}
-					className="flex flex-col md:flex-row gap-8"
-					orientation="vertical"
-				>
+				<div className="flex flex-col md:flex-row gap-8">
 					{/* Sidebar Navigation */}
 					<div className="w-full md:w-64 flex-shrink-0">
 						<div className="sticky top-24">
@@ -92,61 +28,57 @@ export default function DocsPage() {
 								</h1>
 							</div>
 
-							<TabsList className="bg-transparent p-0 flex flex-col h-auto items-stretch space-y-1">
+							<nav className="bg-transparent p-0 flex flex-col h-auto items-stretch space-y-1">
 								<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
 									Getting Started
 								</div>
-								<TabsTrigger
-									value="overview"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
+								<Link
+									href="#overview"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Overview
-								</TabsTrigger>
-								<TabsTrigger
-									value="syntax"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
+								</Link>
+								<Link
+									href="#syntax"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Schema & Data
-								</TabsTrigger>
-								<TabsTrigger
-									value="examples"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
+								</Link>
+								<Link
+									href="#examples"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Examples
-								</TabsTrigger>
+								</Link>
 
 								<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-4">
 									Advanced
 								</div>
-								<TabsTrigger
-									value="workflows"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
+								<Link
+									href="#workflows"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Workflow Mode
-								</TabsTrigger>
-								<TabsTrigger
-									value="advanced"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
+								</Link>
+								<Link
+									href="#advanced"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Advanced Features
-								</TabsTrigger>
-								<TabsTrigger
-									value="mcp"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md transition-colors hover:bg-muted"
+								</Link>
+								<Link
+									href="#mcp"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									MCP Integration
-								</TabsTrigger>
-							</TabsList>
+								</Link>
+							</nav>
 						</div>
 					</div>
 
 					{/* Main Content */}
 					<main className="flex-1 min-w-0">
-						<TabsContent
-							value="overview"
-							id="overview"
-							className="mt-0 space-y-6"
-						>
+						<section id="overview" className="mt-0 space-y-6 scroll-mt-24">
 							<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
 								<h2 className="text-2xl font-bold text-card-foreground mb-4">
 									Overview
@@ -201,29 +133,26 @@ export default function DocsPage() {
 								</div>
 							</Card>
 
-							<Accordion type="single" collapsible className="space-y-4">
-								<AccordionItem value="faq-1">
-									<AccordionTrigger>
-										Why use Mockzilla over straightforward mocks?
-									</AccordionTrigger>
-									<AccordionContent>
+							<div className="space-y-4">
+								<details className="group border rounded-lg p-4 bg-card/50">
+									<summary className="cursor-pointer list-none font-medium flex items-center justify-between">
+										<span>Why use Mockzilla over straightforward mocks?</span>
+										<AlertCircle className="h-4 w-4 text-muted-foreground group-open:rotate-180 transition-transform" />
+									</summary>
+									<div className="mt-2 text-sm text-muted-foreground">
 										Mockzilla allows for dynamic responses and stateful
 										scenarios, which lets you test complex interactions even
 										when backend APIs aren't ready.
-									</AccordionContent>
-								</AccordionItem>
-							</Accordion>
-						</TabsContent>
+									</div>
+								</details>
+							</div>
+						</section>
 
-						<TabsContent value="syntax" id="syntax" className="mt-0 space-y-6">
+						<section id="syntax" className="mt-0 space-y-6 scroll-mt-24">
 							<SchemaDocs />
-						</TabsContent>
+						</section>
 
-						<TabsContent
-							value="examples"
-							id="examples"
-							className="mt-0 space-y-6"
-						>
+						<section id="examples" className="mt-0 space-y-6 scroll-mt-24">
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
 								<h2 className="text-2xl font-bold text-foreground mb-4">
 									Schema & Interpolation Examples
@@ -352,25 +281,21 @@ export default function DocsPage() {
 									</div>
 								</div>
 							</Card>
-						</TabsContent>
+						</section>
 
-						<TabsContent
-							value="workflows"
-							id="workflows"
-							className="mt-0 space-y-6"
-						>
+						<section id="workflows" className="mt-0 space-y-6 scroll-mt-24">
 							<WorkflowDocs />
-						</TabsContent>
+						</section>
 
-						<TabsContent value="advanced" id="advanced" className="mt-0">
+						<section id="advanced" className="mt-0 scroll-mt-24">
 							<Card className="p-6 border-dashed">
 								<p className="text-center text-muted-foreground">
 									Advanced documentation is being updated.
 								</p>
 							</Card>
-						</TabsContent>
+						</section>
 
-						<TabsContent value="mcp" id="mcp" className="mt-0">
+						<section id="mcp" className="mt-0 scroll-mt-24">
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
 								<h2 className="text-2xl font-bold text-foreground mb-4">
 									MCP Integration
@@ -441,9 +366,9 @@ export default function DocsPage() {
 									</p>
 								</div>
 							</Card>
-						</TabsContent>
+						</section>
 					</main>
-				</Tabs>
+				</div>
 			</div>
 		</div>
 	);

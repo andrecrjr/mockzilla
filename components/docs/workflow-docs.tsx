@@ -1,5 +1,3 @@
-'use client';
-
 import { Box, Braces, Database, Lightbulb, Workflow } from 'lucide-react';
 import {
 	Accordion,
