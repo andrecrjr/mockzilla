@@ -199,113 +199,6 @@ Support for:
 
 ---
 
-## Advanced: Custom Formats
-
-For more control, use custom format extensions:
-
-### `x-store-as`: Store a Generated Value
-
-Generate and store a value for later reference:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "userId": {
-      "type": "string",
-      "format": "uuid",
-      "x-store-as": "mainUserId"
-    }
-  }
-}
-```
-
-### `x-ref`: Reference a Stored Value
-
-Retrieve a previously stored value:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "userId": {
-      "type": "string",
-      "format": "uuid",
-      "x-store-as": "mainUserId"
-    },
-    "createdBy": {
-      "type": "string",
-      "x-ref": "mainUserId"
-    },
-    "modifiedBy": {
-      "type": "string",
-      "x-ref": "mainUserId"
-    }
-  }
-}
-```
-
-**Output:**
-```json
-{
-  "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "createdBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "modifiedBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-}
-```
-
-### `x-template`: String Templates with Variable Interpolation
-
-Create templates using stored variables:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "userName": {
-      "type": "string",
-      "faker": "person.firstName",
-      "x-store-as": "userFirstName"
-    },
-    "welcomeMessage": {
-      "type": "string",
-      "x-template": "Welcome back, {{userFirstName}}!"
-    }
-  }
-}
-```
-
----
-
-## Combining Both Approaches
-
-You can use both post-processing templates (`{$.field}`) and custom formats (`x-store-as`, `x-ref`) in the same schema:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "format": "uuid",
-      "x-store-as": "ticketId"
-    },
-    "status": {
-      "enum": ["open", "in_progress", "closed"]
-    },
-    "message": {
-      "const": "Ticket {$.id} is currently {$.status}"
-    },
-    "confirmationCode": {
-      "type": "string",
-      "x-ref": "ticketId"
-    }
-  }
-}
-```
-
----
-
 ## Common Use Cases
 
 ### 1. **Consistent IDs Across Fields**
@@ -360,8 +253,7 @@ Pull specific items from arrays:
 
 > [!TIP]
 > - Use `{$.field}` for simple, readable templates
-> - Use custom formats (`x-store-as`, `x-ref`) when you need more control over generation order
-> - Combine both approaches for maximum flexibility
+> - Prefer JSONPath-style references over custom formats; they work consistently across nested objects and arrays.
 
 ---
 

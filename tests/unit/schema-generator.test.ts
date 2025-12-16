@@ -35,35 +35,24 @@ describe("lib/schema-generator", () => {
             expect(typeof data.age).toBe("number");
         });
 
-
-
-         it("handles post-processing templates {$.field}", () => {
+        it("handles post-processing templates {$.field}", () => {
             const schema = {
                 type: "object",
                 properties: {
-                    firstName: { type: "string", "x-store-as": "fname" },
+                    firstName: { type: "string" },
                     fullName: { 
                         type: "string", 
-                        // Using the post-processing syntax mentioned in the outline
-                        // Implementation might vary, but assuming support for {$.firstName} based on file outline
-                        "x-template": "full name: {$.firstName}" 
+                        const: "full name: {$.firstName}" 
                     }
                 },
                 required: ["firstName", "fullName"]
             };
 
-            // Note: The outline suggested processTemplates supports {$.path}
-            // Let's verify if the generator automatically applies this or if we need specific syntax
             const json = generateFromSchema(schema);
             const data = JSON.parse(json);
-            
-            // If x-template isn't used, maybe it's just a string with template? 
-            // The outline says: Post-processes generated data to replace template strings
-            
-            // Let's try to match what the code likely does
-            if (data.fullName.includes("full name:")) {
-                 expect(data.fullName).toContain(data.firstName);
-            }
+
+            expect(data.fullName).toContain("full name:");
+            expect(data.fullName).toContain(data.firstName);
         });
     });
 });

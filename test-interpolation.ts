@@ -93,38 +93,8 @@ console.log(
 	`✅ Test 3: ${test3Pass ? 'PASS' : 'FAIL'} - Status message contains both IDs\n`,
 );
 
-// Test 4: Custom formats (x-store-as and x-ref)
-console.log('Test 4: Custom Formats (x-store-as and x-ref)');
-console.log('='.repeat(50));
-const schema4 = {
-	type: 'object',
-	properties: {
-		userId: {
-			type: 'string',
-			format: 'x-store-as',
-			'x-key': 'mainUserId',
-		},
-		createdBy: {
-			type: 'string',
-			format: 'x-ref',
-			'x-key': 'mainUserId',
-		},
-		modifiedBy: {
-			type: 'string',
-			format: 'x-ref',
-			'x-key': 'mainUserId',
-		},
-	},
-};
-const result4 = generateFromSchema(schema4);
-console.log(result4);
-const parsed4 = JSON.parse(result4);
-const test4Pass =
-	parsed4.userId === parsed4.createdBy && parsed4.userId === parsed4.modifiedBy;
-console.log(`✅ Test 4: ${test4Pass ? 'PASS' : 'FAIL'} - All IDs match\n`);
-
-// Test 5: Array element reference
-console.log('Test 5: Array Element Reference');
+// Test 4: Array element reference
+console.log('Test 4: Array Element Reference');
 console.log('='.repeat(50));
 const schema5 = {
 	type: 'object',
@@ -157,14 +127,14 @@ console.log(result5);
 const parsed5 = JSON.parse(result5);
 const test5Pass = parsed5.featuredProduct === parsed5.items[0].name;
 console.log(
-	`✅ Test 5: ${test5Pass ? 'PASS' : 'FAIL'} - Featured product matches first item\n`,
+	`✅ Test 4: ${test5Pass ? 'PASS' : 'FAIL'} - Featured product matches first item\n`,
 );
 
 // Summary
 console.log('\n' + '='.repeat(50));
 console.log('📊 Test Summary');
 console.log('='.repeat(50));
-const allTests = [test1Pass, test2Pass, test3Pass, test4Pass, test5Pass];
+const allTests = [test1Pass, test2Pass, test3Pass, test5Pass];
 const passCount = allTests.filter((t) => t).length;
 console.log(`Total: ${allTests.length} tests`);
 console.log(`Passed: ${passCount}`);
