@@ -182,7 +182,7 @@ export function TransitionDialog({
 
 			// Populate effects
 			if (Array.isArray(transition.effects)) {
-				const parsedEffects = transition.effects.map((e: any) => {
+				const parsedEffects: EffectItem[] = transition.effects.map((e: any) => {
 					if (e.type === 'state.set') {
 						return {
 							type: 'state.set',
@@ -211,7 +211,10 @@ export function TransitionDialog({
 							match: typeof e.match === 'object' ? e.match : e.match || '',
 						};
 					}
-					return e as EffectItem;
+					return {
+						type: 'unknown',
+						raw: e,
+					};
 				});
 
 				setEffectsList(parsedEffects);
