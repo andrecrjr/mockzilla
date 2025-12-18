@@ -8,6 +8,8 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Code References: Use `file_path:line_number` to jump precisely.
 - Terminology: "folder" groups mocks; "mock" is an individual endpoint response.
 - Data Store: PostgreSQL via Drizzle; see `lib/db/schema.ts`.
+- Must NEVER use `any` type, ensure always creating types/interfaces or generic types or `unknown`.
+- Must use `z.infer<typeof schema>` to extract types from Zod schemas.
 
 ## Index
 - Mock Serving Agent

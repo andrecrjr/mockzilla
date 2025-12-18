@@ -8,6 +8,11 @@
 	"files": {
 		"ignoreUnknown": false
 	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
@@ -18,6 +23,18 @@
 			"recommended": true,
 			"performance": {
 				"noImgElement": "off"
+			},
+			"correctness": {
+				"noUnknownFunction": "off"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"suspicious": {
+				"noThenProperty": "off"
+			},
+			"style": {
+				"useConst": "off"
 			}
 		}
 	},
