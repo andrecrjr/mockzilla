@@ -1,31 +1,33 @@
 # Mockzilla 🦖
 
-A powerful Next.js application with PostgreSQL database, built with modern web technologies.
+A powerful self-hosted API mocking platform for development and testing. Deploy your own private mock server with an intuitive interface and advanced response generation capabilities.
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended for Local Development)
+### Option 1: Self-Host with Docker (Recommended)
 
-The fastest way to get started with hot-reloading and automatic database setup:
+The fastest way to get your own Mockzilla instance running:
 
 ```bash
 # Copy environment template
+# Update DATABASE_URL to: postgresql://mockzilla:mockzilla@localhost:5432/mockzilla
 cp .env.example .env
 
-# Start development environment
+# Start your mock server
 make dev-up
 
 # Or use the Makefile commands
 make help
 ```
 
-Your application will be available at:
+Your self-hosted mock server will be available at:
 - **Application**: http://localhost:36666
-- **Database**: localhost:5432
+- **Database**: localhost:5432 (internal, not exposed)
 
-📖 **For detailed Docker documentation, see [documentation/DOCKER.md](./documentation/DOCKER.md)**
 
-### Option 2: Local Development (Without Docker)
+### Option 2: Self-Host Without Docker
+
+For more control over your deployment, install directly on your system:
 
 1. **Install dependencies:**
    ```bash
@@ -38,19 +40,19 @@ Your application will be available at:
    # Update DATABASE_URL to: postgresql://mockzilla:mockzilla@localhost:5432/mockzilla
    ```
 
-3. **Start PostgreSQL** (you'll need PostgreSQL running locally)
+3. **Ensure PostgreSQL is running** on your system (you'll need PostgreSQL installed and running locally)
 
 4. **Run database migrations:**
    ```bash
    bun run db:push
    ```
 
-5. **Start the development server:**
+5. **Start the mock server:**
    ```bash
    bun run dev
    ```
 
-Open [http://localhost:36666](http://localhost:36666) with your browser to see the result.
+Your self-hosted instance will be available at [http://localhost:36666](http://localhost:36666).
 
 ## 📦 Available Scripts
 
@@ -73,77 +75,68 @@ Open [http://localhost:36666](http://localhost:36666) with your browser to see t
 - `make db-studio` - Open Drizzle Studio in Docker
 - `make help` - See all available commands
 
-## 🛠️ Tech Stack
+## 🛠️ Self-Hosting Stack
 
-- **Framework**: [Next.js 16](https://nextjs.org/) with App Router
-- **Runtime**: [Bun](https://bun.sh/)
+Mockzilla is designed for easy self-hosting with the following technologies:
+
+- **Framework**: [Next.js 16](https://nextjs.org/) with App Router (for mock server UI)
+- **Runtime**: [Bun](https://bun.sh/) (fast JavaScript runtime)
 - **Language**: TypeScript
-- **Database**: PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/)
+- **Database**: PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/) (for mock configuration storage)
 - **Styling**: Tailwind CSS 4
 - **UI Components**: Radix UI
 - **Forms**: React Hook Form + Zod
-- **Deployment**: Docker
+- **Containerization**: Docker (for simplified self-hosting)
 
-## 🐳 Docker Setup
+## 🐳 Self-Hosting with Docker
 
-This project includes optimized Docker configurations for both development and production:
+Mockzilla provides optimized Docker configurations for reliable self-hosting:
 
-- **Development** (`docker-compose.yaml`): Hot-reloading, volume mounting, Drizzle Studio
-- **Production** (`Dockerfile.prd`): Optimized builds, standalone output, minimal runtime
+- **Development** (`docker-compose.yaml`): Perfect for setting up your local instance with hot-reloading
+- **Production** (`Dockerfile.prd`): Optimized images for deploying your production mock server
 
-See [documentation/DOCKER.md](./documentation/DOCKER.md) for comprehensive Docker documentation.
+Since there's no DOCKER.md file, you can find comprehensive self-hosting documentation in the main README and Docker configuration files.
 
-## 📁 Project Structure
+## 📁 Self-Hosting Structure
 
 ```
 mockzilla/
-├── app/              # Next.js app directory (routes, layouts)
-├── components/       # React components
+├── app/              # Next.js app directory (mock server UI)
+├── components/       # React components (UI elements)
 ├── lib/              # Utility functions and configurations
-│   └── db/          # Database schema and connection
-├── drizzle/         # Database migrations
+│   └── db/          # Database schema and connection (for mock storage)
+├── drizzle/         # Database migrations (for self-hosted database)
 ├── public/          # Static assets
-├── Dockerfile       # Development Docker configuration
+├── Dockerfile       # Development Docker configuration (for local self-hosting)
 ├── Dockerfile.dev   # Development Docker configuration (legacy)
-├── Dockerfile.prd   # Production Docker configuration
-└── docker-compose.yaml  # Development compose file
+├── Dockerfile.prd   # Production Docker configuration (for production self-hosting)
+└── docker-compose.yaml  # Development compose file (for easy self-hosting setup)
 ```
 
-## 🗄️ Database Management
+## 🗄️ Self-Hosted Database Management
 
 ### Using Drizzle Studio
 
-Drizzle Studio provides a visual interface for your database:
-
-**With Docker:**
-```bash
-make db-studio
-# Open http://localhost:4983
-```
-
-**Without Docker:**
-```bash
-bun run db:studio
-```
+Drizzle Studio provides a visual interface for managing your self-hosted database:
 
 ### Running Migrations
 
-**With Docker:**
+**With Docker (self-hosting):**
 ```bash
 docker exec -it mockzilla-app-dev bun run db:push
 ```
 
-**Without Docker:**
+**Without Docker (self-hosting):**
 ```bash
 bun run db:push
 ```
 
-## 🔧 Environment Variables
+## 🔧 Self-Hosting Configuration
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and configure for your self-hosted instance:
 
 ```bash
-# Database
+# Database (for self-hosted mock storage)
 POSTGRES_USER=mockzilla
 POSTGRES_PASSWORD=mockzilla
 POSTGRES_DB=mockzilla
@@ -162,17 +155,19 @@ NEXT_TELEMETRY_DISABLED=1
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📚 Learn More
+## 📚 Self-Hosting Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Drizzle ORM Documentation](https://orm.drizzle.team/)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [Radix UI Documentation](https://www.radix-ui.com/docs/primitives/overview/introduction)
+For more information about running your own Mockzilla instance:
+
+- [Next.js Documentation](https://nextjs.org/docs) (for understanding the UI)
+- [Drizzle ORM Documentation](https://orm.drizzle.team/) (for database management)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs) (for UI customization)
+- [Docker Documentation](https://docs.docker.com/) (for containerized self-hosting)
 
 ## 📄 License
 
-This project is private and proprietary.
+This project is open source under MIT license
 
 ---
 
-Built with ❤️ using Next.js and Bun
+Deploy your own Mockzilla instance with ❤️ using Next.js and Bun
