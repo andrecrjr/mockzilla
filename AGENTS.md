@@ -124,10 +124,9 @@ Tags: #jsonschema #faker #templates #llm-context
 - Purpose: Generate sample JSON from JSON Schema with custom formats and template interpolation.
 - Module: `lib/schema-generator.ts`
 - Capabilities
-  - Custom formats: `x-store-as`, `x-ref`, `x-template` (lib/schema-generator.ts:39–66, 75–89, 99–114).
-  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts:198–241, 267–294).
-  - Validation helper `validateSchema` (lib/schema-generator.ts:243–265).
-  - Entry points: `generateFromSchema`, `generateFromSchemaString` (lib/schema-generator.ts:275–294, 296–308).
+  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts:106–201, 232–259).
+  - Validation helper `validateSchema` (lib/schema-generator.ts:204–229).
+  - Entry point: `generateFromSchema` (lib/schema-generator.ts:240–259).
 - Dependencies
   - `@faker-js/faker`, `json-schema-faker` integration (lib/schema-generator.ts:1–3, 17–28).
 - Related Docs
@@ -177,4 +176,3 @@ Tags: #storage #browser #fallback
 ## Additional References
 - UI docs page for interpolation examples: `app/docs/page.tsx`.
 - DB client: `lib/db/index.ts` (lib/db/index.ts:1–21).
-

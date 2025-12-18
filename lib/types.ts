@@ -99,3 +99,35 @@ export interface LegacyImportFormat {
 		body: string;
 	}>;
 }
+
+// Workflow Types
+
+export interface Scenario {
+	id: string;
+	name: string;
+	description?: string | null;
+	createdAt: string;
+	updatedAt?: string;
+}
+
+export interface Transition {
+	id: number;
+	scenarioId: string;
+	name: string;
+	description?: string | null;
+	path: string;
+	method: string;
+	conditions: any;
+	effects: any;
+	response: any;
+	meta?: any;
+	createdAt: string;
+	updatedAt?: string;
+}
+
+export interface WorkflowExportData {
+	version: number;
+	exportedAt: string;
+	scenarios: Scenario[];
+	transitions: Transition[];
+}

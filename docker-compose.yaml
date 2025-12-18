@@ -44,6 +44,7 @@ services:
       - ./tsconfig.json:/app/tsconfig.json
       - ./postcss.config.mjs:/app/postcss.config.mjs
       - ./drizzle.config.ts:/app/drizzle.config.ts
+      - ./tests:/app/tests
       # Exclude node_modules and .next from mounting to avoid conflicts
       - /app/node_modules
       - /app/.next

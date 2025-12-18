@@ -22,6 +22,38 @@ CREATE TABLE IF NOT EXISTS "mock_responses" (
 	"match_type" "match_type" DEFAULT 'exact',
 	"body_type" "body_type" DEFAULT 'json',
 	"enabled" boolean DEFAULT true NOT NULL,
+	"json_schema" text,
+	"use_dynamic_response" boolean DEFAULT false NOT NULL,
+	"echo_request_body" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "scenario_state" (
+	"scenario_id" text PRIMARY KEY NOT NULL,
+	"data" jsonb DEFAULT '{"tables": {}, "state": {}}' NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "scenarios" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "transitions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"scenario_id" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"path" text NOT NULL,
+	"method" text NOT NULL,
+	"conditions" jsonb DEFAULT '{}',
+	"effects" jsonb DEFAULT '[]',
+	"response" jsonb NOT NULL,
+	"meta" jsonb DEFAULT '{}',
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp
 );

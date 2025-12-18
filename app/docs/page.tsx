@@ -1,1059 +1,374 @@
-'use client';
-
 import {
 	AlertCircle,
-	ArrowLeft,
 	BookOpen,
+	Braces,
 	Code2,
+	Database,
 	Lightbulb,
+	Workflow,
 } from 'lucide-react';
 import Link from 'next/link';
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
+import { SchemaDocs } from '@/components/docs/schema-docs';
+import { SchemaTesterDialog } from '@/components/docs/schema-tester-dialog';
+import { WorkflowDocs } from '@/components/docs/workflow-docs';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function DocsPage() {
 	return (
 		<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
-			<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-				{/* Header */}
-				<div className="mb-8">
-					<Link href="/" className="underline underline-offset-4">
-						<Button variant="ghost" className="mb-4 -ml-4">
-							<ArrowLeft className="mr-2 h-4 w-4" />
-							Back to Home
-						</Button>
-					</Link>
-					<div className="flex items-center gap-4 mb-4">
-						<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
-							<BookOpen className="h-6 w-6 text-primary" />
-						</div>
-						<div>
-							<h1 className="text-4xl font-black tracking-tighter text-foreground">
-								Documentation
-							</h1>
+			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+				<div className="flex flex-col md:flex-row gap-8">
+					{/* Sidebar Navigation */}
+					<div className="w-full md:w-64 flex-shrink-0">
+						<div className="sticky top-24">
+							<div className="flex items-center gap-2 mb-6">
+								<BookOpen className="h-5 w-5 text-primary" />
+								<h1 className="text-xl font-bold tracking-tight">
+									Documentation
+								</h1>
+							</div>
+
+							<nav className="bg-transparent p-0 flex flex-col h-auto items-stretch space-y-1">
+								<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+									Getting Started
+								</div>
+								<Link
+									href="#overview"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Overview
+								</Link>
+								<Link
+									href="#syntax"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Schema & Data
+								</Link>
+								<Link
+									href="#examples"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Examples
+								</Link>
+
+								<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-4">
+									Advanced
+								</div>
+								<Link
+									href="#workflows"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Workflow Mode
+								</Link>
+								<Link
+									href="#advanced"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Advanced Features
+								</Link>
+								<Link
+									href="#mcp"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									MCP Integration
+								</Link>
+							</nav>
 						</div>
 					</div>
-				</div>
 
-				{/* Main Content */}
-				<Tabs defaultValue="overview" className="space-y-6">
-					<TabsList className="grid w-full grid-cols-5 mockzilla-border bg-card/50 backdrop-blur-sm">
-						<TabsTrigger value="overview">Overview</TabsTrigger>
-						<TabsTrigger value="syntax">Syntax</TabsTrigger>
-						<TabsTrigger value="examples">Examples</TabsTrigger>
-						<TabsTrigger value="advanced">Advanced</TabsTrigger>
-						<TabsTrigger value="mcp">MCP</TabsTrigger>
-					</TabsList>
+					{/* Main Content */}
+					<main className="flex-1 min-w-0">
+						<section id="overview" className="mt-0 space-y-6 scroll-mt-24">
+							<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
+								<h2 className="text-2xl font-bold text-card-foreground mb-4">
+									Overview
+								</h2>
+								<p className="text-muted-foreground mb-4">
+									Mockzilla is a powerful API mocking tool designed for modern
+									development workflows. It supports dynamic response
+									generation, stateful workflows, and AI integration via MCP.
+								</p>
 
-					{/* Overview Tab */}
-					<TabsContent value="overview" className="space-y-6">
-						<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-							<h2 className="text-2xl font-bold text-card-foreground mb-4">
-								What is String Interpolation?
-							</h2>
-							<p className="text-muted-foreground mb-4">
-								String interpolation allows you to reference and reuse generated
-								values within your JSON Schema Faker mocks. This means you can
-								create consistent mock data where the same randomly generated
-								value appears in multiple fields.
-							</p>
-							<p className="text-muted-foreground mb-4">
-								Mockzilla supports dynamic responses defined with JSON Schema,
-								powered by{' '}
-								<a
-									href="https://github.com/json-schema-faker/json-schema-faker"
-									className="underline underline-offset-4 hover:text-primary"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									JSON Schema Faker
-								</a>{' '}
-								and{' '}
-								<code className="bg-muted px-1 py-0.5 rounded">
-									@faker-js/faker
-								</code>
-								. You can combine standard JSON Schema formats (like{' '}
-								<code className="bg-muted px-1 rounded">email</code> or{' '}
-								<code className="bg-muted px-1 rounded">uuid</code>) with Faker
-								directives (like{' '}
-								<code className="bg-muted px-1 rounded">person.fullName</code>{' '}
-								or <code className="bg-muted px-1 rounded">internet.email</code>
-								) for realistic sample data.
-							</p>
-
-							<div className="grid gap-4 md:grid-cols-3 mt-6">
-								<div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-									<Code2 className="h-8 w-8 text-primary mb-2" />
-									<h3 className="font-semibold text-foreground mb-2">
-										Field References
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										Reference any field using{' '}
-										<code className="bg-muted px-1 py-0.5 rounded">
-											{'{$.field}'}
-										</code>{' '}
-										syntax
-									</p>
-								</div>
-								<div className="p-4 rounded-lg bg-accent/5 border border-accent/20">
-									<Lightbulb className="h-8 w-8 text-accent mb-2" />
-									<h3 className="font-semibold text-foreground mb-2">
-										Consistent Data
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										Reuse the same random value across multiple fields for
-										realistic mock data
-									</p>
-								</div>
-								<div className="p-4 rounded-lg bg-secondary/20 border border-border">
-									<AlertCircle className="h-8 w-8 text-foreground mb-2" />
-									<h3 className="font-semibold text-foreground mb-2">
-										Dynamic Responses
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										Each request generates fresh random data with maintained
-										internal consistency
-									</p>
-								</div>
-							</div>
-						</Card>
-						<Accordion type="single" collapsible className="space-y-4">
-							<AccordionItem value="overview-quick">
-								<AccordionTrigger>Quick Example</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-										<div className="grid md:grid-cols-2 gap-4">
-											<div>
-												<p className="text-sm font-semibold text-muted-foreground mb-2">
-													JSON Schema:
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-													{`{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "message": {
-      "const": "Your ID is {$.id}"
-    }
-  }
-}`}
-												</pre>
-											</div>
-											<div>
-												<p className="text-sm font-semibold text-muted-foreground mb-2">
-													Generated Output:
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-													{`{
-  "id": "a7c3f821-9b4d-...",
-  "message": "Your ID is a7c3f821-9b4d-..."
-}`}
-												</pre>
-												<p className="text-xs text-primary mt-2">
-													✨ Notice how the message contains the actual
-													generated ID!
-												</p>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="syntax-custom-formats">
-								<AccordionTrigger>
-									Custom Formats: x-store-as, x-ref, x-template
-								</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-										<div className="space-y-6">
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													x-store-as: generate and store
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Generate a value and store it under a key to reuse
-													later.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
-  "type": "object",
-  "properties": {
-    "userId": {
-      "type": "string",
-      "format": "x-store-as",
-      "x-key": "mainUserId"
-    }
-  }
-}`}</pre>
-											</div>
-
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													x-ref: reuse stored value
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Reference a previously stored value by key.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
-  "type": "object",
-  "properties": {
-    "createdBy": {
-      "type": "string",
-      "format": "x-ref",
-      "x-key": "mainUserId"
-    },
-    "modifiedBy": {
-      "type": "string",
-      "format": "x-ref",
-      "x-key": "mainUserId"
-    }
-  }
-}`}</pre>
-											</div>
-
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													x-template: inline templating
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Use stored values inside strings. Supports{' '}
-													<code>{'{{key}}'}</code> and <code>{'{key}'}</code>.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
-  "type": "object",
-  "properties": {
-    "userId": {
-      "type": "string",
-      "format": "x-store-as",
-      "x-key": "mainUserId"
-    },
-    "summary": {
-      "type": "string",
-      "format": "x-template",
-      "template": "Action by {{mainUserId}}"
-    }
-  }
-}`}</pre>
-											</div>
-
-											<div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-												<p className="text-sm text-muted-foreground">
-													<strong>When to use:</strong> Use{' '}
-													<code>x-store-as</code> when a value must be generated
-													once and reused; use <code>x-ref</code> to mirror that
-													value elsewhere; use <code>x-template</code> to embed
-													stored values directly into strings.
-												</p>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-						</Accordion>
-					</TabsContent>
-
-					{/* Syntax Tab */}
-					<TabsContent value="syntax" className="space-y-6">
-						<Accordion type="single" collapsible className="space-y-4">
-							<AccordionItem value="syntax-template">
-								<AccordionTrigger>Template Syntax</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-										<div className="space-y-6">
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													Basic Field Reference
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Use{' '}
-													<code className="bg-muted px-2 py-1 rounded">
-														{'{$.fieldName}'}
-													</code>{' '}
-													to reference a field at the root level.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm">
-													{`"message": {
-  "const": "Hello {$.userName}!"
-}`}
-												</pre>
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													Nested Object Reference
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Use dot notation to access nested properties.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm">
-													{`"greeting": {
-  "const": "Hello, {$.user.firstName} {$.user.lastName}!"
-}`}
-												</pre>
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													Array Element Reference
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Use bracket notation to access array elements by
-													index.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm">
-													{`"featured": {
-  "const": "Try our {$.items[0].name}!"
-}`}
-												</pre>
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													Multiple References
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													You can use multiple references in a single string.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm">
-													{`"status": {
-  "const": "Order {$.orderId} for {$.customerName} is {$.status}"
-}`}
-												</pre>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="syntax-alternative">
-								<AccordionTrigger>Alternative Syntax</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-										<p className="text-muted-foreground mb-3">
-											Both single and double braces work identically:
+								<div className="grid gap-6 md:grid-cols-2 mt-8">
+									<div className="p-4 rounded-lg bg-card border border-border">
+										<h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+											<Code2 className="h-4 w-4 text-primary" />
+											Dynamic Mocks
+										</h3>
+										<p className="text-sm text-muted-foreground">
+											Generate realistic data using JSON Schema + Faker. Ensure
+											your UI handles varied data correctly.
 										</p>
-										<div className="grid md:grid-cols-2 gap-4">
-											<div className="bg-muted p-4 rounded-lg">
-												<p className="text-xs font-semibold text-muted-foreground mb-2">
-													Single Braces:
-												</p>
-												<code className="text-sm">{'{$.field}'}</code>
-											</div>
-											<div className="bg-muted p-4 rounded-lg">
-												<p className="text-xs font-semibold text-muted-foreground mb-2">
-													Double Braces:
-												</p>
-												<code className="text-sm">{'{{$.field}}'}</code>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="syntax-jsonschema-faker">
-								<AccordionTrigger>JSON Schema + Faker</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-										<div className="space-y-6">
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													Basic Faker Fields
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Define fields with{' '}
-													<code className="bg-muted px-1 rounded">faker</code>{' '}
-													paths that map to{' '}
-													<code className="bg-muted px-1 rounded">
-														@faker-js/faker
-													</code>{' '}
-													methods.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-													{`{
-  "type": "object",
-  "properties": {
-    "name": {
-      "type": "string",
-      "faker": "person.fullName"
-    },
-    "email": {
-      "type": "string",
-      "format": "email",
-      "faker": "internet.email"
-    }
-  },
-  "required": ["name", "email"]
-}`}
-												</pre>
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													Choose Faker Source with oneOf
-												</h3>
-												<p className="text-muted-foreground mb-3">
-													Use{' '}
-													<code className="bg-muted px-1 rounded">oneOf</code>{' '}
-													to randomly select one of multiple Faker generators.
-												</p>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-													{`{
-  "type": "object",
-  "properties": {
-    "image": {
-      "type": "string",
-      "oneOf": [
-        { "faker": "internet.avatar" },
-        { "faker": "image.url" }
-      ]
-    }
-  },
-  "required": ["image"]
-}`}
-												</pre>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-						</Accordion>
-					</TabsContent>
+									</div>
+									<div className="p-4 rounded-lg bg-card border border-border">
+										<h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+											<Workflow className="h-4 w-4 text-accent" />
+											Stateful Workflows
+										</h3>
+										<p className="text-sm text-muted-foreground">
+											Simulate complex user flows (Cart &rarr; Checkout) with
+											persistent state and logic.
+										</p>
+									</div>
+									<div className="p-4 rounded-lg bg-card border border-border">
+										<h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+											<Database className="h-4 w-4 text-secondary-foreground" />
+											Mini-Database
+										</h3>
+										<p className="text-sm text-muted-foreground">
+											Each scenario gets a transient database to push, update,
+											and query items during a session.
+										</p>
+									</div>
+									<div className="p-4 rounded-lg bg-card border border-border">
+										<h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+											<Lightbulb className="h-4 w-4 text-yellow-500" />
+											MCP Support
+										</h3>
+										<p className="text-sm text-muted-foreground">
+											First-class support for AI agents. Let Claude or other
+											LLMs control your mocks directly.
+										</p>
+									</div>
+								</div>
+							</Card>
 
-					{/* Examples Tab */}
-					<TabsContent value="examples" className="space-y-6">
-						<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-							<h2 className="text-2xl font-bold text-card-foreground mb-4">
-								Real-World Examples
-							</h2>
-							<Accordion type="single" collapsible className="space-y-4">
-								<AccordionItem value="ex-ticket">
-									<AccordionTrigger>Ticket System</AccordionTrigger>
-									<AccordionContent>
-										<div className="border-l-4 border-primary pl-4">
-											<p className="text-sm text-muted-foreground mb-3">
-												Create a support ticket with consistent ID across
-												multiple fields.
-											</p>
-											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-												{`{
-  "type": "object",
-  "properties": {
-    "ticketId": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "message": {
-      "const": "Your ticket {$.ticketId} has been created"
-    },
-    "confirmationNumber": {
-      "const": "{$.ticketId}"
-    }
-  }
-}`}
-											</pre>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem value="ex-user">
-									<AccordionTrigger>User Profile</AccordionTrigger>
-									<AccordionContent>
-										<div className="border-l-4 border-accent pl-4">
-											<p className="text-sm text-muted-foreground mb-3">
-												Generate personalized messages using user data.
-											</p>
-											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-												{`{
-  "type": "object",
-  "properties": {
-    "user": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "faker": "person.fullName"
-        },
-        "email": {
-          "type": "string",
-          "faker": "internet.email"
-        }
-      }
-    },
-    "welcome": {
-      "const": "Welcome, {$.user.name}!"
-    },
-    "emailSubject": {
-      "const": "Hello {$.user.name}, verify {$.user.email}"
-    }
-  }
-}`}
-											</pre>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem value="ex-ecommerce">
-									<AccordionTrigger>E-commerce Order</AccordionTrigger>
-									<AccordionContent>
-										<div className="border-l-4 border-secondary pl-4">
-											<p className="text-sm text-muted-foreground mb-3">
-												Reference array elements for featured products.
-											</p>
-											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-												{`{
-  "type": "object",
-  "properties": {
-    "products": {
-      "type": "array",
-      "minItems": 3,
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "faker": "commerce.productName"
-          },
-          "price": {
-            "type": "number",
-            "minimum": 10,
-            "maximum": 500
-          }
-        }
-      }
-    },
-    "featuredProduct": {
-      "const": "{$.products[0].name}"
-    },
-    "summary": {
-      "const": "Featuring {$.products[0].name} at just $\${$.products[0].price}!"
-    }
-  }
-}`}
-											</pre>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem value="ex-media">
-									<AccordionTrigger>Media Asset</AccordionTrigger>
-									<AccordionContent>
-										<div className="border-l-4 border-primary pl-4">
-											<p className="text-sm text-muted-foreground mb-3">
-												Randomly choose between avatar or generic image URL.
-											</p>
-											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-												{`{
-  "type": "object",
-  "properties": {
-    "image": {
-      "type": "string",
-      "oneOf": [
-        { "faker": "internet.avatar" },
-        { "faker": "image.url" }
-      ]
-    },
-    "caption": {
-      "type": "string",
-      "const": "Preview: {$.image}"
-    }
-  }
-}`}
-											</pre>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem value="ex-fixed-array">
-									<AccordionTrigger>
-										Fixed-Length Arrays (n items)
-									</AccordionTrigger>
-									<AccordionContent>
-										<div className="border-l-4 border-primary pl-4">
-											<p className="text-sm text-muted-foreground mb-3">
-												Generate an array with exactly 3 items; set{' '}
-												<code>minItems</code> and <code>maxItems</code> to the
-												same number.
-											</p>
-											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+							<div className="space-y-4">
+								<details className="group border rounded-lg p-4 bg-card/50">
+									<summary className="cursor-pointer list-none font-medium flex items-center justify-between">
+										<span>Why use Mockzilla over straightforward mocks?</span>
+										<AlertCircle className="h-4 w-4 text-muted-foreground group-open:rotate-180 transition-transform" />
+									</summary>
+									<div className="mt-2 text-sm text-muted-foreground">
+										Mockzilla allows for dynamic responses and stateful
+										scenarios, which lets you test complex interactions even
+										when backend APIs aren't ready.
+									</div>
+								</details>
+							</div>
+						</section>
+
+						<section id="syntax" className="mt-0 space-y-6 scroll-mt-24">
+							<SchemaDocs />
+						</section>
+
+						<section id="examples" className="mt-0 space-y-6 scroll-mt-24">
+							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+								<h2 className="text-2xl font-bold text-foreground mb-4">
+									Schema & Interpolation Examples
+								</h2>
+								<div className="flex items-center justify-between gap-3 mb-6">
+									<p className="text-muted-foreground">
+										Drop these schemas into a mock&apos;s JSON Schema field when
+										dynamic responses are enabled. Mockzilla will use
+										json-schema-faker + Faker plus its own interpolation engine
+										to generate fresh data on each request.
+									</p>
+									<SchemaTesterDialog />
+								</div>
+
+								<div className="space-y-6">
+									<div className="border rounded-lg p-4">
+										<h3 className="font-semibold mb-2">
+											1. Simple Faker-Powered List
+										</h3>
+										<p className="text-sm text-muted-foreground mb-3">
+											Generate an array of users with realistic names and
+											avatars.
+										</p>
+										<pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
+											{`{
   "type": "array",
   "minItems": 3,
-  "maxItems": 3,
+  "maxItems": 5,
   "items": {
     "type": "object",
     "properties": {
       "id": { "type": "string", "format": "uuid" },
-      "name": { "type": "string", "faker": "person.fullName" }
-    }
+      "name": { "type": "string", "faker": "person.fullName" },
+      "avatar": { "type": "string", "faker": "image.avatar" }
+    },
+    "required": ["id", "name"]
   }
-}`}</pre>
-											<p className="text-xs text-primary mt-2">
-												Tip: reference items by index like{' '}
-												<code>{`{$.users[0].id}`}</code>
-											</p>
-											<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">{`{
+}`}
+										</pre>
+									</div>
+
+									<div className="border rounded-lg p-4">
+										<h3 className="font-semibold mb-2">
+											2. Referencing Another Field with {`{$.path}`}
+										</h3>
+										<p className="text-sm text-muted-foreground mb-3">
+											Use JSONPath-style syntax to reuse generated values in
+											other strings. References are resolved after the full JSON
+											is generated.
+										</p>
+										<pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
+											{`{
   "type": "object",
   "properties": {
-    "users": {
-      "type": "array",
-      "minItems": 2,
-      "maxItems": 2,
-      "items": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" } } }
-    },
-    "summary": {
-      "const": "First user is {$.users[0].id}"
-    }
+    "orderId": { "type": "string", "format": "uuid" },
+    "summary": { "const": "Order {$.orderId} confirmed" }
   }
-}`}</pre>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-							</Accordion>
-						</Card>
-					</TabsContent>
+}`}
+										</pre>
+									</div>
 
-					{/* Advanced Tab */}
-					<TabsContent value="advanced" className="space-y-6">
-						<Accordion type="single" collapsible className="space-y-4">
-							<AccordionItem value="adv-echo">
-								<AccordionTrigger>Echo Request Body</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-										<p className="text-muted-foreground mb-4">
-											For POST, PUT, and PATCH methods, you can enable "Echo
-											Request Body" to return exactly what was sent in the
-											request.
+									<div className="border rounded-lg p-4">
+										<h3 className="font-semibold mb-2">
+											3. Coherent User Profile with Interpolation
+										</h3>
+										<p className="text-sm text-muted-foreground mb-3">
+											Generate a name once, then build username, email, and bio
+											from it using interpolation handled by the schema
+											generator.
 										</p>
-										<div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-											<div className="flex gap-3">
-												<Lightbulb className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-												<div>
-													<p className="font-semibold text-foreground mb-1">
-														JSON Handling
-													</p>
-													<p className="text-sm text-muted-foreground">
-														If the request Content-Type is{' '}
-														<code>application/json</code>, the body will be
-														parsed and returned as a proper JSON object.
-													</p>
-												</div>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="adv-formats">
-								<AccordionTrigger>Custom Formats</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-										<p className="text-muted-foreground mb-4">
-											For advanced use cases, you can use custom format keywords
-											for explicit control over value generation and storage.
+										<pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
+											{`{
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "faker": "person.firstName"
+    },
+    "lastName": {
+      "type": "string",
+      "faker": "person.lastName"
+    },
+    "username": {
+      "type": "string",
+      "pattern": "{{$.firstName}}.{{$.lastName}}"
+    },
+    "email": {
+      "type": "string",
+      "pattern": "{{$.firstName}}.{{$.lastName}}@example.com"
+    },
+    "bio": {
+      "type": "string",
+      "pattern": "Hi, I'm {$.firstName} {$.lastName}. I love coding!"
+    }
+  },
+  "required": ["firstName", "lastName", "username", "email"]
+}`}
+										</pre>
+									</div>
+
+									<div className="border rounded-lg p-4">
+										<h3 className="font-semibold mb-2">
+											4. Reuse a Stored ID with Templates
+										</h3>
+										<p className="text-sm text-muted-foreground mb-3">
+											Generate a value once and reference it in multiple fields
+											using {`{$.path}`} interpolation.
 										</p>
-										<div className="space-y-6">
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													<code className="bg-muted px-2 py-1 rounded text-sm">
-														x-store-as
-													</code>
-												</h3>
-												<pre className="bg-muted p-4 rounded-lg text-sm">
-													{`"userId": {
-  "type": "string",
-  "format": "x-store-as",
-  "x-key": "mainUserId"
-}`}
-												</pre>
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-2">
-													<code className="bg-muted px-2 py-1 rounded text-sm">
-														x-ref
-													</code>
-												</h3>
-												<pre className="bg-muted p-4 rounded-lg text-sm">
-													{`"createdBy": {
-  "type": "string",
-  "format": "x-ref",
-  "x-key": "mainUserId"
-}`}
-												</pre>
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-foreground mb-3">
-													Complete Example
-												</h3>
-												<pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-													{`{
+										<pre className="bg-muted p-3 rounded text-xs font-mono overflow-auto">
+											{`{
   "type": "object",
   "properties": {
     "userId": {
       "type": "string",
-      "format": "x-store-as",
-      "x-key": "mainUserId"
+      "format": "uuid"
     },
     "createdBy": {
-      "type": "string",
-      "format": "x-ref",
-      "x-key": "mainUserId"
+      "const": "{$.userId}"
     },
     "modifiedBy": {
-      "type": "string",
-      "format": "x-ref",
-      "x-key": "mainUserId"
+      "const": "{$.userId}"
     }
   }
 }`}
-												</pre>
-												<div className="mt-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-													<p className="text-sm text-foreground">
-														<strong>Result:</strong> All three fields will have
-														the same generated UUID value.
-													</p>
-												</div>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="adv-notes">
-								<AccordionTrigger>Important Notes</AccordionTrigger>
-								<AccordionContent>
-									<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-										<div className="space-y-3">
-											<div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-												<div className="flex gap-3">
-													<AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-													<div>
-														<p className="font-semibold text-foreground mb-1">
-															Template Resolution Order
-														</p>
-														<p className="text-sm text-muted-foreground">
-															Template references are resolved{' '}
-															<strong>after</strong> the entire JSON is
-															generated. Make sure referenced fields exist in
-															your schema.
-														</p>
-													</div>
-												</div>
-											</div>
-											<div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-												<div className="flex gap-3">
-													<AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-													<div>
-														<p className="font-semibold text-foreground mb-1">
-															Case Sensitivity
-														</p>
-														<p className="text-sm text-muted-foreground">
-															Field references are case-sensitive.{' '}
-															<code className="bg-muted px-1 rounded">
-																{'{$.Id}'}
-															</code>{' '}
-															is different from{' '}
-															<code className="bg-muted px-1 rounded">
-																{'{$.id}'}
-															</code>
-															.
-														</p>
-													</div>
-												</div>
-											</div>
-											<div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-												<div className="flex gap-3">
-													<AlertCircle className="h-5 w-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-													<div>
-														<p className="font-semibold text-foreground mb-1">
-															Array Index Bounds
-														</p>
-														<p className="text-sm text-muted-foreground">
-															Make sure array indices exist. Referencing{' '}
-															<code className="bg-muted px-1 rounded">
-																{'{$.items[10]}'}
-															</code>{' '}
-															when the array only has 3 items will fail
-															gracefully.
-														</p>
-													</div>
-												</div>
-											</div>
-										</div>
-									</Card>
-								</AccordionContent>
-							</AccordionItem>
-						</Accordion>
-					</TabsContent>
-
-					{/* MCP Tab */}
-					<TabsContent value="mcp" className="space-y-6">
-						<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-							<h2 className="text-2xl font-bold text-card-foreground mb-4">
-								Model Context Protocol (MCP)
-							</h2>
-							<p className="text-muted-foreground mb-4">
-								Interact with Mockzilla via MCP tools at{' '}
-								<code className="bg-muted px-1 py-0.5 rounded">/mcp</code>.
-								Tools support folder browsing, mock creation, schema-driven
-								generation, and preview.
-							</p>
-							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4 mb-6">
-								<h3 className="text-xl font-bold text-foreground mb-2">
-									Installation & Setup
-								</h3>
-								<ul className="list-disc pl-5 text-sm text-muted-foreground">
-									<li>
-										Start app:{' '}
-										<code className="bg-muted px-1 py-0.5 rounded">
-											npm run dev
-										</code>{' '}
-										(port 36666)
-									</li>
-									<li>
-										List tools: GET{' '}
-										<code className="bg-muted px-1 py-0.5 rounded">
-											http://localhost:36666/mcp
-										</code>
-									</li>
-									<li>
-										Call a tool: POST JSON to{' '}
-										<code className="bg-muted px-1 py-0.5 rounded">/mcp</code>
-									</li>
-									<li>
-										HTTP servers can log to stdout/stderr; avoid stdout only for
-										STDIO servers
-									</li>
-								</ul>
-								<Accordion type="single" collapsible className="space-y-4 mt-4">
-									<AccordionItem value="install-json">
-										<AccordionTrigger>JSON Requests</AccordionTrigger>
-										<AccordionContent>
-											<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
-												<p className="text-sm text-muted-foreground mb-2">
-													List tools:
-												</p>
-												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-													{
-														'curl -s -X POST \\\n-H \'Content-Type: application/json\' \\\n-d \'{"action":"list_tools"}\' \\\nhttp://localhost:36666/mcp'
-													}
-												</pre>
-												<p className="text-sm text-muted-foreground mt-4 mb-2">
-													Create schema mock:
-												</p>
-												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-													{
-														'curl -s -X POST \\\n-H \'Content-Type: application/json\' \\\n-d \'{\n  "action":"call_tool",\n  "toolName":"create_schema_mock",\n  "args":{\n    "name":"Tickets",\n    "path":"/tickets",\n    "method":"GET",\n    "statusCode":200,\n    "folderSlug":"support",\n    "jsonSchema":"{\\"type\\":\\"object\\",\\"properties\\":{\\"id\\":{\\"type\\":\\"string\\",\\"format\\":\\"uuid\\"},\\"message\\":{\\"const\\":\\"Your ticket {$.id} has been created\\"}}}"\n  }\n}\' \\\nhttp://localhost:36666/mcp'
-													}
-												</pre>
-											</Card>
-										</AccordionContent>
-									</AccordionItem>
-									<AccordionItem value="install-claude">
-										<AccordionTrigger>Claude Desktop</AccordionTrigger>
-										<AccordionContent>
-											<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
-												<p className="text-sm text-muted-foreground mb-3">
-													Point the MCP host to the HTTP endpoint:
-												</p>
-												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-													{
-														'{\n  "mcpServers": {\n    "mockzilla": {\n      "transport": "http",\n      "url": "http://localhost:36666/mcp"\n    }\n  }\n}'
-													}
-												</pre>
-												<p className="text-xs text-muted-foreground mt-2">
-													Start Mockzilla first; approve tool execution when
-													prompted.
-												</p>
-											</Card>
-										</AccordionContent>
-									</AccordionItem>
-									<AccordionItem value="install-vscode">
-										<AccordionTrigger>VS Code</AccordionTrigger>
-										<AccordionContent>
-											<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
-												<p className="text-sm text-muted-foreground mb-3">
-													Add an MCP server entry in your MCP-enabled client
-													settings:
-												</p>
-												<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-													{
-														'{\n  "mcpServers": {\n    "mockzilla": {\n      "transport": "http",\n      "url": "http://localhost:36666/mcp",\n      "capabilities": { "tools": true }\n    }\n  }\n}'
-													}
-												</pre>
-												<p className="text-xs text-muted-foreground mt-2">
-													Use the client’s UI to call tools or send JSON POSTs.
-												</p>
-											</Card>
-										</AccordionContent>
-									</AccordionItem>
-								</Accordion>
+										</pre>
+									</div>
+								</div>
 							</Card>
+						</section>
 
-							<div className="grid gap-4 md:grid-cols-3">
-								<div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-									<h3 className="font-semibold text-foreground mb-2">
-										list_folders
-									</h3>
-									<p className="text-sm text-muted-foreground mb-2">
-										Paginate folders for selection.
-									</p>
-									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
-	"action": "call_tool",
-	"toolName": "list_folders",
-	"args": { "page": 1, "limit": 10 }
-}`}</pre>
-								</div>
-								<div className="p-4 rounded-lg bg-accent/5 border border-accent/20">
-									<h3 className="font-semibold text-foreground mb-2">
-										create_mock
-									</h3>
-									<p className="text-sm text-muted-foreground mb-2">
-										Create a static or echo mock in a folder.
-									</p>
-									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
-	"action": "call_tool",
-	"toolName": "create_mock",
-	"args": {
-		"name": "Users Index",
-		"path": "/users",
-		"method": "GET",
-		"statusCode": 200,
-		"folderId": "<folder-id>",
-		"response": "{\\"data\\":[]}",
-		"bodyType": "json"
-	}
-}`}</pre>
-								</div>
-								<div className="p-4 rounded-lg bg-secondary/20 border border-border">
-									<h3 className="font-semibold text-foreground mb-2">
-										create_schema_mock
-									</h3>
-									<p className="text-sm text-muted-foreground mb-2">
-										Create a mock using JSON Schema + Faker with interpolation.
-									</p>
-									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
-	"action": "call_tool",
-	"toolName": "create_schema_mock",
-	"args": {
-		"name": "Tickets",
-		"path": "/tickets",
-		"method": "GET",
-		"statusCode": 200,
-		"folderSlug": "support",
-		"jsonSchema": "{\\"type\\":\\"object\\",\\"properties\\":{\\"id\\":{\\"type\\":\\"string\\",\\"format\\":\\"uuid\\"},\\"message\\":{\\"const\\":\\"Your ticket {$.id} has been created\\"}}}"
-	}
-}`}</pre>
-								</div>
-							</div>
+						<section id="workflows" className="mt-0 space-y-6 scroll-mt-24">
+							<WorkflowDocs />
+						</section>
 
-							<div className="mt-6 grid gap-4 md:grid-cols-2">
-								<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
-									<h3 className="font-semibold mb-2">preview_mock</h3>
-									<p className="text-sm text-muted-foreground mb-2">
-										Preview resolved response (dynamic schema or echo aware).
-									</p>
-									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`{
-	"action": "call_tool",
-	"toolName": "preview_mock",
-	"args": { "folderSlug": "support", "path": "/tickets", "method": "GET" }
-}`}</pre>
-								</Card>
-								<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
-									<h3 className="font-semibold mb-2">Server Info</h3>
-									<p className="text-sm text-muted-foreground mb-2">
-										The MCP endpoint returns tool catalog and server
-										capabilities.
-									</p>
-									<pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">{`GET /mcp -> { tools, server }`}</pre>
-									<ul className="list-disc pl-5 text-sm text-muted-foreground">
+						<section id="advanced" className="mt-0 scroll-mt-24">
+							<Card className="p-6 border-dashed">
+								<p className="text-center text-muted-foreground">
+									Advanced documentation is being updated.
+								</p>
+							</Card>
+						</section>
+
+						<section id="mcp" className="mt-0 scroll-mt-24">
+							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+								<h2 className="text-2xl font-bold text-foreground mb-4">
+									MCP Integration
+								</h2>
+								<p className="text-muted-foreground mb-4">
+									Mockzilla exposes a Model Context Protocol server, allowing AI
+									agents to fully control mocking.
+								</p>
+								<div className="bg-muted p-4 rounded-lg">
+									<h3 className="font-bold text-sm mb-2">Available Tools</h3>
+									<ul className="list-disc pl-4 text-sm space-y-1">
 										<li>
-											Methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+											<code>create_mock</code> - Create new endpoints
 										</li>
-										<li>Body types: json, text</li>
-										<li>Dynamic schema responses</li>
-										<li>Echo request body</li>
+										<li>
+											<code>create_workflow_transition</code> - Define workflow
+											rules
+										</li>
+										<li>
+											<code>inspect_workflow_state</code> - Read scenario state
+										</li>
+										<li>
+											<code>reset_workflow_state</code> - Clear scenario data
+										</li>
 									</ul>
-								</Card>
-							</div>
-						</Card>
-					</TabsContent>
-				</Tabs>
+								</div>
+							</Card>
+							{/* Installation Section */}
+							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 mt-3">
+								<div className="flex items-center gap-3 mb-6">
+									<div className="p-2 bg-primary/10 rounded-lg">
+										<Braces className="h-6 w-6 text-primary" />
+									</div>
+									<div>
+										<h2 className="text-2xl font-bold text-foreground">
+											Installation & Setup
+										</h2>
+										<p className="text-muted-foreground">
+											Configure Mockzilla with MCP server for advanced workflow
+											capabilities.
+										</p>
+									</div>
+								</div>
 
-				<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 mt-8">
-					<h3 className="text-xl font-bold text-foreground mb-3">
-						Reference Links
-					</h3>
-					<ul className="list-disc pl-6 space-y-2 text-sm">
-						<li>
-							<a
-								href="https://json-schema.org/understanding-json-schema/structuring.html"
-								className="underline underline-offset-4 hover:text-primary"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								JSON Schema — Structuring and modular combination
-							</a>
-						</li>
-						<li>
-							<a
-								href="https://json-schema.org/understanding-json-schema/reference/"
-								className="underline underline-offset-4 hover:text-primary"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								JSON Schema — Reference
-							</a>
-						</li>
-						<li>
-							<a
-								href="https://datatracker.ietf.org/doc/html/rfc6901"
-								className="underline underline-offset-4 hover:text-primary"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								RFC6901 — JSON Pointer
-							</a>
-						</li>
-						<li>
-							<a
-								href="https://spec.openapis.org/oas/latest.html#reference-object"
-								className="underline underline-offset-4 hover:text-primary"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								OpenAPI — Reference Object
-							</a>
-						</li>
-						<li>
-							<a
-								href="https://github.com/json-schema-faker/json-schema-faker"
-								className="underline underline-offset-4 hover:text-primary"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								JSON Schema Faker
-							</a>
-						</li>
-						<li>
-							<Link href="/" className="underline underline-offset-4">
-								Mockzilla Home
-							</Link>
-						</li>
-					</ul>
-				</Card>
-
-				{/* Footer CTA */}
-				<Card className="mockzilla-border mockzilla-glow mt-8 border-2 bg-gradient-to-br from-primary/10 to-accent/10 p-6">
-					<div className="text-center">
-						<h3 className="text-xl font-bold text-foreground mb-2">
-							Ready to try it out?
-						</h3>
-						<p className="text-muted-foreground mb-4">
-							Create a new mock with "Dynamic Response" enabled and use string
-							interpolation in your JSON Schema.
-						</p>
-						<Link href="/" className="underline underline-offset-4">
-							<Button className="bg-primary hover:bg-primary/90">
-								Create Your First Mock
-							</Button>
-						</Link>
-					</div>
-				</Card>
+								<div className="space-y-4">
+									<h3 className="font-semibold text-lg text-foreground">
+										MCP Server Configuration
+									</h3>
+									<p className="text-sm text-muted-foreground">
+										Add this configuration to your project's settings to connect
+										Mockzilla with the MCP server:
+									</p>
+									<pre className="bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
+										{`{
+  "mockzilla": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "mcp-remote",
+      "http://localhost:36666/api/mcp" # MCP server endpoint
+    ]
+  }
+}`}
+									</pre>
+									<p className="text-sm text-muted-foreground">
+										This configuration enables the MCP server to handle advanced
+										tools with AI on port 36666 (locally) or using your own DNS.
+									</p>
+								</div>
+							</Card>
+						</section>
+					</main>
+				</div>
 			</div>
 		</div>
 	);

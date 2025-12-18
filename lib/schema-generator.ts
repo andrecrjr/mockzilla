@@ -1,23 +1,8 @@
 import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
 
-/**
- * Context for storing generated values that can be referenced later
- * Used by custom formats (x-store-as, x-ref)
- */
-interface GenerationContext {
-	storedValues: Map<string, any>;
-}
-
-// Global context for current generation (reset on each generate call)
-let generationContext: GenerationContext = {
-	storedValues: new Map(),
-};
-
-// Configure json-schema-faker to use faker.js
 jsf.extend('faker', () => faker);
 
-// Configure default options
 jsf.option({
 	alwaysFakeOptionals: true,
 	useDefaultValue: true,
@@ -25,94 +10,6 @@ jsf.option({
 	fixedProbabilities: true,
 	minItems: 1,
 	maxItems: 5,
-});
-
-/**
- * Custom format: x-store-as
- * When a field has format: "x-store-as", it generates a UUID and stores it
- * NOTE: This requires using the format field, e.g.:
- * { "type": "string", "format": "x-store-as", "x-key": "userId" }
- *
- * However, a simpler approach is to let json-schema-faker handle generation
- * and use post-processing. This format is kept for explicit control.
- */
-jsf.format('x-store-as', (schema: any) => {
-	const key = schema['x-key'] || schema['x-store-as'];
-	let value: any;
-
-	// Generate value based on the schema's format or faker directive
-	if (schema.format === 'uuid' || !key) {
-		value = faker.string.uuid();
-	} else if (schema.faker) {
-		// Support faker.js methods like "person.fullName"
-		const fakerPath = schema.faker.split('.');
-		let fakerFn: any = faker;
-		for (const part of fakerPath) {
-			fakerFn = fakerFn[part];
-		}
-		value = typeof fakerFn === 'function' ? fakerFn() : fakerFn;
-	} else if (schema.type === 'string') {
-		value = faker.lorem.word();
-	} else {
-		value = faker.string.alphanumeric(10);
-	}
-
-	// Store the value
-	if (key) {
-		generationContext.storedValues.set(key, value);
-	}
-
-	return value;
-});
-
-/**
- * Custom format: x-ref
- * Retrieves a previously stored value by key
- *
- * Example:
- * { "type": "string", "format": "x-ref", "x-key": "userId" }
- */
-jsf.format('x-ref', (schema: any) => {
-	const key = schema['x-key'] || schema['x-ref'];
-	if (!key) {
-		console.warn('[schema-generator] x-ref format requires x-key property');
-		return '[missing-ref-key]';
-	}
-
-	const value = generationContext.storedValues.get(key);
-	if (value === undefined) {
-		console.warn(`[schema-generator] Reference '${key}' not found in context`);
-		return `[ref:${key}-not-found]`;
-	}
-
-	return value;
-});
-
-/**
- * Custom format: x-template
- * String template with variable interpolation
- * Variables are referenced as {{key}} or {key}
- *
- * Example:
- * { "type": "string", "format": "x-template", "template": "Hello {{userName}}!" }
- */
-jsf.format('x-template', (schema: any) => {
-	const template = schema['template'] || schema['x-template'];
-	if (!template || typeof template !== 'string') {
-		return '[invalid-template]';
-	}
-
-	// Replace {{key}} and {key} with stored values
-	return template.replace(/\{\{?(\w+)\}?\}/g, (match, key) => {
-		const value = generationContext.storedValues.get(key);
-		if (value === undefined) {
-			console.warn(
-				`[schema-generator] Template variable '${key}' not found in context`,
-			);
-			return `[${key}-not-found]`;
-		}
-		return String(value);
-	});
 });
 
 /**
@@ -154,53 +51,6 @@ function resolveJSONPath(path: string, data: any): any {
 	}
 
 	return current;
-}
-
-/**
- * Post-processes generated data to replace template strings
- * Supports {$.path} and {{$.path}} syntax for referencing other fields
- *
- * @param data - The generated data object
- * @returns The data with templates replaced
- */
-function processTemplates(data: any, visited = new WeakSet()): any {
-	// Prevent circular reference infinite loops
-	if (data && typeof data === 'object') {
-		if (visited.has(data)) {
-			return data;
-		}
-		visited.add(data);
-	}
-
-	// Handle different data types
-	if (typeof data === 'string') {
-		// Replace template syntax: {$.field} or {{$.field}}
-		// Regex: matches {$.path} or {{$.path}} where path can include dots, brackets, and numbers
-		return data.replace(/\{\{?\$\.([\w.[\]]+)\}?\}/g, (match, path) => {
-			const value = resolveJSONPath('$.' + path, data);
-
-			if (value === undefined) {
-				console.warn(
-					`[schema-generator] Template reference '${match}' could not be resolved`,
-				);
-				return match; // Keep original if not found
-			}
-
-			return String(value);
-		});
-	} else if (Array.isArray(data)) {
-		return data.map((item) => processTemplates(item, visited));
-	} else if (data && typeof data === 'object') {
-		const processed: any = {};
-		for (const key in data) {
-			if (Object.hasOwn(data, key)) {
-				processed[key] = processTemplates(data[key], visited);
-			}
-		}
-		return processed;
-	}
-
-	return data;
 }
 
 /**
@@ -290,23 +140,14 @@ export function validateSchema(schemaString: string): {
 
 /**
  * Generates sample JSON data from a JSON Schema with support for:
- * 1. Custom formats: x-store-as, x-ref, x-template
- * 2. Post-processing templates: {$.field} or {{$.field}} syntax
+ * Post-processing templates: {$.field} or {{$.field}} syntax
  *
  * @param schema - JSON Schema object
  * @returns JSON string with generated data
  */
 export function generateFromSchema(schema: object): string {
 	try {
-		// Reset generation context for each new generation
-		generationContext = {
-			storedValues: new Map(),
-		};
-
-		// Generate data using json-schema-faker
 		const generated = jsf.generate(schema);
-
-		// Post-process to replace template strings with actual values
 		const processed = deepReplaceTemplates(generated);
 
 		return JSON.stringify(processed, null, 2);
@@ -315,6 +156,36 @@ export function generateFromSchema(schema: object): string {
 			`Failed to generate from schema: ${error instanceof Error ? error.message : 'Unknown error'}`,
 		);
 	}
+}
+
+/**
+ * Pre-processes the schema to handle special cases before generation
+ * Ensures that pattern fields containing template syntax are preserved as-is,
+ * instead of being treated as regular expressions by json-schema-faker.
+ */
+function preprocessSchema(schema: any, visited = new WeakSet()): any {
+	// Prevent circular reference infinite loops
+	if (schema && typeof schema === 'object') {
+		if (visited.has(schema)) {
+			return schema;
+		}
+		visited.add(schema);
+	}
+
+	if (Array.isArray(schema)) {
+		return schema.map((item) => preprocessSchema(item, visited));
+	} else if (schema && typeof schema === 'object') {
+		const processed: any = {};
+
+		for (const key in schema) {
+			if (Object.hasOwn(schema, key)) {
+				processed[key] = preprocessSchema(schema[key], visited);
+			}
+		}
+		return processed;
+	}
+
+	return schema;
 }
 
 /**
@@ -328,5 +199,7 @@ export function generateFromSchemaString(schemaString: string): string {
 	}
 
 	const schema = JSON.parse(schemaString);
-	return generateFromSchema(schema);
+	const preprocessedSchema = preprocessSchema(schema);
+
+	return generateFromSchema(preprocessedSchema);
 }

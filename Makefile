@@ -22,6 +22,15 @@ help:
 	@echo "Utility Commands:"
 	@echo "  make clean         - Remove all containers, volumes, and images"
 	@echo "  make db-shell      - Open PostgreSQL shell"
+	@echo "  make db-generate   - Generate Drizzle migrations"
+	@echo "  make db-migrate    - Run Drizzle migrations"
+
+# Database commands
+db-generate:
+	docker compose exec app bun run db:generate
+
+db-migrate:
+	docker compose exec app bun run db:migrate
 
 # Development commands
 dev-up:

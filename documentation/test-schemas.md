@@ -94,36 +94,7 @@ This directory contains test schemas to verify the string interpolation and fiel
 
 ---
 
-## Test Case 4: Custom Format x-store-as and x-ref
-
-**File:** `test-custom-formats.json`
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "userId": {
-      "type": "string",
-      "format": "uuid",
-      "x-store-as": "mainUserId"
-    },
-    "createdBy": {
-      "type": "string",
-      "x-ref": "mainUserId"
-    },
-    "modifiedBy": {
-      "type": "string",
-      "x-ref": "mainUserId"
-    }
-  }
-}
-```
-
-**Expected:** All three fields should have the same UUID value.
-
----
-
-## Test Case 5: Multiple References
+## Test Case 4: Multiple References
 
 **File:** `test-multiple-references.json`
 
@@ -154,9 +125,7 @@ This directory contains test schemas to verify the string interpolation and fiel
 
 ---
 
-## Test Case 6: Ticket System (Real-World Example)
-
-**File:** `test-ticket-system.json`
+## Test Case 5: Ticket System (Real-World Example)
 
 ```json
 {
@@ -185,14 +154,12 @@ This directory contains test schemas to verify the string interpolation and fiel
           },
           "serialNumber": {
             "type": "string",
-            "faker": "string.alphanumeric",
-            "x-store-as": "equipSerial"
+            "faker": "string.alphanumeric"
           }
         }
       },
       "confirmationCode": {
-        "type": "string",
-        "x-ref": "equipSerial"
+        "const": "CONF-{$.equipment.serialNumber}"
       },
       "summary": {
         "const": "Ticket {$.id} for equipment {$.equipment.name}"
