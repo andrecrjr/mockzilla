@@ -469,21 +469,9 @@ export function TransitionDialog({
 		}
 	};
 
-	const defaultTrigger = isEditMode ? (
-		<Button variant="ghost" size="sm">
-			<Pencil className="mr-2 h-4 w-4" />
-			Edit
-		</Button>
-	) : (
-		<Button>
-			<Plus className="mr-2 h-4 w-4" />
-			Add Transition
-		</Button>
-	);
-
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
+			<DialogTrigger asChild>{trigger}</DialogTrigger>
 			<DialogContent className="sm:max-w-[90vw] lg:max-w-[1400px] max-h-[85vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>
