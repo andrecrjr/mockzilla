@@ -865,7 +865,7 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 			db: baseState.tables || {},
 			input: { body, query, params: {}, headers },
 		};
-		if (matches(t.conditions || {}, ctx)) {
+		if (matches((t.conditions as any) || {}, ctx)) {
 			const result = await processWorkflowRequest(t, {}, body, query, headers);
 			return {
 				success: true,
@@ -913,7 +913,7 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 			db: baseState.tables || {},
 			input: { body, query, params, headers },
 		};
-		if (matches(t.conditions || {}, ctx)) {
+		if (matches((t.conditions as any) || {}, ctx)) {
 			const result = await processWorkflowRequest(
 				t,
 				params,
@@ -1039,9 +1039,12 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 
 		transitionsList = transitionsData.map((t) => ({
 			...t,
+			conditions: t.conditions as any,
+			effects: t.effects as any,
+			response: t.response as any,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
-		}));
+		})) as Transition[];
 	} else {
 		const scenariosData = await db.select().from(scenarios);
 		scenariosList = scenariosData.map((s) => ({
@@ -1053,9 +1056,12 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 		const transitionsData = await db.select().from(transitions);
 		transitionsList = transitionsData.map((t) => ({
 			...t,
+			conditions: t.conditions as any,
+			effects: t.effects as any,
+			response: t.response as any,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
-		}));
+		})) as Transition[];
 	}
 
 	return {

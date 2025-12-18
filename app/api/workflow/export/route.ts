@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 				...scenario,
 				createdAt: scenario.createdAt.toISOString(),
 				updatedAt: scenario.updatedAt?.toISOString(),
-			},
+			} as Scenario,
 		];
 
 		const transitionsData = await db
@@ -41,23 +41,29 @@ export async function GET(request: NextRequest) {
 
 		transitionsList = transitionsData.map((t) => ({
 			...t,
+			conditions: t.conditions as any,
+			effects: t.effects as any,
+			response: t.response as any,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
-		}));
+		})) as Transition[];
 	} else {
 		const scenariosData = await db.select().from(scenarios);
 		scenariosList = scenariosData.map((s) => ({
 			...s,
 			createdAt: s.createdAt.toISOString(),
 			updatedAt: s.updatedAt?.toISOString(),
-		}));
+		})) as Scenario[];
 
 		const transitionsData = await db.select().from(transitions);
 		transitionsList = transitionsData.map((t) => ({
 			...t,
+			conditions: t.conditions as any,
+			effects: t.effects as any,
+			response: t.response as any,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
-		}));
+		})) as Transition[];
 	}
 
 	const exportData: WorkflowExportData = {

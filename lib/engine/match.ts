@@ -1,4 +1,3 @@
-
 export type Condition = {
 	/**
 	 * Operator type:
@@ -20,41 +19,47 @@ export type Condition = {
 	value?: unknown;
 };
 
+export type StateSetEffect = {
+	type: 'state.set';
+	/** Key to set in scenario state. */
+	key?: string;
+	/** Value to set (interpolation supported). */
+	value?: unknown;
+	/** Map of multiple keys/values to set. */
+	raw?: Record<string, unknown>;
+};
+
+export type DbPushEffect = {
+	type: 'db.push';
+	table: string;
+	value: unknown;
+};
+
+export type DbUpdateEffect = {
+	type: 'db.update';
+	table: string;
+	match: Record<string, unknown>;
+	set: Record<string, unknown>;
+};
+
+export type DbRemoveEffect = {
+	type: 'db.remove';
+	table: string;
+	match: Record<string, unknown>;
+};
+
+export type UnknownEffect = {
+	type: 'unknown';
+	raw: unknown;
+};
+
 export type Effect =
-  | {
-      /** Set state variables explicitly. */
-      type: 'state.set';
-      /** Key to set in scenario state. */
-      key: string;
-      /** Value to set (interplation supported). */
-      value: unknown
-    }
-  | {
-      /** Append a row to a mini-db table. */
-      type: 'db.push';
-      /** Table name. */
-      table: string;
-      /** Row object to append. */
-      value: unknown
-    }
-  | {
-      /** Update existing rows in a mini-db table. */
-      type: 'db.update';
-      /** Table name. */
-      table: string;
-      /** Fields to match against (e.g. { id: "{{input.body.id}}" }). */
-      match: Record<string, unknown>;
-      /** Fields to update. */
-      set: Record<string, unknown>
-    }
-  | {
-      /** Remove rows from a mini-db table. */
-      type: 'db.remove';
-      /** Table name. */
-      table: string;
-      /** Fields to match for removal. */
-      match: Record<string, unknown>
-    };
+	| StateSetEffect
+	| DbPushEffect
+	| DbUpdateEffect
+	| DbRemoveEffect
+	| UnknownEffect;
+
 
 export type MatchContext = {
 	input: {
@@ -88,10 +93,11 @@ function resolveOp(path: string, context: MatchContext): unknown {
 
 function getPath(obj: unknown, path: string): unknown {
 	const parts = path.split('.');
-	let current = obj as any;
+	let current: unknown = obj;
 	for (const part of parts) {
 		if (current === undefined || current === null) return undefined;
-		current = current[part];
+		if (typeof current !== 'object') return undefined;
+		current = (current as Record<string, unknown>)[part];
 	}
 	return current;
 }

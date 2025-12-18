@@ -1,131 +1,116 @@
 
-import type { MatchContext } from './match';
-
-type Effect = 
-  | { 
-      /** Set state variables explicitly. */
-      type: 'state.set'; 
-      /** Key to set in scenario state. */
-      key: string; 
-      /** Value to set (interplation supported). */
-      value: any 
-    }
-  | { 
-      /** Append a row to a mini-db table. */
-      type: 'db.push'; 
-      /** Table name. */
-      table: string; 
-      /** Row object to append. */
-      value: any 
-    }
-  | { 
-      /** Update existing rows in a mini-db table. */
-      type: 'db.update'; 
-      /** Table name. */
-      table: string; 
-      /** Fields to match against (e.g. { id: "{{input.body.id}}" }). */
-      match: Record<string, any>; 
-      /** Fields to update. */
-      set: Record<string, any> 
-    }
-  | { 
-      /** Remove rows from a mini-db table. */
-      type: 'db.remove'; 
-      /** Table name. */
-      table: string; 
-      /** Fields to match for removal. */
-      match: Record<string, any> 
-    };
+import type { Effect, MatchContext } from './match';
 
 /**
  * Interpolates a string value using context.
  * e.g. "{{input.sku}}" -> "SKU_123"
  */
-function interpolate(value: any, context: MatchContext): any {
+function interpolate(value: unknown, context: MatchContext): unknown {
 	if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
 		const path = value.slice(2, -2).trim();
 		const parts = path.split('.');
 		let current: any = context;
 		for (const part of parts) {
 			if (current === undefined || current === null) return undefined;
-			current = current[part];
+			if (typeof current !== 'object') return undefined;
+			current = (current as Record<string, unknown>)[part];
 		}
 		return current;
 	}
 	// Deep interpolation for objects
 	if (typeof value === 'object' && value !== null) {
 		if (Array.isArray(value)) {
-			return value.map(v => interpolate(v, context));
+			return value.map((v) => interpolate(v, context));
 		}
-		const result: any = {};
+		const result: Record<string, unknown> = {};
 		for (const k in value) {
-			result[k] = interpolate(value[k], context);
+			if (Object.prototype.hasOwnProperty.call(value, k)) {
+				result[k] = interpolate((value as Record<string, unknown>)[k], context);
+			}
 		}
 		return result;
 	}
 	return value;
 }
 
-export function applyEffects(effects: Record<string, any> | any[], context: MatchContext): void {
-	const effectsList = Array.isArray(effects) ? effects : Object.entries(effects).map(([k, v]) => {
-		// Convert simple map syntax to strictly typed effects if possible
-		// Case: "$db.cartItems.push": { ... }
-		if (k.startsWith('$')) {
-			const parts = k.substring(1).split('.');
-			if (parts[0] === 'state' && parts[1] === 'set') {
-				// "$state.set": { "key": "val" } -> multiple sets
-				return { type: 'state.set', raw: v };
-			}
-			if (parts[0] === 'db' && parts[2] === 'push') {
-				return { type: 'db.push', table: parts[1], value: v };
-			}
-			if (parts[0] === 'db' && parts[2] === 'update') {
-				return { type: 'db.update', table: parts[1], match: v.match, set: v.set };
-			}
-			if (parts[0] === 'db' && parts[2] === 'remove') {
-				return { type: 'db.remove', table: parts[1], match: v };
-			}
-		}
-		return { type: 'unknown', raw: { [k]: v } }; 
-	});
+export function applyEffects(
+	effects: Record<string, unknown> | Effect[],
+	context: MatchContext,
+): void {
+	const effectsList: Effect[] = Array.isArray(effects)
+		? effects
+		: Object.entries(effects).map(([k, v]): Effect => {
+				// Convert simple map syntax to strictly typed effects if possible
+				// Case: "$db.cartItems.push": { ... }
+				if (k.startsWith('$')) {
+					const parts = k.substring(1).split('.');
+					if (parts[0] === 'state' && parts[1] === 'set') {
+						// "$state.set": { "key": "val" } -> multiple sets
+						return { type: 'state.set', raw: v as Record<string, unknown> };
+					}
+					if (parts[0] === 'db' && parts[2] === 'push') {
+						return { type: 'db.push', table: parts[1], value: v };
+					}
+					if (parts[0] === 'db' && parts[2] === 'update') {
+						const val = v as { match: Record<string, unknown>; set: Record<string, unknown> };
+						return {
+							type: 'db.update',
+							table: parts[1],
+							match: val.match,
+							set: val.set,
+						};
+					}
+					if (parts[0] === 'db' && parts[2] === 'remove') {
+						return {
+							type: 'db.remove',
+							table: parts[1],
+							match: v as Record<string, unknown>,
+						};
+					}
+				}
+				return { type: 'unknown', raw: { [k]: v } };
+			});
 
 	for (const effect of effectsList) {
-		if ((effect as any).type === 'state.set' && (effect as any).raw) {
-			const sets = (effect as any).raw; 
-			for (const [key, val] of Object.entries(sets)) {
-				context.state[key] = interpolate(val, context);
+		if (effect.type === 'state.set') {
+			if (effect.raw) {
+				for (const [key, val] of Object.entries(effect.raw)) {
+					context.state[key] = interpolate(val, context);
+				}
+			} else if (effect.key) {
+				context.state[effect.key] = interpolate(effect.value, context);
 			}
-		} 
-		else if (effect.type === 'db.push') {
+		} else if (effect.type === 'db.push') {
 			const table = context.db[effect.table] || [];
 			const resolvedValue = interpolate(effect.value, context);
 			table.push(resolvedValue);
 			context.db[effect.table] = table;
-		}
-		else if (effect.type === 'db.update') {
+		} else if (effect.type === 'db.update') {
 			const table = context.db[effect.table] || [];
 			// Iterate and update matching items
 			for (let i = 0; i < table.length; i++) {
 				let matches = true;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					if (table[i][mk] != interpolate(mv, context)) {
+					const row = table[i] as Record<string, unknown>;
+					if (row[mk] != interpolate(mv, context)) {
 						matches = false;
 						break;
 					}
 				}
 				if (matches) {
 					for (const [sk, sv] of Object.entries(effect.set)) {
-						table[i][sk] = interpolate(sv, context);
+						const row = table[i] as Record<string, unknown>;
+						row[sk] = interpolate(sv, context);
 					}
 				}
 			}
 			context.db[effect.table] = table;
-		}
-		else if (effect.type === 'db.remove') {
+		} else if (effect.type === 'db.remove') {
 			let table = context.db[effect.table] || [];
-			table = table.filter((item: any) => {
+			table = table.filter((item) => {
+				const row = item as Record<string, unknown>;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					if (item[mk] == interpolate(mv, context)) {
+					if (row[mk] == interpolate(mv, context)) {
 						return false; // remove
 					}
 				}

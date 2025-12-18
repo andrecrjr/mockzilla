@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { Transition } from '@/lib/types';
 import {
-	type Transition,
 	TransitionDialog,
 } from '@/components/workflow/create-transition-dialog';
 import { StateInspector } from '@/components/workflow/state-inspector';

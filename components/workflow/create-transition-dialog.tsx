@@ -33,7 +33,9 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '../ui/textarea';
-import { type EffectItem, EffectsEditor } from './effects-editor';
+import { EffectsEditor, type EffectItem } from './effects-editor';
+import type { Transition } from '@/lib/types';
+import type { Condition, Effect } from '@/lib/engine/match';
 
 // --- Schema ---
 const transitionSchema = z.object({
@@ -46,25 +48,13 @@ const transitionSchema = z.object({
 	method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
 	responseStatus: z.coerce.number().min(100).max(599),
 	responseBody: z.string().min(1, 'Response body is required'),
-	conditions: z.any().optional(),
+	conditions: z.string().optional(), // This is for the raw JSON string input
 });
 
 type TransitionFormValues = z.infer<typeof transitionSchema>;
 
-export interface Transition {
-	id: number;
-	scenarioId: string;
-	name: string;
-	description?: string;
-	path: string;
-	method: string;
-	conditions: object | any[];
-	effects: any[];
-	response: { status: number; body: any };
-	meta: object;
-	createdAt: string;
-	updatedAt?: string;
-}
+// The Transition interface is now imported from '@/lib/types'
+// The local definition has been removed.
 
 interface TransitionDialogProps {
 	scenarioId: string;
@@ -79,7 +69,7 @@ interface TransitionDialogProps {
 }
 
 // SWR Mutation fetchers
-async function createTransition(url: string, { arg }: { arg: any }) {
+async function createTransition(url: string, { arg }: { arg: Omit<Transition, 'id' | 'createdAt' | 'updatedAt'> }) {
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -92,7 +82,7 @@ async function createTransition(url: string, { arg }: { arg: any }) {
 	return res.json();
 }
 
-async function updateTransition(url: string, { arg }: { arg: any }) {
+async function updateTransition(url: string, { arg }: { arg: Partial<Transition> }) {
 	const res = await fetch(url, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -117,7 +107,6 @@ export function TransitionDialog({
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [useConditionBuilder, setUseConditionBuilder] = useState(true);
 	const [useEffectsBuilder, setUseEffectsBuilder] = useState(true);
-	const [rawEffectsJson, setRawEffectsJson] = useState('');
 
 	// Use controlled state if provided, otherwise use internal state
 	const isControlled = controlledOpen !== undefined;
@@ -159,21 +148,21 @@ export function TransitionDialog({
 				description: transition.description || '',
 				path: transition.path,
 				method: transition.method as 'GET' | 'POST' | 'PUT' | 'DELETE',
-				responseStatus: transition.response?.status || 200,
+				responseStatus: transition.response.status,
 				responseBody:
-					typeof transition.response?.body === 'object'
+					typeof transition.response.body === 'object'
 						? JSON.stringify(transition.response.body, null, 2)
-						: transition.response?.body || '{"success": true}',
+						: String(transition.response.body || '{"success": true}'),
 				conditions: JSON.stringify(transition.conditions || {}),
 			});
 
 			// Populate conditions builder
 			if (Array.isArray(transition.conditions)) {
 				setConditionsList(
-					transition.conditions.map((c: any) => ({
+					(transition.conditions as Condition[]).map((c) => ({
 						field: c.field || '',
 						type: c.type || 'eq',
-						value: c.value || '',
+						value: String(c.value || ''),
 					})),
 				);
 			} else {
@@ -182,33 +171,33 @@ export function TransitionDialog({
 
 			// Populate effects
 			if (Array.isArray(transition.effects)) {
-				const parsedEffects: EffectItem[] = transition.effects.map((e: any) => {
+				const parsedEffects: EffectItem[] = (transition.effects as Effect[]).map((e) => {
 					if (e.type === 'state.set') {
 						return {
 							type: 'state.set',
-							raw: typeof e.raw === 'object' ? e.raw : e.raw || {},
+							raw: e.raw || {},
 						};
 					}
 					if (e.type === 'db.push') {
 						return {
 							type: 'db.push',
 							table: e.table || '',
-							value: typeof e.value === 'object' ? e.value : e.value || '',
+							value: e.value || '',
 						};
 					}
 					if (e.type === 'db.update') {
 						return {
 							type: 'db.update',
 							table: e.table || '',
-							match: typeof e.match === 'object' ? e.match : e.match || '',
-							set: typeof e.set === 'object' ? e.set : e.set || '',
+							match: e.match || {},
+							set: e.set || {},
 						};
 					}
 					if (e.type === 'db.remove') {
 						return {
 							type: 'db.remove',
 							table: e.table || '',
-							match: typeof e.match === 'object' ? e.match : e.match || '',
+							match: e.match || {},
 						};
 					}
 					return {
@@ -218,10 +207,8 @@ export function TransitionDialog({
 				});
 
 				setEffectsList(parsedEffects);
-				setRawEffectsJson(JSON.stringify(transition.effects, null, 2));
 			} else {
 				setEffectsList([]);
-				setRawEffectsJson('[]');
 			}
 		}
 	}, [open, isEditMode, transition, form]);
@@ -232,19 +219,9 @@ export function TransitionDialog({
 			form.reset();
 			setConditionsList([]);
 			setEffectsList([]);
-			setRawEffectsJson('[]');
 		}
 	}, [open, isEditMode, form]);
 
-	// Sync effectsList and raw JSON when switching modes
-	useEffect(() => {
-		if (useEffectsBuilder) {
-			// When switching to builder mode, effectsList is already properly formatted
-		} else {
-			// When switching to JSON mode, ensure rawEffectsJson reflects the current effectsList
-			setRawEffectsJson(JSON.stringify(effectsList, null, 2));
-		}
-	}, [useEffectsBuilder, effectsList]);
 
 	const { trigger: triggerCreate, isMutating: isCreating } = useSWRMutation(
 		'/api/workflow/transitions',
@@ -296,7 +273,7 @@ export function TransitionDialog({
 		]);
 	};
 
-	const updateCondition = (index: number, key: string, val: string) => {
+	const updateCondition = (index: number, key: keyof typeof conditionsList[0], val: string) => {
 		const newConditions = [...conditionsList];
 		(newConditions[index] as any)[key] = val;
 		setConditionsList(newConditions);
@@ -312,8 +289,8 @@ export function TransitionDialog({
 		variable: string,
 	) => {
 		if (field === 'conditions' && useConditionBuilder) return;
-		const current = form.getValues(field as any);
-		form.setValue(field as any, (current || '') + variable);
+		const current = form.getValues(field);
+		form.setValue(field, (current || '') + variable);
 	};
 
 	const insertConditionExample = (
@@ -444,10 +421,10 @@ export function TransitionDialog({
 
 	const onSubmit = async (data: TransitionFormValues) => {
 		// 1. Process Conditions
-		let finalConditions: any;
+		let finalConditions: Condition[] | Record<string, unknown>;
 		if (useConditionBuilder) {
 			finalConditions = conditionsList.map((c) => ({
-				type: c.type,
+				type: c.type as Condition['type'],
 				field: c.field,
 				value: c.value,
 			}));
@@ -461,7 +438,7 @@ export function TransitionDialog({
 		}
 
 		// 2. Process Response Body
-		let finalResponseBody: string;
+		let finalResponseBody: unknown;
 		try {
 			finalResponseBody = JSON.parse(data.responseBody);
 		} catch {
@@ -469,18 +446,11 @@ export function TransitionDialog({
 		}
 
 		// 3. Process Effects
-		let finalEffects: any;
-		if (useEffectsBuilder) {
-			// When using the builder, effectsList is already properly formatted
-			finalEffects = effectsList;
-		} else {
-			// When in JSON mode, effectsList is already updated from the textarea via onChange
-			finalEffects = effectsList;
-		}
+		const finalEffects: Effect[] = effectsList;
 
 		const payload = {
 			scenarioId,
-			name: data.name,
+			name: data.name || '',
 			description: data.description || null,
 			path: data.path,
 			method: data.method,
@@ -840,7 +810,6 @@ export function TransitionDialog({
 								<EffectsEditor
 									effects={effectsList}
 									onChange={setEffectsList}
-									scenarioId={scenarioId}
 								/>
 							) : (
 								<Textarea

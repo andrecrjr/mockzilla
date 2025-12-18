@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 			.insert(transitions)
 			.values({
 				scenarioId,
-				name: name || '', // Default to empty string if not provided
+				name: name || '',
 				description: description || null,
 				path,
 				method,
@@ -42,38 +42,42 @@ export async function POST(request: NextRequest) {
 			})
 			.returning();
 
+		if (!result || result.length === 0) {
+			throw new Error('Failed to create transition: No record returned');
+		}
+
 		return NextResponse.json(result[0], { status: 201 });
 	} catch (error) {
 		console.error('Error creating transition:', error);
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: String(error) },
+			{ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
 			{ status: 500 }
 		);
 	}
 }
 
 export async function GET(request: NextRequest) {
-	const searchParams = request.nextUrl.searchParams;
-	const scenarioId = searchParams.get('scenarioId');
-
-	if (!scenarioId) {
-		return NextResponse.json(
-			{ error: 'scenarioId is required' },
-			{ status: 400 }
-		);
-	}
-
 	try {
+		const searchParams = request.nextUrl.searchParams;
+		const scenarioId = searchParams.get('scenarioId');
+
+		if (!scenarioId) {
+			return NextResponse.json(
+				{ error: 'scenarioId is required' },
+				{ status: 400 }
+			);
+		}
+
 		const result = await db
 			.select()
 			.from(transitions)
 			.where(eq(transitions.scenarioId, scenarioId));
 
-		return NextResponse.json(result);
+		return NextResponse.json(result || []);
 	} catch (error) {
 		console.error('Error fetching transitions:', error);
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: String(error) },
+			{ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
 			{ status: 500 }
 		);
 	}

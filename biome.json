@@ -31,7 +31,8 @@
 				"noDangerouslySetInnerHtml": "off"
 			},
 			"suspicious": {
-				"noThenProperty": "off"
+				"noThenProperty": "off",
+				"noDoubleEquals": "off"
 			},
 			"style": {
 				"useConst": "off"

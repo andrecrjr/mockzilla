@@ -120,8 +120,8 @@ export interface Transition {
 	path: string;
 	method: string;
 	conditions: Condition[] | Record<string, unknown>;
-	effects: Effect[] | Record<string, unknown>;
-	response: unknown;
+	effects: Effect[];
+	response: { status: number; body: unknown };
 	meta?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt?: string;
