@@ -100,7 +100,7 @@ export interface LegacyImportFormat {
 	}>;
 }
 
-// Workflow Types
+export type { MatchContext, Condition, Effect } from './engine/match';
 
 export interface Scenario {
 	id: string;
@@ -110,6 +110,8 @@ export interface Scenario {
 	updatedAt?: string;
 }
 
+import type { Condition, Effect } from './engine/match';
+
 export interface Transition {
 	id: number;
 	scenarioId: string;
@@ -117,10 +119,10 @@ export interface Transition {
 	description?: string | null;
 	path: string;
 	method: string;
-	conditions: any;
-	effects: any;
-	response: any;
-	meta?: any;
+	conditions: Condition[] | Record<string, unknown>;
+	effects: Effect[] | Record<string, unknown>;
+	response: unknown;
+	meta?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt?: string;
 }

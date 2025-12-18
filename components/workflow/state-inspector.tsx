@@ -7,8 +7,10 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
+import type { MatchContext } from '@/lib/types';
+
 interface StateInspectorProps {
-  data: { state: any; tables: any };
+  data: MatchContext;
   onRefresh: () => void;
   isLoading: boolean;
 }
@@ -53,18 +55,18 @@ export function StateInspector({ data, onRefresh, isLoading }: StateInspectorPro
         <TabsContent value="db" className="flex-1 min-h-0 relative">
              <ScrollArea className="h-full absolute inset-0">
                 <div className="p-4 space-y-6">
-                    {Object.keys(data.tables || {}).length === 0 ? (
+                    {Object.keys(data.db || {}).length === 0 ? (
                         <div className="text-center text-muted-foreground text-sm py-8">
                              <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
                              No tables in Mini-DB
                         </div>
                     ) : (
-                        Object.entries(data.tables).map(([table, rows]) => (
+                        Object.entries(data.db).map(([table, rows]) => (
                             <div key={table}>
                                 <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                                     <Database className="h-3 w-3" />
                                     {table} 
-                                    <span className="text-muted-foreground font-normal ml-auto text-xs">{(rows as any[]).length} rows</span>
+                                    <span className="text-muted-foreground font-normal ml-auto text-xs">{(rows as unknown[]).length} rows</span>
                                 </h4>
                                 <div className="bg-muted p-2 rounded-md overflow-x-auto">
                                     <pre className="text-xs font-mono">

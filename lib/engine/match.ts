@@ -17,18 +17,54 @@ export type Condition = {
 	/**
 	 * Value to compare against.
 	 */
-	value?: any;
+	value?: unknown;
 };
+
+export type Effect =
+  | {
+      /** Set state variables explicitly. */
+      type: 'state.set';
+      /** Key to set in scenario state. */
+      key: string;
+      /** Value to set (interplation supported). */
+      value: unknown
+    }
+  | {
+      /** Append a row to a mini-db table. */
+      type: 'db.push';
+      /** Table name. */
+      table: string;
+      /** Row object to append. */
+      value: unknown
+    }
+  | {
+      /** Update existing rows in a mini-db table. */
+      type: 'db.update';
+      /** Table name. */
+      table: string;
+      /** Fields to match against (e.g. { id: "{{input.body.id}}" }). */
+      match: Record<string, unknown>;
+      /** Fields to update. */
+      set: Record<string, unknown>
+    }
+  | {
+      /** Remove rows from a mini-db table. */
+      type: 'db.remove';
+      /** Table name. */
+      table: string;
+      /** Fields to match for removal. */
+      match: Record<string, unknown>
+    };
 
 export type MatchContext = {
 	input: {
-		body: any;
-		query: any;
+		body: unknown;
+		query: unknown;
 		params: Record<string, string>;
 		headers: Record<string, string>;
 	};
-	state: any;
-	db: any; // Mini-DB tables
+	state: Record<string, unknown>;
+	db: Record<string, unknown[]>; // Mini-DB tables
 };
 
 /**
@@ -38,21 +74,21 @@ export type MatchContext = {
  * Resolves a field path (e.g. "input.body.id" or "state.authorized") to a value.
  * Falls back to input.body for convenience if not found in root.
  */
-function resolveOp(path: string, context: MatchContext): any {
+function resolveOp(path: string, context: MatchContext): unknown {
     const direct = getPath(context, path);
     if (direct !== undefined) return direct;
 
     // Fallback: try looking in input.body
-    if (context.input && context.input.body) {
+    if (context.input?.body) {
         return getPath(context.input.body, path);
     }
     
     return undefined;
 }
 
-function getPath(obj: any, path: string): any {
+function getPath(obj: unknown, path: string): unknown {
 	const parts = path.split('.');
-	let current: any = obj;
+	let current = obj as any;
 	for (const part of parts) {
 		if (current === undefined || current === null) return undefined;
 		current = current[part];
@@ -60,10 +96,9 @@ function getPath(obj: any, path: string): any {
 	return current;
 }
 
-export function matches(conditions: Record<string, any> | Condition[], context: MatchContext): boolean {
+export function matches(conditions: Record<string, unknown> | Condition[], context: MatchContext): boolean {
   if (!conditions) return true;
   
-  // Array of structured conditions
   if (Array.isArray(conditions)) {
       if (conditions.length === 0) return true;
       for (const condition of conditions) {
@@ -74,10 +109,8 @@ export function matches(conditions: Record<string, any> | Condition[], context: 
       return true;
   }
 
-  // Legacy: Object key-value equality
   if (Object.keys(conditions).length === 0) return true;
 
-  // Support for simplified key-value equality: { "input.role": "admin" }
   for (const [key, expected] of Object.entries(conditions)) {
     const actual = resolveOp(key, context);
     
@@ -108,8 +141,8 @@ export function evaluateCondition(condition: Condition, context: MatchContext): 
 		case 'gt': return Number(actual) > Number(condition.value);
 		case 'lt': return Number(actual) < Number(condition.value);
 		case 'contains': 
-			return Array.isArray(actual) && actual.includes(condition.value) || 
-				   String(actual).includes(condition.value);
+			return (Array.isArray(actual) && actual.includes(condition.value)) || 
+				   String(actual).includes(String(condition.value));
 		default: return false;
 	}
 }
