@@ -11,10 +11,13 @@ function generateSlug(name: string): string {
 		.replace(/[^a-z0-9-]/g, '');
 }
 
-function isLegacyFormat(data: any): data is LegacyImportFormat {
+function isLegacyFormat(data: unknown): data is LegacyImportFormat {
 	return (
-		(data.groups !== undefined || data.rules !== undefined) &&
-		data.folders === undefined
+		typeof data === 'object' &&
+		data !== null &&
+		((data as Record<string, unknown>).groups !== undefined ||
+			(data as Record<string, unknown>).rules !== undefined) &&
+		(data as Record<string, unknown>).folders === undefined
 	);
 }
 
@@ -176,10 +179,10 @@ export async function POST(request: NextRequest) {
 			success: true,
 			imported: results,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error('[API] Import error:', error);
 		return NextResponse.json(
-			{ error: error.message || 'Failed to import data' },
+			{ error: error instanceof Error ? error.message : 'Failed to import data' },
 			{ status: 500 },
 		);
 	}

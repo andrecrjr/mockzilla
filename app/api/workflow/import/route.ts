@@ -93,10 +93,10 @@ export async function POST(request: NextRequest) {
 			importedScenarios: importedScenarios.length,
 			importedTransitions: data.transitions.length,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error('Import error:', error);
 		return NextResponse.json(
-			{ error: error.message || 'Failed to import workflow data' },
+			{ error: error instanceof Error ? error.message : 'Failed to import workflow data' },
 			{ status: 500 },
 		);
 	}

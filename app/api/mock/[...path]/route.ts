@@ -2,10 +2,11 @@ import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
+import type { HttpMethod } from '@/lib/types';
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const pathSegments = params.path;
-	const method = request.method;
+	const method = (request.method as HttpMethod) || 'GET';
 
 	// Expected format: /mock/{folderSlug}/{mockPath}
 	if (pathSegments.length < 2) {
@@ -16,7 +17,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	}
 
 	const folderSlug = pathSegments[0];
-	const mockPath = '/' + pathSegments.slice(1).join('/');
+	const mockPath = `/${pathSegments.slice(1).join('/')}`;
 
 	try {
 		// Find the folder by slug
@@ -41,7 +42,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				and(
 					eq(mockResponses.folderId, folder.id),
 					eq(mockResponses.endpoint, mockPath),
-					eq(mockResponses.method, method as any),
+					eq(mockResponses.method, method),
 				),
 			)
 			.limit(1);
@@ -134,8 +135,12 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			status: mock.statusCode,
 			headers: { 'Content-Type': contentType },
 		});
-	} catch (error: any) {
-		console.error('[API] Error serving mock:', error.message);
+	} catch (error) {
+		if (error instanceof Error) {
+			console.error('[API] Error serving mock:', error.message);
+		} else {
+			console.error('[API] Unknown error serving mock:', error);
+		}
 		return NextResponse.json(
 			{ error: 'Failed to serve mock response' },
 			{ status: 500 },
@@ -185,10 +190,7 @@ export async function HEAD(
 	return handleRequest(request, await params);
 }
 
-export async function OPTIONS(
-	request: NextRequest,
-	{ params }: { params: Promise<{ path: string[] }> },
-) {
+export async function OPTIONS() {
 	// Respond to preflight with 204; actual CORS headers are set by middleware
 	return new NextResponse(null, { status: 204 });
 }

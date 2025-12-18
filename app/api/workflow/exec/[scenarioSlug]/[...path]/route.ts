@@ -12,7 +12,7 @@ export async function POST(
 	// The path is composed of the scenario slug and additional path segments
 	// For example: /api/workflow/exec/my-scenario/users -> scenarioSlug: "my-scenario", path: ["users"]
 	// We need to reconstruct the path as it would be stored in the transitions database
-	const path = '/' + resolvedParams.path.join('/');
+	const path = `/${resolvedParams.path.join('/')}`;
 	const method = request.method;
 
 	// 1. Find Transition - look for transitions that belong to the specific scenario
@@ -41,7 +41,7 @@ export async function POST(
                 console.warn('Failed to parse body as JSON', e);
             }
         }
-	} catch (e) {
+	} catch (_e) {
 		// Ignore body reading errors
 	}
 
@@ -81,7 +81,27 @@ export async function POST(
 // The prompt emphasized POST /mockzilla/:scenario/:event, but we generalized.
 // Let's support all common methods by exporting them effectively.
 
-export async function GET(req: NextRequest, props: any) { return POST(req, props); }
-export async function PUT(req: NextRequest, props: any) { return POST(req, props); }
-export async function DELETE(req: NextRequest, props: any) { return POST(req, props); }
-export async function PATCH(req: NextRequest, props: any) { return POST(req, props); }
+export async function GET(
+	req: NextRequest,
+	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
+) {
+	return POST(req, { params });
+}
+export async function PUT(
+	req: NextRequest,
+	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
+) {
+	return POST(req, { params });
+}
+export async function DELETE(
+	req: NextRequest,
+	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
+) {
+	return POST(req, { params });
+}
+export async function PATCH(
+	req: NextRequest,
+	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
+) {
+	return POST(req, { params });
+}

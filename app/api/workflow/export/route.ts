@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scenarios, transitions } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { WorkflowExportData, Scenario, Transition } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';

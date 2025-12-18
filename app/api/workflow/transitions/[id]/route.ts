@@ -17,8 +17,8 @@ export async function PUT(
             );
         }
 
-        const transitionId = parseInt(id);
-        if (isNaN(transitionId)) {
+        const transitionId = parseInt(id, 10);
+        if (Number.isNaN(transitionId)) {
             return NextResponse.json(
                 { error: 'Invalid Transition ID' },
                 { status: 400 }
@@ -70,17 +70,17 @@ export async function PUT(
             .returning();
 
         return NextResponse.json(result[0]);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error updating transition:', error);
         return NextResponse.json(
-            { error: 'Internal Server Error', details: String(error) },
+            { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         );
     }
 }
 
 export async function DELETE(
-    request: NextRequest,
+    _request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
@@ -93,8 +93,8 @@ export async function DELETE(
             );
         }
 
-        const transitionId = parseInt(id);
-        if (isNaN(transitionId)) {
+        const transitionId = parseInt(id, 10);
+        if (Number.isNaN(transitionId)) {
             return NextResponse.json(
                 { error: 'Invalid Transition ID' },
                 { status: 400 }
@@ -118,10 +118,10 @@ export async function DELETE(
         await db.delete(transitions).where(eq(transitions.id, transitionId));
 
         return NextResponse.json({ message: 'Transition deleted successfully' });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error deleting transition:', error);
         return NextResponse.json(
-            { error: 'Internal Server Error', details: String(error) },
+            { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         );
     }

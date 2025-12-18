@@ -37,10 +37,10 @@ export async function GET() {
 		};
 
 		return NextResponse.json(exportData);
-	} catch (error: any) {
-		console.error('[API] Error exporting data:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error exporting data:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to export data' },
+			{ error: error instanceof Error ? error.message : 'Failed to export data' },
 			{ status: 500 },
 		);
 	}

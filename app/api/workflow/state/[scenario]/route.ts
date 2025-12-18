@@ -5,7 +5,7 @@ import { scenarioState } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(
-	request: NextRequest,
+	_request: NextRequest,
 	{ params }: { params: Promise<{ scenario: string }> }
 ) {
 	const { scenario } = await params;
@@ -41,7 +41,7 @@ export async function POST(
                 tables: body.tables || {} 
             };
         }
-    } catch(e) {
+    } catch(_e) {
         // Ignore JSON parse error, use default
     }
 
@@ -60,7 +60,7 @@ export async function POST(
 }
 
 export async function DELETE(
-	request: NextRequest,
+	_request: NextRequest,
 	{ params }: { params: Promise<{ scenario: string }> }
 ) {
 	const { scenario } = await params;
