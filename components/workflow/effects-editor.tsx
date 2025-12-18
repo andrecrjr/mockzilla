@@ -1,18 +1,13 @@
 'use client';
 
 import {
-	Braces,
-	Database,
-	GripVertical,
-	MoreHorizontal,
 	Plus,
 	Trash2,
-	X,
+	Braces,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -30,62 +25,45 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
-export type EffectType =
-	| 'state.set'
-	| 'db.push'
-	| 'db.update'
-	| 'db.remove'
-	| 'unknown';
+import type { Effect, StateSetEffect, DbPushEffect, DbUpdateEffect, DbRemoveEffect } from '@/lib/engine/match';
 
-export interface EffectItem {
-	type: EffectType;
-	// state.set
-	raw?: any;
-	// db operations
-	table?: string;
-	value?: any;
-	match?: any;
-	set?: any;
-}
+export type EffectType = Effect['type'];
+
+export type EffectItem = Effect;
 
 interface EffectsEditorProps {
 	effects: EffectItem[];
 	onChange: (effects: EffectItem[]) => void;
-	scenarioId?: string; // For future autocomplete/suggestions
 }
 
 export function EffectsEditor({
 	effects,
 	onChange,
-	scenarioId,
 }: EffectsEditorProps) {
 	const [activeTab, setActiveTab] = useState<'all' | 'state' | 'db'>('all');
 
 	const addEffect = (type: EffectType) => {
-		const newEffect: EffectItem = { type };
+		let newEffect: Effect;
 		if (type === 'state.set') {
-			newEffect.raw = {};
+			newEffect = { type: 'state.set', raw: {} };
 		} else if (type === 'db.push') {
-			newEffect.table = '';
-			newEffect.value = '';
+			newEffect = { type: 'db.push', table: '', value: '' };
 		} else if (type === 'db.update') {
-			newEffect.table = '';
-			newEffect.match = {};
-			newEffect.set = {};
+			newEffect = { type: 'db.update', table: '', match: {}, set: {} };
 		} else if (type === 'db.remove') {
-			newEffect.table = '';
-			newEffect.match = {};
+			newEffect = { type: 'db.remove', table: '', match: {} };
+		} else {
+			newEffect = { type: 'unknown', raw: {} };
 		}
 		onChange([...effects, newEffect]);
 	};
 
 	const updateEffect = (index: number, updates: Partial<EffectItem>) => {
 		const newEffects = [...effects];
-		newEffects[index] = { ...newEffects[index], ...updates };
+		newEffects[index] = { ...newEffects[index], ...updates } as EffectItem;
 		onChange(newEffects);
 	};
 
@@ -115,7 +93,7 @@ export function EffectsEditor({
 						</Badge>
 						{effect.type.startsWith('db.') && (
 							<span className="text-xs text-muted-foreground font-mono">
-								table: {effect.table || '(empty)'}
+								table: {(effect as DbPushEffect | DbUpdateEffect | DbRemoveEffect).table || '(empty)'}
 							</span>
 						)}
 					</div>
@@ -134,34 +112,34 @@ export function EffectsEditor({
 				<div className="pl-1">
 					{effect.type === 'state.set' && (
 						<StateSetEditor
-							value={effect.raw}
-							onChange={(val) => updateEffect(index, { raw: val })}
+							value={(effect as StateSetEffect).raw || {}}
+							onChange={(val) => updateEffect(index, { raw: val } as Partial<StateSetEffect>)}
 						/>
 					)}
 					{effect.type === 'db.push' && (
 						<DbPushEditor
-							table={effect.table || ''}
-							value={effect.value}
-							onTableChange={(t) => updateEffect(index, { table: t })}
-							onValueChange={(v) => updateEffect(index, { value: v })}
+							table={(effect as DbPushEffect).table || ''}
+							value={(effect as DbPushEffect).value}
+							onTableChange={(t) => updateEffect(index, { table: t } as Partial<DbPushEffect>)}
+							onValueChange={(v) => updateEffect(index, { value: v } as Partial<DbPushEffect>)}
 						/>
 					)}
 					{effect.type === 'db.update' && (
 						<DbUpdateEditor
-							table={effect.table || ''}
-							match={effect.match}
-							set={effect.set}
-							onTableChange={(t) => updateEffect(index, { table: t })}
-							onMatchChange={(m) => updateEffect(index, { match: m })}
-							onSetChange={(s) => updateEffect(index, { set: s })}
+							table={(effect as DbUpdateEffect).table || ''}
+							match={(effect as DbUpdateEffect).match}
+							set={(effect as DbUpdateEffect).set}
+							onTableChange={(t) => updateEffect(index, { table: t } as Partial<DbUpdateEffect>)}
+							onMatchChange={(m) => updateEffect(index, { match: m } as Partial<DbUpdateEffect>)}
+							onSetChange={(s) => updateEffect(index, { set: s } as Partial<DbUpdateEffect>)}
 						/>
 					)}
 					{effect.type === 'db.remove' && (
 						<DbRemoveEditor
-							table={effect.table || ''}
-							match={effect.match}
-							onTableChange={(t) => updateEffect(index, { table: t })}
-							onMatchChange={(m) => updateEffect(index, { match: m })}
+							table={(effect as DbRemoveEffect).table || ''}
+							match={(effect as DbRemoveEffect).match}
+							onTableChange={(t) => updateEffect(index, { table: t } as Partial<DbRemoveEffect>)}
+							onMatchChange={(m) => updateEffect(index, { match: m } as Partial<DbRemoveEffect>)}
 						/>
 					)}
 				</div>
@@ -172,23 +150,31 @@ export function EffectsEditor({
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
-				<Tabs
-					value={activeTab}
-					onValueChange={(v) => setActiveTab(v as any)}
-					className="w-[200px]"
-				>
-					<TabsList className="grid w-full grid-cols-3 h-8">
-						<TabsTrigger value="all" className="text-xs">
+				<div className="w-[200px]">
+					<div className="grid w-full grid-cols-3 h-8 border rounded-md p-1 bg-muted/50">
+						<button 
+							type="button"
+							onClick={() => setActiveTab('all')}
+							className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded", activeTab === 'all' && "bg-background shadow-sm")}
+						>
 							All
-						</TabsTrigger>
-						<TabsTrigger value="state" className="text-xs">
+						</button>
+						<button 
+							type="button"
+							onClick={() => setActiveTab('state')}
+							className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded", activeTab === 'state' && "bg-background shadow-sm")}
+						>
 							State
-						</TabsTrigger>
-						<TabsTrigger value="db" className="text-xs">
+						</button>
+						<button 
+							type="button"
+							onClick={() => setActiveTab('db')}
+							className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded", activeTab === 'db' && "bg-background shadow-sm")}
+						>
 							DB
-						</TabsTrigger>
-					</TabsList>
-				</Tabs>
+						</button>
+					</div>
+				</div>
 
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
@@ -262,12 +248,9 @@ function StateSetEditor({
 	value,
 	onChange,
 }: {
-	value: any;
-	onChange: (val: any) => void;
+	value: Record<string, unknown>;
+	onChange: (val: Record<string, unknown>) => void;
 }) {
-	// Value is expected to be an object { key: value }
-	// We'll treat it as a JSON string for flexibility, or maybe a key-value list later.
-	// For now, let's use a smart JSON input.
 	return (
 		<div className="grid gap-2">
 			<Label className="text-xs text-muted-foreground">
@@ -275,7 +258,11 @@ function StateSetEditor({
 			</Label>
 			<JsonOrStringInput
 				value={value}
-				onChange={onChange}
+				onChange={(val) => {
+					if (typeof val === 'object' && val !== null) {
+						onChange(val as Record<string, unknown>);
+					}
+				}}
 				placeholder='{ "isLoggedIn": true, "userId": "{{ input.body.id }}" }'
 				minLines={2}
 			/>
@@ -290,9 +277,9 @@ function DbPushEditor({
 	onValueChange,
 }: {
 	table: string;
-	value: any;
+	value: unknown;
 	onTableChange: (t: string) => void;
-	onValueChange: (v: any) => void;
+	onValueChange: (v: unknown) => void;
 }) {
 	return (
 		<div className="grid gap-3">
@@ -329,11 +316,11 @@ function DbUpdateEditor({
 	onSetChange,
 }: {
 	table: string;
-	match: any;
-	set: any;
+	match: Record<string, unknown>;
+	set: Record<string, unknown>;
 	onTableChange: (t: string) => void;
-	onMatchChange: (m: any) => void;
-	onSetChange: (s: any) => void;
+	onMatchChange: (m: Record<string, unknown>) => void;
+	onSetChange: (s: Record<string, unknown>) => void;
 }) {
 	return (
 		<div className="grid gap-3">
@@ -353,7 +340,11 @@ function DbUpdateEditor({
 					</Label>
 					<JsonOrStringInput
 						value={match}
-						onChange={onMatchChange}
+						onChange={(val) => {
+							if (typeof val === 'object' && val !== null) {
+								onMatchChange(val as Record<string, unknown>);
+							}
+						}}
 						placeholder='{ "id": "{{ input.params.id }}" }'
 						minLines={3}
 					/>
@@ -364,7 +355,11 @@ function DbUpdateEditor({
 					</Label>
 					<JsonOrStringInput
 						value={set}
-						onChange={onSetChange}
+						onChange={(val) => {
+							if (typeof val === 'object' && val !== null) {
+								onSetChange(val as Record<string, unknown>);
+							}
+						}}
 						placeholder='{ "status": "active", "updatedAt": "now" }'
 						minLines={3}
 					/>
@@ -381,9 +376,9 @@ function DbRemoveEditor({
 	onMatchChange,
 }: {
 	table: string;
-	match: any;
+	match: Record<string, unknown>;
 	onTableChange: (t: string) => void;
-	onMatchChange: (m: any) => void;
+	onMatchChange: (m: Record<string, unknown>) => void;
 }) {
 	return (
 		<div className="grid gap-3">
@@ -402,7 +397,11 @@ function DbRemoveEditor({
 				</Label>
 				<JsonOrStringInput
 					value={match}
-					onChange={onMatchChange}
+					onChange={(val) => {
+						if (typeof val === 'object' && val !== null) {
+							onMatchChange(val as Record<string, unknown>);
+						}
+					}}
 					placeholder='{ "sku": "{{ input.params.sku }}" }'
 					minLines={2}
 				/>
@@ -419,16 +418,15 @@ function JsonOrStringInput({
 	placeholder,
 	minLines = 2,
 }: {
-	value: any;
-	onChange: (val: any) => void;
+	value: unknown;
+	onChange: (val: unknown) => void;
 	placeholder?: string;
 	minLines?: number;
 }) {
-	// If value is an object, stringify it for display
 	const stringValue =
 		typeof value === 'object' && value !== null
 			? JSON.stringify(value, null, 2)
-			: value || '';
+			: String(value || '');
 
 	const [internalValue, setInternalValue] = useState(stringValue);
 	const [isValidJson, setIsValidJson] = useState(true);
@@ -437,31 +435,24 @@ function JsonOrStringInput({
 		const val =
 			typeof value === 'object' && value !== null
 				? JSON.stringify(value, null, 2)
-				: value || '';
+				: String(value || '');
 		setInternalValue(val);
 	}, [value]);
 
-	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => {
 		const newVal = e.target.value;
 		setInternalValue(newVal);
 
-		// Try to parse as JSON
 		try {
-			// If it looks like JSON object/array, try to parse
 			if (newVal.trim().startsWith('{') || newVal.trim().startsWith('[')) {
 				const parsed = JSON.parse(newVal);
 				onChange(parsed);
 				setIsValidJson(true);
 			} else {
-				// Otherwise treat as string (e.g. simple template or empty)
 				onChange(newVal);
 				setIsValidJson(true);
 			}
 		} catch {
-			// If it looks like JSON but fails, keep as string but maybe mark as invalid if we want strict mode?
-			// For now, we allow loose strings (templates) so we just pass the string.
-			// But if the user intended JSON, they might want to know it's broken.
-			// Let's rely on the fact that if it fails parse, it's just a string.
 			onChange(newVal);
 			setIsValidJson(false);
 		}
@@ -471,8 +462,7 @@ function JsonOrStringInput({
 		const toInsert = `{{ ${v} }}`;
 		const newVal = internalValue + toInsert;
 		setInternalValue(newVal);
-		// Trigger change logic
-		handleChange({ target: { value: newVal } } as any);
+		handleChange({ target: { value: newVal } });
 	};
 
 	return (

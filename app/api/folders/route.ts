@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const page = Number.parseInt(searchParams.get('page') || '1');
-		const limit = Number.parseInt(searchParams.get('limit') || '10');
+		const page = Number.parseInt(searchParams.get('page') || '1', 10);
+		const limit = Number.parseInt(searchParams.get('limit') || '10', 10);
 		const offset = (page - 1) * limit;
 
 		const [totalResult] = await db
@@ -95,8 +95,8 @@ export async function GET(request: NextRequest) {
 				totalPages,
 			},
 		});
-	} catch (error: any) {
-		console.error('[API] Error fetching folders:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error fetching folders:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
 			{ error: 'Failed to fetch folders' },
 			{ status: 500 },
@@ -130,10 +130,10 @@ export async function POST(request: NextRequest) {
 			},
 			{ status: 201 },
 		);
-	} catch (error: any) {
-		console.error('[API] Error creating folder:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error creating folder:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to create folder' },
+			{ error: error instanceof Error ? error.message : 'Failed to create folder' },
 			{ status: 500 },
 		);
 	}
@@ -175,10 +175,10 @@ export async function PUT(request: NextRequest) {
 			createdAt: updatedFolder.createdAt.toISOString(),
 			updatedAt: updatedFolder.updatedAt?.toISOString(),
 		});
-	} catch (error: any) {
-		console.error('[API] Error updating folder:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error updating folder:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to update folder' },
+			{ error: error instanceof Error ? error.message : 'Failed to update folder' },
 			{ status: 500 },
 		);
 	}
@@ -197,10 +197,10 @@ export async function DELETE(request: NextRequest) {
 		await db.delete(folders).where(eq(folders.id, id));
 
 		return NextResponse.json({ success: true });
-	} catch (error: any) {
-		console.error('[API] Error deleting folder:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error deleting folder:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to delete folder' },
+			{ error: error instanceof Error ? error.message : 'Failed to delete folder' },
 			{ status: 500 },
 		);
 	}

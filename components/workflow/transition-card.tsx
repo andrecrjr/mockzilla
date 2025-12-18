@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
+import type { MatchContext, Transition } from '@/lib/types';
+
 interface TransitionCardProps {
-  transition: any; // Type strictly later
-  onDelete: (id: string) => void;
-  onEdit: (transition: any) => void;
+  transition: Transition;
+  onDelete: (id: number) => void;
+  onEdit: (transition: Transition) => void;
 }
 
 export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardProps) {
@@ -46,17 +48,17 @@ export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardP
                 {transition.path}
             </code>
         </div>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(transition)}>
+                <DropdownMenuItem onSelect={() => onEdit(transition)}>
                     <Pencil className="mr-2 h-4 w-4" /> Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete(transition.id)} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onSelect={() => onDelete(transition.id)} className="text-destructive focus:text-destructive">
                     <Trash className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
             </DropdownMenuContent>
@@ -98,13 +100,16 @@ export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardP
             <span className="text-xs uppercase font-semibold text-muted-foreground/50 w-16 shrink-0 mt-0.5">Then</span>
              <div className="flex-1 space-y-1">
                 {(transition.effects || []).length > 0 ? (
-                    (transition.effects as any[]).map((e, i) => (
-                        <div key={i} className="flex items-center gap-1.5 text-xs">
-                             <ArrowRight className="h-3 w-3 text-primary" />
-                             <span>{e.type}</span>
-                             {e.table && <code className="bg-muted px-1 rounded">{e.table}</code>}
-                        </div>
-                    ))
+                    <>
+                        {Array.isArray(transition.effects) && transition.effects.map((e, i) => (
+                            <div key={`${e.type}-${i}`} className="flex items-center gap-1.5 text-xs">
+                                 <ArrowRight className="h-3 w-3 text-primary" />
+                                 <span>{e.type}</span>
+                                 {((e.type === 'db.push' || e.type === 'db.update' || e.type === 'db.remove') && 'table' in e) && <code className="bg-muted px-1 rounded">{e.table}</code>}
+                            </div>
+                        ))}
+                        <span className="text-muted-foreground font-normal ml-auto text-xs">{(transition.effects as unknown[]).length} rows</span>
+                    </>
                 ) : (
                     <span className="text-muted-foreground/50 italic">No side effects</span>
                 )}

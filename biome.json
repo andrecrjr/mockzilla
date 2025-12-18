@@ -8,6 +8,11 @@
 	"files": {
 		"ignoreUnknown": false
 	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
@@ -15,7 +20,23 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"performance": {
+				"noImgElement": "off"
+			},
+			"correctness": {
+				"noUnknownFunction": "off"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"suspicious": {
+				"noThenProperty": "off",
+				"noDoubleEquals": "off"
+			},
+			"style": {
+				"useConst": "off"
+			}
 		}
 	},
 	"javascript": {

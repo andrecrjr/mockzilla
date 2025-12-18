@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Download, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { Transition } from '@/lib/types';
 import {
-	type Transition,
 	TransitionDialog,
 } from '@/components/workflow/create-transition-dialog';
 import { StateInspector } from '@/components/workflow/state-inspector';
@@ -28,19 +28,11 @@ import { TransitionCard } from '@/components/workflow/transition-card';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-async function deleteTransition(url: string) {
-	const res = await fetch(url, { method: 'DELETE' });
-	if (!res.ok) {
-		const err = await res.json();
-		throw new Error(err.error || 'Failed to delete transition');
-	}
-	return res.json();
-}
-
 export default function ScenarioDetailPage() {
 	const params = useParams();
 	const scenarioId = params.scenarioId as string;
 	const [deleteId, setDeleteId] = useState<number | null>(null);
+	const [isAdding, setIsAdding] = useState(false);
 	const [editingTransition, setEditingTransition] = useState<Transition | null>(
 		null,
 	);
@@ -62,18 +54,23 @@ export default function ScenarioDetailPage() {
 	const stateData = stateResponse?.data || { state: {}, tables: {} };
 
 	const { trigger: triggerDelete, isMutating: isDeleting } = useSWRMutation(
-		deleteId ? `/api/workflow/transitions/${deleteId}` : null,
-		deleteTransition,
+		'/api/workflow/transitions',
+		async (url, { arg: id }: { arg: number }) => {
+			const res = await fetch(`${url}/${id}`, { method: 'DELETE' });
+			if (!res.ok) {
+				const err = await res.json();
+				throw new Error(err.error || 'Failed to delete transition');
+			}
+			return res.json();
+		},
 		{
 			onSuccess: () => {
 				toast.success('Transition deleted');
-				setDeleteId(null);
 				mutateTransitions();
 				mutateState();
 			},
 			onError: (err) => {
 				toast.error(err.message || 'Failed to delete transition');
-				setDeleteId(null);
 			},
 		},
 	);
@@ -82,9 +79,10 @@ export default function ScenarioDetailPage() {
 		setDeleteId(id);
 	};
 
-	const confirmDelete = async () => {
+	const confirmDelete = () => {
 		if (deleteId) {
-			await triggerDelete();
+			triggerDelete(deleteId);
+			setDeleteId(null);
 		}
 	};
 
@@ -126,10 +124,10 @@ export default function ScenarioDetailPage() {
 						<Trash2 className="mr-2 h-4 w-4" />
 						Reset State
 					</Button>
-					<TransitionDialog
-						scenarioId={scenarioId}
-						onSuccess={() => mutateTransitions()}
-					/>
+					<Button onClick={() => setIsAdding(true)}>
+						<Plus className="mr-2 h-4 w-4" />
+						Add Transition
+					</Button>
 				</div>
 			</div>
 
@@ -205,22 +203,24 @@ export default function ScenarioDetailPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Edit Transition Dialog */}
-			{editingTransition && (
-				<TransitionDialog
-					scenarioId={scenarioId}
-					transition={editingTransition}
-					mode="edit"
-					open={!!editingTransition}
-					onOpenChange={(isOpen) => {
-						if (!isOpen) setEditingTransition(null);
-					}}
-					onSuccess={() => {
-						mutateTransitions();
+			{/* Unified Transition Dialog */}
+			<TransitionDialog
+				scenarioId={scenarioId}
+				transition={editingTransition || undefined}
+				mode={editingTransition ? 'edit' : 'create'}
+				open={isAdding || !!editingTransition}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) {
+						setIsAdding(false);
 						setEditingTransition(null);
-					}}
-				/>
-			)}
+					}
+				}}
+				onSuccess={() => {
+					mutateTransitions();
+					setIsAdding(false);
+					setEditingTransition(null);
+				}}
+			/>
 		</div>
 	);
 }

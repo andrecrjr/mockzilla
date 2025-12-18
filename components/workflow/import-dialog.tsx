@@ -52,10 +52,10 @@ export function ImportWorkflowDialog({ onSuccess }: ImportWorkflowDialogProps) {
 			setError(null);
 
 			// Validate JSON locally first
-			let data;
+			let data: unknown;
 			try {
 				data = JSON.parse(jsonContent);
-			} catch (e) {
+			} catch {
 				throw new Error('Invalid JSON format');
 			}
 
@@ -77,8 +77,8 @@ export function ImportWorkflowDialog({ onSuccess }: ImportWorkflowDialogProps) {
 			setIsOpen(false);
 			setJsonContent('');
 			if (onSuccess) onSuccess();
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Unknown error');
 			toast.error('Import failed');
 		} finally {
 			setIsLoading(false);

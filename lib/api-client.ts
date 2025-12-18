@@ -26,6 +26,30 @@ async function handleResponse(response: Response) {
 	return response.json();
 }
 
+interface ServerFolder {
+	id: string;
+	name: string;
+	slug?: string;
+	description?: string;
+	created_at?: string;
+	updated_at?: string;
+}
+
+interface ServerMock {
+	id: string;
+	name: string;
+	endpoint?: string;
+	method: string;
+	response: string;
+	status_code: number;
+	folder: string;
+	match_type?: string;
+	body_type?: string;
+	enabled?: boolean;
+	created_at?: string;
+	updated_at?: string;
+}
+
 function slugify(name: string) {
 	return name
 		.toLowerCase()
@@ -34,7 +58,7 @@ function slugify(name: string) {
 		.replace(/[^a-z0-9-]/g, '');
 }
 
-function mapServerFolderToFolder(server: any): Folder {
+function mapServerFolderToFolder(server: ServerFolder): Folder {
 	return {
 		id: server.id,
 		name: server.name,
@@ -45,7 +69,7 @@ function mapServerFolderToFolder(server: any): Folder {
 	};
 }
 
-function mapServerMockToMock(server: any): Mock {
+function mapServerMockToMock(server: ServerMock): Mock {
 	return {
 		id: server.id,
 		name: server.name,

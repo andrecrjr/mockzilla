@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
 		const searchParams = request.nextUrl.searchParams;
 		const folderId = searchParams.get('folderId');
 		const id = searchParams.get('id');
-		const page = Number.parseInt(searchParams.get('page') || '1');
-		const limit = Number.parseInt(searchParams.get('limit') || '10');
+		const page = Number.parseInt(searchParams.get('page') || '1', 10);
+		const limit = Number.parseInt(searchParams.get('limit') || '10', 10);
 		const offset = (page - 1) * limit;
 
 		if (id) {
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
-		let mocks;
-		let total;
+		let mocks: (typeof mockResponses.$inferSelect)[];
+		let total: number;
 
 		if (folderId) {
 			const [totalResult] = await db
@@ -104,10 +104,10 @@ export async function GET(request: NextRequest) {
 				totalPages,
 			},
 		});
-	} catch (error: any) {
-		console.error('[API] Error fetching mocks:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error fetching mocks:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to fetch mocks' },
+			{ error: error instanceof Error ? error.message : 'Failed to fetch mocks' },
 			{ status: 500 },
 		);
 	}
@@ -155,10 +155,10 @@ export async function POST(request: NextRequest) {
 			},
 			{ status: 201 },
 		);
-	} catch (error: any) {
-		console.error('[API] Error creating mock:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error creating mock:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to create mock' },
+			{ error: error instanceof Error ? error.message : 'Failed to create mock' },
 			{ status: 500 },
 		);
 	}
@@ -217,10 +217,10 @@ export async function PUT(request: NextRequest) {
 			createdAt: updatedMock.createdAt.toISOString(),
 			updatedAt: updatedMock.updatedAt?.toISOString(),
 		});
-	} catch (error: any) {
-		console.error('[API] Error updating mock:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error updating mock:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to update mock' },
+			{ error: error instanceof Error ? error.message : 'Failed to update mock' },
 			{ status: 500 },
 		);
 	}
@@ -239,10 +239,10 @@ export async function DELETE(request: NextRequest) {
 		await db.delete(mockResponses).where(eq(mockResponses.id, id));
 
 		return NextResponse.json({ success: true });
-	} catch (error: any) {
-		console.error('[API] Error deleting mock:', error.message);
+	} catch (error: unknown) {
+		console.error('[API] Error deleting mock:', error instanceof Error ? error.message : String(error));
 		return NextResponse.json(
-			{ error: error.message || 'Failed to delete mock' },
+			{ error: error instanceof Error ? error.message : 'Failed to delete mock' },
 			{ status: 500 },
 		);
 	}

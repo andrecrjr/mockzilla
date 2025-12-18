@@ -10,7 +10,7 @@ import {
 	transitions,
 } from '@/lib/db/schema';
 import { matches } from '@/lib/engine/match';
-import type { CreateMockRequest, HttpMethod } from '@/lib/types';
+import type { CreateMockRequest, HttpMethod, Scenario, Transition } from '@/lib/types';
 
 const ListFoldersArgs = z.object({
 	page: z.number().int().min(1).optional(),
@@ -94,7 +94,7 @@ const ConditionSchema = z.object({
 		.describe(
 			'Path to field in context (e.g., "input.body.id", "state.status", "db.users")',
 		),
-	value: z.any().optional().describe('Value to compare against'),
+	value: z.unknown().optional().describe('Value to compare against'),
 });
 
 // Helper to parse JSON strings or pass through objects
@@ -122,7 +122,7 @@ const CreateWorkflowTransitionArgs = z.object({
 	conditions: z
 		.preprocess(
 			parseJsonOrPassthrough,
-			z.union([z.record(z.any()), z.array(ConditionSchema)]).optional(),
+			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
 		)
 		.describe(
 			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).\n\nEXAMPLE:\n[\n  { "type": "eq", "field": "input.body.type", "value": "admin" },\n  { "type": "exists", "field": "input.headers.authorization" }\n]\n\nSupported Types:\n- eq: Equals\n- neq: Not Equals\n- exists: Field exists\n- gt: Greater Than\n- lt: Less Than\n- contains: String/Array contains value\n\nAllowed Fields:\n- input.body.*\n- input.query.*\n- input.params.*\n- input.headers.*\n- state.*\n- db.*',
@@ -130,17 +130,17 @@ const CreateWorkflowTransitionArgs = z.object({
 	effects: z
 		.preprocess(
 			parseJsonOrPassthrough,
-			z.union([z.record(z.any()), z.array(z.any())]).optional(),
+			z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 		)
 		.describe(
 			'Side effects to execute.\nFormat: Array of effect objects.\n\nEXAMPLE:\n[\n  { "type": "state.set", "raw": { "isLoggedIn": true } },\n  { "type": "db.push", "table": "users", "value": "{{input.body}}" }\n]\n\nSupported Actions:\n- state.set: Set state variables ({ type: "state.set", raw: { key: value } })\n- db.push: Add row to table ({ type: "db.push", table: "name", value: obj })\n- db.update: Update rows ({ type: "db.update", table: "name", match: { id: "{{input.params.id}}" }, set: { status: "active" } })\n- db.remove: Remove rows ({ type: "db.remove", table: "name", match: { id: 123 } })\n\nNOTE: NO Random/Faker. Use {{input.*}}, {{state.*}} for values.',
 		),
 	response: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.any()))
+		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()))
 		.describe(
 			'Response configuration.\n\nEXAMPLE:\n{\n  "status": 201,\n  "body": { "id": "{{input.body.id}}", "status": "created" }\n}\n\nInterpolation supported for body values: {{input.*}}, {{state.*}}, {{db.*}}',
 		),
-	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
 
 const ResetWorkflowStateArgs = z.object({
@@ -162,7 +162,7 @@ const UpdateWorkflowTransitionArgs = z.object({
 	conditions: z
 		.preprocess(
 			parseJsonOrPassthrough,
-			z.union([z.record(z.any()), z.array(ConditionSchema)]).optional(),
+			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
 		)
 		.describe(
 			'Update conditions. See CreateWorkflowTransitionArgs for allowed formats and rules.',
@@ -170,17 +170,17 @@ const UpdateWorkflowTransitionArgs = z.object({
 	effects: z
 		.preprocess(
 			parseJsonOrPassthrough,
-			z.union([z.record(z.any()), z.array(z.any())]).optional(),
+			z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 		)
 		.describe(
 			'Update effects. See CreateWorkflowTransitionArgs for allowed formats and rules.',
 		),
 	response: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional())
+		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional())
 		.describe(
 			'Update response configuration. See CreateWorkflowTransitionArgs for rules.',
 		),
-	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
 
 const CreateWorkflowScenarioArgs = z.object({
@@ -213,7 +213,7 @@ const TestWorkflowArgs = z.object({
 	scenarioId: z.string(),
 	path: z.string(),
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-	body: z.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional()),
+	body: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 	query: z.record(z.string()).optional(),
 	headers: z.preprocess(
 		parseJsonOrPassthrough,
@@ -844,7 +844,7 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 		.where(eq(scenarioState.scenarioId, args.scenarioId));
 
 	const baseState = stateRow
-		? (stateRow.data as any)
+		? (stateRow.data as { state: Record<string, unknown>; tables: Record<string, unknown[]> })
 		: { state: {}, tables: {} };
 
 	const exactCandidates = await db
@@ -865,7 +865,7 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 			db: baseState.tables || {},
 			input: { body, query, params: {}, headers },
 		};
-		if (matches(t.conditions || {}, ctx)) {
+		if (matches((t.conditions as any) || {}, ctx)) {
 			const result = await processWorkflowRequest(t, {}, body, query, headers);
 			return {
 				success: true,
@@ -913,7 +913,7 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 			db: baseState.tables || {},
 			input: { body, query, params, headers },
 		};
-		if (matches(t.conditions || {}, ctx)) {
+		if (matches((t.conditions as any) || {}, ctx)) {
 			const result = await processWorkflowRequest(
 				t,
 				params,
@@ -965,7 +965,7 @@ const WorkflowTransitionSchema = z.object({
 	conditions: z
 		.preprocess(
 			parseJsonOrPassthrough,
-			z.union([z.record(z.any()), z.array(ConditionSchema)]).optional(),
+			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
 		)
 		.describe(
 			'Rules to trigger this transition. Can be an array of Condition objects (preferred) or a key-value object (legacy). Supported operators: eq, neq, exists, gt, lt, contains. Context fields: input.body.*, input.query.*, input.params.*, input.headers.*, state.*, db.*',
@@ -973,18 +973,18 @@ const WorkflowTransitionSchema = z.object({
 	effects: z
 		.preprocess(
 			parseJsonOrPassthrough,
-			z.union([z.record(z.any()), z.array(z.any())]).optional(),
+			z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 		)
 		.describe(
 			'Side effects to execute. Array of effect objects. Supported types: "state.set" (sets state variables), "db.push" (adds to table), "db.update" (updates rows), "db.remove" (removes rows). Examples: { "type": "state.set", "raw": { "isLoggedIn": true } }, { "type": "db.push", "table": "users", "value": "{{input.body}}" }',
 		),
 	response: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.any()))
+		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()))
 		.describe(
 			'Response configuration to return to the client. Can use interpolation like {{input.body.id}} or {{state.token}}.',
 		),
 	meta: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.any()).optional())
+		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional())
 		.describe('Additional metadata'),
 });
 
@@ -1013,8 +1013,8 @@ const ExportWorkflowArgs = z.object({
 
 async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 	const { scenarioId } = args;
-	let scenariosList: any[] = [];
-	let transitionsList: any[] = [];
+	let scenariosList: Scenario[] = [];
+	let transitionsList: Transition[] = [];
 
 	if (scenarioId) {
 		const [scenario] = await db
@@ -1039,9 +1039,12 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 
 		transitionsList = transitionsData.map((t) => ({
 			...t,
+			conditions: t.conditions as any,
+			effects: t.effects as any,
+			response: t.response as any,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
-		}));
+		})) as Transition[];
 	} else {
 		const scenariosData = await db.select().from(scenarios);
 		scenariosList = scenariosData.map((s) => ({
@@ -1053,9 +1056,12 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 		const transitionsData = await db.select().from(transitions);
 		transitionsList = transitionsData.map((t) => ({
 			...t,
+			conditions: t.conditions as any,
+			effects: t.effects as any,
+			response: t.response as any,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
-		}));
+		})) as Transition[];
 	}
 
 	return {
@@ -1108,7 +1114,7 @@ async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 		}
 	}
 
-	const scenarioIds = data.scenarios.map((s: any) => s.id);
+	const scenarioIds = data.scenarios.map((s) => s.id);
 	if (scenarioIds.length > 0) {
 		await db
 			.delete(transitions)
@@ -1119,7 +1125,7 @@ async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 			Array.isArray(data.transitions) &&
 			data.transitions.length > 0
 		) {
-			const transitionsToInsert = data.transitions.map((t: any) => ({
+			const transitionsToInsert = data.transitions.map((t) => ({
 				scenarioId: t.scenarioId,
 				name: t.name,
 				description: t.description,

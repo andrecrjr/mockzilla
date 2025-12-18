@@ -1,4 +1,3 @@
-
 export type Condition = {
 	/**
 	 * Operator type:
@@ -17,18 +16,60 @@ export type Condition = {
 	/**
 	 * Value to compare against.
 	 */
-	value?: any;
+	value?: unknown;
 };
+
+export type StateSetEffect = {
+	type: 'state.set';
+	/** Key to set in scenario state. */
+	key?: string;
+	/** Value to set (interpolation supported). */
+	value?: unknown;
+	/** Map of multiple keys/values to set. */
+	raw?: Record<string, unknown>;
+};
+
+export type DbPushEffect = {
+	type: 'db.push';
+	table: string;
+	value: unknown;
+};
+
+export type DbUpdateEffect = {
+	type: 'db.update';
+	table: string;
+	match: Record<string, unknown>;
+	set: Record<string, unknown>;
+};
+
+export type DbRemoveEffect = {
+	type: 'db.remove';
+	table: string;
+	match: Record<string, unknown>;
+};
+
+export type UnknownEffect = {
+	type: 'unknown';
+	raw: unknown;
+};
+
+export type Effect =
+	| StateSetEffect
+	| DbPushEffect
+	| DbUpdateEffect
+	| DbRemoveEffect
+	| UnknownEffect;
+
 
 export type MatchContext = {
 	input: {
-		body: any;
-		query: any;
+		body: unknown;
+		query: unknown;
 		params: Record<string, string>;
 		headers: Record<string, string>;
 	};
-	state: any;
-	db: any; // Mini-DB tables
+	state: Record<string, unknown>;
+	db: Record<string, unknown[]>; // Mini-DB tables
 };
 
 /**
@@ -38,32 +79,32 @@ export type MatchContext = {
  * Resolves a field path (e.g. "input.body.id" or "state.authorized") to a value.
  * Falls back to input.body for convenience if not found in root.
  */
-function resolveOp(path: string, context: MatchContext): any {
+function resolveOp(path: string, context: MatchContext): unknown {
     const direct = getPath(context, path);
     if (direct !== undefined) return direct;
 
     // Fallback: try looking in input.body
-    if (context.input && context.input.body) {
+    if (context.input?.body) {
         return getPath(context.input.body, path);
     }
     
     return undefined;
 }
 
-function getPath(obj: any, path: string): any {
+function getPath(obj: unknown, path: string): unknown {
 	const parts = path.split('.');
-	let current: any = obj;
+	let current: unknown = obj;
 	for (const part of parts) {
 		if (current === undefined || current === null) return undefined;
-		current = current[part];
+		if (typeof current !== 'object') return undefined;
+		current = (current as Record<string, unknown>)[part];
 	}
 	return current;
 }
 
-export function matches(conditions: Record<string, any> | Condition[], context: MatchContext): boolean {
+export function matches(conditions: Record<string, unknown> | Condition[], context: MatchContext): boolean {
   if (!conditions) return true;
   
-  // Array of structured conditions
   if (Array.isArray(conditions)) {
       if (conditions.length === 0) return true;
       for (const condition of conditions) {
@@ -74,10 +115,8 @@ export function matches(conditions: Record<string, any> | Condition[], context: 
       return true;
   }
 
-  // Legacy: Object key-value equality
   if (Object.keys(conditions).length === 0) return true;
 
-  // Support for simplified key-value equality: { "input.role": "admin" }
   for (const [key, expected] of Object.entries(conditions)) {
     const actual = resolveOp(key, context);
     
@@ -108,8 +147,8 @@ export function evaluateCondition(condition: Condition, context: MatchContext): 
 		case 'gt': return Number(actual) > Number(condition.value);
 		case 'lt': return Number(actual) < Number(condition.value);
 		case 'contains': 
-			return Array.isArray(actual) && actual.includes(condition.value) || 
-				   String(actual).includes(condition.value);
+			return (Array.isArray(actual) && actual.includes(condition.value)) || 
+				   String(actual).includes(String(condition.value));
 		default: return false;
 	}
 }

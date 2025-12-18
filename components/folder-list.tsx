@@ -14,7 +14,7 @@ interface FolderListProps {
 	onDeleteFolder: (id: string) => void;
 	onDeleteMock: (id: string) => void;
 	onUpdateFolder: (id: string, name: string) => Promise<void>;
-	onUpdateMock: (id: string, data: any) => Promise<void>;
+	onUpdateMock: (id: string, data: Partial<Mock>) => Promise<void>;
 	onCopy: (text: string) => void;
 }
 
