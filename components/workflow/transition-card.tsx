@@ -48,17 +48,17 @@ export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardP
                 {transition.path}
             </code>
         </div>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(transition)}>
+                <DropdownMenuItem onSelect={() => onEdit(transition)}>
                     <Pencil className="mr-2 h-4 w-4" /> Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete(transition.id)} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onSelect={() => onDelete(transition.id)} className="text-destructive focus:text-destructive">
                     <Trash className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
             </DropdownMenuContent>
