@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 'use client';
 
 import {
@@ -15,16 +16,6 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -351,8 +342,8 @@ export default function WorkflowsPage() {
 			{/* Loading State */}
 			{isLoading && (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{[...Array(3)].map((k) => (
-						<Card key={k} className="p-6">
+					{[...Array(3)].map((_, index) => (
+						<Card key={index} className="p-6">
 							<Skeleton className="h-10 w-10 rounded-lg mb-4" />
 							<Skeleton className="h-6 w-3/4 mb-2" />
 							<Skeleton className="h-4 w-1/2" />

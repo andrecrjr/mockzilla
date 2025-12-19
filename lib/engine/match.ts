@@ -69,7 +69,7 @@ export type MatchContext = {
 		headers: Record<string, string>;
 	};
 	state: Record<string, unknown>;
-	db: Record<string, unknown[]>; // Mini-DB tables
+	tables: Record<string, unknown[]>; // Mini-DB tables
 };
 
 /**
@@ -80,7 +80,13 @@ export type MatchContext = {
  * Falls back to input.body for convenience if not found in root.
  */
 function resolveOp(path: string, context: MatchContext): unknown {
-    const direct = getPath(context, path);
+    // Handle "db" -> "tables" alliance for backward compatibility
+    let adjustedPath = path;
+    if (path.startsWith('db.')) {
+        adjustedPath = `tables.${path.substring(3)}`;
+    }
+
+    const direct = getPath(context, adjustedPath);
     if (direct !== undefined) return direct;
 
     // Fallback: try looking in input.body

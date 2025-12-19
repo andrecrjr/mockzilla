@@ -10,7 +10,7 @@ import {
 	transitions,
 } from '@/lib/db/schema';
 import { matches } from '@/lib/engine/match';
-import type { CreateMockRequest, HttpMethod, Scenario, Transition } from '@/lib/types';
+import type { Condition, CreateMockRequest, HttpMethod, Scenario, Transition } from '@/lib/types';
 
 const ListFoldersArgs = z.object({
 	page: z.number().int().min(1).optional(),
@@ -862,11 +862,11 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 	for (const t of exactCandidates) {
 		const ctx = {
 			state: baseState.state || {},
-			db: baseState.tables || {},
+			tables: baseState.tables || {},
 			input: { body, query, params: {}, headers },
 		};
-		if (matches((t.conditions as any) || {}, ctx)) {
-			const result = await processWorkflowRequest(t, {}, body, query, headers);
+		if (matches((t.conditions as Record<string, unknown> | Condition[]) || {}, ctx)) {
+			const result = await processWorkflowRequest(t as unknown as Transition, {}, body, query, headers);
 			return {
 				success: true,
 				transitionId: t.id,
@@ -910,12 +910,12 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 		if (!params) continue;
 		const ctx = {
 			state: baseState.state || {},
-			db: baseState.tables || {},
+			tables: baseState.tables || {},
 			input: { body, query, params, headers },
 		};
-		if (matches((t.conditions as any) || {}, ctx)) {
+		if (matches((t.conditions as Record<string, unknown> | Condition[]) || {}, ctx)) {
 			const result = await processWorkflowRequest(
-				t,
+				t as unknown as Transition,
 				params,
 				body,
 				query,

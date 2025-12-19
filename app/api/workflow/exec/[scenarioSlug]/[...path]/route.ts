@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { findTransition } from '@/lib/engine/router';
 import { processWorkflowRequest } from '@/lib/engine/processor';
+import type { Transition } from '@/lib/types';
 
 export async function POST(
 	request: NextRequest,
@@ -57,7 +58,7 @@ export async function POST(
 	// 3. Process Request
 	try {
 		const result = await processWorkflowRequest(
-			match.transition,
+			match.transition as unknown as Transition,
 			match.params,
 			body,
 			query,
