@@ -55,6 +55,11 @@ db-studio:
 prod-build:
 	docker build -f Dockerfile.prd --no-cache -t mockzilla:latest .
 
+## using pglite no need to have your own
+prod-pglite:
+	docker run -p 36666:36666 -v $(pwd)/data/mockzilla-data:/app/data mockzilla
+
+## With a postgresql database outside
 prod-up:
 	docker run -d --env-file .env -p 36666:36666 --name mockzilla-prod mockzilla:latest
 

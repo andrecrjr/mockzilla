@@ -24,6 +24,20 @@ Your self-hosted mock server will be available at:
 - **Application**: http://localhost:36666
 - **Database**: localhost:5432 (internal, not exposed)
 
+### Option 2: Super Fast Docker Run (Standalone)
+
+No configuration needed. Ideal for quick testing:
+
+```bash
+# Run Mockzilla instantly
+docker run -p 36666:36666 \
+  -v $(pwd)/mockzilla-data:/app/data \
+  andrecrjr/mockzilla:latest
+```
+
+> [!TIP]
+> Use the `-v` flag to persist your mocks and folders in a local directory.
+
 
 ### Option 2: Self-Host Without Docker
 
