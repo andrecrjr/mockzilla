@@ -16,12 +16,12 @@ fi
 if [ -n "$DATABASE_URL" ]; then
   if command -v pg_isready >/dev/null 2>&1; then
     echo "Waiting for database to be ready..."
-    for i in 1 2 3 4 5; do
+    for i in 1 2 3; do
       if pg_isready -d "$DATABASE_URL" -t 5; then
         echo "Database is ready"
         break
       fi
-      echo "Attempt $i/5: Database not ready, waiting..."
+      echo "Attempt $i/3: Database not ready, waiting..."
       sleep 2
     done
   else

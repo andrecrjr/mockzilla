@@ -15,10 +15,6 @@ build
 coverage
 .nyc_output
 
-# Environment files
-.env
-.env*
-.env*.local
 
 # Git
 .git
