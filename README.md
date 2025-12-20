@@ -4,69 +4,44 @@ A powerful self-hosted API mocking platform for development and testing. Deploy 
 
 ## 🚀 Quick Start
 
-### Option 1: Self-Host with Docker (Recommended)
+### Option 1: Fast In-Memory with PGLite (Recommended for Development)
 
-The fastest way to get your own Mockzilla instance running:
-
-```bash
-# Copy environment template
-# Update DATABASE_URL to: postgresql://mockzilla:mockzilla@localhost:5432/mockzilla
-cp .env.example .env
-
-# Start your mock server
-make dev-up
-
-# Or use the Makefile commands
-make help
-```
-
-Your self-hosted mock server will be available at:
-- **Application**: http://localhost:36666
-- **Database**: localhost:5432 (internal, not exposed)
-
-### Option 2: Super Fast Docker Run (Standalone)
-
-No configuration needed. Ideal for quick testing:
+Perfect for quick testing and development. By default, all data is stored in memory and will be lost when the container stops. Use volume persistence to maintain data between restarts.
 
 ```bash
-# Run Mockzilla instantly
+# Pull the latest image
+docker pull andrecrjr/mockzilla:latest
+
+
+# run with volume persistence to maintain data between container restarts
 docker run -p 36666:36666 \
-  -v $(pwd)/mockzilla-data:/app/data \
+  -v mockzilla-data:/data \
   andrecrjr/mockzilla:latest
 ```
 
 > [!TIP]
-> Use the `-v` flag to persist your mocks and folders in a local directory.
+> This option is ideal for development, testing, and quick experimentation. It starts instantly with no external dependencies. Use volume persistence to keep your mocks between container restarts.
 
+Your mock server will be available at http://localhost:36666
 
-### Option 2: Self-Host Without Docker
+### Option 2: Persistent with External PostgreSQL (Recommended for Production)
 
-For more control over your deployment, install directly on your system:
+For production use or when you need data persistence between container restarts.
 
-1. **Install dependencies:**
-   ```bash
-   bun install
-   ```
+```bash
+# Pull the latest image
+docker pull andrecrjr/mockzilla:latest
 
-2. **Set up environment variables:**
-   ```bash
-   cp .env.example .env
-   # Update DATABASE_URL to: postgresql://mockzilla:mockzilla@localhost:5432/mockzilla
-   ```
+# Run with external PostgreSQL database
+docker run -p 36666:36666 \
+  -e DATABASE_URL=postgresql://username:password@host:5432/database_name \
+  andrecrjr/mockzilla:latest
+```
 
-3. **Ensure PostgreSQL is running** on your system (you'll need PostgreSQL installed and running locally)
+> [!NOTE]
+> This option is recommended for production environments where data persistence is required. Make sure your PostgreSQL database is accessible from the container.
 
-4. **Run database migrations:**
-   ```bash
-   bun run db:push
-   ```
-
-5. **Start the mock server:**
-   ```bash
-   bun run dev
-   ```
-
-Your self-hosted instance will be available at [http://localhost:36666](http://localhost:36666).
+Your mock server will be available at http://localhost:36666
 
 ## 📦 Available Scripts
 
@@ -83,11 +58,37 @@ Your self-hosted instance will be available at [http://localhost:36666](http://l
 - `bun run db:studio` - Open Drizzle Studio (database UI)
 
 ### Docker Commands
-- `make dev-up` - Start development environment
+- `docker pull andrecrjr/mockzilla:latest` - Pull latest image
+- `docker run -p 36666:36666 andrecrjr/mockzilla:latest` - Run with PGLite (in-memory)
+- `docker run -p 36666:36666 -e DATABASE_URL=... andrecrjr/mockzilla:latest` - Run with PostgreSQL
+
+### Running in Background
+```bash
+docker run -d \
+  --name mockzilla \
+  -p 36666:36666 \
+  andrecrjr/mockzilla:latest
+```
+
+### Running with Volume Persistence
+```bash
+docker run -d \
+  --name mockzilla \
+  -p 36666:36666 \
+  -v mockzilla-data:/data \
+  andrecrjr/mockzilla:latest
+```
+
+### Development and Contributing
+For development purposes, the project includes Makefile commands:
+- `make dev-up` - Start development environment with hot-reload
 - `make dev-down` - Stop development environment
 - `make dev-logs` - View logs
 - `make db-studio` - Open Drizzle Studio in Docker
-- `make help` - See all available commands
+- `make help` - See all available development commands
+
+> [!NOTE]
+> Makefile commands are primarily for development and contributing to the project, not for production self-hosting.
 
 ## 🛠️ Self-Hosting Stack
 
@@ -104,12 +105,65 @@ Mockzilla is designed for easy self-hosting with the following technologies:
 
 ## 🐳 Self-Hosting with Docker
 
-Mockzilla provides optimized Docker configurations for reliable self-hosting:
+Mockzilla provides optimized Docker images for reliable self-hosting:
 
-- **Development** (`docker-compose.yaml`): Perfect for setting up your local instance with hot-reloading
-- **Production** (`Dockerfile.prd`): Optimized images for deploying your production mock server
+- **Docker Hub Image**: `andrecrjr/mockzilla:latest` - Production-ready image
+- **In-Memory Option**: Uses PGLite for fast, ephemeral storage
+- **Persistent Option**: Connects to external PostgreSQL for data persistence
 
-Since there's no DOCKER.md file, you can find comprehensive self-hosting documentation in the main README and Docker configuration files.
+### Pulling the Image
+
+Always start by pulling the latest image:
+
+```bash
+docker pull andrecrjr/mockzilla:latest
+```
+
+### Running with Data Persistence
+
+For production use, connect to an external PostgreSQL database:
+
+```bash
+docker run -d \
+  --name mockzilla \
+  -p 36666:36666 \
+  -e DATABASE_URL=postgresql://username:password@host:5432/database_name \
+  andrecrjr/mockzilla:latest
+```
+
+### Running with Volume Persistence
+
+To persist data without an external database, mount a volume to `/data/`:
+
+```bash
+docker run -d \
+  --name mockzilla \
+  -p 36666:36666 \
+  -v mockzilla-data:/data \
+  andrecrjr/mockzilla:latest
+```
+
+Or mount a local directory:
+
+```bash
+docker run -d \
+  --name mockzilla \
+  -p 36666:36666 \
+  -v /path/to/local/data:/data \
+  andrecrjr/mockzilla:latest
+```
+
+> [!NOTE]
+> Using volume persistence at `/data/` will maintain your mocks and configurations between container restarts while still using the in-memory PGLite database.
+
+### Environment Variables
+
+- `DATABASE_URL` (optional): PostgreSQL connection string (when using external database)
+- `PORT` (optional): Port to run the server on (default: 36666)
+
+### Data Persistence
+
+- Volume mount: Mount a volume to `/data/` to persist mocks and configurations between container restarts when using PGLite
 
 ## 📁 Self-Hosting Structure
 
@@ -147,18 +201,11 @@ bun run db:push
 
 ## 🔧 Self-Hosting Configuration
 
-Copy `.env.example` to `.env` and configure for your self-hosted instance:
+When running with an external PostgreSQL database, configure the `DATABASE_URL` environment variable:
 
 ```bash
-# Database (for self-hosted mock storage)
-POSTGRES_USER=mockzilla
-POSTGRES_PASSWORD=mockzilla
-POSTGRES_DB=mockzilla
-DATABASE_URL=postgresql://mockzilla:mockzilla@postgres:5432/mockzilla
-
-# Next.js
-NODE_ENV=development
-NEXT_TELEMETRY_DISABLED=1
+# PostgreSQL connection string (when using external database)
+DATABASE_URL=postgresql://username:password@host:5432/database_name
 ```
 
 ## 🤝 Contributing
