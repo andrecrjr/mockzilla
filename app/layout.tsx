@@ -58,11 +58,11 @@ export default function RootLayout({
 										href="/"
 										className="flex items-center gap-4 font-bold text-xl"
 									>
-										<div className="flex h-10 w-20 items-center justify-center rounded-lg dark:invert">
+										<div className="flex h-10 w-20 items-center justify-center rounded-lg">
 											<img
 												src="/mockzilla-logo.png"
 												alt="Mockzilla logo"
-												className="h-12 w-full"
+												className="h-12 w-full invert dark:filter-none"
 											/>
 										</div>
 										<span className="text-foreground">Mockzilla</span>
