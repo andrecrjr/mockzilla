@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
-import type { MatchContext, Transition } from '@/lib/types';
+import type { Transition } from '@/lib/types';
 
 interface TransitionCardProps {
   transition: Transition;
@@ -18,8 +18,8 @@ interface TransitionCardProps {
 
 export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardProps) {
   const fullUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/api/workflow${transition.path}`
-    : `/api/workflow${transition.path}`;
+    ? `${window.location.origin}/api/workflow/exec/${transition.scenarioId}${transition.path}`
+    : `/api/workflow/exec/${transition.scenarioId}${transition.path}`;
 
   const copyUrl = () => {
     navigator.clipboard.writeText(fullUrl);
@@ -31,7 +31,6 @@ export function TransitionCard({ transition, onDelete, onEdit }: TransitionCardP
     navigator.clipboard.writeText(curl);
     toast.success('cURL Command Copied');
   };
-  console.log(transition)
 
   return (
     <Card className="p-4 group hover:border-primary/50 transition-colors">

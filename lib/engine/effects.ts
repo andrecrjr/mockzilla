@@ -9,10 +9,11 @@ function interpolate(value: unknown, context: MatchContext): unknown {
 	if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
 		const path = value.slice(2, -2).trim();
 		const parts = path.split('.');
-		let current: any = context;
+		let current: unknown = context;
 		for (const part of parts) {
-			if (current === undefined || current === null) return undefined;
-			if (typeof current !== 'object') return undefined;
+			if (current === undefined || current === null || typeof current !== 'object') {
+				return undefined;
+			}
 			current = (current as Record<string, unknown>)[part];
 		}
 		return current;
@@ -81,13 +82,12 @@ export function applyEffects(
 				context.state[effect.key] = interpolate(effect.value, context);
 			}
 		} else if (effect.type === 'db.push') {
-			const table = context.db[effect.table] || [];
+			const table = context.tables[effect.table] || [];
 			const resolvedValue = interpolate(effect.value, context);
 			table.push(resolvedValue);
-			context.db[effect.table] = table;
+			context.tables[effect.table] = table;
 		} else if (effect.type === 'db.update') {
-			const table = context.db[effect.table] || [];
-			// Iterate and update matching items
+			const table = context.tables[effect.table] || [];
 			for (let i = 0; i < table.length; i++) {
 				let matches = true;
 				for (const [mk, mv] of Object.entries(effect.match)) {
@@ -104,9 +104,9 @@ export function applyEffects(
 					}
 				}
 			}
-			context.db[effect.table] = table;
+			context.tables[effect.table] = table;
 		} else if (effect.type === 'db.remove') {
-			let table = context.db[effect.table] || [];
+			let table = context.tables[effect.table] || [];
 			table = table.filter((item) => {
 				const row = item as Record<string, unknown>;
 				for (const [mk, mv] of Object.entries(effect.match)) {
@@ -116,7 +116,7 @@ export function applyEffects(
 				}
 				return true;
 			});
-			context.db[effect.table] = table;
+			context.tables[effect.table] = table;
 		}
 	}
 }

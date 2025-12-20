@@ -4,16 +4,19 @@ import { eq } from 'drizzle-orm';
 import { matches } from './match';
 import { applyEffects } from './effects';
 import type { MatchContext } from './match';
+import type { Transition } from '@/lib/types';
+
+// Processor.ts has its own interpolate with slightly different logic (regex replace).
 
 
 
 export async function processWorkflowRequest(
-	transition: any,
+	transition: Transition,
 	params: Record<string, string>,
-	body: any,
-	query: any,
+	body: unknown,
+	query: unknown,
 	headers: Record<string, string> = {}
-): Promise<{ status: number; headers: any; body: any }> {
+): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
 	const scenarioId = transition.scenarioId;
 
 	// 1. Load State
@@ -21,14 +24,14 @@ export async function processWorkflowRequest(
 	
 	const scenarioData: MatchContext = {
 		state: {},
-		db: {},
+		tables: {},
 		input: { body, query, params, headers }
 	};
 
 	if (stateRow.length > 0) {
-		const savedData = stateRow[0].data as any;
+		const savedData = stateRow[0].data as { state?: Record<string, unknown>; tables?: Record<string, unknown[]> };
 		scenarioData.state = savedData.state || {};
-		scenarioData.db = savedData.tables || {}; // map "tables" in storage to "db" in context
+		scenarioData.tables = savedData.tables || {};
 	} else {
 		// Initialize if not exists
 		await db.insert(scenarioState).values({
@@ -61,52 +64,48 @@ export async function processWorkflowRequest(
 	await db.insert(scenarioState)
 		.values({
 			scenarioId,
-			data: { state: scenarioData.state, tables: scenarioData.db }
+			data: { state: scenarioData.state, tables: scenarioData.tables }
 		})
 		.onConflictDoUpdate({
 			target: scenarioState.scenarioId,
 			set: { 
-				data: { state: scenarioData.state, tables: scenarioData.db },
+				data: { state: scenarioData.state, tables: scenarioData.tables },
 				updatedAt: new Date()
 			}
 		});
 
 	// 5. Return Response
-	const responseConfig = transition.response || {};
+	const responseConfig = transition.response;
 	
-	// Interpolate response body if it's dynamic
-	// We might want `applyEffects` to also handle response interpolation or do it here.
-	// For now, let's assume valid JSON in response.
-
 	return {
 		status: responseConfig.status || 200,
-		headers: responseConfig.headers || { 'Content-Type': 'application/json' },
-		body: interpolate(responseConfig.body, scenarioData) || {}
+		headers: (responseConfig as any).headers || { 'Content-Type': 'application/json' },
+		body: interpolateProcessor(responseConfig.body, scenarioData) || {}
 	};
 }
 
-function interpolate(template: any, context: MatchContext): any {
+function interpolateProcessor(template: unknown, context: MatchContext): unknown {
 	if (typeof template === 'string') {
         const trimmed = template.trim();
         // Check for exact variable match to preserve type (Array/Object)
         // e.g. "{{ db.items }}" -> returns Array, not stringified array
         const exactMatch = trimmed.match(/^\{\{\s*([^}]+)\s*\}\}$/);
         if (exactMatch) {
-            const val = get(context, exactMatch[1].trim());
+            const val = getHelper(context, exactMatch[1].trim());
             return val !== undefined ? val : template;
         }
 
 		// Replace {{ path.to.val }} with actual value stringified for embedded interpolation
 		return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, path) => {
-			const val = get(context, path.trim());
+			const val = getHelper(context, (path as string).trim());
 			return val !== undefined ? String(val) : '';
 		});
 	} else if (Array.isArray(template)) {
-		return template.map(item => interpolate(item, context));
+		return template.map(item => interpolateProcessor(item, context));
 	} else if (typeof template === 'object' && template !== null) {
-		const result: any = {};
+		const result: Record<string, unknown> = {};
 		for (const key in template) {
-			result[key] = interpolate(template[key], context);
+			result[key] = interpolateProcessor((template as Record<string, unknown>)[key], context);
 		}
 		return result;
 	}
@@ -114,16 +113,26 @@ function interpolate(template: any, context: MatchContext): any {
 }
 
 // Simple get helper
-function get(obj: any, path: string) {
+function getHelper(obj: unknown, path: string): unknown {
     const parts = path.split('.');
-    const current = obj;
+    let current: any = obj;
     
-    // Special handling for "db.tableName" - default to [] if not found
+    // Special handling for "db.tableName" - fallback to "tables.tableName"
     if (parts[0] === 'db' && parts.length === 2) {
-        if (current.db && current.db[parts[1]] === undefined) {
-            return [];
+        if (current && typeof current === 'object' && 'tables' in current) {
+            const contextObj = current as MatchContext;
+            if (contextObj.tables[parts[1]] === undefined) {
+                return [];
+            }
+            return contextObj.tables[parts[1]];
         }
     }
 
-    return parts.reduce((acc: any, part: string) => acc && acc[part], obj);
+    for (const part of parts) {
+        if (current === undefined || current === null || typeof current !== 'object') {
+            return undefined;
+        }
+        current = (current as Record<string, unknown>)[part];
+    }
+    return current;
 }

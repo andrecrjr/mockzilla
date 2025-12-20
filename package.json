@@ -13,6 +13,7 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
+		"@electric-sql/pglite": "^0.3.14",
 		"@faker-js/faker": "^10.1.0",
 		"@hookform/resolvers": "^3.10.0",
 		"@modelcontextprotocol/sdk": "^1.24.1",

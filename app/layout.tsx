@@ -62,7 +62,7 @@ export default function RootLayout({
 											<img
 												src="/mockzilla-logo.png"
 												alt="Mockzilla logo"
-												className="h-12 w-full"
+												className="h-12 w-full invert dark:filter-none"
 											/>
 										</div>
 										<span className="text-foreground">Mockzilla</span>

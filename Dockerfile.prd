@@ -24,12 +24,13 @@ ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=36666
 
-# Install PostgreSQL client for migration health checks
-RUN apk add --no-cache postgresql-client
+# Install runtime utilities
+RUN apk add --no-cache postgresql-client curl
 
 # Create non-root user
 RUN addgroup -S nodejs -g 1001 && adduser -S nextjs -u 1001
-RUN mkdir -p .next && chown nextjs:nodejs .next
+
+RUN mkdir -p .next data && chown -R nextjs:nodejs .next data
 
 # Copy standalone output as application root
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -48,10 +49,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/mig
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-USER nextjs
+# Start as root to allow the entrypoint to fix volume permissions
+USER root
 
 EXPOSE 36666
 
 # Run migrations on container start, then start the server
-ENV START_CMD="bun ./server.js"
+ENV START_CMD="node server.js"
 ENTRYPOINT ["./docker-entrypoint.sh"]
