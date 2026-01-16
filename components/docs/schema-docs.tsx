@@ -236,7 +236,7 @@ export function SchemaDocs() {
 						</h3>
 						<p className="text-sm text-muted-foreground mb-4">
 							Generate a value once, then reference it anywhere else in the
-							document.
+							document. You can also access array items like <code>{`{$.items[0].id}`}</code>.
 						</p>
 						<div className="grid md:grid-cols-2 gap-4">
 							<div className="space-y-2">

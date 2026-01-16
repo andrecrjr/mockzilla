@@ -5,6 +5,7 @@ import { matches } from './match';
 import { applyEffects } from './effects';
 import type { MatchContext } from './match';
 import type { Transition } from '@/lib/types';
+import { resolvePath } from '../utils/path-resolver';
 
 // Processor.ts has its own interpolate with slightly different logic (regex replace).
 
@@ -113,26 +114,14 @@ function interpolateProcessor(template: unknown, context: MatchContext): unknown
 }
 
 // Simple get helper
-function getHelper(obj: unknown, path: string): unknown {
-    const parts = path.split('.');
-    let current: any = obj;
-    
-    // Special handling for "db.tableName" - fallback to "tables.tableName"
-    if (parts[0] === 'db' && parts.length === 2) {
-        if (current && typeof current === 'object' && 'tables' in current) {
-            const contextObj = current as MatchContext;
-            if (contextObj.tables[parts[1]] === undefined) {
-                return [];
-            }
-            return contextObj.tables[parts[1]];
-        }
-    }
+function getHelper(context: MatchContext, path: string): unknown {
+	let lookupPath = path;
 
-    for (const part of parts) {
-        if (current === undefined || current === null || typeof current !== 'object') {
-            return undefined;
-        }
-        current = (current as Record<string, unknown>)[part];
-    }
-    return current;
+	// Support "db" -> "tables" alias
+	// e.g. "db.users[0]" -> "tables.users[0]"
+	if (lookupPath.startsWith('db.') || lookupPath === 'db') {
+		lookupPath = lookupPath.replace(/^db/, 'tables');
+	}
+
+	return resolvePath(lookupPath, context);
 }

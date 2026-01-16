@@ -1,22 +1,20 @@
 
 import type { Effect, MatchContext } from './match';
+import { resolvePath } from '../utils/path-resolver';
 
 /**
  * Interpolates a string value using context.
  * e.g. "{{input.sku}}" -> "SKU_123"
+ * Now supports array access: "{{input.items[0].id}}"
  */
 function interpolate(value: unknown, context: MatchContext): unknown {
 	if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-		const path = value.slice(2, -2).trim();
-		const parts = path.split('.');
-		let current: unknown = context;
-		for (const part of parts) {
-			if (current === undefined || current === null || typeof current !== 'object') {
-				return undefined;
-			}
-			current = (current as Record<string, unknown>)[part];
+		let path = value.slice(2, -2).trim();
+		// Support "db" -> "tables" alias
+		if (path.startsWith('db.') || path === 'db') {
+			path = path.replace(/^db/, 'tables');
 		}
-		return current;
+		return resolvePath(path, context);
 	}
 	// Deep interpolation for objects
 	if (typeof value === 'object' && value !== null) {
@@ -33,6 +31,7 @@ function interpolate(value: unknown, context: MatchContext): unknown {
 	}
 	return value;
 }
+
 
 export function applyEffects(
 	effects: Record<string, unknown> | Effect[],

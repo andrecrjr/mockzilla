@@ -12,46 +12,8 @@ jsf.option({
 	maxItems: 5,
 });
 
-/**
- * Resolves a JSONPath-like reference to a value in an object
- * Supports: $.field, $.nested.field, $.array[0], $.array[0].field
- *
- * @param path - JSONPath string (e.g., "$.user.name" or "$.items[0].id")
- * @param data - The object to resolve the path in
- * @returns The resolved value or undefined
- */
-function resolveJSONPath(path: string, data: any): any {
-	// Remove leading $. if present
-	const cleanPath = path.startsWith('$.')
-		? path.slice(2)
-		: path.startsWith('$')
-			? path.slice(1)
-			: path;
+import { resolvePath } from './utils/path-resolver';
 
-	if (!cleanPath) {
-		return data;
-	}
-
-	// Split by dots and brackets, handling array indices
-	const parts = cleanPath.split(/\.|\[|\]/).filter(Boolean);
-
-	let current = data;
-	for (const part of parts) {
-		if (current === null || current === undefined) {
-			return undefined;
-		}
-
-		// Check if part is an array index
-		const arrayIndex = parseInt(part, 10);
-		if (!isNaN(arrayIndex)) {
-			current = current[arrayIndex];
-		} else {
-			current = current[part];
-		}
-	}
-
-	return current;
-}
 
 /**
  * Deep traverses the generated object and applies template replacement
@@ -78,7 +40,7 @@ function deepReplaceTemplates(
 	if (typeof currentData === 'string') {
 		// Replace template syntax: {$.field} or {{$.field}}
 		return currentData.replace(/\{\{?\$\.([\w.[\]]+)\}?\}/g, (match, path) => {
-			const value = resolveJSONPath('$.' + path, rootData);
+			const value = resolvePath('$.' + path, rootData);
 
 			if (value === undefined) {
 				console.warn(

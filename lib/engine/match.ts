@@ -1,3 +1,5 @@
+import { resolvePath } from '../utils/path-resolver';
+
 export type Condition = {
 	/**
 	 * Operator type:
@@ -73,39 +75,26 @@ export type MatchContext = {
 };
 
 /**
- * Resolves a field path (e.g. "input.body.id" or "state.authorized") to a value.
- */
-/**
- * Resolves a field path (e.g. "input.body.id" or "state.authorized") to a value.
+ * Resolves a field path (e.g. \"input.body.id\" or \"state.authorized\") to a value.
  * Falls back to input.body for convenience if not found in root.
  */
 function resolveOp(path: string, context: MatchContext): unknown {
+
     // Handle "db" -> "tables" alliance for backward compatibility
     let adjustedPath = path;
     if (path.startsWith('db.')) {
         adjustedPath = `tables.${path.substring(3)}`;
     }
 
-    const direct = getPath(context, adjustedPath);
+    const direct = resolvePath(adjustedPath, context);
     if (direct !== undefined) return direct;
 
     // Fallback: try looking in input.body
     if (context.input?.body) {
-        return getPath(context.input.body, path);
+        return resolvePath(path, context.input.body);
     }
     
     return undefined;
-}
-
-function getPath(obj: unknown, path: string): unknown {
-	const parts = path.split('.');
-	let current: unknown = obj;
-	for (const part of parts) {
-		if (current === undefined || current === null) return undefined;
-		if (typeof current !== 'object') return undefined;
-		current = (current as Record<string, unknown>)[part];
-	}
-	return current;
 }
 
 export function matches(conditions: Record<string, unknown> | Condition[], context: MatchContext): boolean {

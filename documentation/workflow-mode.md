@@ -64,10 +64,13 @@ Use `{{ path.to.value }}` to inject dynamic values:
 | Path | Description |
 |------|-------------|
 | `{{input.body.field}}` | Request body field |
+| `{{input.body.items[0]}}` | First element of array in body |
 | `{{input.query.param}}` | Query parameter |
 | `{{input.params.id}}` | URL parameter from `:id` |
 | `{{state.key}}` | State variable |
+| `{{state.users[0].name}}` | Nested array access in state |
 | `{{db.tableName}}` | Entire table array |
+| `{{db.items[0].id}}` | First item's id from table |
 
 ---
 

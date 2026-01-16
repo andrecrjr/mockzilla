@@ -122,6 +122,7 @@ export function WorkflowDocs() {
 											<li>input.query.param</li>
 											<li>input.headers.auth</li>
 											<li>input.params.id</li>
+											<li>input.body.items[0].id</li>
 										</ul>
 									</div>
 									<div>
@@ -162,6 +163,10 @@ export function WorkflowDocs() {
 								<div className="border p-2 rounded flex justify-between items-center">
 									<span className="font-mono text-xs text-primary">{`{{ input.body.id }}`}</span>
 									<span className="text-xs text-muted-foreground">Echo request data</span>
+								</div>
+								<div className="border p-2 rounded flex justify-between items-center">
+									<span className="font-mono text-xs text-primary">{`{{ input.body.items[0] }}`}</span>
+									<span className="text-xs text-muted-foreground">Access array item</span>
 								</div>
 								<div className="border p-2 rounded flex justify-between items-center">
 									<span className="font-mono text-xs text-primary">{`{{ state.token }}`}</span>
