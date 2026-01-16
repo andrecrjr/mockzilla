@@ -35,7 +35,7 @@ Request → Router → Processor → Response
 |-------|---------|
 | `scenarios` | Named workflow containers (id, name, description) |
 | `transitions` | Rules defining path, conditions, effects, response |
-| `scenario_state` | Persisted state and mini-db tables per scenario |
+| `scenario_state` | Persisted state and mini-db tables per scenario |now
 
 ---
 

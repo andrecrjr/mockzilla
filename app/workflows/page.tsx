@@ -70,7 +70,6 @@ export default function WorkflowsPage() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [newScenarioName, setNewScenarioName] = useState('');
 	const [newScenarioDescription, setNewScenarioDescription] = useState('');
-	const [deleteId, setDeleteId] = useState<string | null>(null);
 	const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -101,8 +100,8 @@ export default function WorkflowsPage() {
 	);
 
 	// Delete scenario mutation
-	async function deleteScenario(url: string) {
-		const res = await fetch(url, { method: 'DELETE' });
+	async function deleteScenario(url: string, { arg }: { arg: { id: string } }) {
+		const res = await fetch(`${url}/${arg.id}`, { method: 'DELETE' });
 		if (!res.ok) {
 			const err = await res.json();
 			throw new Error(err.error || 'Failed to delete scenario');
@@ -111,17 +110,15 @@ export default function WorkflowsPage() {
 	}
 
 	const { trigger: triggerDelete, isMutating: isDeleting } = useSWRMutation(
-		deleteId ? `/api/workflow/scenarios/${deleteId}` : null,
+		'/api/workflow/scenarios',
 		deleteScenario,
 		{
 			onSuccess: () => {
 				toast.success('Scenario deleted');
-				setDeleteId(null);
 				mutate(); // Refresh the list
 			},
 			onError: (err) => {
 				toast.error(err.message || 'Failed to delete scenario');
-				setDeleteId(null);
 			},
 		},
 	);
@@ -197,12 +194,9 @@ export default function WorkflowsPage() {
 			)
 		) {
 			try {
-				setDeleteId(id);
-				await triggerDelete();
-			} catch (err: any) {
-				toast.error(err.message || 'Failed to delete scenario');
-			} finally {
-				setDeleteId(null);
+				await triggerDelete({ id });
+			} catch {
+				// Error handled in mutation hook
 			}
 		}
 	};
