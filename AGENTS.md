@@ -3,6 +3,9 @@
 Last updated: 2025-12-02
 Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`. This catalog defines callable agents, their capabilities, inputs/outputs, constraints, and cross-references to detailed docs in `documentation/`.
 
+- You only use bun, and docker to get all context about server.
+- You never use npm or yarn.
+
 ## Conventions
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.

@@ -1604,7 +1604,7 @@ const handler = createMcpHandler(
 		);
 	},
 	{
-		serverInfo: { name: 'Mockzilla', version: '1.0.0' },
+		serverInfo: { name: 'Mockzilla', version: '1.0.1' },
 	},
 	{
 		basePath: '/api',
