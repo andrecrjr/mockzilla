@@ -149,6 +149,54 @@ export function SchemaDocs() {
 						</AccordionContent>
 					</AccordionItem>
 
+					<AccordionItem value="jsf-features">
+						<AccordionTrigger>JSON Schema Faker Features</AccordionTrigger>
+						<AccordionContent>
+							<div className="space-y-4 pt-2">
+								<p className="text-sm text-muted-foreground">
+									Mockzilla uses <code>json-schema-faker v0.5.9</code> which
+									primarily supports <strong>JSON Schema Draft-04</strong>. It
+									comes pre-configured with options for better data generation.
+								</p>
+								<div className="grid md:grid-cols-2 gap-6">
+									<div className="space-y-3">
+										<h4 className="text-sm font-semibold">Configured Options</h4>
+										<ul className="text-xs space-y-2 text-muted-foreground list-disc pl-4">
+											<li>
+												<code>alwaysFakeOptionals: true</code> — Always
+												generates optional fields.
+											</li>
+											<li>
+												<code>useDefaultValue: true</code> — Uses{' '}
+												<code>default</code> values from schema.
+											</li>
+											<li>
+												<code>useExamplesValue: true</code> — Picks random value from{' '}
+												<code>examples</code> array.
+											</li>
+											<li>
+												<code>minItems: 1</code> — At least one item in arrays.
+											</li>
+										</ul>
+									</div>
+									<div className="space-y-3">
+										<h4 className="text-sm font-semibold">Passing Arguments</h4>
+										<p className="text-xs text-muted-foreground">
+											Pass arguments to Faker methods using an array:
+										</p>
+										<pre className="bg-muted p-3 rounded-lg text-[10px] font-mono overflow-auto">
+											{`{
+  "faker": {
+    "finance.amount": [100, 1000, 2, "$"]
+  }
+}`}
+										</pre>
+									</div>
+								</div>
+							</div>
+						</AccordionContent>
+					</AccordionItem>
+
 					<AccordionItem value="referencing">
 						<AccordionTrigger>Referring to Other Fields</AccordionTrigger>
 						<AccordionContent>

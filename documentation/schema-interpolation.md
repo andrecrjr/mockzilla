@@ -1,6 +1,10 @@
 # JSON Schema String Interpolation & Field Referencing
 
-Mockzilla's JSON Schema Faker now supports **string interpolation** and **field referencing**, allowing you to reuse generated values across multiple fields and create dynamic template strings.
+Mockzilla's JSON Schema Faker supports **string interpolation** and **field referencing**, allowing you to reuse generated values across multiple fields and create dynamic template strings.
+
+> [!TIP]
+> This guide focuses on Mockzilla's custom interpolation extensions. For standard JSON Schema data generation features, see the [JSON Schema Faker guide](json-schema-faker.md).
+
 
 ## Quick Start
 
