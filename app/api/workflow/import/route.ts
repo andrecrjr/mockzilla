@@ -4,7 +4,7 @@ import { scenarios, transitions } from '@/lib/db/schema';
 import type { WorkflowExportData } from '@/lib/types';
 import { eq, inArray } from 'drizzle-orm';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
 	try {
 		const data: WorkflowExportData = await request.json();
 

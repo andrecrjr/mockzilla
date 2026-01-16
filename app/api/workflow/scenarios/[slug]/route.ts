@@ -6,7 +6,7 @@ import { scenarios, transitions } from '@/lib/db/schema';
 export async function PUT(
 	request: NextRequest,
 	{ params }: { params: Promise<{ slug: string }> },
-) {
+): Promise<NextResponse> {
 	try {
 		const { slug } = await params;
 
@@ -59,7 +59,7 @@ export async function PUT(
 export async function DELETE(
 	_request: NextRequest,
 	{ params }: { params: Promise<{ slug: string }> },
-) {
+): Promise<NextResponse> {
 	try {
 		const { slug } = await params;
 

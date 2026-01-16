@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { transitions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
 	try {
 		const body = await request.json();
 		const {
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 	}
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
 	try {
 		const searchParams = request.nextUrl.searchParams;
 		const scenarioId = searchParams.get('scenarioId');

@@ -6,7 +6,7 @@ import type { Transition } from '@/lib/types';
 export async function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> }
-) {
+): Promise<NextResponse> {
 	// Await the params to resolve the promise
 	const resolvedParams = await params;
 
@@ -85,24 +85,24 @@ export async function POST(
 export async function GET(
 	req: NextRequest,
 	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
-) {
+): Promise<NextResponse> {
 	return POST(req, { params });
 }
 export async function PUT(
 	req: NextRequest,
 	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
-) {
+): Promise<NextResponse> {
 	return POST(req, { params });
 }
 export async function DELETE(
 	req: NextRequest,
 	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
-) {
+): Promise<NextResponse> {
 	return POST(req, { params });
 }
 export async function PATCH(
 	req: NextRequest,
 	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
-) {
+): Promise<NextResponse> {
 	return POST(req, { params });
 }

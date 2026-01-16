@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
     try {
         const { id } = await params;
 
@@ -82,7 +82,7 @@ export async function PUT(
 export async function DELETE(
     _request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
     try {
         const { id } = await params;
 

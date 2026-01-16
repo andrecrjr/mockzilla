@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 export async function GET(
 	_request: NextRequest,
 	{ params }: { params: Promise<{ scenario: string }> }
-) {
+): Promise<NextResponse> {
 	try {
 		const { scenario } = await params;
 		
@@ -36,7 +36,7 @@ export async function GET(
 export async function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ scenario: string }> }
-) {
+): Promise<NextResponse> {
 	try {
 		const { scenario } = await params;
 		
@@ -78,7 +78,7 @@ export async function POST(
 export async function DELETE(
 	_request: NextRequest,
 	{ params }: { params: Promise<{ scenario: string }> }
-) {
+): Promise<NextResponse> {
 	try {
 		const { scenario } = await params;
 

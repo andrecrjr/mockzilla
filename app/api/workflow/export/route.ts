@@ -6,7 +6,7 @@ import type { WorkflowExportData, Scenario, Transition } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
 	const searchParams = request.nextUrl.searchParams;
 	const scenarioId = searchParams.get('scenarioId');
 

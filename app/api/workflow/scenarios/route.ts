@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { scenarios, transitions } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
-export async function GET(_request: NextRequest) {
+export async function GET(_request: NextRequest): Promise<NextResponse> {
     try {
         // Fetch all scenarios from the scenarios table
         const allScenarios = await db.select().from(scenarios);
@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
         const body = await request.json();
         const { name, description } = body;
