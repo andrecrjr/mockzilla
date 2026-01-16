@@ -231,12 +231,12 @@ DELETE /api/workflow/transitions/{id}            # Delete
 ### Testing
 ```bash
 # Register a user in the 'auth' scenario
-curl -X POST http://localhost:3000/api/workflow/exec/auth/register \
+curl -X POST http://localhost:36666/api/workflow/exec/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Alice", "email":"alice@test.com"}'
 
 # List users in the 'users' scenario
-curl http://localhost:3000/api/workflow/exec/users/list
+curl http://localhost:36666/api/workflow/exec/users/list
 # Returns: [{"name":"Alice", "email":"alice@test.com"}]
 ```
 
@@ -248,18 +248,27 @@ Use AI assistants to interact with the Workflow engine via the MCP server at `ap
 
 ### Available Tools
 
-| Tool | Description |
-|------|-------------|
-| `create_workflow_scenario` | Create a new workflow scenario container |
-| `list_workflow_scenarios` | List all existing scenarios |
-| `delete_workflow_scenario` | Delete a scenario by ID |
-| `create_workflow_transition` | Create a transition rule for a scenario |
-| `update_workflow_transition` | Update an existing transition by ID |
-| `delete_workflow_transition` | Delete a transition by ID |
-| `list_workflow_transitions` | List all transitions for a scenario |
-| `inspect_workflow_state` | View current state and DB tables for a scenario |
-| `reset_workflow_state` | Clear state and DB for a scenario |
-| `test_workflow` | Simulate a request to test a workflow path |
+Mockzilla exposes **24 specialized tools** to AI assistants. They are grouped into four categories:
+
+#### 1. Folders & Mocks
+- `list_folders`, `create_folder`, `get_folder`, `update_folder`, `delete_folder`
+- `list_mocks`, `get_mock`, `create_mock`, `update_mock`, `delete_mock`
+- `create_schema_mock` (**Recommended** for dynamic data)
+- `preview_mock` (Validate responses)
+
+#### 2. Workflow Scenarios
+- `list_workflow_scenarios`
+- `create_workflow_scenario`, `delete_workflow_scenario`
+- `export_workflow`, `import_workflow` (Snapshot and restore)
+
+#### 3. Transitions & State
+- `list_workflow_transitions`
+- `create_workflow_transition`, `update_workflow_transition`, `delete_workflow_transition`
+- `inspect_workflow_state` (View mini-DB and state variables)
+- `reset_workflow_state` (Wipe scenario data)
+- `test_workflow` (Simulate requests)
+
+For detailed installation and configuration, see `documentation/mcp.md`.
 
 ### LLM Rules & Constraints
 

@@ -106,11 +106,11 @@ This section explains how Mockzilla integrates with the Model Context Protocol (
 - What MCP is used for:
   - Allowing tools like Claude or other LLM-based agents to manage mocks and workflows programmatically.
   - Providing high-level tools instead of requiring direct HTTP calls from the agent.
-- Conceptual list of tools:
-  - `create_mock`: Define new mocks with schema-based or static responses.
-  - `create_workflow_transition`: Register transitions for workflow scenarios.
-  - `inspect_workflow_state`: Inspect scenario state and mini-DB tables.
-  - `reset_workflow_state`: Clear state and data for a scenario.
+- Conceptual list of tools (24 tools total):
+  - **Folders & Mocks**: `list_folders`, `create_folder`, `create_mock`, `create_schema_mock`, `preview_mock`, etc.
+  - **Snapshots**: `export_workflow`, `import_workflow`.
+  - **Workflows**: `create_workflow_transition`, `list_workflow_transitions`, `test_workflow`.
+  - **State**: `inspect_workflow_state`, `reset_workflow_state`, `list_workflow_scenarios`.
 - Configuration:
   - The docs show a JSON configuration snippet that points an MCP client at the Mockzilla MCP endpoint exposed by the app.
 

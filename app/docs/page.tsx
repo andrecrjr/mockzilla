@@ -292,22 +292,32 @@ export default function DocsPage() {
 									agents to fully control mocking.
 								</p>
 								<div className="bg-muted p-4 rounded-lg">
-									<h3 className="font-bold text-sm mb-2">Available Tools</h3>
-									<ul className="list-disc pl-4 text-sm space-y-1">
-										<li>
-											<code>create_mock</code> - Create new endpoints
-										</li>
-										<li>
-											<code>create_workflow_transition</code> - Define workflow
-											rules
-										</li>
-										<li>
-											<code>inspect_workflow_state</code> - Read scenario state
-										</li>
-										<li>
-											<code>reset_workflow_state</code> - Clear scenario data
-										</li>
-									</ul>
+									<h3 className="font-bold text-sm mb-4">Available Tools</h3>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div>
+											<h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Folders & Mocks</h4>
+											<ul className="list-disc pl-4 text-sm space-y-1">
+												<li><code>list_folders</code>, <code>create_folder</code>, <code>get_folder</code></li>
+												<li><code>update_folder</code>, <code>delete_folder</code></li>
+												<li><code>list_mocks</code>, <code>get_mock</code>, <code>delete_mock</code></li>
+												<li><code>create_mock</code>, <code>update_mock</code></li>
+												<li><code>create_schema_mock</code> (Advanced)</li>
+												<li><code>preview_mock</code></li>
+											</ul>
+										</div>
+										<div>
+											<h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Workflows & State</h4>
+											<ul className="list-disc pl-4 text-sm space-y-1">
+												<li><code>list_workflow_scenarios</code></li>
+												<li><code>create_workflow_scenario</code>, <code>delete_workflow_scenario</code></li>
+												<li><code>list_workflow_transitions</code>, <code>get_workflow_transition</code></li>
+												<li><code>create_workflow_transition</code>, <code>update_workflow_transition</code></li>
+												<li><code>delete_workflow_transition</code></li>
+												<li><code>inspect_workflow_state</code>, <code>reset_workflow_state</code></li>
+												<li><code>test_workflow</code>, <code>export_workflow</code>, <code>import_workflow</code></li>
+											</ul>
+										</div>
+									</div>
 								</div>
 							</Card>
 							{/* Installation Section */}
@@ -327,30 +337,46 @@ export default function DocsPage() {
 									</div>
 								</div>
 
-								<div className="space-y-4">
-									<h3 className="font-semibold text-lg text-foreground">
-										MCP Server Configuration
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										Add this configuration to your project's settings to connect
-										Mockzilla with the MCP server:
-									</p>
-									<pre className="bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
-										{`{
+								<div className="space-y-6">
+									<div>
+										<h3 className="font-semibold text-lg text-foreground mb-2">
+											Option 1: Direct URL (Streamable HTTP)
+										</h3>
+										<p className="text-sm text-muted-foreground mb-4">
+											Mockzilla uses the <strong>WebStandardStreamableHTTPServerTransport</strong>. For modern clients that support the MCP Streamable HTTP protocol, you can connect directly using only the endpoint URL.
+										</p>
+										<div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+											<div className="flex items-center justify-between">
+												<code className="text-sm font-bold text-primary">
+													http://localhost:36666/api/mcp
+												</code>
+											</div>
+										</div>
+										<p className="text-xs text-muted-foreground mt-2 italic">
+											Recommended for Cursor, internal agents, and modern MCP explorers.
+										</p>
+									</div>
+
+									<div className="border-t pt-6">
+										<h3 className="font-semibold text-lg text-foreground mb-2">
+											Option 2: Stdio Bridge (mcp-remote)
+										</h3>
+										<p className="text-sm text-muted-foreground mb-4">
+											For clients that primarily support local <code>stdio</code> servers (like Claude Desktop), use <code>mcp-remote</code> as a bridge to the remote server.
+										</p>
+										<pre className="bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
+											{`{
   "mockzilla": {
     "command": "npx",
     "args": [
       "-y",
       "mcp-remote",
-      "http://localhost:36666/api/mcp" # MCP server endpoint
+      "http://localhost:36666/api/mcp"
     ]
   }
 }`}
-									</pre>
-									<p className="text-sm text-muted-foreground">
-										This configuration enables the MCP server to handle advanced
-										tools with AI on port 36666 (locally) or using your own DNS.
-									</p>
+										</pre>
+									</div>
 								</div>
 							</Card>
 						</section>

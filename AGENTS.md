@@ -7,12 +7,16 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - You never use npm or yarn.
 
 ## Conventions
+- MCP: Use `http://localhost:36666/api/mcp` as the MCP endpoint.
+- Always use Bun to run commands.
+- Always use Docker to get all context about server.
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.
 - Terminology: "folder" groups mocks; "mock" is an individual endpoint response.
 - Data Store: PostgreSQL via Drizzle; see `lib/db/schema.ts`.
 - Must NEVER use `any` type, ensure always creating types/interfaces or generic types or `unknown`.
 - Must use `z.infer<typeof schema>` to extract types from Zod schemas.
+- Must always in the end update `documentation/` folder with updated docs.
 
 ## Index
 - Mock Serving Agent
@@ -181,3 +185,4 @@ Tags: #storage #browser #fallback
 ## Additional References
 - UI docs page for interpolation examples: `app/docs/page.tsx`.
 - DB client: `lib/db/index.ts` (lib/db/index.ts:1–21).
+- MCP Integration: `documentation/mcp.md`.
