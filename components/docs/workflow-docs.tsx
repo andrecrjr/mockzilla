@@ -27,6 +27,29 @@ export function WorkflowDocs() {
 					</div>
 				</div>
 
+				<div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
+					<h3 className="font-bold text-sm text-primary mb-2 flex items-center gap-2">
+						<Lightbulb className="h-4 w-4" />
+						Philosophy: Action-Driven State
+					</h3>
+					<div className="grid md:grid-cols-2 gap-4 text-xs">
+						<div className="space-y-1">
+							<span className="font-semibold text-red-500">❌ Don't: CRUD State</span>
+							<p className="text-muted-foreground">
+								Creating endpoints just to set data.<br/>
+								Ex: <code>POST /set-data</code>
+							</p>
+						</div>
+						<div className="space-y-1">
+							<span className="font-semibold text-green-500">✅ Do: Business Logic</span>
+							<p className="text-muted-foreground">
+								Transitions trigger state changes.<br/>
+								Ex: <code>POST /checkout</code> updates DB.
+							</p>
+						</div>
+					</div>
+				</div>
+
 				<div className="grid md:grid-cols-2 gap-6 mb-6">
 					<div className="space-y-3">
 						<h3 className="font-semibold text-lg flex items-center gap-2">
@@ -188,7 +211,36 @@ export function WorkflowDocs() {
 
 			<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 mt-8">
 				<h2 className="text-xl font-bold text-foreground mb-4">
-					Example: Users CRUD Journey
+					Example 1: Complex Business Logic (Action-Driven)
+				</h2>
+				<div className="space-y-6">
+					{/* Checkout Flow */}
+					<div className="relative border-l-2 border-green-500 pl-6 pb-2">
+						<div className="absolute -left-[9px] top-0 h-4 w-4 rounded-full bg-green-500" />
+						<div className="mb-2">
+							<span className="text-xs font-bold bg-green-500/20 text-green-600 px-2 py-1 rounded">POST /checkout</span>
+						</div>
+						<div className="bg-muted p-4 rounded-lg text-xs font-mono space-y-4">
+							<div>
+								<span className="text-gray-500 block mb-1">{`// 1. Create Order in DB`}</span>
+								{`{ "type": "db.push", "table": "orders", "value": { "id": "ord_123", "items": "{{ state.cart }}" } }`}
+							</div>
+							<div>
+								<span className="text-gray-500 block mb-1">{`// 2. Clear Shopping Cart State`}</span>
+								{`{ "type": "state.set", "raw": { "cart": [], "cartCount": 0 } }`}
+							</div>
+							<div>
+								<span className="text-gray-500 block mb-1">{`// 3. Update User Status`}</span>
+								{`{ "type": "state.set", "raw": { "lastOrderDate": "${new Date().toISOString()}" } }`}
+							</div>
+						</div>
+					</div>
+				</div>
+			</Card>
+
+			<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 mt-8">
+				<h2 className="text-xl font-bold text-foreground mb-4">
+					Example 2: Standard CRUD
 				</h2>
 				<div className="space-y-6">
 					

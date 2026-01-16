@@ -19,6 +19,28 @@ Mockzilla Workflow Mode enables stateful, scenario-based mocking with dynamic da
 
 ## Architecture
 
+## Philosophy: Action-Driven State
+
+**State variables must not be endpoints.**
+
+In a real application, you rarely "set the database status to 'paid'" via a direct API call. Instead, you "process a payment," and the *result* is that the status becomes 'paid'. Mockzilla workflows should mirror this.
+
+### The "State as Endpoint" Anti-Pattern (Bad)
+Creating "utility" transitions just to manipulate state makes your mock fragile and unrealistic.
+- ❌ `POST /set-state` with body `{"key": "value"}`
+- ❌ `POST /db/insert` with body `{"table": "users", "data": ...}`
+
+### The "Action-Driven" Pattern (Good)
+Trigger business logic that internally updates multiple state variables and db tables as a side effect.
+- ✅ `POST /checkout` -> Updates `db.orders`, decrements `db.inventory`, clears `state.cart_id`.
+
+**Why?**
+This ensures your mock tests the *application flow* and logic, ensuring your frontend handles the *consequences* of actions correctly, rather than just verifying it can read static data.
+
+---
+
+## Architecture
+
 ```
 Request → Router → Processor → Response
              ↓          ↓
@@ -263,7 +285,13 @@ When using `create_workflow_transition` or `update_workflow_transition`, you MUS
 - ❌ **NO Faker/Random**: Random value generation is NOT supported in effects.
 - ❌ **NO Pure JS**: Transitions define data transformations, not code execution.
 
-#### 3. Response
+#### 4. Action-Driven State Only
+- ❌ **NO CRUD Endpoints for State**: Do not create transitions solely to update state (e.g., `POST /update-state`).
+- ✅ **Business Logic**: State updates must be side effects of business logic transitions (e.g., `POST /submit-order` updates `db.orders` and `state.cart_count`).
+
+#### 5. Response
+
+#### 5. Response
 - **Interpolation**: Supported for `{{state}}`, `{{db}}`, `{{input}}`.
 - ❌ **NO Faker/Random**: Responses must be deterministic based on state/inputs.
 

@@ -127,7 +127,7 @@ const CreateWorkflowTransitionArgs = z.object({
 			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
 		)
 		.describe(
-			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).\n\nEXAMPLE:\n[\n  { "type": "eq", "field": "input.body.type", "value": "admin" },\n  { "type": "exists", "field": "input.headers.authorization" }\n]\n\nSupported Types:\n- eq: Equals\n- neq: Not Equals\n- exists: Field exists\n- gt: Greater Than\n- lt: Less Than\n- contains: String/Array contains value\n\nAllowed Fields:\n- input.body.*\n- input.query.*\n- input.params.*\n- input.headers.*\n- state.*\n- db.*',
+			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).\n\nEXAMPLE:\n[\n  { "type": "eq", "field": "input.body.type", "value": "admin" },\n  { "type": "exists", "field": "input.headers.authorization" }\n]\n\nSupported Types:\n- eq: Equals\n- neq: Not Equals\n- exists: Field exists\n- gt: Greater Than\n- lt: Less Than\n- contains: String/Array contains value\n\nAllowed Fields:\n- input.body.*\n- input.query.*\n- input.params.*\n- input.headers.*\n- state.*\n- db.*\n\nWARNING: Pure JavaScript is NOT supported. Use the structured JSON format.',
 		),
 	effects: z
 		.preprocess(
@@ -135,7 +135,7 @@ const CreateWorkflowTransitionArgs = z.object({
 			z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 		)
 		.describe(
-			'Side effects to execute.\nFormat: Array of effect objects.\n\nEXAMPLE:\n[\n  { "type": "state.set", "raw": { "isLoggedIn": true } },\n  { "type": "db.push", "table": "users", "value": "{{input.body}}" }\n]\n\nSupported Actions:\n- state.set: Set state variables ({ type: "state.set", raw: { key: value } })\n- db.push: Add row to table ({ type: "db.push", table: "name", value: obj })\n- db.update: Update rows ({ type: "db.update", table: "name", match: { id: "{{input.params.id}}" }, set: { status: "active" } })\n- db.remove: Remove rows ({ type: "db.remove", table: "name", match: { id: 123 } })\n\nNOTE: NO Random/Faker. Use {{input.*}}, {{state.*}} for values.',
+			'Side effects to execute.\nFormat: Array of effect objects.\n\nEXAMPLE:\n[\n  { "type": "state.set", "raw": { "isLoggedIn": true } },\n  { "type": "db.push", "table": "users", "value": "{{input.body}}" }\n]\n\nSupported Actions:\n- state.set: Set state variables ({ type: "state.set", raw: { key: value } })\n- db.push: Add row to table ({ type: "db.push", table: "name", value: obj })\n- db.update: Update rows ({ type: "db.update", table: "name", match: { id: "{{input.params.id}}" }, set: { status: "active" } })\n- db.remove: Remove rows ({ type: "db.remove", table: "name", match: { id: 123 } })\n\nNOTE: NO Random/Faker. Use {{input.*}}, {{state.*}} for values.\n\nCRITICAL: State updates must be side-effects of business logic (Action-Driven), NOT direct CRUD endpoints. Do not create "utility" transitions just to set state.',
 		),
 	response: z
 		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()))

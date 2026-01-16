@@ -61,12 +61,6 @@ export default function DocsPage() {
 									Workflow Mode
 								</Link>
 								<Link
-									href="#advanced"
-									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
-								>
-									Advanced Features
-								</Link>
-								<Link
 									href="#mcp"
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
@@ -287,13 +281,6 @@ export default function DocsPage() {
 							<WorkflowDocs />
 						</section>
 
-						<section id="advanced" className="mt-0 scroll-mt-24">
-							<Card className="p-6 border-dashed">
-								<p className="text-center text-muted-foreground">
-									Advanced documentation is being updated.
-								</p>
-							</Card>
-						</section>
 
 						<section id="mcp" className="mt-0 scroll-mt-24">
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
