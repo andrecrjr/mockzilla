@@ -1,5 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { createMcpHandler } from 'mcp-handler';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import {
@@ -1149,466 +1151,460 @@ async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 	};
 }
 
-const handler = createMcpHandler(
-	async (server) => {
-		server.registerTool(
-			'list_folders',
-			{
-				title: 'List Folders',
-				description: 'List folders with pagination',
-				inputSchema: z.object({
-					page: z.number().int().min(1).optional(),
-					limit: z.number().int().min(1).max(100).optional(),
-				}),
-			},
-			async ({ page, limit }, _extra) => {
-				const result = await callListFolders({ page, limit });
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
+const server = new McpServer(
+	{ name: 'Mockzilla', version: '1.0.1' },
+	{ capabilities: { tools: {} } }
+);
 
-		server.registerTool(
-			'create_folder',
-			{
-				title: 'Create Folder',
-				description: 'Create a folder to group mocks',
-				inputSchema: CreateFolderArgs,
-			},
-			async (args: z.infer<typeof CreateFolderArgs>, _extra) => {
-				const result = await callCreateFolder(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerTool(
-			'get_folder',
-			{
-				title: 'Get Folder',
-				description: 'Get a folder by id or slug',
-				inputSchema: GetFolderArgs,
-			},
-			async (args: z.infer<typeof GetFolderArgs>, _extra) => {
-				const result = await callGetFolder(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-				};
-			},
-		);
-
-		server.registerTool(
-			'update_folder',
-			{
-				title: 'Update Folder',
-				description: 'Update a folder by id',
-				inputSchema: UpdateFolderArgs,
-			},
-			async (args: z.infer<typeof UpdateFolderArgs>, _extra) => {
-				const result = await callUpdateFolder(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-				};
-			},
-		);
-
-		server.registerTool(
-			'delete_folder',
-			{
-				title: 'Delete Folder',
-				description: 'Delete a folder by id',
-				inputSchema: DeleteFolderArgs,
-			},
-			async (args: z.infer<typeof DeleteFolderArgs>, _extra) => {
-				const result = await callDeleteFolder(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerTool(
-			'create_mock',
-			{
-				title: 'Create Mock',
-				description: 'Create a mock response',
-				inputSchema: CreateMockArgs,
-			},
-			async (args: z.infer<typeof CreateMockArgs>, _extra) => {
-				const result = await callCreateMock(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerTool(
-			'list_mocks',
-			{
-				title: 'List Mocks',
-				description: 'List mocks with pagination and optional folder filter',
-				inputSchema: ListMocksArgs,
-			},
-			async (args: z.infer<typeof ListMocksArgs>, _extra) => {
-				const result = await callListMocks(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerTool(
-			'get_mock',
-			{
-				title: 'Get Mock',
-				description: 'Get a mock by id',
-				inputSchema: GetMockArgs,
-			},
-			async (args: z.infer<typeof GetMockArgs>, _extra) => {
-				const result = await callGetMock(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-				};
-			},
-		);
-
-		server.registerTool(
-			'update_mock',
-			{
-				title: 'Update Mock',
-				description: 'Update a mock by id',
-				inputSchema: UpdateMockArgs,
-			},
-			async (args: z.infer<typeof UpdateMockArgs>, _extra) => {
-				const result = await callUpdateMock(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-				};
-			},
-		);
-
-		server.registerTool(
-			'delete_mock',
-			{
-				title: 'Delete Mock',
-				description: 'Delete a mock by id',
-				inputSchema: DeleteMockArgs,
-			},
-			async (args: z.infer<typeof DeleteMockArgs>, _extra) => {
-				const result = await callDeleteMock(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerTool(
-			'create_schema_mock',
-			{
-				title: 'Create Schema Mock',
-				description:
-					'Create a mock using a JSON Schema with Faker directives and field interpolation',
-				inputSchema: z.object({
-					name: z.string(),
-					path: z.string(),
-					method: z.enum([
-						'GET',
-						'POST',
-						'PUT',
-						'PATCH',
-						'DELETE',
-						'HEAD',
-						'OPTIONS',
-					]),
-					statusCode: z.number().int(),
-					folderSlug: z.string().nullable().optional(),
-					folderId: z.string().nullable().optional(),
-					jsonSchema: z.string(),
-					enabled: z.boolean().optional(),
-					matchType: z.enum(['exact', 'substring']).optional(),
-					echoRequestBody: z.boolean().nullable().optional(),
-				}),
-			},
-			async (args: Parameters<typeof callCreateSchemaMock>[0], _extra) => {
-				const result = await callCreateSchemaMock(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-				};
-			},
-		);
-
-		server.registerTool(
-			'preview_mock',
-			{
-				title: 'Preview Mock',
-				description: 'Preview the response for a mock path',
-				inputSchema: PreviewMockArgs,
-			},
-			async (args: z.infer<typeof PreviewMockArgs>, _extra) => {
-				const result = await callPreviewMock(args);
-				return {
-					content: [
-						{
-							type: 'text',
-							text: `${JSON.stringify(result)}`,
-						},
-					],
-					structuredContent: result,
-				};
-			},
-		);
-
-		server.registerTool(
-			'create_workflow_transition',
-			{
-				title: 'Create Workflow Transition',
-				description: 'Create a stateful transition for a workflow scenario',
-				inputSchema: CreateWorkflowTransitionArgs,
-			},
-			async (args: z.infer<typeof CreateWorkflowTransitionArgs>, _extra) => {
-				const result = await callCreateWorkflowTransition(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'reset_workflow_state',
-			{
-				title: 'Reset Workflow State',
-				description: 'Reset the state and DB of a scenario',
-				inputSchema: ResetWorkflowStateArgs,
-			},
-			async (args: z.infer<typeof ResetWorkflowStateArgs>, _extra) => {
-				const result = await callResetWorkflowState(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'inspect_workflow_state',
-			{
-				title: 'Inspect Workflow State',
-				description: 'View the current state and DB of a scenario',
-				inputSchema: InspectWorkflowStateArgs,
-			},
-			async (args: z.infer<typeof InspectWorkflowStateArgs>, _extra) => {
-				const result = await callInspectWorkflowState(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'update_workflow_transition',
-			{
-				title: 'Update Workflow Transition',
-				description: 'Update an existing workflow transition by ID',
-				inputSchema: UpdateWorkflowTransitionArgs,
-			},
-			async (args: z.infer<typeof UpdateWorkflowTransitionArgs>, _extra) => {
-				const result = await callUpdateWorkflowTransition(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'delete_workflow_transition',
-			{
-				title: 'Delete Workflow Transition',
-				description: 'Delete a workflow transition by ID',
-				inputSchema: DeleteWorkflowTransitionArgs,
-			},
-			async (args: z.infer<typeof DeleteWorkflowTransitionArgs>, _extra) => {
-				const result = await callDeleteWorkflowTransition(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'list_workflow_transitions',
-			{
-				title: 'List Workflow Transitions',
-				description: 'List all transitions for a scenario',
-				inputSchema: ListWorkflowTransitionsArgs,
-			},
-			async (args: z.infer<typeof ListWorkflowTransitionsArgs>, _extra) => {
-				const result = await callListWorkflowTransitions(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'create_workflow_scenario',
-			{
-				title: 'Create Workflow Scenario',
-				description:
-					'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
-				inputSchema: CreateWorkflowScenarioArgs,
-			},
-			async (args: z.infer<typeof CreateWorkflowScenarioArgs>, _extra) => {
-				const result = await callCreateWorkflowScenario(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'list_workflow_scenarios',
-			{
-				title: 'List Workflow Scenarios',
-				description: 'List existing workflow scenarios.',
-				inputSchema: ListWorkflowScenariosArgs,
-			},
-			async (args: z.infer<typeof ListWorkflowScenariosArgs>, _extra) => {
-				const result = await callListWorkflowScenarios(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'delete_workflow_scenario',
-			{
-				title: 'Delete Workflow Scenario',
-				description: 'Delete a workflow scenario by ID.',
-				inputSchema: DeleteWorkflowScenarioArgs,
-			},
-			async (args: z.infer<typeof DeleteWorkflowScenarioArgs>, _extra) => {
-				const result = await callDeleteWorkflowScenario(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'test_workflow',
-			{
-				title: 'Test Workflow',
-				description:
-					'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
-				inputSchema: TestWorkflowArgs,
-			},
-			async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
-				const result = await callTestWorkflow(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'export_workflow',
-			{
-				title: 'Export Workflow',
-				description: 'Export one or all workflow scenarios to JSON',
-				inputSchema: ExportWorkflowArgs,
-			},
-			async (args: z.infer<typeof ExportWorkflowArgs>, _extra) => {
-				const result = await callExportWorkflow(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-
-		server.registerTool(
-			'import_workflow',
-			{
-				title: 'Import Workflow',
-				description: 'Import workflow scenarios from JSON',
-				inputSchema: ImportWorkflowArgs,
-			},
-			async (args: z.infer<typeof ImportWorkflowArgs>, _extra) => {
-				const result = await callImportWorkflow(args);
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result) }],
-				};
-			},
-		);
-	},
+server.registerTool(
+	'list_folders',
 	{
-		serverInfo: { name: 'Mockzilla', version: '1.0.1' },
+		title: 'List Folders',
+		description: 'List folders with pagination',
+		inputSchema: z.object({
+			page: z.number().int().min(1).optional(),
+			limit: z.number().int().min(1).max(100).optional(),
+		}),
 	},
-	{
-		basePath: '/api',
-		verboseLogs: true,
+	async ({ page, limit }, _extra) => {
+		const result = await callListFolders({ page, limit });
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
 	},
 );
-export { handler as GET, handler as POST, handler as DELETE };
+
+server.registerTool(
+	'create_folder',
+	{
+		title: 'Create Folder',
+		description: 'Create a folder to group mocks',
+		inputSchema: CreateFolderArgs,
+	},
+	async (args: z.infer<typeof CreateFolderArgs>, _extra) => {
+		const result = await callCreateFolder(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'get_folder',
+	{
+		title: 'Get Folder',
+		description: 'Get a folder by id or slug',
+		inputSchema: GetFolderArgs,
+	},
+	async (args: z.infer<typeof GetFolderArgs>, _extra) => {
+		const result = await callGetFolder(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'update_folder',
+	{
+		title: 'Update Folder',
+		description: 'Update a folder by id',
+		inputSchema: UpdateFolderArgs,
+	},
+	async (args: z.infer<typeof UpdateFolderArgs>, _extra) => {
+		const result = await callUpdateFolder(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'delete_folder',
+	{
+		title: 'Delete Folder',
+		description: 'Delete a folder by id',
+		inputSchema: DeleteFolderArgs,
+	},
+	async (args: z.infer<typeof DeleteFolderArgs>, _extra) => {
+		const result = await callDeleteFolder(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'create_mock',
+	{
+		title: 'Create Mock',
+		description: 'Create a mock response',
+		inputSchema: CreateMockArgs,
+	},
+	async (args: z.infer<typeof CreateMockArgs>, _extra) => {
+		const result = await callCreateMock(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'list_mocks',
+	{
+		title: 'List Mocks',
+		description: 'List mocks with pagination and optional folder filter',
+		inputSchema: ListMocksArgs,
+	},
+	async (args: z.infer<typeof ListMocksArgs>, _extra) => {
+		const result = await callListMocks(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'get_mock',
+	{
+		title: 'Get Mock',
+		description: 'Get a mock by id',
+		inputSchema: GetMockArgs,
+	},
+	async (args: z.infer<typeof GetMockArgs>, _extra) => {
+		const result = await callGetMock(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'update_mock',
+	{
+		title: 'Update Mock',
+		description: 'Update a mock by id',
+		inputSchema: UpdateMockArgs,
+	},
+	async (args: z.infer<typeof UpdateMockArgs>, _extra) => {
+		const result = await callUpdateMock(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'delete_mock',
+	{
+		title: 'Delete Mock',
+		description: 'Delete a mock by id',
+		inputSchema: DeleteMockArgs,
+	},
+	async (args: z.infer<typeof DeleteMockArgs>, _extra) => {
+		const result = await callDeleteMock(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'create_schema_mock',
+	{
+		title: 'Create Schema Mock',
+		description:
+			'Create a mock using a JSON Schema with Faker directives and field interpolation',
+		inputSchema: z.object({
+			name: z.string(),
+			path: z.string(),
+			method: z.enum([
+				'GET',
+				'POST',
+				'PUT',
+				'PATCH',
+				'DELETE',
+				'HEAD',
+				'OPTIONS',
+			]),
+			statusCode: z.number().int(),
+			folderSlug: z.string().nullable().optional(),
+			folderId: z.string().nullable().optional(),
+			jsonSchema: z.string(),
+			enabled: z.boolean().optional(),
+			matchType: z.enum(['exact', 'substring']).optional(),
+			echoRequestBody: z.boolean().nullable().optional(),
+		}),
+	},
+	async (args: Parameters<typeof callCreateSchemaMock>[0], _extra) => {
+		const result = await callCreateSchemaMock(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'preview_mock',
+	{
+		title: 'Preview Mock',
+		description: 'Preview the response for a mock path',
+		inputSchema: PreviewMockArgs,
+	},
+	async (args: z.infer<typeof PreviewMockArgs>, _extra) => {
+		const result = await callPreviewMock(args);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `${JSON.stringify(result)}`,
+				},
+			],
+		};
+	},
+);
+
+server.registerTool(
+	'create_workflow_transition',
+	{
+		title: 'Create Workflow Transition',
+		description: 'Create a stateful transition for a workflow scenario',
+		inputSchema: CreateWorkflowTransitionArgs,
+	},
+	async (args: z.infer<typeof CreateWorkflowTransitionArgs>, _extra) => {
+		const result = await callCreateWorkflowTransition(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'reset_workflow_state',
+	{
+		title: 'Reset Workflow State',
+		description: 'Reset the state and DB of a scenario',
+		inputSchema: ResetWorkflowStateArgs,
+	},
+	async (args: z.infer<typeof ResetWorkflowStateArgs>, _extra) => {
+		const result = await callResetWorkflowState(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'inspect_workflow_state',
+	{
+		title: 'Inspect Workflow State',
+		description: 'View the current state and DB of a scenario',
+		inputSchema: InspectWorkflowStateArgs,
+	},
+	async (args: z.infer<typeof InspectWorkflowStateArgs>, _extra) => {
+		const result = await callInspectWorkflowState(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'update_workflow_transition',
+	{
+		title: 'Update Workflow Transition',
+		description: 'Update an existing workflow transition by ID',
+		inputSchema: UpdateWorkflowTransitionArgs,
+	},
+	async (args: z.infer<typeof UpdateWorkflowTransitionArgs>, _extra) => {
+		const result = await callUpdateWorkflowTransition(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'delete_workflow_transition',
+	{
+		title: 'Delete Workflow Transition',
+		description: 'Delete a workflow transition by ID',
+		inputSchema: DeleteWorkflowTransitionArgs,
+	},
+	async (args: z.infer<typeof DeleteWorkflowTransitionArgs>, _extra) => {
+		const result = await callDeleteWorkflowTransition(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'list_workflow_transitions',
+	{
+		title: 'List Workflow Transitions',
+		description: 'List all transitions for a scenario',
+		inputSchema: ListWorkflowTransitionsArgs,
+	},
+	async (args: z.infer<typeof ListWorkflowTransitionsArgs>, _extra) => {
+		const result = await callListWorkflowTransitions(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'create_workflow_scenario',
+	{
+		title: 'Create Workflow Scenario',
+		description:
+			'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
+		inputSchema: CreateWorkflowScenarioArgs,
+	},
+	async (args: z.infer<typeof CreateWorkflowScenarioArgs>, _extra) => {
+		const result = await callCreateWorkflowScenario(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'list_workflow_scenarios',
+	{
+		title: 'List Workflow Scenarios',
+		description: 'List existing workflow scenarios.',
+		inputSchema: ListWorkflowScenariosArgs,
+	},
+	async (args: z.infer<typeof ListWorkflowScenariosArgs>, _extra) => {
+		const result = await callListWorkflowScenarios(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'delete_workflow_scenario',
+	{
+		title: 'Delete Workflow Scenario',
+		description: 'Delete a workflow scenario by ID.',
+		inputSchema: DeleteWorkflowScenarioArgs,
+	},
+	async (args: z.infer<typeof DeleteWorkflowScenarioArgs>, _extra) => {
+		const result = await callDeleteWorkflowScenario(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'test_workflow',
+	{
+		title: 'Test Workflow',
+		description:
+			'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
+		inputSchema: TestWorkflowArgs,
+	},
+	async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
+		const result = await callTestWorkflow(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'export_workflow',
+	{
+		title: 'Export Workflow',
+		description: 'Export one or all workflow scenarios to JSON',
+		inputSchema: ExportWorkflowArgs,
+	},
+	async (args: z.infer<typeof ExportWorkflowArgs>, _extra) => {
+		const result = await callExportWorkflow(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+server.registerTool(
+	'import_workflow',
+	{
+		title: 'Import Workflow',
+		description: 'Import workflow scenarios from JSON',
+		inputSchema: ImportWorkflowArgs,
+	},
+	async (args: z.infer<typeof ImportWorkflowArgs>, _extra) => {
+		const result = await callImportWorkflow(args);
+		return {
+			content: [{ type: 'text', text: JSON.stringify(result) }],
+		};
+	},
+);
+
+const mcpHandler = async (req: NextRequest) => {
+	const transport = new WebStandardStreamableHTTPServerTransport();
+	await server.connect(transport);
+	return transport.handleRequest(req);
+};
+
+export { mcpHandler as GET, mcpHandler as POST, mcpHandler as DELETE };
