@@ -15,94 +15,114 @@ JSF supports a wide range of standard JSON Schema keywords to guide data generat
 
 - **Logic**: `allOf`, `anyOf`, `oneOf`, `not` (partially)
 - **Objects**: `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`
-- **Arrays**: `items`, `minItems`, `maxItems`, `uniqueItems`, `additionalItems`
-- **Strings**: `minLength`, `maxLength`, `pattern`, `format`, `enum`
+- **Arrays**: `items` (mandatory for validation), `minItems`, `maxItems`, `uniqueItems`, `additionalItems`
+- **Strings**: `minLength`, `maxLength`, `pattern` (RegExp), `format`, `enum`
 - **Numbers**: `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`
-- **Metadata**: `default`, `examples`
+- **Metadata**: `default`, `examples`, `const`, `description`
 
-## Faker.js Integration
+---
 
-Mockzilla integrates [Faker.js](https://fakerjs.dev/) directly into the schema generation process. You can use the `faker` keyword on any schema property:
+## Faker.js Integration (v10)
 
+Mockzilla integrates [Faker.js](https://fakerjs.dev/) v10 directly into the schema generation process. You can use the `faker` keyword on any schema property.
+
+### Passing Arguments to Faker
+
+Modern Faker uses **object notation** for named parameters. This is the preferred syntax in Mockzilla.
+
+```json
+{
+  "faker": {
+    "finance.amount": { "min": 100, "max": 1000, "dec": 2, "symbol": "$" }
+  }
+}
+```
+
+> [!IMPORTANT]
+> For named parameters (like `min`/`max` in modern Faker), always use the object syntax. Positional arguments can still use array syntax if necessary.
+
+## Common Faker Fields & Usage
+
+| Category | Method Examples | Use Case |
+| :--- | :--- | :--- |
+| **👤 Person** | `fullName`, `firstName`, `lastName`, `jobTitle`, `bio` | User profiles, authors, employees. |
+| **🌐 Internet** | `email`, `userName`, `password`, `url`, `ipv4` | Digital identities, networking. |
+| **💰 Finance** | `amount`, `accountNumber`, `currencyCode`, `iban` | Transactions, banking, pricing. |
+| **📍 Location**| `streetAddress`, `city`, `zipCode`, `country`, `latitude` | Map data, shipping addresses. |
+| **📅 Date** | `recent`, `future`, `past`, `birthdate`, `weekday` | Timestamps, schedules. |
+| **📦 Lorem** | `word`, `sentence`, `paragraph`, `slug` | Placeholder text, blog content. |
+| **🔢 System** | `string.uuid`, `string.alphanumeric`, `number.int` | IDs, tokens, counts. |
+| **🖼️ Image** | `url`, `avatar`, `dataUri` | Mocking visual assets. |
+
+---
+
+## High-Fidelity Patterns
+
+Use these patterns to generate data that feels like a real production API.
+
+### 📊 Frontend UI: Dashboard & Feeds
+
+#### Social Feed (Polymorphic)
+```json
+{
+  "type": "array",
+  "minItems": 5, "maxItems": 10,
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "type": { "const": "post" },
+          "id": { "type": "string", "faker": "string.uuid" },
+          "author": { "type": "string", "faker": "person.fullName" },
+          "content": { "type": "string", "faker": "lorem.paragraph" }
+        },
+        "required": ["type", "id", "author", "content"]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": { "const": "ad" },
+          "headline": { "type": "string", "faker": "company.catchPhrase" },
+          "image": { "type": "string", "faker": "image.url" }
+        },
+        "required": ["type", "headline", "image"]
+      }
+    ]
+  }
+}
+```
+
+### 📄 Backend API: Pagination & Errors
+
+#### Paginated List Response
 ```json
 {
   "type": "object",
   "properties": {
-    "name": {
-      "type": "string",
-      "faker": "person.fullName"
+    "data": {
+      "type": "array",
+      "minItems": 5, "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "faker": "string.uuid" },
+          "title": { "type": "string", "faker": "lorem.sentence" }
+        }
+      }
     },
-    "email": {
-      "type": "string",
-      "faker": "internet.email"
+    "meta": {
+      "type": "object",
+      "properties": {
+        "page": { "const": 1 },
+        "total": { "type": "integer", "faker": { "number.int": { "min": 50, "max": 100 } } }
+      }
     }
   }
 }
 ```
 
-### Passing Arguments to Faker
-
-You can pass arguments to Faker methods by using an object with the method name as the key and an array of arguments as the value:
-
-```json
-{
-  "faker": {
-    "finance.amount": [100, 1000, 2, "$"]
-  }
-}
-```
-
-## Common Faker Fields & Usage
-
-Faker.js provides a vast library of generators. Below are the most commonly used categories and methods in Mockzilla.
-
-### 👤 Person
-Used for generating user-relative data.
-- `person.firstName`: "Jane"
-- `person.lastName`: "Doe"
-- `person.fullName`: "Jane Doe"
-- `person.jobTitle`: "Senior Software Engineer"
-
-### 🌐 Internet
-Used for digital identities and network data.
-- `internet.email`: "jane.doe@example.com"
-- `internet.userName`: "janedoe42"
-- `internet.password`: "********"
-- `internet.url`: "https://example.com"
-- `internet.ipv4`: "192.168.1.1"
-
-### 🛒 Commerce & Finance
-Useful for e-commerce and banking mocks.
-- `commerce.productName`: "Ergonomic Chair"
-- `commerce.price`: "199.99"
-- `commerce.productDescription`: "A comfortable chair for long hours."
-- `finance.accountNumber`: "12345678"
-- `finance.currencyCode`: "USD"
-- `finance.amount`: "500.00"
-
-### 📍 Location
-For addresses and geographic data.
-- `location.streetAddress`: "123 Main St"
-- `location.city`: "New York"
-- `location.country`: "United States"
-- `location.zipCode`: "10001"
-
-### 📅 Date & Time
-- `date.past`: A date in the past.
-- `date.future`: A date in the future.
-- `date.recent`: A date from the last few days.
-- `date.weekday`: "Monday"
-
-### 📝 Lorem
-For placeholder text.
-- `lorem.word`: A single word.
-- `lorem.sentence`: A full sentence.
-- `lorem.paragraphs`: Multiple paragraphs.
-
-### 🔢 Random & System
-- `string.uuid`: A standard UUID (alternative to JSF's `format: "uuid"`).
-- `number.int`: A random integer (can take `min` and `max`).
-- `image.avatar`: A URL to a profile picture.
+---
 
 ## Mockzilla Default Options
 
@@ -114,21 +134,14 @@ Mockzilla configures JSF with several default options to ensure high-quality dat
 | `useDefaultValue` | `true` | Uses the `default` keyword if present in the schema. |
 | `useExamplesValue` | `true` | Uses the `examples` keyword if present (picks a random example). |
 | `minItems` | `1` | Forces at least 1 item in arrays if not specified. |
-| `maxItems` | `5` | Limits arrays to 5 items if not specified. |
+| `maxItems` | `5` | Limits arrays to 5 items if not specified. **Important**: Requests for `minItems > 5` will be capped at 5 unless the schema generator config is updated. |
 
-## Mockzilla Specific Extensions
+---
 
-### String Interpolation & Field Referencing
+## Troubleshooting & Tips
 
-On top of standard JSF features, Mockzilla provides its own **interpolation engine**. This allows you to reference values generated in one field from another field using `{$.path}` syntax.
-
-> [!TIP]
-> Use `{$.path}` when you need consistency across your generated objects, like matching an `orderId` in a summary string.
-
-See the [Schema Interpolation](schema-interpolation.md) guide for more details.
-
-## Troubleshooting
-
-- **Invalid Schema**: If your schema doesn't follow Draft-04, JSF might fail to generate data. Ensure you have a `type` defined for your properties.
+- **Mandatory `items`**: For `type: "array"`, an `items` subschema MUST be provided if you use validation keywords like `minItems`. Without it, generation will fail.
+- **Empty Properties**: Ensure every property has a defined `type`. If you use constraints like `minLength` without `type: "string"`, compatibility with other tools may vary.
 - **Circular References**: JSF and Mockzilla's interpolation engine both have protections against circular references.
-- **Faker Method Not Found**: Ensure you are using a valid Faker v10 path (e.g., `person.fullName`, not `name.findName`).
+- **Array Size Capped**: If your array never grows beyond 5 items despite settings, it's due to the global `maxItems: 5` limit in the generator.
+- **Consistency**: Use [Schema Interpolation](schema-interpolation.md) (`{$.path}`) to match values across your object.

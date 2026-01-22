@@ -4,9 +4,10 @@ Specialized instruction sets in `.agent/skills/` for AI agents.
 
 ## 🛠️ Skills
 
-### 1. Mockzilla Creator (`mockzilla-creator`)
+### 1. Mockzilla Mock Maker (`mockzilla-mock-maker`)
 High-quality, dynamic mocks using JSON Schema + Faker.
-- **Focus**: Premium templates, internal interpolation.
+- **Resources**: [JSON Faker Mock References](/documentation/json-schema-faker.md)
+- **Focus**: Premium templates, internal interpolation, and high-fidelity data.
 - **Principle**: "Stateless First" - Use schemas for 90% of cases.
 
 ### 2. Mockzilla Workflow Architect (`mockzilla-workflow-architect`)

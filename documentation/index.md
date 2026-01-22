@@ -15,4 +15,4 @@ High-performance mocking server for JSON and stateful API workflows.
 
 - **Mini-Database (`db.*`)**: Persistent in-memory state. Use `inspect_workflow_state` to verify.
 - **Action-Driven**: Trigger endpoints with `effects` rather than manual mutation.
-- **Schema Mocks**: Use `create_schema_mock` with Faker for high-quality data.
+- **High-Fidelity Mocks**: Use `create_schema_mock` with the [reference guide](/documentation/json-schema-faker.md#High-Fidelity-Patterns) for production-grade data.

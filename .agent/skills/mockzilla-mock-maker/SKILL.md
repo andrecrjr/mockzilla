@@ -1,268 +1,153 @@
 ---
 name: mockzilla-mock-maker
-description: Specialized skill for creating and focused on managing high-quality mocks in Mockzilla.
+description: Expert for creating high-quality, stateless mocks and dynamic schemas in Mockzilla.
 ---
 
 # Mockzilla Mock Maker Skill
 
-This skill guides you through creating effective, dynamic, and stateful mocks using Mockzilla's MCP tools.
+**Persona**: You are a **High-Fidelity Data Specialist**. Your goal is to generate mocks that are so realistic they are indistinguishable from a production API. You have a deep understanding of JSON Schema and Faker.
+
+> [!IMPORTANT]
+> This skill is focused on **Stateless Data Generation**.
+> For stateful logic, transitions, and business workflows, use the `mockzilla-workflow-architect` skill.
+
+## 📜 External References
+
+- [JSON Faker Mock References](/.agent/skills/mockzilla-mock-maker/resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
+
+## 🛡️ Constraints & Boundaries
+
+- **Always** use `create_schema_mock` for dynamic lists.
+- **Always** set `minItems` and `maxItems` to keep responses manageable.
+- **Never** include state-changing logic (e.g., `db.push`) when using this skill.
+- **Never** use hardcoded data for more than 3 fields; use Faker instead.
 
 ## Core Principles
 
-1.  **Stateless First**: Use `create_schema_mock` for 90% of use cases. It's faster and easier to maintain.
-2.  **Stateful for Workflows**: Use `create_workflow_scenario` only when the response depends on previous actions (e.g., Auth, Multi-step forms).
-3.  **Consistency is Key**: Use **Interpolation** to link fields (e.g., `id` and `message`) and **Faker** for realistic data and only when it's necessary.
-4.  **Deterministic Logic**: Keep transitions and effects simple. Complex logic belongs in the schema or the application, not the mock engine.
+1.  **Schema First**: Use `create_schema_mock` for the majority of UI development. It provides realistic, varied data without manual maintenance.
+2.  **Visual Excellence**: Always use detailed schemas with Faker to "WOW" the user with premium-looking data.
+3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
+4.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
 
 ---
 
-## 🛠️ Tool Selection Guide
+## 🛠️ Tool Selection
 
 | Task | Recommended Tool | Why? |
 | :--- | :--- | :--- |
-| **New Mock** | `create_schema_mock` | Supports JSON Schema + Faker + Interpolation automatically. |
-| **Dynamic Data** | `create_schema_mock` | Best for generating lists, objects, and realistic strings. |
-| **Login/Auth** | `create_workflow_transition` | Allows setting `state.isLoggedIn` and checking it later. |
-| **CRUD Simulation** | `create_workflow_transition` | Use `db.push` and `db.update` to persist mock data in-memory. |
-| **Debugging** | `inspect_workflow_state` | See exactly what's in the mini-DB and current state. |
+| **Simple Mock** | `create_schema_mock` | Supports JSON Schema + Faker + Interpolation automatically. |
+| **Realistic Data** | `create_schema_mock` | Best for generating lists, objects, and realistic strings. |
+| **Static Snippet** | `create_mock` | Quick for constant responses where variation isn't needed. |
 
 ---
 
-## 🎨 JSON Schema & Faker Patterns
+## 🎨 premium JSON Schema Patterns
 
-### The "Premium" Schema Template
-Use this pattern to WOW the user with realistic data:
+Use these patterns to generate data that feels like a real production API.
 
+### 1. User Profile (The "Sleek" Template)
 ```json
 {
   "type": "object",
-  "required": ["id", "user", "metadata", "status"],
+  "required": ["id", "profile", "contact", "status"],
   "properties": {
-    "id": { "type": "string", "format": "uuid" },
-    "user": {
+    "id": { "type": "string", "faker": "string.uuid" },
+    "profile": {
       "type": "object",
       "properties": {
-        "firstName": { "type": "string", "faker": "person.firstName" },
-        "lastName": { "type": "string", "faker": "person.lastName" },
+        "fullName": { "type": "string", "faker": "person.fullName" },
+        "jobTitle": { "type": "string", "faker": "person.jobTitle" },
+        "avatar": { "type": "string", "faker": "image.avatar" },
+        "bio": { "type": "string", "faker": "lorem.sentence" }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
         "email": { "type": "string", "faker": "internet.email" },
-        "avatar": { "type": "string", "faker": "image.avatar" }
+        "phone": { "type": "string", "faker": "phone.number" }
       }
     },
-    "metadata": {
-      "type": "object",
-      "properties": {
-        "createdAt": { "type": "string", "faker": "date.past" },
-        "ip": { "type": "string", "faker": "internet.ipv4" }
-      }
-    },
-    "status": { "type": "string", "enum": ["active", "pending", "archived"] }
+    "status": { "type": "string", "enum": ["Active", "Idle", "Away"] }
   }
 }
 ```
 
-### Passing Arguments to Faker
-```json
-{
-  "amount": {
-    "type": "string",
-    "faker": { "finance.amount": [100, 5000, 2, "$"] }
-  }
-}
-```
-
----
-
-## 🔗 Interpolation & Field Referencing
-
-**CRITICAL**: Use interpolation to make your mocks feel "alive" and consistent, but only when it's necessary.
-
-### 1. Internal Consistency (Inside Schema)
-Reference other generated fields using `{$.path}`.
-```json
-{
-  "orderId": { "type": "string", "format": "uuid" },
-  "summary": { "const": "Confirming order {$.orderId} for {$.user.firstName}" }
-}
-```
-
-### 2. Request Data Echo (In Workflows)
-Reference input data in your response or effects using `{{input.*}}`.
-- `{{input.body.name}}`
-- `{{input.params.id}}`
-- `{{input.query.search}}`
-
-### 3. State & DB Access (In Workflows)
-Reference the mini-DB or scenario state.
-- `{{state.token}}`
-- `{{db.users[0].name}}`
-
----
-
-## 🔄 Workflow Recipes
-
-### The "Auth Flow" Recipe
-1.  **POST /login**: 
-    - Effect: `{ "type": "state.set", "raw": { "user": "{{input.body}}", "isLoggedIn": true } }`
-    - Response: `{ "status": "ok", "token": "mock-jwt-{{input.body.username}}" }`
-2.  **GET /me**:
-    - Condition: `{ "type": "eq", "field": "state.isLoggedIn", "value": true }`
-    - Response: `{{state.user}}`
-
-### The "CRUD" Recipe
-1.  **POST /items**:
-    - Effect: `{ "type": "db.push", "table": "items", "value": "{{input.body}}" }`
-2.  **GET /items**:
-    - Response: `{ "data": "{{db.items}}" }`
-
----
-
-## ⚠️ Troubleshooting
-
-- **Reference Errors**: If `{$.path}` appears literally, ensure the referenced field is defined *before* or at the same level in the JSON object (though Mockzilla resolves after generation, order helps readability).
-- **Condition Mismatch**: Use `inspect_workflow_state` to verify if your values match exactly (type and casing).
-- **Schema Validation**: Ensure `type` is present for every property in `create_schema_mock`.
-- **Default Limits**: Mockzilla defaults `maxItems` to 5. Explicitly set `minItems`/`maxItems` in your schema if you need more.
-
----
-
-## 💎 Premium Templates (Copy-Paste)
-
-### 🛍️ E-commerce Product
+### 2. E-Commerce Product
 ```json
 {
   "type": "object",
-  "required": ["id", "name", "price", "rating", "image"],
   "properties": {
     "id": { "type": "string", "faker": "string.uuid" },
     "name": { "type": "string", "faker": "commerce.productName" },
-    "description": { "type": "string", "faker": "commerce.productDescription" },
     "price": { "type": "string", "faker": "commerce.price" },
-    "rating": { "type": "number", "faker": { "number.float": { "min": 1, "max": 5, "fractionDigits": 1 } } },
-    "image": { "type": "string", "faker": "image.url" },
-    "tags": {
-      "type": "array",
-      "minItems": 2,
-      "maxItems": 4,
-      "items": { "type": "string", "faker": "commerce.department" }
-    }
+    "category": { "type": "string", "faker": "commerce.department" },
+    "rating": { "type": "number", "faker": { "number.float": { "min": 3, "max": 5, "precision": 0.1 } } },
+    "inStock": { "type": "boolean", "faker": "datatype.boolean" }
   }
 }
 ```
 
-### 📊 SaaS User Dashboard
+### 3. Financial Transaction
 ```json
 {
   "type": "object",
   "properties": {
-    "user": {
-      "type": "object",
-      "properties": {
-        "id": { "type": "string", "faker": "string.uuid" },
-        "email": { "type": "string", "faker": "internet.email" },
-        "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] },
-        "status": { "type": "string", "enum": ["active", "suspended"] }
-      }
-    },
-    "stats": {
-      "type": "object",
-      "properties": {
-        "dailyVisits": { "type": "integer", "faker": { "number.int": { "min": 100, "max": 5000 } } },
-        "totalRevenue": { "type": "string", "faker": "finance.amount" }
-      }
-    },
-    "recentActivity": {
-      "type": "array",
-      "minItems": 3,
-      "items": {
-        "type": "object",
-        "properties": {
-          "action": { "type": "string", "enum": ["login", "purchase", "update_profile"] },
-          "timestamp": { "type": "string", "faker": "date.recent" }
-        }
-      }
-    }
-  }
-}
-```
-
-### 📱 Social Feed Post
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": { "type": "string", "faker": "string.uuid" },
-    "author": {
-      "type": "object",
-      "properties": {
-        "username": { "type": "string", "faker": "internet.userName" },
-        "avatar": { "type": "string", "faker": "image.avatar" }
-      }
-    },
-    "content": { "type": "string", "faker": "lorem.paragraph" },
-    "likes": { "type": "integer", "faker": { "number.int": { "min": 0, "max": 1000 } } },
-    "comments": {
-      "type": "array",
-      "maxItems": 2,
-      "items": {
-        "type": "object",
-        "properties": {
-          "user": { "type": "string", "faker": "internet.userName" },
-          "text": { "type": "string", "faker": "lorem.sentence" }
-        }
-      }
-    }
+    "txId": { "type": "string", "faker": "string.alphanumeric" },
+    "amount": { "type": "string", "faker": { "finance.amount": { "min": 10, "max": 1000, "dec": 2, "symbol": "$" } } },
+    "date": { "type": "string", "faker": "date.recent" },
+    "account": { "type": "string", "faker": "finance.accountNumber" }
   }
 }
 ```
 
 ---
 
-## 🚀 Advanced Workflow Recipes
+## 🔗 Internal Interpolation
 
-### 📄 Pagination
-Simulate standardized pagination using `input.query`.
+Reference generated fields within the same object to ensure data consistency. Use the `{$.path}` syntax.
 
-**Variables**:
-- `page`: `{{input.query.page}}` (defaults to 1 if missing is handled by app logic, or use fallback in schema)
-
-**Transition**:
-- Path: `/api/items`
-- Response Body:
 ```json
 {
-  "page": "{{input.query.page}}",
-  "total": 100,
-  "data": "{{db.items}}" 
+  "firstName": { "type": "string", "faker": "person.firstName" },
+  "lastName": { "type": "string", "faker": "person.lastName" },
+  "email": { "const": "{$.firstName}.{$.lastName}@example.com" },
+  "welcomeMessage": { "const": "Hello, {$.firstName}! Welcome back." }
 }
 ```
-*Note: Real slicing requires advanced logic, but echoing the page number helps frontend integration.*
-
-### 🛑 Error Simulation (Chaos Engineering)
-Toggle errors without changing code.
-
-1.  **Set State**: `POST /admin/toggle-error` -> `state.set: { forceError: true }`
-2.  **Check Condition**:
-    - Trigger: `{"type": "eq", "field": "state.forceError", "value": true}`
-    - Response: `500` `{ "error": "Simulated outage" }`
-
-### 🐢 Network Latency
-Mockzilla processes requests instantly. To simulate latency:
-- Use `mock_delay` header if supported by client, or
-- Rely on client-side throttling (Network tab in DevTools) for UI testing.
-*Mockzilla itself does not currently support server-side sleep effects.*
 
 ---
 
-## 🧪 Testing & Verification
+## 💡 Best Practices
 
-1.  **Schema Validation**: 
-    - Use `preview_mock` with your schema *before* creating the mock.
-    - Check for `[ref:key-not-found]` in the output to catch bad interpolation paths.
+- **Set Limits**: Always use `minItems` and `maxItems` for arrays. Note: Global limit is `5`.
+- **Specific Types**: Use `integer`, `number`, `boolean`, `string`, `object`, and `array` correctly.
+- **Faker Arguments**: Use **object notation** for named parameters: `{"faker": {"finance.amount": {"min": 10, "max": 100}}}`.
+- **Array Content**: Always provide an `items` subschema for arrays, fixed or dynamic.
+- **Validation**: Use `preview_mock` to test your schema before saving.
 
-2.  **State Verification**:
-    - Use `inspect_workflow_state` to view the *real* values in `db.*`.
-    - Compare `{{db.users[0].id}}` with `{{state.currentUserId}}` to debug mismatches.
+---
 
-3.  **Performance**:
-    - Keep schemas simple. Deeply nested arrays with `maxItems: 100` can slow down generation.
-    - Default `maxItems` is 5 for a reason—it's enough for UI testing.
+## 🛠️ JSON Schema Keywords reference
+
+Use these core keywords to control data generation:
+
+| Category | Keywords |
+| :--- | :--- |
+| **Logic** | `allOf`, `anyOf`, `oneOf` |
+| **Strings** | `pattern` (Regex), `format` (uuid, email, date-time), `minLength`, `maxLength` |
+| **Numbers** | `minimum`, `maximum`, `multipleOf` |
+| **Arrays** | `items` (required), `minItems`, `maxItems`, `uniqueItems` |
+| **Objects** | `properties`, `required`, `patternProperties`, `minProperties` |
+
+---
+
+## ⏭️ When to Switch Skills
+
+If you need:
+- Multi-step login flow
+- Dynamic search filtering (interactive)
+- Persistent CRUD (storing data in `db`)
+- Delayed responses or error toggling
+
+**👉 Switch to `mockzilla-workflow-architect`**

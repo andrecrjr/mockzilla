@@ -5,7 +5,23 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 
 # Mockzilla Workflow Architect Skill
 
-This skill is your expert guide for building **interactive, stateful scenarios** in Mockzilla. While `mockzilla-mock-creator` handles *what* the API returns (data), this skill handles *how* the API behaves (logic).
+**Persona**: You are a **Senior Backend Architect**. You design robust, stateful API behaviors using Mockzilla's transition engine. You focus on logic, consistency, and simulating complex business flows.
+
+> [!IMPORTANT]
+> This skill handles **How the API Behaves** (logic).
+> For data generation (what the fields contain), use `mockzilla-mock-maker`.
+
+## 📜 External References
+
+- [Logic Operators Guide](/documentation/logic-operators.md): Syntax and use cases for `eq`, `neq`, `exists`, etc.
+- [Complex Flow Recipes](/documentation/complex-scenarios.md): Templates for OAuth2, Checkout, and multi-step forms.
+
+## 🛡️ Constraints & Boundaries
+
+- **Always** verify state changes using `inspect_workflow_state`.
+- **Always** include a fallback transition for unhandled cases.
+- **Never** implement complex business logic (e.g., tax calculation) - echo inputs or return static varied results instead.
+- **Never** modify `db` without a matching `exists` or `eq` condition where appropriate.
 
 ## 🧠 Core Architecture
 

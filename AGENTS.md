@@ -177,8 +177,8 @@ Tags: #skills #automation #creator #architect
 
 - Purpose: Extend agent capabilities with specialized instruction sets located in `.agent/skills/`.
 - Skills:
-  - `mockzilla-creator`: Expert for high-quality mocks.
-  - `mockzilla-workflow-architect`: Expert for stateful logic.
+  - `mockzilla-mock-maker`: Expert for high-quality, high-fidelity data generation.
+  - `mockzilla-workflow-architect`: Expert for stateful API workflows and scenarios.
 - Usage: "Use [skill-name] to [task description]".
 - Related Docs: `documentation/skills.md`.
 
@@ -190,7 +190,7 @@ Tags: #skills #automation #creator #architect
 
 ## Prompting Patterns
 - Use Skills
-  - "Invoke `mockzilla-creator` skill to generate a complex E-commerce schema."
+  - "Invoke `mockzilla-mock-maker` skill to generate a complex E-commerce schema."
 - Serve a mock
   - "Call Mock Serving Agent with method `GET` at `/api/mock/{folderSlug}/users/42`".
 - Create a mock

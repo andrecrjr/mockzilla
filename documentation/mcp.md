@@ -112,4 +112,4 @@ Effects handle data transformations.
 - **Use Schema Mocks**: For data-heavy mocks, provide the AI with a JSON Schema. It's much more reliable than asking it to generate large JSON blobs.
 - **Inspect Often**: When debugging workflows, use `inspect_workflow_state` to see exactly how your mini-DB tables are evolving.
 - **Transactional Imports**: Use `export_workflow` and `import_workflow` to move complex setups between environments or to "snapshot" a known good state.
-- **Leverage Skills**: Don't just rely on raw tools. Use **Agent Skills** ([skills.md](file:///home/andrecrjr/development/fullstack/mockzilla/documentation/skills.md)) to provide the AI with proven patterns for complex Mockzilla tasks.
+- **Leverage Skills**: Don't just rely on raw tools. Use **Agent Skills** ([skills.md](/documentation/skills.md)) to provide the AI with proven patterns for complex Mockzilla tasks.

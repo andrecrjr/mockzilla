@@ -2,6 +2,10 @@
 
 This directory contains test schemas to verify the string interpolation and field referencing features work correctly.
 
+## High-Fidelity Production Patterns
+
+For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [High-Fidelity Patterns Guide](/documentation/json-schema-faker.md#High-Fidelity-Patterns).
+
 ## Test Case 1: Simple Field Reference
 
 **File:** `test-simple-reference.json`
