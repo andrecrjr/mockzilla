@@ -6,12 +6,11 @@ A powerful self-hosted API mocking platform for development and testing. Deploy 
 
 ### Option 1: Fast In-Memory with PGLite (Recommended for Development)
 
-Perfect for quick testing and development. By default, all data is stored in memory and will be lost when the container stops. Use volume persistence to maintain data between restarts.
+Perfect for quick testing and development. By default, all data is stored in memory and will be lost when the container stops. Use volume persistence to maintain data between restarts (if needed).
 
 ```bash
 # Pull the latest image
 docker pull andrecrjr/mockzilla:latest
-
 
 # run with volume persistence to maintain data between container restarts
 docker run -p 36666:36666 \
@@ -42,6 +41,15 @@ docker run -p 36666:36666 \
 > This option is recommended for production environments where data persistence is required. Make sure your PostgreSQL database is accessible from the container.
 
 Your mock server will be available at http://localhost:36666
+
+## 🤖 AI Agent Skills
+
+Mockzilla includes specialized AI agent skills to help you build and manage mocks.
+You can add easier with add-skill:
+
+`npx add-skill https://github.com/andrecrjr/mockzilla` 
+
+or copy the `.agent/skills` folder to your project's root.
 
 ## 📦 Available Scripts
 
