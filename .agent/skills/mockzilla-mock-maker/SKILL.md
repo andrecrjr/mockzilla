@@ -13,7 +13,7 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 ## 📜 External References
 
-- [JSON Faker Mock References](/.agent/skills/mockzilla-mock-maker/resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
+- [JSON Faker Mock References](./resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
 
 ## 🛡️ Constraints & Boundaries
 
