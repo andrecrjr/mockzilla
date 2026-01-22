@@ -1,9 +1,9 @@
 ---
-name: mockzilla-creator
+name: mockzilla-mock-maker
 description: Specialized skill for creating and focused on managing high-quality mocks in Mockzilla.
 ---
 
-# Mockzilla Creator Skill
+# Mockzilla Mock Maker Skill
 
 This skill guides you through creating effective, dynamic, and stateful mocks using Mockzilla's MCP tools.
 
