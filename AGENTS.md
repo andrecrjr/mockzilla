@@ -3,13 +3,12 @@
 Last updated: 2025-12-02
 Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`. This catalog defines callable agents, their capabilities, inputs/outputs, constraints, and cross-references to detailed docs in `documentation/`.
 
-- You only use bun, and docker to get all context about server.
-- You never use npm or yarn.
 
 ## Conventions
+- Use bun for commands to update install or run scripts, but always use docker(Makefile) to run over the server.
+- You never use npm or yarn.
 - MCP: Use `http://localhost:36666/api/mcp` as the MCP endpoint.
 - Always use Docker to get all context about server.
-- Use bun for commands to update install or run scripts, but always use docker to run over the server.
 - Makefile is the main entry point for all commands.
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.
