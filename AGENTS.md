@@ -8,16 +8,17 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 
 ## Conventions
 - MCP: Use `http://localhost:36666/api/mcp` as the MCP endpoint.
-- Always use Bun to run commands.
 - Always use Docker to get all context about server.
+- Use bun for commands to update install or run scripts, but always use docker to run over the server.
+- Makefile is the main entry point for all commands.
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.
 - Terminology: "folder" groups mocks; "mock" is an individual endpoint response.
 - Data Store: PostgreSQL via Drizzle; see `lib/db/schema.ts`.
-- Must NEVER use `any` type, ensure always creating types/interfaces or generic types or `unknown`.
+- **NEVER** use `any` type, ensure always creating types/interfaces or generic types or `unknown`.
 - Must use `z.infer<typeof schema>` to extract types from Zod schemas.
+- **Always** in the end update `documentation/` folder with updated docs.
 - Use **Agent Skills** (`.agent/skills/`) for complex mocking or logic tasks.
-- Must always in the end update `documentation/` folder with updated docs.
 
 ## Index
 - Mock Serving Agent
