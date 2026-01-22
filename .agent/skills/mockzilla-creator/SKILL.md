@@ -1,6 +1,6 @@
 ---
 name: mockzilla-creator
-description: Specialized skill for creating and managing high-quality mocks and stateful workflows in Mockzilla.
+description: Specialized skill for creating and focused on managing high-quality mocks in Mockzilla.
 ---
 
 # Mockzilla Creator Skill

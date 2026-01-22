@@ -16,6 +16,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Data Store: PostgreSQL via Drizzle; see `lib/db/schema.ts`.
 - Must NEVER use `any` type, ensure always creating types/interfaces or generic types or `unknown`.
 - Must use `z.infer<typeof schema>` to extract types from Zod schemas.
+- Use **Agent Skills** (`.agent/skills/`) for complex mocking or logic tasks.
 - Must always in the end update `documentation/` folder with updated docs.
 
 ## Index
@@ -27,6 +28,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Schema Generator Agent
 - API Client Agent
 - Local Storage Agent
+- Agent Skills Reference
 
 ---
 
@@ -170,11 +172,25 @@ Tags: #storage #browser #fallback
 
 ---
 
+## Agent Skills Reference
+Tags: #skills #automation #creator #architect
+
+- Purpose: Extend agent capabilities with specialized instruction sets located in `.agent/skills/`.
+- Skills:
+  - `mockzilla-creator`: Expert for high-quality mocks.
+  - `mockzilla-workflow-architect`: Expert for stateful logic.
+- Usage: "Use [skill-name] to [task description]".
+- Related Docs: `documentation/skills.md`.
+
+---
+
 ## Data Model (Reference)
 - Enums: `http_method`, `match_type`, `body_type` (lib/db/schema.ts:5–18).
 - Tables: `folders`, `mock_responses` and relations (lib/db/schema.ts:20–59).
 
 ## Prompting Patterns
+- Use Skills
+  - "Invoke `mockzilla-creator` skill to generate a complex E-commerce schema."
 - Serve a mock
   - "Call Mock Serving Agent with method `GET` at `/api/mock/{folderSlug}/users/42`".
 - Create a mock
@@ -183,6 +199,7 @@ Tags: #storage #browser #fallback
   - "Use Schema Generator Agent with `generateFromSchemaString` and interpolate `{ $.user.id }` into summary field".
 
 ## Additional References
+- Reference Guide: `documentation/index.md`.
 - UI docs page for interpolation examples: `app/docs/page.tsx`.
 - DB client: `lib/db/index.ts` (lib/db/index.ts:1–21).
 - MCP Integration: `documentation/mcp.md`.
