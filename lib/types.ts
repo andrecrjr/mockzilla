@@ -14,6 +14,8 @@ export interface Folder {
 	name: string;
 	slug: string;
 	description?: string;
+	isExtension?: boolean;
+	meta?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt?: string;
 }

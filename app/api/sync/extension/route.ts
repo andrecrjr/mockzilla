@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import type { HttpMethod, MatchType, BodyType } from '@/lib/types';
+import type { HttpMethod, MatchType } from '@/lib/types';
 
 // Helper to generate slugs (consistent with import route)
 function generateSlug(name: string): string {
@@ -56,11 +56,14 @@ export async function POST(request: NextRequest) {
 
         await db.transaction(async (tx) => {
             for (const group of body.groups) {
+                // Normalize name: remove existing "(Extension)" suffix if present to avoid recursive stacking
+                const cleanedName = group.name.replace(/\s*\(Extension\)$/i, '').trim();
+                
                 // Logic: Extension groups sync to "[Name]-extension" folders
                 // We append -extension to the slug to distinguish them
-                const baseSlug = generateSlug(group.name);
+                const baseSlug = generateSlug(cleanedName);
                 const extensionSlug = `${baseSlug}-extension`;
-                const folderName = `${group.name} (Extension)`;
+                const folderName = `${cleanedName} (Extension)`;
 
                 // 1. Check if folder exists
                 const existingFolder = await tx.query.folders.findFirst({
