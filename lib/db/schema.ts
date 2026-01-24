@@ -32,6 +32,7 @@ export const folders = pgTable('folders', {
 	name: text('name').notNull(),
 	slug: text('slug').notNull().unique(),
 	description: text('description'),
+	meta: jsonb('meta').default({}),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at'),
 });

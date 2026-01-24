@@ -8,6 +8,7 @@ import {
 	Workflow,
 } from 'lucide-react';
 import Link from 'next/link';
+import { ExtensionDocs } from '@/components/docs/extension-docs';
 import { SchemaDocs } from '@/components/docs/schema-docs';
 import { SchemaTesterDialog } from '@/components/docs/schema-tester-dialog';
 import { WorkflowDocs } from '@/components/docs/workflow-docs';
@@ -59,6 +60,12 @@ export default function DocsPage() {
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Workflow Mode
+								</Link>
+								<Link
+									href="#extension"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Extension Sync
 								</Link>
 								<Link
 									href="#mcp"
@@ -279,6 +286,10 @@ export default function DocsPage() {
 
 						<section id="workflows" className="mt-0 space-y-6 scroll-mt-24">
 							<WorkflowDocs />
+						</section>
+			
+						<section id="extension" className="mt-0 space-y-6 scroll-mt-24">
+							<ExtensionDocs />
 						</section>
 
 

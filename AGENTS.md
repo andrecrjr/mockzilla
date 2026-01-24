@@ -5,7 +5,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 
 
 ## Conventions
-- Use bun for commands to update install or run scripts, but always use docker(Makefile) to run over the server.
+- Always prefer to use docker(Makefile) to run over any scripts like migrate/migration, exec scripts inside the container.
 - You never use npm or yarn.
 - MCP: Use `http://localhost:36666/api/mcp` as the MCP endpoint.
 - Always use Docker to get all context about server.
@@ -203,3 +203,4 @@ Tags: #skills #automation #creator #architect
 - UI docs page for interpolation examples: `app/docs/page.tsx`.
 - DB client: `lib/db/index.ts` (lib/db/index.ts:1–21).
 - MCP Integration: `documentation/mcp.md`.
+- **Extension Sync**: `documentation/extension-sync.md` (High-fidelity data transfer)
