@@ -58,7 +58,7 @@ export default function MockzillaAdmin() {
 		toast.success('Folder Created', {
 			description: 'Your folder has been created successfully',
 		});
-		mutate(`/api/folders?page=${page}&limit=${limit}`);
+		mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 		mutate('/api/folders?all=true');
 	};
 
@@ -86,7 +86,7 @@ export default function MockzillaAdmin() {
 			toast.success('Folder Deleted', {
 				description: 'Folder has been removed',
 			});
-			mutate(`/api/folders?page=${page}&limit=${limit}`);
+			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 			mutate('/api/folders?all=true');
 		} catch {
 			toast.error('Error', {
@@ -111,7 +111,7 @@ export default function MockzillaAdmin() {
 			toast.success('Folder Updated', {
 				description: 'Folder has been updated successfully',
 			});
-			mutate(`/api/folders?page=${page}&limit=${limit}`);
+			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 			mutate('/api/folders?all=true');
 		} catch (error: unknown) {
 			toast.error('Error', {
@@ -172,7 +172,7 @@ export default function MockzillaAdmin() {
 				description: `Imported ${result.imported.folders} folders and ${result.imported.mocks} mocks`,
 			});
 
-			mutate(`/api/folders?page=${page}&limit=${limit}`);
+			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 			mutate('/api/folders?all=true');
 		} catch {
 			toast.error('Import Failed', {
