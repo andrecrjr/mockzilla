@@ -56,16 +56,11 @@ export async function POST(request: NextRequest) {
 
         await db.transaction(async (tx) => {
             for (const group of body.groups) {
-                // Normalize name: remove existing "(Extension)" suffix if present to avoid recursive stacking
                 const cleanedName = group.name.replace(/\s*\(Extension\)$/i, '').trim();
-                
-                // Logic: Extension groups sync to "[Name]-extension" folders
-                // We append -extension to the slug to distinguish them
                 const baseSlug = generateSlug(cleanedName);
                 const extensionSlug = `${baseSlug}-extension`;
-                const folderName = `${cleanedName} (Extension)`;
+                const folderName = `${cleanedName}`;
 
-                // 1. Check if folder exists
                 const existingFolder = await tx.query.folders.findFirst({
                     where: eq(folders.slug, extensionSlug)
                 });
@@ -74,7 +69,6 @@ export async function POST(request: NextRequest) {
 
                 if (existingFolder) {
                     folderId = existingFolder.id;
-                    // Update metadata if needed
                     await tx.update(folders)
                         .set({ 
                             name: folderName,
