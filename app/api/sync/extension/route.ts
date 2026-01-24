@@ -14,16 +14,23 @@ function generateSlug(name: string): string {
         .replace(/[^a-z0-9-]/g, '');
 }
 
+interface ExtensionVariant {
+    key: string;
+    bodyType: string;
+    statusCode: number;
+    body: string;
+}
+
 interface ExtensionMock {
     id: string;
     name: string;
     pattern: string;
-    method: HttpMethod;
     body: string;
     response: string;
     statusCode: number;
     matchType: MatchType;
     enabled: boolean;
+    variants?: ExtensionVariant[];
 }
 
 interface ExtensionGroup {
@@ -101,7 +108,7 @@ export async function POST(request: NextRequest) {
                         await tx.insert(mockResponses).values({
                             name: mock.name,
                             endpoint: mock.pattern,
-                            method: mock.method, // User selected method
+                            method: 'GET', // Internal default as extension no longer sends it
                             statusCode: mock.statusCode,
                             response: mock.response || mock.body || '', // Fallback
                             folderId: folderId,
