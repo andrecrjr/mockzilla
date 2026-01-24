@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import type { HttpMethod, MatchType } from '@/lib/types';
+import type { MatchType } from '@/lib/types';
 
 // Helper to generate slugs (consistent with import route)
 function generateSlug(name: string): string {
