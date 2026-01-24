@@ -10,6 +10,9 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - MCP: Use `http://localhost:36666/api/mcp` as the MCP endpoint.
 - Always use Docker to get all context about server.
 - Makefile is the main entry point for all commands.
+- **Docker Usage**: Always prefer to use Docker (via `Makefile`) to run commands. Never run scripts like `migrate` or `db:generate` locally; execute them inside the container.
+- **Migrations**: Always use `bun run db:generate` inside Docker (or `make db-generate`) to create migrations.
+- **Bun**: Use `bun` as the primary runtime and package manager inside Docker.
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.
 - Terminology: "folder" groups mocks; "mock" is an individual endpoint response.

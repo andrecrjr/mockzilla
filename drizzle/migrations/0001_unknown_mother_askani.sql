@@ -1,1 +1,0 @@
-ALTER TABLE "folders" ADD COLUMN "meta" jsonb DEFAULT '{}'::jsonb;

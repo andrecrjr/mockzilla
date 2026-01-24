@@ -1,5 +1,5 @@
 {
-  "id": "45555096-b278-43c7-9807-6ba119d5d320",
+  "id": "4eae6fab-82b8-4e0b-b4aa-3c71cab65585",
   "prevId": "885c4e85-040f-4f1f-9733-9bfddc7b9365",
   "version": "7",
   "dialect": "postgresql",
@@ -122,8 +122,7 @@
         },
         "match_type": {
           "name": "match_type",
-          "type": "match_type",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "default": "'exact'"
@@ -386,14 +385,6 @@
         "DELETE",
         "HEAD",
         "OPTIONS"
-      ]
-    },
-    "public.match_type": {
-      "name": "match_type",
-      "schema": "public",
-      "values": [
-        "exact",
-        "substring"
       ]
     }
   },

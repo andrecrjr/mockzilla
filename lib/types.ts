@@ -6,7 +6,7 @@ export type HttpMethod =
 	| 'DELETE'
 	| 'HEAD'
 	| 'OPTIONS';
-export type MatchType = 'exact' | 'substring';
+export type MatchType = 'exact' | 'substring' | 'wildcard';
 export type BodyType = 'json' | 'text';
 
 export interface Folder {
