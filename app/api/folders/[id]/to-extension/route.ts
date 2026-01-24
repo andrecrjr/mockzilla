@@ -62,13 +62,10 @@ export async function GET(
             .from(mockResponses)
             .where(eq(mockResponses.folderId, folderId));
 
-        // 3. Transform to Extension Format
-        // 3. Transform to Extension Format (with High Fidelity Merge)
         const meta = folder.meta as { extensionSyncData?: ExtensionGroup } | null;
         const extensionSyncData = meta?.extensionSyncData;
 
         const extensionMocks: ExtensionMock[] = mocks.map(mock => {
-            // Attempt to find original mock to preserve metadata (variants, etc.)
             const originalMock = extensionSyncData?.mocks?.find(m => 
                 m.name === mock.name && 
                 m.pattern === mock.endpoint && 
@@ -77,8 +74,7 @@ export async function GET(
 
             if (originalMock) {
                 return {
-                    ...originalMock, // Keep variants, extra fields
-                    // Overwrite with Server's current truth
+                    ...originalMock,
                     pattern: mock.endpoint,
                     method: (mock.method as HttpMethod) || 'GET',
                     body: mock.response,
@@ -86,12 +82,9 @@ export async function GET(
                     statusCode: mock.statusCode,
                     enabled: mock.enabled,
                     bodyType: mock.bodyType || originalMock.bodyType || 'json',
-                    // Keep original ID
                     id: originalMock.id 
                 };
             }
-
-            // Fallback for new mocks
             return {
                 id: mock.id,
                 name: mock.name,
