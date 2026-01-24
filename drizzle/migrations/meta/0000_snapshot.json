@@ -1,5 +1,5 @@
 {
-  "id": "885c4e85-040f-4f1f-9733-9bfddc7b9365",
+  "id": "b4801012-d367-4f40-b8f5-231833d4a394",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -32,6 +32,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "meta": {
+          "name": "meta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
         },
         "created_at": {
           "name": "created_at",
@@ -115,8 +122,7 @@
         },
         "match_type": {
           "name": "match_type",
-          "type": "match_type",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "default": "'exact'"
@@ -379,14 +385,6 @@
         "DELETE",
         "HEAD",
         "OPTIONS"
-      ]
-    },
-    "public.match_type": {
-      "name": "match_type",
-      "schema": "public",
-      "values": [
-        "exact",
-        "substring"
       ]
     }
   },

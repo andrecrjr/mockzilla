@@ -1,23 +1,11 @@
-DO $$ BEGIN
- CREATE TYPE "public"."body_type" AS ENUM('json', 'text');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "public"."http_method" AS ENUM('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "public"."match_type" AS ENUM('exact', 'substring');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+CREATE TYPE "public"."body_type" AS ENUM('json', 'text');--> statement-breakpoint
+CREATE TYPE "public"."http_method" AS ENUM('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "folders" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"description" text,
+	"meta" jsonb DEFAULT '{}'::jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp,
 	CONSTRAINT "folders_slug_unique" UNIQUE("slug")
@@ -31,7 +19,7 @@ CREATE TABLE IF NOT EXISTS "mock_responses" (
 	"status_code" integer DEFAULT 200 NOT NULL,
 	"response" text NOT NULL,
 	"folder_id" uuid NOT NULL,
-	"match_type" "match_type" DEFAULT 'exact',
+	"match_type" text DEFAULT 'exact',
 	"body_type" "body_type" DEFAULT 'json',
 	"enabled" boolean DEFAULT true NOT NULL,
 	"json_schema" text,
