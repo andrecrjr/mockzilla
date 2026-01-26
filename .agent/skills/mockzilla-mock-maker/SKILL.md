@@ -17,7 +17,7 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 ## 🛡️ Constraints & Boundaries
 
-- **Always** use `create_schema_mock` for dynamic lists.
+- **Always** use `create_schema_mock` for dynamic/static lists.
 - **Always** set `minItems` and `maxItems` to keep responses manageable.
 - **Never** include state-changing logic (e.g., `db.push`) when using this skill.
 - **Strict Schemas**: Always set `additionalProperties: false` on objects and `additionalItems: false` on arrays to prevent "ugly" or unwanted random data by default.
