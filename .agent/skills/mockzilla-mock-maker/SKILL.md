@@ -20,6 +20,7 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 - **Always** use `create_schema_mock` for dynamic lists.
 - **Always** set `minItems` and `maxItems` to keep responses manageable.
 - **Never** include state-changing logic (e.g., `db.push`) when using this skill.
+- **Strict Schemas**: Always set `additionalProperties: false` on objects and `additionalItems: false` on arrays to prevent "ugly" or unwanted random data by default.
 - **Never** use hardcoded data for more than 3 fields; use Faker instead.
 
 ## Core Principles
@@ -50,10 +51,12 @@ Use these patterns to generate data that feels like a real production API.
 {
   "type": "object",
   "required": ["id", "profile", "contact", "status"],
+  "additionalProperties": false,
   "properties": {
     "id": { "type": "string", "faker": "string.uuid" },
     "profile": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "fullName": { "type": "string", "faker": "person.fullName" },
         "jobTitle": { "type": "string", "faker": "person.jobTitle" },
@@ -63,6 +66,7 @@ Use these patterns to generate data that feels like a real production API.
     },
     "contact": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "email": { "type": "string", "faker": "internet.email" },
         "phone": { "type": "string", "faker": "phone.number" }
@@ -124,6 +128,7 @@ Reference generated fields within the same object to ensure data consistency. Us
 - **Specific Types**: Use `integer`, `number`, `boolean`, `string`, `object`, and `array` correctly.
 - **Faker Arguments**: Use **object notation** for named parameters: `{"faker": {"finance.amount": {"min": 10, "max": 100}}}`.
 - **Array Content**: Always provide an `items` subschema for arrays, fixed or dynamic.
+- **Strictness**: Use `additionalProperties: false` (objects) and `additionalItems: false` (arrays) to ensure the output matches the schema *exactly*.
 - **Validation**: Use `preview_mock` to test your schema before saving.
 
 ---
