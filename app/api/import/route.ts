@@ -133,49 +133,68 @@ export async function POST(request: NextRequest) {
 		await db.transaction(async (tx) => {
 			// Import folders first
 			for (const folder of exportData.folders) {
-				try {
-					const [newFolder] = await tx
-						.insert(folders)
-						.values({
+				// Skip folders that are marked as extension sync data
+				const meta = folder.meta as Record<string, any>;
+				if (meta?.extensionSyncData) {
+					console.log(`[API] Skipping extension-synced folder: ${folder.name}`);
+					continue;
+				}
+
+				const [newFolder] = await tx
+					.insert(folders)
+					.values({
+						name: folder.name,
+						slug: folder.slug,
+						description: folder.description || null,
+						meta: folder.meta || {},
+					})
+					.onConflictDoUpdate({
+						target: folders.slug,
+						set: {
 							name: folder.name,
-							slug: folder.slug,
 							description: folder.description || null,
 							meta: folder.meta || {},
-						})
-						.returning();
+							updatedAt: new Date(),
+						},
+					})
+					.returning();
 
-					folderIdMap.set(folder.id, newFolder.id);
-					results.folders++;
-				} catch (error) {
-					console.error('[API] Failed to import folder:', error);
-				}
+				folderIdMap.set(folder.id, newFolder.id);
+				results.folders++;
 			}
 
 			// Import mocks with updated folder IDs
 			for (const mock of exportData.mocks) {
-				try {
-					const mappedFolderId =
-						folderIdMap.get(mock.folderId) || mock.folderId;
+				const mappedFolderId = folderIdMap.get(mock.folderId);
 
-					await tx.insert(mockResponses).values({
-						name: mock.name,
-						endpoint: mock.path,
-						method: mock.method,
-						statusCode: mock.statusCode,
-						response: mock.response,
-						folderId: mappedFolderId,
-						matchType: mock.matchType || 'exact',
-						bodyType: mock.bodyType || 'json',
-						enabled: mock.enabled ?? true,
-						jsonSchema: mock.jsonSchema,
-						useDynamicResponse: mock.useDynamicResponse ?? false,
-						echoRequestBody: mock.echoRequestBody ?? false,
-					});
-
-					results.mocks++;
-				} catch (error) {
-					console.error('[API] Failed to import mock:', error);
+				// If the folder was skipped (e.g. extension folder), skip the mock too
+				if (!mappedFolderId) {
+					// Check if it was in the original payload but skipped
+					const originalFolder = exportData.folders.find(f => f.id === mock.folderId);
+					if (originalFolder) {
+						// It was an explicitly skipped folder
+						continue;
+					}
+					// Otherwise, it might be a folder that already existed or was provided by ID
+					// We'll proceed with the provided ID if it's a UUID
 				}
+
+				await tx.insert(mockResponses).values({
+					name: mock.name,
+					endpoint: mock.path,
+					method: mock.method,
+					statusCode: mock.statusCode,
+					response: mock.response,
+					folderId: mappedFolderId || mock.folderId,
+					matchType: mock.matchType || 'exact',
+					bodyType: mock.bodyType || 'json',
+					enabled: mock.enabled ?? true,
+					jsonSchema: mock.jsonSchema,
+					useDynamicResponse: mock.useDynamicResponse ?? false,
+					echoRequestBody: mock.echoRequestBody ?? false,
+				});
+
+				results.mocks++;
 			}
 		});
 

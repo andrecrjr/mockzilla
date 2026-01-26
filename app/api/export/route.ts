@@ -10,8 +10,19 @@ export async function GET() {
 			db.select().from(mockResponses).orderBy(mockResponses.createdAt),
 		]);
 
+		// Filter out folders that are synced from the extension
+		const regularFolders = allFolders.filter(folder => {
+			const meta = folder.meta as Record<string, any>;
+			return !meta?.extensionSyncData;
+		});
+
+		const regularFolderIds = new Set(regularFolders.map(f => f.id));
+
+		// Filter mocks to only include those in regular folders
+		const regularMocks = allMocks.filter(mock => regularFolderIds.has(mock.folderId));
+
 		const exportData: ExportData = {
-			folders: allFolders.map((folder) => ({
+			folders: regularFolders.map((folder) => ({
 				id: folder.id,
 				name: folder.name,
 				slug: folder.slug,
@@ -20,7 +31,7 @@ export async function GET() {
 				createdAt: folder.createdAt.toISOString(),
 				updatedAt: folder.updatedAt?.toISOString(),
 			})),
-			mocks: allMocks.map((mock) => ({
+			mocks: regularMocks.map((mock) => ({
 				id: mock.id,
 				name: mock.name,
 				path: mock.endpoint,
