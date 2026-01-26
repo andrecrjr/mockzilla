@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
 							name: folder.name,
 							slug: folder.slug,
 							description: folder.description || null,
+							meta: folder.meta || {},
 						})
 						.returning();
 
@@ -166,6 +167,9 @@ export async function POST(request: NextRequest) {
 						matchType: mock.matchType || 'exact',
 						bodyType: mock.bodyType || 'json',
 						enabled: mock.enabled ?? true,
+						jsonSchema: mock.jsonSchema,
+						useDynamicResponse: mock.useDynamicResponse ?? false,
+						echoRequestBody: mock.echoRequestBody ?? false,
 					});
 
 					results.mocks++;
