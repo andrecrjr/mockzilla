@@ -61,6 +61,7 @@ export interface CreateFolderRequest {
 export interface UpdateFolderRequest {
 	name: string;
 	description?: string;
+	meta?: Record<string, unknown>;
 }
 
 export interface UpdateMockRequest {

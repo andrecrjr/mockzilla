@@ -188,15 +188,29 @@ export async function PUT(request: NextRequest) {
 			);
 		}
 
+		const [existingFolder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.id, id));
+
+		if (!existingFolder) {
+			return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+		}
+
 		const body: UpdateFolderRequest = await request.json();
-		const slug = generateSlug(body.name);
+		
+		// Only update slug if the name has actually changed
+		// This preserves -extension suffixes and avoids collisions during mock-only updates
+		const nameChanged = body.name !== existingFolder.name;
+		const slug = nameChanged ? generateSlug(body.name) : existingFolder.slug;
 
 		const [updatedFolder] = await db
 			.update(folders)
 			.set({
 				name: body.name,
 				slug,
-				description: body.description || null,
+				description: body.description ?? existingFolder.description,
+				meta: body.meta !== undefined ? body.meta : existingFolder.meta,
 				updatedAt: new Date(),
 			})
 			.where(eq(folders.id, id))
@@ -211,6 +225,7 @@ export async function PUT(request: NextRequest) {
 			name: updatedFolder.name,
 			slug: updatedFolder.slug,
 			description: updatedFolder.description || undefined,
+			meta: (updatedFolder.meta as Record<string, unknown>) || undefined,
 			createdAt: updatedFolder.createdAt.toISOString(),
 			updatedAt: updatedFolder.updatedAt?.toISOString(),
 		});

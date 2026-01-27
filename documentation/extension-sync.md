@@ -13,7 +13,10 @@ The goal of the synchronization system is to allow users to move data between th
 
 A key challenge in syncing is that the Extension and Server may support different feature sets at different times. For example, the Extension might support `variants` or `delays` before the Server has UI to display them.
 
-To solve this, Mockzilla uses a **High-Fidelity Storage Strategy**.
+To solve this, Mockzilla uses a **High-Fidelity Storage Strategy** with the following key aspects:
+- **Storage**: Synced data is stored in the `meta` column of the `folders` table under the `extensionSyncData` key.
+- **Updatability**: While mocks are primarily managed by the extension, you can now edit their metadata (Name, Method, Status Code, Enabled) directly in the Mockzilla Server UI. These changes are persisted in the folder metadata and are preserved unless overwritten by a subsequent sync from the extension.
+- **Portability**: Exporting server data includes this metadata, making the synced folders portable between Mockzilla instances.
 
 ### The `meta` Column
 

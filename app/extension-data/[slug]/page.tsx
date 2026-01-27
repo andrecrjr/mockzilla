@@ -16,6 +16,10 @@ interface ExtensionMock {
 	method: string;
 	statusCode: number;
 	enabled: boolean;
+	pattern?: string;
+	body?: string;
+	response?: string;
+	matchType?: string;
 	variants?: Array<{
 		id: string;
 		name: string;
@@ -107,7 +111,13 @@ export default function ExtensionFolderPage() {
 						<h2 className="mb-4 text-2xl font-semibold text-foreground">
 							Synced Mocks
 						</h2>
-						<ExtensionMockTable mocks={mocks} />
+						<ExtensionMockTable 
+							mocks={mocks} 
+							folderId={data.id}
+							folderName={data.name}
+							folderSlug={data.slug}
+							folderMeta={data.meta}
+						/>
 					</div>
 				</div>
 			</div>
