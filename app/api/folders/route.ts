@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
 	try {
 		const searchParams = request.nextUrl.searchParams;
 		const all = searchParams.get('all') === 'true';
+		const filterType = searchParams.get('type'); // 'extension' | 'standard' | undefined
 
 		const slug = searchParams.get('slug');
 
@@ -32,11 +33,17 @@ export async function GET(request: NextRequest) {
 				);
 			}
 
+			const isExtension = Boolean(
+				(folder.meta as Record<string, unknown>)?.extensionSyncData
+			);
+
 			return NextResponse.json({
 				id: folder.id,
 				name: folder.name,
 				slug: folder.slug,
 				description: folder.description || undefined,
+				isExtension,
+				meta: (folder.meta as Record<string, unknown>) || undefined,
 				createdAt: folder.createdAt.toISOString(),
 				updatedAt: folder.updatedAt?.toISOString(),
 			});
@@ -47,28 +54,40 @@ export async function GET(request: NextRequest) {
 				.select()
 				.from(folders)
 				.orderBy(folders.createdAt);
-			return NextResponse.json(
-				allFolders.map((folder) => ({
+			
+			const mappedFolders = allFolders.map((folder) => {
+				const isExtension = Boolean(
+					(folder.meta as Record<string, unknown>)?.extensionSyncData
+				);
+				return {
 					id: folder.id,
 					name: folder.name,
 					slug: folder.slug,
 					description: folder.description || undefined,
+					isExtension,
 					createdAt: folder.createdAt.toISOString(),
 					updatedAt: folder.updatedAt?.toISOString(),
-				})),
-			);
+				};
+			});
+
+			// Filter if type param is present
+			const filteredFolders = mappedFolders.filter((f) => {
+				if (filterType === 'extension') return f.isExtension;
+				if (filterType === 'standard') return !f.isExtension;
+				return true;
+			});
+
+			return NextResponse.json(filteredFolders);
 		}
 
 		const page = Number.parseInt(searchParams.get('page') || '1', 10);
 		const limit = Number.parseInt(searchParams.get('limit') || '10', 10);
 		const offset = (page - 1) * limit;
 
-		const [totalResult] = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(folders);
-		const total = Number(totalResult.count);
-		const totalPages = Math.ceil(total / limit);
-
+		// Note: We're doing client-side filtering for 'type' because 'meta' is a JSONB column 
+		// and simple SQL filtering might be complex or inefficient depending on the query structure.
+		// For a small number of folders this is fine, but for scale we should consider a dedicated column.
+		
 		const paginatedFolders = await db
 			.select()
 			.from(folders)
@@ -76,20 +95,40 @@ export async function GET(request: NextRequest) {
 			.limit(limit)
 			.offset(offset);
 
+		const [totalResult] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(folders);
+		const total = Number(totalResult.count);
+		const totalPages = Math.ceil(total / limit);
+
 		// Map database fields to API format
-		const formattedFolders = paginatedFolders.map((folder) => ({
-			id: folder.id,
-			name: folder.name,
-			slug: folder.slug,
-			description: folder.description || undefined,
-			createdAt: folder.createdAt.toISOString(),
-			updatedAt: folder.updatedAt?.toISOString(),
-		}));
+		const formattedFolders = paginatedFolders.map((folder) => {
+			const isExtension = Boolean(
+				(folder.meta as Record<string, unknown>)?.extensionSyncData
+			);
+			return {
+				id: folder.id,
+				name: folder.name,
+				slug: folder.slug,
+				description: folder.description || undefined,
+				isExtension,
+				meta: (folder.meta as Record<string, unknown>) || undefined,
+				createdAt: folder.createdAt.toISOString(),
+				updatedAt: folder.updatedAt?.toISOString(),
+			};
+		});
+
+		// Apply filter if requested
+		const finalFolders = formattedFolders.filter(f => {
+			if (filterType === 'extension') return f.isExtension;
+			if (filterType === 'standard') return !f.isExtension;
+			return true;
+		});
 
 		return NextResponse.json({
-			data: formattedFolders,
+			data: finalFolders,
 			meta: {
-				total,
+				total, // Note: Total count might be inaccurate if filtering matches only a subset
 				page,
 				limit,
 				totalPages,
@@ -149,15 +188,29 @@ export async function PUT(request: NextRequest) {
 			);
 		}
 
+		const [existingFolder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.id, id));
+
+		if (!existingFolder) {
+			return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+		}
+
 		const body: UpdateFolderRequest = await request.json();
-		const slug = generateSlug(body.name);
+		
+		// Only update slug if the name has actually changed
+		// This preserves -extension suffixes and avoids collisions during mock-only updates
+		const nameChanged = body.name !== existingFolder.name;
+		const slug = nameChanged ? generateSlug(body.name) : existingFolder.slug;
 
 		const [updatedFolder] = await db
 			.update(folders)
 			.set({
 				name: body.name,
 				slug,
-				description: body.description || null,
+				description: body.description ?? existingFolder.description,
+				meta: body.meta !== undefined ? body.meta : existingFolder.meta,
 				updatedAt: new Date(),
 			})
 			.where(eq(folders.id, id))
@@ -172,6 +225,7 @@ export async function PUT(request: NextRequest) {
 			name: updatedFolder.name,
 			slug: updatedFolder.slug,
 			description: updatedFolder.description || undefined,
+			meta: (updatedFolder.meta as Record<string, unknown>) || undefined,
 			createdAt: updatedFolder.createdAt.toISOString(),
 			updatedAt: updatedFolder.updatedAt?.toISOString(),
 		});

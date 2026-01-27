@@ -22,7 +22,7 @@ export const httpMethodEnum = pgEnum('http_method', [
 	'OPTIONS',
 ]);
 
-export const matchTypeEnum = pgEnum('match_type', ['exact', 'substring']);
+
 
 export const bodyTypeEnum = pgEnum('body_type', ['json', 'text']);
 
@@ -32,6 +32,7 @@ export const folders = pgTable('folders', {
 	name: text('name').notNull(),
 	slug: text('slug').notNull().unique(),
 	description: text('description'),
+	meta: jsonb('meta').default({}),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at'),
 });
@@ -46,7 +47,7 @@ export const mockResponses = pgTable('mock_responses', {
 	folderId: uuid('folder_id')
 		.notNull()
 		.references(() => folders.id, { onDelete: 'cascade' }),
-	matchType: matchTypeEnum('match_type').default('exact'),
+	matchType: text('match_type').default('exact'),
 	bodyType: bodyTypeEnum('body_type').default('json'),
 	enabled: boolean('enabled').default(true).notNull(),
 	jsonSchema: text('json_schema'),

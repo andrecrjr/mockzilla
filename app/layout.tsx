@@ -76,6 +76,12 @@ export default function RootLayout({
 												Mocks
 											</Link>
 											<Link
+												href="/extension-data"
+												className="text-foreground/80 hover:text-foreground hover:bg-accent px-3 py-2 rounded-md text-sm font-medium transition-colors"
+											>
+												Extension Sync
+											</Link>
+											<Link
 												href="/workflows"
 												className="text-foreground/80 hover:text-foreground hover:bg-accent px-3 py-2 rounded-md text-sm font-medium transition-colors"
 											>

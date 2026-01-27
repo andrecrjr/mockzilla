@@ -12,8 +12,9 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { CreateMockDialog } from '@/components/create-mock-dialog';
+import { CreateFolderDialog } from '@/components/create-folder-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
-import { FolderForm } from '@/components/folder-form';
+// import { FolderForm } from '@/components/folder-form'; // Removed
 import { PaginationControls } from '@/components/pagination-controls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -35,7 +36,7 @@ export default function MockzillaAdmin() {
 	const { data, isLoading: foldersLoading } = useSWR<{
 		data: Folder[];
 		meta: { total: number; page: number; limit: number; totalPages: number };
-	}>(`/api/folders?page=${page}&limit=${limit}`, fetcher, {
+	}>(`/api/folders?page=${page}&limit=${limit}&type=standard`, fetcher, {
 		onError: (error) => {
 			console.log('[v0] SWR error:', error);
 			toast.error('Failed to load folders', {
@@ -58,15 +59,10 @@ export default function MockzillaAdmin() {
 		toast.success('Folder Created', {
 			description: 'Your folder has been created successfully',
 		});
-		mutate(`/api/folders?page=${page}&limit=${limit}`);
+		mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 		mutate('/api/folders?all=true');
 	};
 
-	const handleError = (message: string) => {
-		toast.error('Error', {
-			description: message,
-		});
-	};
 
 	const handleDeleteFolder = async (id: string) => {
 		const response = await fetch(`/api/mocks?folderId=${id}`);
@@ -86,7 +82,7 @@ export default function MockzillaAdmin() {
 			toast.success('Folder Deleted', {
 				description: 'Folder has been removed',
 			});
-			mutate(`/api/folders?page=${page}&limit=${limit}`);
+			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 			mutate('/api/folders?all=true');
 		} catch {
 			toast.error('Error', {
@@ -111,11 +107,11 @@ export default function MockzillaAdmin() {
 			toast.success('Folder Updated', {
 				description: 'Folder has been updated successfully',
 			});
-			mutate(`/api/folders?page=${page}&limit=${limit}`);
+			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 			mutate('/api/folders?all=true');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			toast.error('Error', {
-				description: error.message || 'Failed to update folder',
+				description: error instanceof Error ? error.message : 'Failed to update folder',
 			});
 			throw error;
 		}
@@ -172,7 +168,7 @@ export default function MockzillaAdmin() {
 				description: `Imported ${result.imported.folders} folders and ${result.imported.mocks} mocks`,
 			});
 
-			mutate(`/api/folders?page=${page}&limit=${limit}`);
+			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
 			mutate('/api/folders?all=true');
 		} catch {
 			toast.error('Import Failed', {
@@ -192,6 +188,7 @@ export default function MockzillaAdmin() {
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
 							<div className="flex gap-2">
+								<CreateFolderDialog onSuccess={handleFolderSuccess} />
 								<CreateMockDialog folders={allFolders} />
 								<Button
 									variant="outline"
@@ -221,22 +218,9 @@ export default function MockzillaAdmin() {
 					</div>
 				</div>
 
-				<div className="grid gap-8 lg:grid-cols-3">
-					{/* Left Column - Create Folder Form */}
-					<div className="lg:col-span-1">
-						<Card className="mockzilla-border mockzilla-glow border-2 bg-card/50 backdrop-blur-sm p-6">
-							<h2 className="mb-4 text-2xl font-bold text-card-foreground">
-								Create Folder
-							</h2>
-							<FolderForm
-								onSuccess={handleFolderSuccess}
-								onError={handleError}
-							/>
-						</Card>
-					</div>
-
-					{/* Right Column - Folders Grid */}
-					<div className="lg:col-span-2">
+				<div className="grid gap-8">
+					{/* Folders Grid */}
+					<div className="col-span-full">
 						<div className="mb-4 flex items-center justify-between">
 							<h2 className="text-2xl font-bold text-foreground">Folders</h2>
 							<span className="rounded-lg bg-primary/20 px-3 py-1 text-sm font-semibold text-primary mockzilla-border">
@@ -262,21 +246,21 @@ export default function MockzillaAdmin() {
 							</Card>
 						) : (
 							<>
-								<div className="grid gap-4 sm:grid-cols-2">
+								<div className="grid gap-4 grid-cols-3">
 									{folders.map((folder) => (
 										<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
 												<div className="p-6">
 													<div className="flex items-start justify-between">
 														<Link href={`/folder/${folder.slug}`} key={folder.id}>
 														<div className="flex items-center gap-3 flex-1">
-															<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
+															<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
 																<FolderIcon className="h-6 w-6 text-primary" />
 															</div>
 															<div className="flex-1 min-w-0">
-																<h3 className="text-lg font-semibold text-card-foreground group-hover:text-primary transition-colors truncate">
+																<h3 className="text-lg font-semibold text-card-foreground group-hover:text-primary transition-colors">
 																	{folder.name}
 																</h3>
-																<p className="text-sm text-muted-foreground truncate">
+																<p className="text-sm text-muted-foreground">
 																	/{folder.slug}
 																</p>
 															</div>

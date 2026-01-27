@@ -6,7 +6,7 @@ export type HttpMethod =
 	| 'DELETE'
 	| 'HEAD'
 	| 'OPTIONS';
-export type MatchType = 'exact' | 'substring';
+export type MatchType = 'exact' | 'substring' | 'wildcard';
 export type BodyType = 'json' | 'text';
 
 export interface Folder {
@@ -14,6 +14,8 @@ export interface Folder {
 	name: string;
 	slug: string;
 	description?: string;
+	isExtension?: boolean;
+	meta?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt?: string;
 }
@@ -59,6 +61,7 @@ export interface CreateFolderRequest {
 export interface UpdateFolderRequest {
 	name: string;
 	description?: string;
+	meta?: Record<string, unknown>;
 }
 
 export interface UpdateMockRequest {
