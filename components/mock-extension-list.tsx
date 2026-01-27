@@ -103,13 +103,11 @@ export function MockExtensionList() {
 
 	return (
 		<div>
-			<div className="mb-4 flex items-center justify-between">
-				<h2 className="text-2xl font-bold text-foreground">Extension Data</h2>
+			<div className="mb-4 flex items-center justify-end">
 				<span className="rounded-lg bg-indigo-500/20 px-3 py-1 text-sm font-semibold text-indigo-500 mockzilla-border">
 					{meta.total} {meta.total === 1 ? 'folder' : 'folders'}
 				</span>
 			</div>
-
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{folders.map((folder) => (
 					<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full border-indigo-500/20">

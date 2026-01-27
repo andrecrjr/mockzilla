@@ -60,7 +60,7 @@ export default function ExtensionFolderPage() {
 					<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-12 text-center">
 						<h2 className="text-xl font-bold">Folder not found</h2>
 						<Button asChild className="mt-4">
-							<Link href="/extension-data">Back to Extension Data</Link>
+							<Link href="/extension-data">Back to Extension Sync</Link>
 						</Button>
 					</Card>
 				</div>
@@ -90,7 +90,7 @@ export default function ExtensionFolderPage() {
 							{data.name}
 						</h1>
 						<span className="rounded-full bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-500 border border-indigo-500/20">
-							Extension Data
+							Browser Extension Sync
 						</span>
 					</div>
 					<p className="mt-1 text-muted-foreground">/{data.slug}</p>
