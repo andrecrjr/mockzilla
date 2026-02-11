@@ -18,7 +18,7 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 
 ## 🛡️ Constraints & Boundaries
 
-- **Always** verify state changes using `inspect_workflow_state`.
+- **Always** verify state changes using `find_workflow` (action: `inspect_state`).
 - **Always** include a fallback transition for unhandled cases.
 - **Never** implement complex business logic (e.g., tax calculation) - echo inputs or return static varied results instead.
 - **Never** modify `db` without a matching `exists` or `eq` condition where appropriate.
@@ -94,7 +94,7 @@ Actions to persist data. Executed *before* the response is generated.
 ## 🔍 Debugging & Verification
 
 1.  **Inspect State**:
-    - Use `inspect_workflow_state` frequently to seeing if your effects actually worked.
+    - Use `find_workflow` with action `inspect_state` frequently to see if your effects actually worked.
     - "Why didn't my login work?" -> Check if `db.users` actually has the user!
 
 2.  **Transition Priority**:

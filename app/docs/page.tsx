@@ -308,24 +308,17 @@ export default function DocsPage() {
 										<div>
 											<h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Folders & Mocks</h4>
 											<ul className="list-disc pl-4 text-sm space-y-1">
-												<li><code>list_folders</code>, <code>create_folder</code>, <code>get_folder</code></li>
-												<li><code>update_folder</code>, <code>delete_folder</code></li>
-												<li><code>list_mocks</code>, <code>get_mock</code>, <code>delete_mock</code></li>
-												<li><code>create_mock</code>, <code>update_mock</code></li>
-												<li><code>create_schema_mock</code> (Advanced)</li>
+												<li><code>find_folders</code>, <code>manage_folders</code></li>
+												<li><code>find_mocks</code>, <code>manage_mocks</code></li>
 												<li><code>preview_mock</code></li>
 											</ul>
 										</div>
 										<div>
 											<h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Workflows & State</h4>
 											<ul className="list-disc pl-4 text-sm space-y-1">
-												<li><code>list_workflow_scenarios</code></li>
-												<li><code>create_workflow_scenario</code>, <code>delete_workflow_scenario</code></li>
-												<li><code>list_workflow_transitions</code>, <code>get_workflow_transition</code></li>
-												<li><code>create_workflow_transition</code>, <code>update_workflow_transition</code></li>
-												<li><code>delete_workflow_transition</code></li>
-												<li><code>inspect_workflow_state</code>, <code>reset_workflow_state</code></li>
-												<li><code>test_workflow</code>, <code>export_workflow</code>, <code>import_workflow</code></li>
+												<li><code>find_workflow</code>, <code>manage_workflow</code></li>
+												<li><code>test_workflow</code></li>
+												<li><code>import_export</code></li>
 											</ul>
 										</div>
 									</div>

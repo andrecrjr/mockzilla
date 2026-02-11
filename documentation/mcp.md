@@ -45,43 +45,32 @@ If your client only supports local `stdio` servers, use `mcp-remote` as a bridge
 
 ## Tool Reference
 
-Mockzilla exposes 24 specialized tools. They are grouped into four main categories:
+Mockzilla exposes 9 consolidated, domain-based tools. They use **Discriminated Unions** for actions (e.g., `create`, `update`, `delete`).
 
-### 1. Folders Management
-Tools for grouping and organizing mocks.
-- `list_folders`: List all folders with pagination.
-- `create_folder`: Create a new folder (name, description).
-- `get_folder`: Fetch detail by ID or slug.
-- `update_folder`: Modify folder metadata.
-- `delete_folder`: Remove a folder.
+### 1. Folders
+Manage grouping and organization of mocks.
+- `find_folders`: Search or list folders.
+  - Actions: `list`, `get`.
+- `manage_folders`: CRUD operations for folders.
+  - Actions: `create`, `update`, `delete`.
 
-### 2. Mocks Management
+### 2. Mocks
 Core tools for defining API responses.
-- `list_mocks`: Paginated list of mocks, optionally filtered by folder.
-- `create_mock`: Create a standard mock (static or basic dynamic).
-- `create_schema_mock`: **(Recommended)** Create a mock using JSON Schema with Faker directives.
-- `get_mock`: Get full mock definition.
-- `update_mock`: Update path, status, or response.
-- `delete_mock`: Delete a mock.
+- `find_mocks`: Search or list mocks.
+  - Actions: `list`, `get`.
+- `manage_mocks`: CRUD operations for mocks.
+  - Actions: `create`, `update`, `delete`. Supports standard mock creation and **JSON Schema** generation.
 - `preview_mock`: Test what a mock would return given a path and method.
 
-### 3. Workflow Scenarios
-Manage stateful, multi-step scenarios.
-- `list_workflow_scenarios`: List all active scenarios.
-- `create_workflow_scenario`: Create a container for isolated state.
-- `delete_workflow_scenario`: Delete a scenario and all its data.
-- `export_workflow`: Export a scenario to JSON for analysis or backup.
-- `import_workflow`: Import scenarios and transitions from JSON.
-
-### 4. Workflow Transitions & State
-Deep interaction with the workflow engine.
-- `list_workflow_transitions`: List rules for a specific scenario.
-- `create_workflow_transition`: Define a "WHEN/THEN" rule (Path, Method, Conditions, Effects, Response).
-- `update_workflow_transition`: Refine an existing rule.
-- `delete_workflow_transition`: Remove a rule.
-- `inspect_workflow_state`: **(Powerful)** View the current `state` and `tables` (mini-DB) for a scenario.
-- `reset_workflow_state`: Wipe the scenario state to start fresh.
+### 3. Workflows (Scenarios & Transitions)
+Manage stateful, multi-step scenarios and rules.
+- `find_workflow`: Inspect scenarios and their configurations.
+  - Actions: `list_scenarios`, `list_transitions`, `get_scenario`, `inspect_state`.
+- `manage_workflow`: CRUD for workflow components.
+  - Actions: `create_scenario`, `delete_scenario`, `create_transition`, `update_transition`, `delete_transition`, `reset_state`.
 - `test_workflow`: Simulate a request to verify complex logic/effects.
+- `import_export`: Bulk operations for workflow data.
+  - Actions: `import`, `export`.
 
 ---
 

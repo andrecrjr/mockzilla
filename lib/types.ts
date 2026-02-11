@@ -9,6 +9,14 @@ export type HttpMethod =
 export type MatchType = 'exact' | 'substring' | 'wildcard';
 export type BodyType = 'json' | 'text';
 
+export type JsonValue =
+	| string
+	| number
+	| boolean
+	| null
+	| JsonValue[]
+	| { [key: string]: JsonValue };
+
 export interface Folder {
 	id: string;
 	name: string;

@@ -248,25 +248,18 @@ Use AI assistants to interact with the Workflow engine via the MCP server at `ap
 
 ### Available Tools
 
-Mockzilla exposes **24 specialized tools** to AI assistants. They are grouped into four categories:
+Mockzilla exposes **9 consolidated tools** to AI assistants:
 
 #### 1. Folders & Mocks
-- `list_folders`, `create_folder`, `get_folder`, `update_folder`, `delete_folder`
-- `list_mocks`, `get_mock`, `create_mock`, `update_mock`, `delete_mock`
-- `create_schema_mock` (**Recommended** for dynamic data)
-- `preview_mock` (Validate responses)
+- `find_folders`, `manage_folders`: Generic CRUD for folder organization.
+- `find_mocks`, `manage_mocks`: Generic CRUD for defining API responses.
+- `preview_mock`: Validate responses before saving.
 
-#### 2. Workflow Scenarios
-- `list_workflow_scenarios`
-- `create_workflow_scenario`, `delete_workflow_scenario`
-- `export_workflow`, `import_workflow` (Snapshot and restore)
-
-#### 3. Transitions & State
-- `list_workflow_transitions`
-- `create_workflow_transition`, `update_workflow_transition`, `delete_workflow_transition`
-- `inspect_workflow_state` (View mini-DB and state variables)
-- `reset_workflow_state` (Wipe scenario data)
-- `test_workflow` (Simulate requests)
+#### 2. Workflows & State
+- `find_workflow`: List scenarios/transitions and inspect state/mini-DB.
+- `manage_workflow`: Create/Update/Delete scenarios and transitions; reset state.
+- `test_workflow`: Simulate requests against the workflow engine.
+- `import_export`: Bulk import/export of workflow data.
 
 For detailed installation and configuration, see `documentation/mcp.md`.
 

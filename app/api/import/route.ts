@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
 import type { ExportData, Folder, LegacyImportFormat, Mock } from '@/lib/types';
+import { isOpenApiFormat, convertOpenApiToMockzilla } from '@/lib/openapi-import';
 
 function generateSlug(name: string): string {
 	return name
@@ -112,6 +113,8 @@ export async function POST(request: NextRequest) {
 		let exportData: ExportData;
 		if (isLegacyFormat(body)) {
 			exportData = convertLegacyFormat(body);
+		} else if (isOpenApiFormat(body)) {
+			exportData = await convertOpenApiToMockzilla(body);
 		} else if (body.folders && body.mocks) {
 			exportData = body as ExportData;
 		} else {
@@ -134,7 +137,7 @@ export async function POST(request: NextRequest) {
 			// Import folders first
 			for (const folder of exportData.folders) {
 				// Skip folders that are marked as extension sync data
-				const meta = folder.meta as Record<string, any>;
+				const meta = folder.meta as Record<string, unknown>;
 				if (meta?.extensionSyncData) {
 					console.log(`[API] Skipping extension-synced folder: ${folder.name}`);
 					continue;

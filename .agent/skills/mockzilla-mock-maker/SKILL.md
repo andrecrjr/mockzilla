@@ -36,9 +36,9 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 | Task | Recommended Tool | Why? |
 | :--- | :--- | :--- |
-| **Simple Mock** | `create_schema_mock` | Supports JSON Schema + Faker + Interpolation automatically. |
-| **Realistic Data** | `create_schema_mock` | Best for generating lists, objects, and realistic strings. |
-| **Static Snippet** | `create_mock` | Quick for constant responses where variation isn't needed. |
+| **Simple Mock** | `manage_mocks` | Action `create`. Supports JSON Schema + Faker + Interpolation. |
+| **Realistic Data** | `manage_mocks` | Action `create`. Best for generating lists and objects. |
+| **Static Snippet** | `manage_mocks` | Action `create`. Quick for constant responses. |
 
 ---
 

@@ -1,5 +1,7 @@
 import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
+import { resolvePath } from './utils/path-resolver';
+import type { JsonValue } from './types';
 
 jsf.extend('faker', () => faker);
 
@@ -12,9 +14,6 @@ jsf.option({
 	maxItems: 5,
 });
 
-import { resolvePath } from './utils/path-resolver';
-
-
 /**
  * Deep traverses the generated object and applies template replacement
  * This is a second-pass traversal that resolves all {$.path} references
@@ -25,10 +24,10 @@ import { resolvePath } from './utils/path-resolver';
  * @returns Processed data with all templates resolved
  */
 function deepReplaceTemplates(
-	rootData: any,
-	currentData: any = rootData,
-	visited = new WeakSet(),
-): any {
+	rootData: JsonValue,
+	currentData: JsonValue = rootData,
+	visited = new WeakSet<object>(),
+): JsonValue {
 	// Prevent circular reference infinite loops
 	if (currentData && typeof currentData === 'object') {
 		if (visited.has(currentData)) {
@@ -56,14 +55,12 @@ function deepReplaceTemplates(
 			deepReplaceTemplates(rootData, item, visited),
 		);
 	} else if (currentData && typeof currentData === 'object') {
-		const processed: any = {};
+		// Use Record<string, JsonValue> for the processed object
+		const processed: Record<string, JsonValue> = {};
 		for (const key in currentData) {
 			if (Object.hasOwn(currentData, key)) {
-				processed[key] = deepReplaceTemplates(
-					rootData,
-					currentData[key],
-					visited,
-				);
+				const value = (currentData as Record<string, JsonValue>)[key];
+				processed[key] = deepReplaceTemplates(rootData, value, visited);
 			}
 		}
 		return processed;
@@ -80,7 +77,7 @@ export function validateSchema(schemaString: string): {
 	error?: string;
 } {
 	try {
-		const schema = JSON.parse(schemaString);
+		const schema = JSON.parse(schemaString) as Record<string, unknown>;
 
 		// Basic validation - check if it has type or properties
 		if (!schema.type && !schema.properties && !schema.$ref) {
@@ -109,7 +106,8 @@ export function validateSchema(schemaString: string): {
  */
 export function generateFromSchema(schema: object): string {
 	try {
-		const generated = jsf.generate(schema);
+        // jsf.generate returns any, so we cast it to JsonValue
+		const generated = jsf.generate(schema) as JsonValue;
 		const processed = deepReplaceTemplates(generated);
 
 		return JSON.stringify(processed, null, 2);
@@ -125,7 +123,10 @@ export function generateFromSchema(schema: object): string {
  * Ensures that pattern fields containing template syntax are preserved as-is,
  * instead of being treated as regular expressions by json-schema-faker.
  */
-function preprocessSchema(schema: any, visited = new WeakSet()): any {
+function preprocessSchema(
+	schema: JsonValue,
+	visited = new WeakSet<object>(),
+): JsonValue {
 	// Prevent circular reference infinite loops
 	if (schema && typeof schema === 'object') {
 		if (visited.has(schema)) {
@@ -137,11 +138,12 @@ function preprocessSchema(schema: any, visited = new WeakSet()): any {
 	if (Array.isArray(schema)) {
 		return schema.map((item) => preprocessSchema(item, visited));
 	} else if (schema && typeof schema === 'object') {
-		const processed: any = {};
+		const processed: Record<string, JsonValue> = {};
 
 		for (const key in schema) {
 			if (Object.hasOwn(schema, key)) {
-				processed[key] = preprocessSchema(schema[key], visited);
+                const value = (schema as Record<string, JsonValue>)[key];
+				processed[key] = preprocessSchema(value, visited);
 			}
 		}
 		return processed;
@@ -160,8 +162,13 @@ export function generateFromSchemaString(schemaString: string): string {
 		throw new Error(`Invalid schema: ${validation.error}`);
 	}
 
-	const schema = JSON.parse(schemaString);
+	const schema = JSON.parse(schemaString) as JsonValue;
 	const preprocessedSchema = preprocessSchema(schema);
+
+    // generateFromSchema expects object, check if preprocessedSchema is object
+    if (typeof preprocessedSchema !== 'object' || preprocessedSchema === null) {
+        throw new Error('Schema must be an object');
+    }
 
 	return generateFromSchema(preprocessedSchema);
 }
