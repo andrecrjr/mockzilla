@@ -39,66 +39,84 @@ const TransitionResponseSchema = z
 		'Response configuration. Interpolation supported for values: {{input.*}}, {{state.*}}, {{db.*}}',
 	);
 
-export const FindWorkflowSchema = z.discriminatedUnion('action', [
-	z.object({
-		action: z.literal('list_scenarios'),
-		page: z.number().int().min(1).optional(),
-		limit: z.number().int().min(1).max(100).optional(),
-	}),
-	z.object({
-		action: z.literal('list_transitions'),
-		scenarioId: z.string(),
-	}),
-	z.object({
-		action: z.literal('inspect_state'),
-		scenarioId: z.string(),
-	}),
+const FindWorkflowListScenariosSchema = z.object({
+	action: z.literal('list_scenarios'),
+	page: z.number().int().min(1).optional(),
+	limit: z.number().int().min(1).max(100).optional(),
+});
+
+const FindWorkflowListTransitionsSchema = z.object({
+	action: z.literal('list_transitions'),
+	scenarioId: z.string(),
+});
+
+const FindWorkflowInspectStateSchema = z.object({
+	action: z.literal('inspect_state'),
+	scenarioId: z.string(),
+});
+
+export const FindWorkflowSchema = z.union([
+	FindWorkflowListScenariosSchema,
+	FindWorkflowListTransitionsSchema,
+	FindWorkflowInspectStateSchema,
 ]);
 
-export const ManageWorkflowSchema = z.discriminatedUnion('action', [
-	z.object({
-		action: z.literal('create_scenario'),
-		name: z.string(),
-		description: z.string().optional(),
-	}),
-	z.object({
-		action: z.literal('delete_scenario'),
-		id: z.string(),
-	}),
-	z.object({
-		action: z.literal('create_transition'),
-		scenarioId: z.string(),
-		name: z.string(),
-		description: z.string().optional(),
-		path: z.string(),
-		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
-		conditions: TransitionConditionsSchema,
-		effects: TransitionEffectsSchema,
-		response: z
-			.preprocess(parseJsonOrPassthrough, z.record(z.string(), z.unknown()))
-			.describe('Response configuration (required for creation)'),
-		meta: z.preprocess(parseJsonOrPassthrough, z.record(z.string(), z.unknown()).optional()),
-	}),
-	z.object({
-		action: z.literal('update_transition'),
-		id: z.number().int(),
-		name: z.string().optional(),
-		description: z.string().optional(),
-		path: z.string().optional(),
-		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
-		conditions: TransitionConditionsSchema,
-		effects: TransitionEffectsSchema,
-		response: TransitionResponseSchema,
-		meta: z.preprocess(parseJsonOrPassthrough, z.record(z.string(), z.unknown()).optional()),
-	}),
-	z.object({
-		action: z.literal('delete_transition'),
-		id: z.number().int(),
-	}),
-	z.object({
-		action: z.literal('reset_state'),
-		scenarioId: z.string(),
-	}),
+const ManageWorkflowCreateScenarioSchema = z.object({
+	action: z.literal('create_scenario'),
+	name: z.string(),
+	description: z.string().optional(),
+});
+
+const ManageWorkflowDeleteScenarioSchema = z.object({
+	action: z.literal('delete_scenario'),
+	id: z.string(),
+});
+
+const ManageWorkflowCreateTransitionSchema = z.object({
+	action: z.literal('create_transition'),
+	scenarioId: z.string(),
+	name: z.string(),
+	description: z.string().optional(),
+	path: z.string(),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+	conditions: TransitionConditionsSchema,
+	effects: TransitionEffectsSchema,
+	response: z
+		.preprocess(parseJsonOrPassthrough, z.record(z.string(), z.unknown()))
+		.describe('Response configuration (required for creation)'),
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.string(), z.unknown()).optional()),
+});
+
+const ManageWorkflowUpdateTransitionSchema = z.object({
+	action: z.literal('update_transition'),
+	id: z.number().int(),
+	name: z.string().optional(),
+	description: z.string().optional(),
+	path: z.string().optional(),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
+	conditions: TransitionConditionsSchema,
+	effects: TransitionEffectsSchema,
+	response: TransitionResponseSchema,
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.string(), z.unknown()).optional()),
+});
+
+const ManageWorkflowDeleteTransitionSchema = z.object({
+	action: z.literal('delete_transition'),
+	id: z.number().int(),
+});
+
+const ManageWorkflowResetStateSchema = z.object({
+	action: z.literal('reset_state'),
+	scenarioId: z.string(),
+});
+
+export const ManageWorkflowSchema = z.union([
+	ManageWorkflowCreateScenarioSchema,
+	ManageWorkflowDeleteScenarioSchema,
+	ManageWorkflowCreateTransitionSchema,
+	ManageWorkflowUpdateTransitionSchema,
+	ManageWorkflowDeleteTransitionSchema,
+	ManageWorkflowResetStateSchema,
 ]);
 
 export const TestWorkflowSchema = z.object({
@@ -113,16 +131,17 @@ export const TestWorkflowSchema = z.object({
 	),
 });
 
-export const ImportExportSchema = z.discriminatedUnion('action', [
-	z.object({
-		action: z.literal('import'),
-		data: z.record(z.string(), z.unknown()).describe('The complete workflow data structure'),
-	}),
-	z.object({
-		action: z.literal('export'),
-		scenarioId: z.string().optional(),
-	}),
-]);
+const ImportExportImportSchema = z.object({
+	action: z.literal('import'),
+	data: z.record(z.string(), z.unknown()).describe('The complete workflow data structure'),
+});
+
+const ImportExportExportSchema = z.object({
+	action: z.literal('export'),
+	scenarioId: z.string().optional(),
+});
+
+export const ImportExportSchema = z.union([ImportExportImportSchema, ImportExportExportSchema]);
 
 export type FindWorkflowArgs = z.infer<typeof FindWorkflowSchema>;
 export type ManageWorkflowArgs = z.infer<typeof ManageWorkflowSchema>;
