@@ -1,0 +1,129 @@
+import type { MatchType } from '@/lib/types';
+
+export interface MockCandidate {
+	endpoint: string;
+	matchType: MatchType;
+	queryParams: Record<string, string> | null;
+	_score: number;
+}
+
+// -------------------------------------------------------
+// Wildcard matching (mirrors Chrome extension logic)
+// -------------------------------------------------------
+
+function escapeRegex(s: string): string {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function wildcardToRegex(p: string): RegExp {
+	const s = String(p || '');
+	const parts = s.split('*').map(escapeRegex);
+	const pattern = parts.join('(.+?)');
+	const anchored = s.includes('://')
+		? '^' + pattern + '$'
+		: '.*' + pattern + '$';
+	return new RegExp(anchored);
+}
+
+export function matchWildcard(
+	url: string,
+	pattern: string,
+): { ok: boolean; captures: string[] } {
+	const p = String(pattern || '');
+	const re = wildcardToRegex(p);
+	const m = re.exec(url);
+	if (!m) return { ok: false, captures: [] };
+	const caps = m.slice(1);
+	return { ok: true, captures: caps };
+}
+
+// -------------------------------------------------------
+// Query params matching
+// -------------------------------------------------------
+
+export function queryParamsMatch(
+	required: Record<string, string> | null | undefined,
+	actual: Record<string, string>,
+): boolean {
+	if (!required || Object.keys(required).length === 0) return true;
+	for (const [key, value] of Object.entries(required)) {
+		if (actual[key] !== value) return false;
+	}
+	return true;
+}
+
+// -------------------------------------------------------
+// Path matching per matchType
+// -------------------------------------------------------
+
+function pathMatchesPattern(
+	requestPath: string,
+	endpoint: string,
+	matchType: MatchType,
+): boolean {
+	switch (matchType) {
+		case 'exact':
+			return requestPath === endpoint;
+		case 'wildcard':
+			return matchWildcard(requestPath, endpoint).ok;
+		case 'substring':
+			return requestPath.includes(endpoint);
+		default:
+			return requestPath === endpoint;
+	}
+}
+
+// -------------------------------------------------------
+// Best match selection
+// -------------------------------------------------------
+
+const MATCH_TYPE_SCORE: Record<MatchType, number> = {
+	exact: 300,
+	wildcard: 200,
+	substring: 100,
+};
+
+function scoreCandidate(
+	candidate: MockCandidate,
+	requestPath: string,
+	urlQueryParams: Record<string, string>,
+): number {
+	if (!pathMatchesPattern(requestPath, candidate.endpoint, candidate.matchType)) {
+		return 0;
+	}
+	if (!queryParamsMatch(candidate.queryParams, urlQueryParams)) {
+		return 0;
+	}
+
+	let score = MATCH_TYPE_SCORE[candidate.matchType];
+
+	// Bonus for having query params requirement met (more specific)
+	if (candidate.queryParams && Object.keys(candidate.queryParams).length > 0) {
+		score += Object.keys(candidate.queryParams).length * 10;
+	}
+
+	// Tie-breaker: longer endpoint is more specific
+	score += candidate.endpoint.length;
+
+	return score;
+}
+
+export function findBestMatch(
+	requestPath: string,
+	urlQueryParams: Record<string, string>,
+	candidates: MockCandidate[],
+): MockCandidate | null {
+	let best: MockCandidate | null = null;
+	let bestScore = 0;
+
+	for (const c of candidates) {
+		const score = scoreCandidate(c, requestPath, urlQueryParams);
+		c._score = score;
+		if (score > bestScore) {
+			bestScore = score;
+			best = c;
+		}
+	}
+
+	return best;
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Info as InfoIcon } from 'lucide-react';
+import { Info as InfoIcon, Plus, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ import {
 	generateFromSchemaString,
 	validateSchema,
 } from '@/lib/schema-generator';
-import type { Folder, HttpMethod } from '@/lib/types';
+import type { Folder, HttpMethod, MatchType } from '@/lib/types';
 
 type MockFormValues = {
 	name: string;
@@ -30,6 +30,8 @@ type MockFormValues = {
 	statusCode: string;
 	folderId?: string;
 	response: string;
+	matchType?: MatchType;
+	queryParams?: Record<string, string> | null;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
@@ -57,6 +59,14 @@ const HTTP_METHODS: HttpMethod[] = [
 	'HEAD',
 	'OPTIONS',
 ];
+
+const MATCH_TYPES: MatchType[] = ['exact', 'wildcard', 'substring'];
+
+const MATCH_TYPE_DESCRIPTIONS: Record<MatchType, string> = {
+	exact: 'Path must match exactly',
+	wildcard: 'Use * as wildcard (e.g., /users/*)',
+	substring: 'Path contains the endpoint',
+};
 
 const STATUS_CODES = [
 	{ value: '200', label: '200 - OK' },
@@ -110,6 +120,16 @@ export function MockEditor({
 	const [echoRequestBody, setEchoRequestBody] = useState<boolean>(
 		Boolean(initial?.echoRequestBody),
 	);
+	const [matchType, setMatchType] = useState<MatchType>(
+		(initial?.matchType as MatchType) ?? 'exact',
+	);
+	const [queryParams, setQueryParams] = useState<
+		{ key: string; value: string }[]
+	>(() => {
+		const qp = initial?.queryParams as Record<string, string> | null | undefined;
+		if (!qp) return [];
+		return Object.entries(qp).map(([key, value]) => ({ key, value }));
+	});
 	const previewJson = useRef<HTMLTextAreaElement>(null);
 	const hydratedRef = useRef<boolean>(false);
 
@@ -126,6 +146,11 @@ export function MockEditor({
 			setJsonSchema(initial?.jsonSchema ?? '');
 			setUseDynamicResponse(Boolean(initial?.useDynamicResponse));
 			setEchoRequestBody(Boolean(initial?.echoRequestBody));
+			setMatchType((initial?.matchType as MatchType) ?? 'exact');
+			const qp = initial?.queryParams as Record<string, string> | null | undefined;
+			setQueryParams(
+				qp ? Object.entries(qp).map(([key, value]) => ({ key, value })) : [],
+			);
 			setActiveTab(initial?.jsonSchema ? 'schema' : 'manual');
 			hydratedRef.current = true;
 		}
@@ -225,6 +250,11 @@ export function MockEditor({
 			statusCode,
 			folderId: folderId || defaultFolderId,
 			response,
+			matchType,
+			queryParams:
+				queryParams.length > 0
+					? Object.fromEntries(queryParams.map((p) => [p.key, p.value]))
+					: null,
 			jsonSchema,
 			useDynamicResponse,
 			echoRequestBody,
@@ -319,6 +349,85 @@ export function MockEditor({
 								</span>
 							</p>
 						)}
+					</div>
+
+					<div className="space-y-2">
+						<Label htmlFor="match-type">Match Type</Label>
+						<Select
+							value={matchType}
+							onValueChange={(value) => setMatchType(value as MatchType)}
+						>
+							<SelectTrigger id="match-type">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{MATCH_TYPES.map((mt) => (
+									<SelectItem key={mt} value={mt}>
+										{mt.charAt(0).toUpperCase() + mt.slice(1)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<p className="text-xs text-muted-foreground">
+							{MATCH_TYPE_DESCRIPTIONS[matchType]}
+						</p>
+					</div>
+
+					<div className="space-y-2">
+						<Label>Query Params (optional)</Label>
+						<p className="text-xs text-muted-foreground">
+							Required query params for this mock to match. Leave empty to match
+							regardless of query params.
+						</p>
+						{queryParams.map((param, index) => (
+							<div key={index} className="flex items-center gap-2">
+								<Input
+									placeholder="key"
+									value={param.key}
+									onChange={(e) => {
+										const updated = [...queryParams];
+										updated[index] = { ...updated[index], key: e.target.value };
+										setQueryParams(updated);
+									}}
+									className="font-mono text-sm"
+								/>
+								<span className="text-muted-foreground">=</span>
+								<Input
+									placeholder="value"
+									value={param.value}
+									onChange={(e) => {
+										const updated = [...queryParams];
+										updated[index] = {
+											...updated[index],
+											value: e.target.value,
+										};
+										setQueryParams(updated);
+									}}
+									className="font-mono text-sm"
+								/>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									onClick={() => {
+										setQueryParams(queryParams.filter((_, i) => i !== index));
+									}}
+								>
+									<X className="h-4 w-4" />
+								</Button>
+							</div>
+						))}
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								setQueryParams([...queryParams, { key: '', value: '' }]);
+							}}
+						>
+							<Plus className="mr-1 h-3 w-3" />
+							Add Query Param
+						</Button>
 					</div>
 				</div>
 

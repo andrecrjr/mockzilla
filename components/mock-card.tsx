@@ -2,6 +2,7 @@
 
 import { Copy, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,12 @@ export function MockCard({
 		return `/api/mock/${folderSlug}${path}`;
 	};
 
+	const getQueryParamsString = () => {
+		const qp = mock.queryParams as Record<string, string> | null | undefined;
+		if (!qp || Object.keys(qp).length === 0) return '';
+		return '?' + Object.entries(qp).map(([k, v]) => `${k}=${v}`).join('&');
+	};
+
 	const getStatusCodeColor = (code: number) => {
 		if (code >= 200 && code < 300) {
 			return 'bg-green-500/10 text-green-600 dark:text-green-400';
@@ -65,6 +72,8 @@ export function MockCard({
 	};
 
 	const mockUrl = getMockUrl(folder?.slug || '', mock.path);
+	const queryParamsString = getQueryParamsString();
+	const mockUrlFull = queryParamsString ? `${mockUrl}${queryParamsString}` : mockUrl;
 
 	return (
 		<Card className="border-border bg-card p-6 transition-colors hover:bg-accent/5">
@@ -86,7 +95,24 @@ export function MockCard({
 							>
 								{mock.statusCode}
 							</span>
+							<Badge variant="outline" className="text-xs">
+								{mock.matchType || 'exact'}
+							</Badge>
 						</div>
+						{queryParamsString && (
+							<div className="mt-2 flex flex-wrap items-center gap-1">
+								<span className="text-xs text-muted-foreground">
+									Required params:
+								</span>
+								{Object.entries(
+									mock.queryParams as Record<string, string>,
+								).map(([key, value]) => (
+									<Badge key={key} variant="secondary" className="text-xs">
+										{key}={value}
+									</Badge>
+								))}
+							</div>
+						)}
 					</div>
 					<div className="flex gap-1">
 						<Button variant="ghost" size="icon" asChild>
@@ -109,21 +135,21 @@ export function MockCard({
 					<Label className="text-xs text-muted-foreground">Mock URL</Label>
 					<div className="flex gap-2">
 						<Input
-							value={mockUrl}
+							value={mockUrlFull}
 							readOnly
 							className="flex-1 font-mono text-sm"
 						/>
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={() => onCopy(mockUrl)}
+							onClick={() => onCopy(mockUrlFull)}
 						>
 							<Copy className="h-4 w-4" />
 						</Button>
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={() => window.open(mockUrl, '_blank')}
+							onClick={() => window.open(mockUrlFull, '_blank')}
 						>
 							<ExternalLink className="h-4 w-4" />
 						</Button>

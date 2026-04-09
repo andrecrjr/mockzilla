@@ -77,6 +77,8 @@ export default function FolderPage() {
 			method: HttpMethod;
 			response: string;
 			statusCode: number;
+			matchType?: string;
+			queryParams?: Record<string, string> | null;
 		},
 	) => {
 		try {

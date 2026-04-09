@@ -43,6 +43,8 @@ export function CreateMockDialog({
 		statusCode: string;
 		folderId?: string;
 		response: string;
+		matchType?: string;
+		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
 	}) => {
@@ -55,6 +57,8 @@ export function CreateMockDialog({
 				response: values.response,
 				statusCode: Number.parseInt(values.statusCode),
 				folderId: values.folderId || defaultFolderId || '',
+				matchType: values.matchType as CreateMockRequest['matchType'],
+				queryParams: values.queryParams,
 				jsonSchema: values.jsonSchema,
 				useDynamicResponse: values.useDynamicResponse,
 			};

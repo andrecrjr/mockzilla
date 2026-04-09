@@ -31,6 +31,7 @@ export interface Mock {
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
+	queryParams?: Record<string, string> | null;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
@@ -48,6 +49,7 @@ export interface CreateMockRequest {
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
+	queryParams?: Record<string, string> | null;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
@@ -73,6 +75,7 @@ export interface UpdateMockRequest {
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
+	queryParams?: Record<string, string> | null;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;

@@ -19,7 +19,9 @@ const mockResponse = {
     bodyType: "json",
     useDynamicResponse: false,
     echoRequestBody: false,
-    enabled: true
+    enabled: true,
+    matchType: "exact",
+    queryParams: null,
 };
 
 // 2. Chainable mock builder

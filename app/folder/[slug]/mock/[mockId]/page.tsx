@@ -40,6 +40,8 @@ export default function EditMockPage() {
 		method: string;
 		statusCode: string;
 		response: string;
+		matchType?: string;
+		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
 	}) => {
@@ -75,6 +77,8 @@ export default function EditMockPage() {
 					method: values.method,
 					response: values.response,
 					statusCode: Number.parseInt(values.statusCode),
+					matchType: values.matchType,
+					queryParams: values.queryParams,
 					jsonSchema: values.jsonSchema,
 					useDynamicResponse: values.useDynamicResponse,
 				}),
@@ -139,8 +143,11 @@ export default function EditMockPage() {
 											method: mock.method,
 											statusCode: mock.statusCode.toString(),
 											response: mock.response,
+											matchType: mock.matchType,
+											queryParams: mock.queryParams,
 											jsonSchema: mock.jsonSchema || '',
 											useDynamicResponse: Boolean(mock.useDynamicResponse),
+											echoRequestBody: Boolean(mock.echoRequestBody),
 										}
 									: undefined
 							}

@@ -50,6 +50,7 @@ export const mockResponses = pgTable('mock_responses', {
 	matchType: text('match_type').default('exact'),
 	bodyType: bodyTypeEnum('body_type').default('json'),
 	enabled: boolean('enabled').default(true).notNull(),
+	queryParams: jsonb('query_params'),
 	jsonSchema: text('json_schema'),
 	useDynamicResponse: boolean('use_dynamic_response').default(false).notNull(),
 	echoRequestBody: boolean('echo_request_body').default(false).notNull(),

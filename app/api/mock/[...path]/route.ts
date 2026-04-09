@@ -2,7 +2,12 @@ import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
-import type { HttpMethod } from '@/lib/types';
+import type { HttpMethod, MatchType } from '@/lib/types';
+import {
+	findBestMatch,
+	queryParamsMatch,
+} from '@/lib/utils/mock-matcher';
+import type { MockCandidate } from '@/lib/utils/mock-matcher';
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const pathSegments = params.path;
@@ -19,6 +24,10 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const folderSlug = pathSegments[0];
 	const mockPath = `/${pathSegments.slice(1).join('/')}`;
 
+	// Extract query params from request URL
+	const url = request.nextUrl;
+	const urlQueryParams = Object.fromEntries(url.searchParams.entries());
+
 	try {
 		// Find the folder by slug
 		const [folder] = await db
@@ -34,8 +43,8 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			);
 		}
 
-		// Find matching mock by folderId, endpoint, and method
-		const [mock] = await db
+		// --- Phase 1: Exact match (existing behavior, zero breaking change) ---
+		const [exactMock] = await db
 			.select()
 			.from(mockResponses)
 			.where(
@@ -43,11 +52,48 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					eq(mockResponses.folderId, folder.id),
 					eq(mockResponses.endpoint, mockPath),
 					eq(mockResponses.method, method),
+					eq(mockResponses.enabled, true),
 				),
 			)
 			.limit(1);
 
-		if (!mock) {
+		if (exactMock && exactMock.matchType === 'exact') {
+			// Check query params if the mock has requirements
+			const qpRequired = exactMock.queryParams as Record<string, string> | null;
+			if (!queryParamsMatch(qpRequired, urlQueryParams)) {
+				// Query params don't match — fall through to Phase 2
+			} else {
+				return await buildResponse(exactMock, request);
+			}
+		} else if (exactMock) {
+			// Found by exact path but matchType is not 'exact' — this means
+			// the endpoint happens to equal the path but is configured as wildcard/substring.
+			// We still need to evaluate it properly in Phase 2.
+		}
+
+		// --- Phase 2: Fallback — fetch all mocks for folder+method and evaluate ---
+		const allMocks = await db
+			.select()
+			.from(mockResponses)
+			.where(
+				and(
+					eq(mockResponses.folderId, folder.id),
+					eq(mockResponses.method, method),
+					eq(mockResponses.enabled, true),
+				),
+			);
+
+		// Build candidates
+		const candidates: MockCandidate[] = allMocks.map((m) => ({
+			endpoint: m.endpoint,
+			matchType: (m.matchType as MatchType) || 'exact',
+			queryParams: (m.queryParams as Record<string, string> | null) ?? null,
+			_score: 0,
+		}));
+
+		const best = findBestMatch(mockPath, urlQueryParams, candidates);
+
+		if (!best) {
 			return NextResponse.json(
 				{
 					error: 'Mock endpoint not found',
@@ -58,83 +104,28 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				{ status: 404 },
 			);
 		}
-		// Check if we should echo the request body
-		if (mock.echoRequestBody) {
-			const contentType = request.headers.get('content-type') || 'text/plain';
 
-			if (contentType.includes('application/json')) {
-				try {
-					const body = await request.json();
-					return NextResponse.json(body, { status: mock.statusCode });
-				} catch {
-					// If JSON parsing fails, fall back to text
-					const body = await request.text();
-					return new NextResponse(body, {
-						status: mock.statusCode,
-						headers: { 'Content-Type': contentType },
-					});
-				}
-			} else {
-				const body = await request.text();
-				return new NextResponse(body, {
-					status: mock.statusCode,
-					headers: { 'Content-Type': contentType },
-				});
-			}
+		// Find the full mock record for the best match
+		const bestMock = allMocks.find(
+			(m) =>
+				m.endpoint === best.endpoint &&
+				(m.matchType as MatchType || 'exact') === best.matchType &&
+				JSON.stringify(m.queryParams) === JSON.stringify(best.queryParams),
+		);
+
+		if (!bestMock) {
+			return NextResponse.json(
+				{
+					error: 'Mock endpoint not found',
+					folder: folderSlug,
+					path: mockPath,
+					method,
+				},
+				{ status: 404 },
+			);
 		}
 
-		// Check if this mock uses dynamic schema-based responses
-		if (mock.useDynamicResponse && mock.jsonSchema) {
-			try {
-				// Import the schema generator utility
-				const { generateFromSchema } = await import('@/lib/schema-generator');
-
-				// Generate fresh JSON from the schema on each request
-				const generatedJson = generateFromSchema(JSON.parse(mock.jsonSchema));
-
-				return NextResponse.json(JSON.parse(generatedJson), {
-					status: mock.statusCode,
-				});
-			} catch (error) {
-				console.error('[API] Error generating from schema:', error);
-				// Fallback to static response if generation fails
-				try {
-					return NextResponse.json(JSON.parse(mock.response), {
-						status: mock.statusCode,
-					});
-				} catch {
-					return new NextResponse(mock.response, {
-						status: mock.statusCode,
-						headers: { 'Content-Type': 'application/json' },
-					});
-				}
-			}
-		}
-
-		// Return the mock response with the configured status code
-		const contentType =
-			mock.bodyType === 'json' ? 'application/json' : 'text/plain';
-
-		// Try to parse as JSON if bodyType is json
-		const responseBody = mock.response;
-		if (mock.bodyType === 'json') {
-			try {
-				return NextResponse.json(JSON.parse(mock.response), {
-					status: mock.statusCode,
-				});
-			} catch {
-				// If parsing fails, return as text
-				return new NextResponse(mock.response, {
-					status: mock.statusCode,
-					headers: { 'Content-Type': contentType },
-				});
-			}
-		}
-
-		return new NextResponse(responseBody, {
-			status: mock.statusCode,
-			headers: { 'Content-Type': contentType },
-		});
+		return await buildResponse(bestMock, request);
 	} catch (error) {
 		if (error instanceof Error) {
 			console.error('[API] Error serving mock:', error.message);
@@ -145,6 +136,98 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			{ error: 'Failed to serve mock response' },
 			{ status: 500 },
 		);
+	}
+}
+
+async function buildResponse(mock: typeof mockResponses.$inferSelect, request: NextRequest): Promise<NextResponse> {
+	// Check if we should echo the request body
+	if (mock.echoRequestBody) {
+		return handleEchoRequestBody(mock, request);
+	}
+
+	// Check if this mock uses dynamic schema-based responses
+	if (mock.useDynamicResponse && mock.jsonSchema) {
+		return handleDynamicResponse(mock);
+	}
+
+	// Return the mock response with the configured status code
+	const contentType =
+		mock.bodyType === 'json' ? 'application/json' : 'text/plain';
+
+	const responseBody = mock.response;
+	if (mock.bodyType === 'json') {
+		try {
+			return NextResponse.json(JSON.parse(mock.response), {
+				status: mock.statusCode,
+			});
+		} catch {
+			// If parsing fails, return as text
+			return new NextResponse(mock.response, {
+				status: mock.statusCode,
+				headers: { 'Content-Type': contentType },
+			});
+		}
+	}
+
+	return new NextResponse(responseBody, {
+		status: mock.statusCode,
+		headers: { 'Content-Type': contentType },
+	});
+}
+
+async function handleEchoRequestBody(
+	mock: typeof mockResponses.$inferSelect,
+	request: NextRequest,
+): Promise<NextResponse> {
+	const contentType = request.headers.get('content-type') || 'text/plain';
+
+	if (contentType.includes('application/json')) {
+		try {
+			const body = await request.json();
+			return NextResponse.json(body, { status: mock.statusCode });
+		} catch {
+			// If JSON parsing fails, fall back to text
+			const body = await request.text();
+			return new NextResponse(body, {
+				status: mock.statusCode,
+				headers: { 'Content-Type': contentType },
+			});
+		}
+	} else {
+		const body = await request.text();
+		return new NextResponse(body, {
+			status: mock.statusCode,
+			headers: { 'Content-Type': contentType },
+		});
+	}
+}
+
+async function handleDynamicResponse(
+	mock: typeof mockResponses.$inferSelect,
+): Promise<NextResponse> {
+	try {
+		// Import the schema generator utility
+		const { generateFromSchema } = await import('@/lib/schema-generator');
+
+		// Generate fresh JSON from the schema on each request
+		const generatedJson = generateFromSchema(JSON.parse(mock.jsonSchema!));
+
+		return NextResponse.json(JSON.parse(generatedJson), {
+			status: mock.statusCode,
+		});
+	} catch (error) {
+		console.error('[API] Error generating from schema:', error);
+		// Fallback to static response if generation fails
+		try {
+			return NextResponse.json(JSON.parse(mock.response), {
+				status: mock.statusCode,
+			});
+		} catch {
+			return new NextResponse(mock.response, {
+				status: mock.statusCode,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
 	}
 }
 

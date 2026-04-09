@@ -34,7 +34,7 @@ db-migrate:
 
 # Development commands
 dev-up:
-	docker compose up --remove-orphans
+	docker compose up --remove-orphans -d
 
 dev-down:
 	docker compose down --remove-orphans
@@ -43,7 +43,7 @@ dev-logs:
 	docker compose logs -f
 
 dev-build:
-	docker compose build --no-cache
+	docker compose up --build --no-cache -d
 
 dev-restart:
 	docker compose restart
