@@ -60,6 +60,9 @@ const HTTP_METHODS: HttpMethod[] = [
 	'OPTIONS',
 ];
 
+// UI-visible match types only (wildcard handled client-side by Chrome extension)
+const UI_MATCH_TYPES: MatchType[] = ['exact', 'substring'];
+
 const MATCH_TYPES: MatchType[] = ['exact', 'wildcard', 'substring'];
 
 const MATCH_TYPE_DESCRIPTIONS: Record<MatchType, string> = {
@@ -361,7 +364,7 @@ export function MockEditor({
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{MATCH_TYPES.map((mt) => (
+								{UI_MATCH_TYPES.map((mt) => (
 									<SelectItem key={mt} value={mt}>
 										{mt.charAt(0).toUpperCase() + mt.slice(1)}
 									</SelectItem>
