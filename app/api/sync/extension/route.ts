@@ -28,9 +28,10 @@ interface ExtensionMock {
     body: string;
     response: string;
     statusCode: number;
-    matchType: MatchType;
+    matchType: string;
     enabled: boolean;
     variants?: ExtensionVariant[];
+    wildcardRequireMatch?: boolean;
 }
 
 interface ExtensionGroup {
@@ -115,7 +116,9 @@ export async function POST(request: NextRequest) {
                             matchType: mock.matchType || 'substring', // Enforce default
                             bodyType: 'json', // Extension sends JSON predominantly, or we can add a field for it
                             enabled: mock.enabled,
-                            useDynamicResponse: false, 
+                            useDynamicResponse: false,
+                            variants: mock.variants || null,
+                            wildcardRequireMatch: mock.wildcardRequireMatch || false,
                         });
                         results.mocksSynced++;
                     }

@@ -9,6 +9,13 @@ export type HttpMethod =
 export type MatchType = 'exact' | 'substring' | 'wildcard';
 export type BodyType = 'json' | 'text';
 
+export interface MockVariant {
+	key: string;
+	body: string;
+	statusCode: number;
+	bodyType: string;
+}
+
 export interface Folder {
 	id: string;
 	name: string;
@@ -32,6 +39,8 @@ export interface Mock {
 	bodyType?: BodyType;
 	enabled?: boolean;
 	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
@@ -50,6 +59,8 @@ export interface CreateMockRequest {
 	bodyType?: BodyType;
 	enabled?: boolean;
 	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
@@ -76,6 +87,8 @@ export interface UpdateMockRequest {
 	bodyType?: BodyType;
 	enabled?: boolean;
 	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;

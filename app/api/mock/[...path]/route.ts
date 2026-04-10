@@ -3,9 +3,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
 import type { HttpMethod, MatchType } from '@/lib/types';
+import type { MockVariant } from '@/lib/types';
 import {
 	findBestMatch,
 	queryParamsMatch,
+	selectVariant as selectMockVariant,
 } from '@/lib/utils/mock-matcher';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 
@@ -83,12 +85,13 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				),
 			);
 
-		// Build candidates
+		// Build candidates (include full mock reference for variant lookup)
 		const candidates: MockCandidate[] = allMocks.map((m) => ({
 			endpoint: m.endpoint,
 			matchType: (m.matchType as MatchType) || 'exact',
 			queryParams: (m.queryParams as Record<string, string> | null) ?? null,
 			_score: 0,
+			_id: m.id,
 		}));
 
 		const best = findBestMatch(mockPath, urlQueryParams, candidates);
@@ -123,6 +126,40 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				},
 				{ status: 404 },
 			);
+		}
+
+		// For wildcard mocks with variants, try to select a matching variant
+		if (bestMock.matchType === 'wildcard') {
+			const variants = bestMock.variants as MockVariant[] | null;
+			const wildcardRequireMatch = bestMock.wildcardRequireMatch || false;
+
+			if (variants && variants.length > 0) {
+				const variant = selectMockVariant(variants, mockPath, bestMock.endpoint);
+				if (variant) {
+					// Use variant's body, statusCode, bodyType
+					const variantMock = {
+						...bestMock,
+						response: variant.body,
+						statusCode: variant.statusCode,
+						bodyType: variant.bodyType as 'json' | 'text',
+					};
+					return await buildResponse(variantMock, request);
+				}
+
+				// No variant matched
+				if (wildcardRequireMatch) {
+					return NextResponse.json(
+						{
+							error: 'No matching variant found',
+							folder: folderSlug,
+							path: mockPath,
+							method,
+						},
+						{ status: 404 },
+					);
+				}
+				// Fall back to default mock body
+			}
 		}
 
 		return await buildResponse(bestMock, request);

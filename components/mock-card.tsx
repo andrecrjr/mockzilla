@@ -21,6 +21,13 @@ interface MockCardProps {
 			method: HttpMethod;
 			response: string;
 			statusCode: number;
+			variants?: Array<{
+				key: string;
+				body: string;
+				statusCode: number;
+				bodyType: string;
+			}> | null;
+			wildcardRequireMatch?: boolean;
 		},
 	) => Promise<void>;
 	onCopy: (text: string) => void;
@@ -43,7 +50,12 @@ export function MockCard({
 	const getQueryParamsString = () => {
 		const qp = mock.queryParams as Record<string, string> | null | undefined;
 		if (!qp || Object.keys(qp).length === 0) return '';
-		return '?' + Object.entries(qp).map(([k, v]) => `${k}=${v}`).join('&');
+		return (
+			'?' +
+			Object.entries(qp)
+				.map(([k, v]) => `${k}=${v}`)
+				.join('&')
+		);
 	};
 
 	const getStatusCodeColor = (code: number) => {
@@ -73,7 +85,9 @@ export function MockCard({
 
 	const mockUrl = getMockUrl(folder?.slug || '', mock.path);
 	const queryParamsString = getQueryParamsString();
-	const mockUrlFull = queryParamsString ? `${mockUrl}${queryParamsString}` : mockUrl;
+	const mockUrlFull = queryParamsString
+		? `${mockUrl}${queryParamsString}`
+		: mockUrl;
 
 	return (
 		<Card className="border-border bg-card p-6 transition-colors hover:bg-accent/5">
@@ -98,19 +112,25 @@ export function MockCard({
 							<Badge variant="outline" className="text-xs">
 								{mock.matchType || 'exact'}
 							</Badge>
+							{mock.variants && mock.variants.length > 0 && (
+								<Badge variant="secondary" className="text-xs">
+									{mock.variants.length} variant
+									{mock.variants.length > 1 ? 's' : ''}
+								</Badge>
+							)}
 						</div>
 						{queryParamsString && (
 							<div className="mt-2 flex flex-wrap items-center gap-1">
 								<span className="text-xs text-muted-foreground">
 									Required params:
 								</span>
-								{Object.entries(
-									mock.queryParams as Record<string, string>,
-								).map(([key, value]) => (
-									<Badge key={key} variant="secondary" className="text-xs">
-										{key}={value}
-									</Badge>
-								))}
+								{Object.entries(mock.queryParams as Record<string, string>).map(
+									([key, value]) => (
+										<Badge key={key} variant="secondary" className="text-xs">
+											{key}={value}
+										</Badge>
+									),
+								)}
 							</div>
 						)}
 					</div>

@@ -44,6 +44,8 @@ export default function EditMockPage() {
 		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
+		variants?: Array<{ key: string; body: string; statusCode: number; bodyType: string }> | null;
+		wildcardRequireMatch?: boolean;
 	}) => {
 		if (!mock || !folder) return;
 		setIsLoading(true);
@@ -81,6 +83,8 @@ export default function EditMockPage() {
 					queryParams: values.queryParams,
 					jsonSchema: values.jsonSchema,
 					useDynamicResponse: values.useDynamicResponse,
+					variants: values.variants,
+					wildcardRequireMatch: values.wildcardRequireMatch,
 				}),
 			});
 			if (!res.ok) {
@@ -148,6 +152,8 @@ export default function EditMockPage() {
 											jsonSchema: mock.jsonSchema || '',
 											useDynamicResponse: Boolean(mock.useDynamicResponse),
 											echoRequestBody: Boolean(mock.echoRequestBody),
+											variants: mock.variants,
+											wildcardRequireMatch: Boolean(mock.wildcardRequireMatch),
 										}
 									: undefined
 							}

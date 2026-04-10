@@ -4,8 +4,10 @@ import {
   matchWildcard,
   queryParamsMatch,
   findBestMatch,
+  extractCaptureKey,
+  selectVariant,
 } from "../../lib/utils/mock-matcher";
-import type { MockCandidate } from "../../lib/utils/mock-matcher";
+import type { MockCandidate, MockVariant } from "../../lib/utils/mock-matcher";
 
 // -------------------------------------------------------
 // wildcardToRegex
@@ -193,5 +195,96 @@ describe("findBestMatch", () => {
     ];
     const result = findBestMatch("/api/users/123", {}, candidates);
     expect(result).toBeNull();
+  });
+});
+
+// -------------------------------------------------------
+// extractCaptureKey
+// -------------------------------------------------------
+describe("extractCaptureKey", () => {
+  test("extracts single capture key", () => {
+    const key = extractCaptureKey("/api/users/123", "/api/users/*");
+    expect(key).toBe("123");
+  });
+
+  test("extracts multiple capture keys joined by |", () => {
+    const key = extractCaptureKey(
+      "/api/users/alice/status/active",
+      "/api/users/*/status/*"
+    );
+    expect(key).toBe("alice|active");
+  });
+
+  test("returns null when pattern has no wildcards", () => {
+    const key = extractCaptureKey("/api/users/123", "/api/users/123");
+    expect(key).toBeNull();
+  });
+
+  test("returns null when URL doesn't match pattern", () => {
+    const key = extractCaptureKey("/api/users", "/api/users/*");
+    expect(key).toBeNull();
+  });
+});
+
+// -------------------------------------------------------
+// selectVariant
+// -------------------------------------------------------
+describe("selectVariant", () => {
+  const variants: MockVariant[] = [
+    { key: "123", body: '{"id": 123}', statusCode: 200, bodyType: "json" },
+    { key: "456", body: '{"id": 456}', statusCode: 200, bodyType: "json" },
+  ];
+
+  test("selects variant by captured key", () => {
+    const result = selectVariant(variants, "/api/users/123", "/api/users/*");
+    expect(result).toEqual(variants[0]);
+  });
+
+  test("selects correct variant for different key", () => {
+    const result = selectVariant(variants, "/api/users/456", "/api/users/*");
+    expect(result).toEqual(variants[1]);
+  });
+
+  test("returns null when no variant matches the capture key", () => {
+    const result = selectVariant(variants, "/api/users/789", "/api/users/*");
+    expect(result).toBeNull();
+  });
+
+  test("returns null when variants array is empty", () => {
+    const result = selectVariant([], "/api/users/123", "/api/users/*");
+    expect(result).toBeNull();
+  });
+
+  test("returns null when variants is null", () => {
+    const result = selectVariant(null, "/api/users/123", "/api/users/*");
+    expect(result).toBeNull();
+  });
+
+  test("returns null when URL doesn't match pattern", () => {
+    const result = selectVariant(variants, "/api/users", "/api/users/*");
+    expect(result).toBeNull();
+  });
+
+  test("handles multi-segment captures", () => {
+    const multiVariants: MockVariant[] = [
+      {
+        key: "alice|active",
+        body: '{"user": "alice"}',
+        statusCode: 200,
+        bodyType: "json",
+      },
+      {
+        key: "bob|inactive",
+        body: '{"user": "bob"}',
+        statusCode: 200,
+        bodyType: "json",
+      },
+    ];
+    const result = selectVariant(
+      multiVariants,
+      "/api/users/alice/status/active",
+      "/api/users/*/status/*"
+    );
+    expect(result).toEqual(multiVariants[0]);
   });
 });

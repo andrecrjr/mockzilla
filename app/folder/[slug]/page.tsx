@@ -79,6 +79,8 @@ export default function FolderPage() {
 			statusCode: number;
 			matchType?: string;
 			queryParams?: Record<string, string> | null;
+			variants?: Array<{ key: string; body: string; statusCode: number; bodyType: string }> | null;
+			wildcardRequireMatch?: boolean;
 		},
 	) => {
 		try {

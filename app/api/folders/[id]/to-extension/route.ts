@@ -9,13 +9,15 @@ interface ExtensionMock {
     id: string;
     name: string;
     pattern: string;
-    method: HttpMethod;
+    method: string;
     body: string;
     response: string;
     statusCode: number;
-    matchType: MatchType;
+    matchType: string;
     enabled: boolean;
 	bodyType: 'json' | 'text';
+    variants: { key: string; bodyType: string; statusCode: number; body: string }[];
+    wildcardRequireMatch: boolean;
 }
 
 interface ExtensionGroup {
@@ -66,36 +68,43 @@ export async function GET(
         const extensionSyncData = meta?.extensionSyncData;
 
         const extensionMocks: ExtensionMock[] = mocks.map(mock => {
-            const originalMock = extensionSyncData?.mocks?.find(m => 
-                m.name === mock.name && 
-                m.pattern === mock.endpoint && 
+            const originalMock = extensionSyncData?.mocks?.find(m =>
+                m.name === mock.name &&
+                m.pattern === mock.endpoint &&
                 m.method === mock.method
             );
+
+            const variants = mock.variants ? (mock.variants as { key: string; bodyType: string; statusCode: number; body: string }[]) : [];
+            const wildcardRequireMatch = mock.wildcardRequireMatch || false;
 
             if (originalMock) {
                 return {
                     ...originalMock,
                     pattern: mock.endpoint,
-                    method: (mock.method as HttpMethod) || 'GET',
+                    method: mock.method || 'GET',
                     body: mock.response,
                     response: mock.response,
                     statusCode: mock.statusCode,
                     enabled: mock.enabled,
                     bodyType: mock.bodyType || originalMock.bodyType || 'json',
-                    id: originalMock.id 
+                    id: originalMock.id,
+                    variants: variants.length > 0 ? variants : originalMock.variants || [],
+                    wildcardRequireMatch: wildcardRequireMatch || originalMock.wildcardRequireMatch || false,
                 };
             }
             return {
                 id: mock.id,
                 name: mock.name,
                 pattern: mock.endpoint,
-                method: (mock.method as HttpMethod) || 'GET',
+                method: mock.method || 'GET',
                 body: mock.response,
                 response: mock.response,
                 statusCode: mock.statusCode,
-                matchType: 'substring',
+                matchType: mock.matchType || 'substring',
                 enabled: mock.enabled,
-                bodyType: mock.bodyType || 'json'
+                bodyType: mock.bodyType || 'json',
+                variants,
+                wildcardRequireMatch,
             };
         });
 

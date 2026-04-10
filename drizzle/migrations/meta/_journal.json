@@ -15,6 +15,13 @@
       "when": 1775754993833,
       "tag": "0001_kind_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775769931314,
+      "tag": "0002_same_proteus",
+      "breakpoints": true
     }
   ]
 }

@@ -47,6 +47,13 @@ export function CreateMockDialog({
 		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
+		variants?: Array<{
+			key: string;
+			body: string;
+			statusCode: number;
+			bodyType: string;
+		}> | null;
+		wildcardRequireMatch?: boolean;
 	}) => {
 		try {
 			setIsSubmitting(true);
@@ -61,6 +68,8 @@ export function CreateMockDialog({
 				queryParams: values.queryParams,
 				jsonSchema: values.jsonSchema,
 				useDynamicResponse: values.useDynamicResponse,
+				variants: values.variants,
+				wildcardRequireMatch: values.wildcardRequireMatch,
 			};
 			const response = await fetch('/api/mocks', {
 				method: 'POST',

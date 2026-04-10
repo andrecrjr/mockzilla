@@ -1,5 +1,12 @@
 import type { MatchType } from '@/lib/types';
 
+export interface MockVariant {
+	key: string;
+	body: string;
+	statusCode: number;
+	bodyType: string;
+}
+
 export interface MockCandidate {
 	endpoint: string;
 	matchType: MatchType;
@@ -126,4 +133,38 @@ export function findBestMatch(
 	}
 
 	return best;
+}
+
+// -------------------------------------------------------
+// Variant selection (mirrors Chrome extension logic)
+// -------------------------------------------------------
+
+/**
+ * Extracts the capture key from a URL matched against a wildcard pattern.
+ * The key is formed by joining all captured wildcard segments with pipe.
+ * Example: pattern "/api/users/WILDCARD" matching "/api/users/123" returns "123"
+ * Example: pattern "/api/users/WILDCARD/status/WILDCARD" matching "/api/users/alice/status/active" returns "alice|active"
+ */
+export function extractCaptureKey(url: string, pattern: string): string | null {
+	const result = matchWildcard(url, pattern);
+	if (!result.ok || result.captures.length === 0) return null;
+	return result.captures.join('|');
+}
+
+/**
+ * Selects a matching variant from a wildcard mock's variants array.
+ * Returns the variant whose key matches the captured segments from the URL.
+ * Returns null if no variant matches or if the mock has no variants.
+ */
+export function selectVariant(
+	variants: MockVariant[] | null,
+	urlPath: string,
+	endpointPattern: string,
+): MockVariant | null {
+	if (!variants || variants.length === 0) return null;
+
+	const key = extractCaptureKey(urlPath, endpointPattern);
+	if (key === null) return null;
+
+	return variants.find((v) => v.key === key) ?? null;
 }

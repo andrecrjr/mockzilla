@@ -51,6 +51,8 @@ export const mockResponses = pgTable('mock_responses', {
 	bodyType: bodyTypeEnum('body_type').default('json'),
 	enabled: boolean('enabled').default(true).notNull(),
 	queryParams: jsonb('query_params'),
+	variants: jsonb('variants'),
+	wildcardRequireMatch: boolean('wildcard_require_match').default(false),
 	jsonSchema: text('json_schema'),
 	useDynamicResponse: boolean('use_dynamic_response').default(false).notNull(),
 	echoRequestBody: boolean('echo_request_body').default(false).notNull(),
