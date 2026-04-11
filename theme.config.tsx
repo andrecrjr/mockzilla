@@ -1,6 +1,4 @@
-import type { DocsThemeConfig } from 'nextra-theme-docs';
-
-const config: DocsThemeConfig = {
+const config = {
   logo: <b>Mockzilla</b>,
   project: {
     link: 'https://github.com/andrecrjr/mockzilla',
