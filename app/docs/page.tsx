@@ -6,6 +6,7 @@ import {
 	Database,
 	Lightbulb,
 	Workflow,
+	GitBranch,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ExtensionDocs } from '@/components/docs/extension-docs';
@@ -13,6 +14,199 @@ import { SchemaDocs } from '@/components/docs/schema-docs';
 import { SchemaTesterDialog } from '@/components/docs/schema-tester-dialog';
 import { WorkflowDocs } from '@/components/docs/workflow-docs';
 import { Card } from '@/components/ui/card';
+
+function WildcardVariantsDocs() {
+	return (
+		<div className="space-y-6">
+			<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
+				<div className="flex items-center gap-3 mb-6">
+					<div className="p-2 bg-accent/10 rounded-lg">
+						<GitBranch className="h-6 w-6 text-accent" />
+					</div>
+					<div>
+						<h2 className="text-2xl font-bold text-foreground">
+							Wildcard Variants
+						</h2>
+						<p className="text-muted-foreground">
+							One endpoint, multiple responses — keyed by URL segments.
+						</p>
+					</div>
+				</div>
+
+				<div className="space-y-6">
+					<div className="space-y-3">
+						<h3 className="font-semibold text-lg">How It Works</h3>
+						<p className="text-sm text-muted-foreground">
+							When you create a <strong>Wildcard</strong> mock with a pattern like{' '}
+							<code className="px-1.5 py-0.5 bg-muted rounded text-xs">
+								/users/*
+							</code>
+							, each{' '}
+							<code className="px-1.5 py-0.5 bg-muted rounded text-xs">*</code>{' '}
+							captures a segment of the URL. The captured value becomes the{' '}
+							<strong>capture key</strong>, which is matched against your variants
+							table to return the right response.
+						</p>
+					</div>
+
+					{/* Capture Key Examples */}
+					<div className="border rounded-lg p-5">
+						<h3 className="font-semibold mb-3">Capture Key Examples</h3>
+						<div className="overflow-x-auto">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="border-b">
+										<th className="text-left py-2 px-3 text-muted-foreground font-medium">
+											Endpoint
+										</th>
+										<th className="text-left py-2 px-3 text-muted-foreground font-medium">
+											Request URL
+										</th>
+										<th className="text-left py-2 px-3 text-muted-foreground font-medium">
+											Capture Key
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr className="border-b">
+										<td className="py-2 px-3 font-mono text-xs">
+											/users/*
+										</td>
+										<td className="py-2 px-3 font-mono text-xs">
+											/users/123
+										</td>
+										<td className="py-2 px-3 font-mono text-xs">123</td>
+									</tr>
+									<tr className="border-b">
+										<td className="py-2 px-3 font-mono text-xs">
+											/users/*/posts/*
+										</td>
+										<td className="py-2 px-3 font-mono text-xs">
+											/users/alice/posts/42
+										</td>
+										<td className="py-2 px-3 font-mono text-xs">alice|42</td>
+									</tr>
+									<tr>
+										<td className="py-2 px-3 font-mono text-xs">
+											/api/*/status/*
+										</td>
+										<td className="py-2 px-3 font-mono text-xs">
+											/api/bob/status/active
+										</td>
+										<td className="py-2 px-3 font-mono text-xs">bob|active</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					{/* Wildcard Fallback */}
+					<div className="border rounded-lg p-5 border-accent/20 bg-accent/5">
+						<h3 className="font-semibold mb-2 flex items-center gap-2">
+							<Lightbulb className="h-4 w-4 text-yellow-500" />
+							Wildcard Catch-All Variant (<code>*</code> Key)
+						</h3>
+						<p className="text-sm text-muted-foreground mb-3">
+							Use <code className="px-1.5 py-0.5 bg-muted rounded text-xs">*</code>{' '}
+							as a variant key to create a <strong>fallback</strong> response. When
+							no exact capture key matches, Mockzilla falls back to this variant.
+							Exact matches always take priority.
+						</p>
+						<div className="grid md:grid-cols-2 gap-4">
+							<div className="space-y-2">
+								<p className="text-xs font-semibold text-muted-foreground">
+									Variants Config
+								</p>
+								<pre className="bg-muted p-3 rounded-lg text-xs font-mono overflow-auto">
+									{`[
+  { "key": "1",   "body": {"name":"Alice"} },
+  { "key": "2",   "body": {"name":"Bob"}   },
+  { "key": "*",   "body": {"error":"Not found"} }
+]`}
+								</pre>
+							</div>
+							<div className="space-y-2">
+								<p className="text-xs font-semibold text-muted-foreground">
+									Request → Response
+								</p>
+								<pre className="bg-muted p-3 rounded-lg text-xs font-mono overflow-auto">
+									{`/users/1   → {"name":"Alice"}
+/users/2   → {"name":"Bob"}
+/users/999 → {"error":"Not found"}  ← fallback`}
+								</pre>
+							</div>
+						</div>
+					</div>
+
+					{/* Require Match */}
+					<div className="border rounded-lg p-5">
+						<h3 className="font-semibold mb-2">Require Match Toggle</h3>
+						<p className="text-sm text-muted-foreground mb-3">
+							When <strong>Require Match</strong> is enabled, unmatched URLs
+							return a <code className="px-1.5 py-0.5 bg-muted rounded text-xs">
+								404
+							</code>{' '}
+							instead of falling through to the base mock response. This is useful
+							for strict validation — e.g., only known IDs should be served.
+						</p>
+						<div className="grid md:grid-cols-2 gap-4">
+							<div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+								<p className="text-xs font-semibold text-green-400 mb-1">
+									Require Match OFF (default)
+								</p>
+								<p className="text-xs text-muted-foreground">
+									No match → serve base mock body
+								</p>
+							</div>
+							<div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+								<p className="text-xs font-semibold text-red-400 mb-1">
+									Require Match ON
+								</p>
+								<p className="text-xs text-muted-foreground">
+									No match → 404 Not Found
+								</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Full Example */}
+					<div className="border rounded-lg p-5">
+						<h3 className="font-semibold mb-3">
+							Complete Example: User Lookup with Fallback
+						</h3>
+						<div className="bg-[#1e1e1e] text-white p-4 rounded-lg overflow-x-auto shadow-inner">
+							<pre className="text-xs font-mono leading-relaxed">
+								{`Endpoint:  /users/*
+Match:     Wildcard
+Require:   OFF
+
+Variants:
+  key "1"   → {"id":1,"name":"Alice","role":"admin"}
+  key "2"   → {"id":2,"name":"Bob","role":"user"}
+  key "*"   → {"error":"User not found","code":404}
+
+Results:
+  GET /api/mock/myfolder/users/1   → Alice (admin)
+  GET /api/mock/myfolder/users/2   → Bob (user)
+  GET /api/mock/myfolder/users/999 → 404 fallback`}
+							</pre>
+						</div>
+					</div>
+
+					{/* Chrome Extension Parity */}
+					<div className="border rounded-lg p-5 border-primary/20 bg-primary/5">
+						<h3 className="font-semibold mb-2">Chrome Extension Parity</h3>
+						<p className="text-sm text-muted-foreground">
+							The same wildcard variant logic works in both the Mockzilla server
+							and the Chrome extension. Variants synced from the extension are
+							preserved with their capture keys, and the <code className="px-1.5 py-0.5 bg-muted rounded text-xs">*</code> fallback works identically on both sides.
+						</p>
+					</div>
+				</div>
+			</Card>
+		</div>
+	);
+}
 
 export default function DocsPage() {
 	return (
@@ -44,6 +238,12 @@ export default function DocsPage() {
 									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
 								>
 									Schema & Data
+								</Link>
+								<Link
+									href="#wildcard-variants"
+									className="justify-start px-2 py-1.5 h-auto text-sm font-medium rounded-md transition-colors hover:bg-muted"
+								>
+									Wildcard Variants
 								</Link>
 								<Link
 									href="#examples"
@@ -151,6 +351,10 @@ export default function DocsPage() {
 
 						<section id="syntax" className="mt-0 space-y-6 scroll-mt-24">
 							<SchemaDocs />
+						</section>
+
+						<section id="wildcard-variants" className="mt-0 space-y-6 scroll-mt-24">
+							<WildcardVariantsDocs />
 						</section>
 
 						<section id="examples" className="mt-0 space-y-6 scroll-mt-24">

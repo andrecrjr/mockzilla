@@ -153,7 +153,7 @@ export function extractCaptureKey(url: string, pattern: string): string | null {
 
 /**
  * Selects a matching variant from a wildcard mock's variants array.
- * Returns the variant whose key matches the captured segments from the URL.
+ * Tries exact key match first, then falls back to "*" wildcard catch-all variant.
  * Returns null if no variant matches or if the mock has no variants.
  */
 export function selectVariant(
@@ -166,5 +166,10 @@ export function selectVariant(
 	const key = extractCaptureKey(urlPath, endpointPattern);
 	if (key === null) return null;
 
-	return variants.find((v) => v.key === key) ?? null;
+	// Try exact match first
+	const exactMatch = variants.find((v) => v.key === key);
+	if (exactMatch) return exactMatch;
+
+	// Fall back to wildcard catch-all variant
+	return variants.find((v) => v.key === "*") ?? null;
 }

@@ -245,9 +245,27 @@ describe("selectVariant", () => {
     expect(result).toEqual(variants[1]);
   });
 
-  test("returns null when no variant matches the capture key", () => {
+  test("returns null when no variant matches the capture key and no wildcard fallback", () => {
     const result = selectVariant(variants, "/api/users/789", "/api/users/*");
     expect(result).toBeNull();
+  });
+
+  test("falls back to * wildcard variant when no exact match", () => {
+    const variantsWithWildcard: MockVariant[] = [
+      { key: "123", body: '{"id": 123}', statusCode: 200, bodyType: "json" },
+      { key: "*", body: '{"error": "not found"}', statusCode: 404, bodyType: "json" },
+    ];
+    const result = selectVariant(variantsWithWildcard, "/api/users/789", "/api/users/*");
+    expect(result).toEqual(variantsWithWildcard[1]);
+  });
+
+  test("exact match takes priority over wildcard fallback", () => {
+    const variantsWithWildcard: MockVariant[] = [
+      { key: "123", body: '{"id": 123}', statusCode: 200, bodyType: "json" },
+      { key: "*", body: '{"error": "not found"}', statusCode: 404, bodyType: "json" },
+    ];
+    const result = selectVariant(variantsWithWildcard, "/api/users/123", "/api/users/*");
+    expect(result).toEqual(variantsWithWildcard[0]);
   });
 
   test("returns null when variants array is empty", () => {
@@ -286,5 +304,28 @@ describe("selectVariant", () => {
       "/api/users/*/status/*"
     );
     expect(result).toEqual(multiVariants[0]);
+  });
+
+  test("wildcard fallback works with multi-segment captures", () => {
+    const multiVariants: MockVariant[] = [
+      {
+        key: "alice|active",
+        body: '{"user": "alice"}',
+        statusCode: 200,
+        bodyType: "json",
+      },
+      {
+        key: "*",
+        body: '{"error": "not found"}',
+        statusCode: 404,
+        bodyType: "json",
+      },
+    ];
+    const result = selectVariant(
+      multiVariants,
+      "/api/users/bob/status/pending",
+      "/api/users/*/status/*"
+    );
+    expect(result).toEqual(multiVariants[1]);
   });
 });
