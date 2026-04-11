@@ -1,8 +1,9 @@
-import { MDXRemote } from 'next-mdx-remote/rsc';
+import { MDXRemote, type MDXRemoteProps } from 'next-mdx-remote/rsc';
 import { notFound } from 'next/navigation';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import remarkGfm from 'remark-gfm';
 import { mdxComponents } from '../../../mdx-components';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content/docs');
@@ -97,7 +98,11 @@ export default async function DocPage({ params }: { params: Promise<{ mdxPath?: 
     const { content } = matter(fileContent);
     return (
       <div className="max-w-4xl mx-auto px-6 py-8 prose dark:prose-invert prose-code:before:content-none prose-code:after:content-none">
-        <MDXRemote source={content} components={mdxComponents} />
+        <MDXRemote
+          source={content}
+          components={mdxComponents}
+          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+        />
       </div>
     );
   } catch {
