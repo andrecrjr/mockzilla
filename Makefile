@@ -43,7 +43,7 @@ dev-logs:
 	docker compose logs -f
 
 dev-build:
-	docker compose up --build --no-cache -d
+	docker compose up --build -d
 
 dev-restart:
 	docker compose restart
