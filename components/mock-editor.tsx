@@ -112,8 +112,12 @@ export function MockEditor({
 		initial?.folderId ?? defaultFolderId ?? '',
 	);
 
-	const [activeTab, setActiveTab] = useState<'manual' | 'schema'>(
-		initial?.jsonSchema ? 'schema' : 'manual',
+	const [activeTab, setActiveTab] = useState<'manual' | 'schema' | 'advanced'>(
+		(initial?.matchType as MatchType) === 'wildcard'
+			? 'advanced'
+			: initial?.jsonSchema
+				? 'schema'
+				: 'manual',
 	);
 	const [response, setResponse] = useState(initial?.response ?? '');
 	const [jsonSchema, setJsonSchema] = useState(initial?.jsonSchema ?? '');
@@ -170,7 +174,13 @@ export function MockEditor({
 				(initial?.variants as MockVariant[] | null | undefined) ?? [],
 			);
 			setWildcardRequireMatch(Boolean(initial?.wildcardRequireMatch));
-			setActiveTab(initial?.jsonSchema ? 'schema' : 'manual');
+			setActiveTab(
+			(initial?.matchType as MatchType) === 'wildcard'
+				? 'advanced'
+				: initial?.jsonSchema
+					? 'schema'
+					: 'manual',
+		);
 			hydratedRef.current = true;
 		}
 	}, [initial, mode, defaultFolderId]);
@@ -376,7 +386,13 @@ export function MockEditor({
 						<Label htmlFor="match-type">Match Type</Label>
 						<Select
 							value={matchType}
-							onValueChange={(value) => setMatchType(value as MatchType)}
+							onValueChange={(value) => {
+								const newMatchType = value as MatchType;
+								setMatchType(newMatchType);
+								if (newMatchType === 'wildcard') {
+									setActiveTab('advanced');
+								}
+							}}
 						>
 							<SelectTrigger id="match-type">
 								<SelectValue />
@@ -393,182 +409,6 @@ export function MockEditor({
 							{MATCH_TYPE_DESCRIPTIONS[matchType]}
 						</p>
 					</div>
-
-					{matchType === 'wildcard' && (
-						<div className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
-							<div className="flex items-center space-x-2">
-								<Switch
-									checked={wildcardRequireMatch}
-									onCheckedChange={setWildcardRequireMatch}
-								/>
-								<div className="space-y-0.5">
-									<Label
-										className="cursor-pointer font-medium"
-										onClick={() =>
-											setWildcardRequireMatch(!wildcardRequireMatch)
-										}
-									>
-										Require Match
-									</Label>
-									<p className="text-xs text-muted-foreground">
-										Return 404 when no variant matches the captured URL segments
-									</p>
-								</div>
-							</div>
-
-							<div className="space-y-3">
-								<div className="flex items-center justify-between">
-									<Label className="text-sm font-semibold">
-										Variants ({variants.length})
-									</Label>
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										onClick={() => {
-											setVariants([
-												...variants,
-												{
-													key: '',
-													body: '{}',
-													statusCode: 200,
-													bodyType: 'json',
-												},
-											]);
-										}}
-									>
-										<Plus className="mr-1 h-3 w-3" />
-										Add Variant
-									</Button>
-								</div>
-
-								{variants.length === 0 && (
-									<p className="text-xs text-muted-foreground">
-										No variants yet. Add a variant to handle different captured
-										URL segments.
-									</p>
-								)}
-
-								{variants.map((variant, index) => (
-									<div
-										key={variant.key || `variant-${index}`}
-										className="space-y-3 rounded-lg border border-border bg-card p-4"
-									>
-										<div className="flex items-center justify-between">
-											<span className="text-sm font-medium">
-												Variant {index + 1}
-											</span>
-											<Button
-												type="button"
-												variant="ghost"
-												size="icon"
-												onClick={() => {
-													setVariants(variants.filter((_, i) => i !== index));
-												}}
-											>
-												<Trash2 className="h-4 w-4 text-destructive" />
-											</Button>
-										</div>
-
-										<div className="grid grid-cols-2 gap-3">
-											<div className="space-y-2">
-												<Label htmlFor={`variant-key-${index}`}>
-													Capture Key
-												</Label>
-												<Input
-													id={`variant-key-${index}`}
-													value={variant.key}
-													onChange={(e) => {
-														const newVariants = [...variants];
-														newVariants[index] = {
-															...variant,
-															key: e.target.value,
-														};
-														setVariants(newVariants);
-													}}
-													placeholder="e.g., 123 or alice|active"
-												/>
-											</div>
-
-											<div className="space-y-2">
-												<Label htmlFor={`variant-status-${index}`}>
-													Status Code
-												</Label>
-												<Select
-													value={String(variant.statusCode)}
-													onValueChange={(value) => {
-														const newVariants = [...variants];
-														newVariants[index] = {
-															...variant,
-															statusCode: Number.parseInt(value, 10),
-														};
-														setVariants(newVariants);
-													}}
-												>
-													<SelectTrigger id={`variant-status-${index}`}>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{STATUS_CODES.map((code) => (
-															<SelectItem key={code.value} value={code.value}>
-																{code.label}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
-										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor={`variant-body-${index}`}>
-												Response Body
-											</Label>
-											<Textarea
-												id={`variant-body-${index}`}
-												value={variant.body}
-												onChange={(e) => {
-													const newVariants = [...variants];
-													newVariants[index] = {
-														...variant,
-														body: e.target.value,
-													};
-													setVariants(newVariants);
-												}}
-												placeholder='{"message": "Variant response"}'
-												className="font-mono text-sm"
-												rows={4}
-											/>
-										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor={`variant-body-type-${index}`}>
-												Body Type
-											</Label>
-											<Select
-												value={variant.bodyType}
-												onValueChange={(value) => {
-													const newVariants = [...variants];
-													newVariants[index] = {
-														...variant,
-														bodyType: value,
-													};
-													setVariants(newVariants);
-												}}
-											>
-												<SelectTrigger id={`variant-body-type-${index}`}>
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="json">JSON</SelectItem>
-													<SelectItem value="text">Text</SelectItem>
-												</SelectContent>
-											</Select>
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-					)}
 
 					<div className="space-y-2">
 						<Label>Query Params (optional)</Label>
@@ -659,11 +499,12 @@ export function MockEditor({
 					>
 						<Tabs
 							value={activeTab}
-							onValueChange={(v) => setActiveTab(v as 'manual' | 'schema')}
+							onValueChange={(v) => setActiveTab(v as 'manual' | 'schema' | 'advanced')}
 						>
 							<TabsList>
 								<TabsTrigger value="manual">Manual JSON</TabsTrigger>
 								<TabsTrigger value="schema">From Schema</TabsTrigger>
+								<TabsTrigger value="advanced">Advanced Options</TabsTrigger>
 							</TabsList>
 							<TabsContent value="manual">
 								<Label htmlFor="create-json">JSON Response</Label>
@@ -737,6 +578,191 @@ export function MockEditor({
 									className="mt-2 font-mono text-sm flex-1 h-[200px]"
 									placeholder="Generated JSON Here"
 								/>
+							</TabsContent>
+							<TabsContent value="advanced" className="space-y-6">
+								{matchType === 'wildcard' ? (
+									<div className="space-y-4">
+										<div className="space-y-4 rounded-lg border border-border p-6 bg-muted/20">
+											<div className="flex items-center justify-between">
+												<div className="flex items-center space-x-2">
+													<Switch
+														checked={wildcardRequireMatch}
+														onCheckedChange={setWildcardRequireMatch}
+													/>
+													<div className="space-y-0.5">
+														<Label
+															className="cursor-pointer font-medium"
+															onClick={() =>
+																setWildcardRequireMatch(!wildcardRequireMatch)
+															}
+														>
+															Require Match
+														</Label>
+														<p className="text-xs text-muted-foreground">
+															Return 404 when no variant matches the captured URL segments
+														</p>
+													</div>
+												</div>
+
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													onClick={() => {
+														setVariants([
+															...variants,
+															{
+																key: '',
+																body: '{}',
+																statusCode: 200,
+																bodyType: 'json',
+															},
+														]);
+													}}
+												>
+													<Plus className="mr-1 h-3 w-3" />
+													Add Variant
+												</Button>
+											</div>
+
+											{variants.length === 0 && (
+												<p className="text-sm text-muted-foreground">
+													No variants yet. Add a variant to handle different captured
+													URL segments.
+												</p>
+											)}
+
+											{variants.map((variant, index) => (
+												<div
+													key={variant.key || `variant-${index}`}
+													className="space-y-4 rounded-lg border border-border bg-card p-6"
+												>
+													<div className="flex items-center justify-between">
+														<span className="text-sm font-semibold">
+															Variant {index + 1}
+														</span>
+														<Button
+															type="button"
+															variant="ghost"
+															size="icon"
+															onClick={() => {
+																setVariants(variants.filter((_, i) => i !== index));
+															}}
+														>
+															<Trash2 className="h-4 w-4 text-destructive" />
+														</Button>
+													</div>
+
+													<div className="grid grid-cols-2 gap-4">
+														<div className="space-y-2">
+															<Label htmlFor={`variant-key-${index}`}>
+																Capture Key
+															</Label>
+															<Input
+																id={`variant-key-${index}`}
+																value={variant.key}
+																onChange={(e) => {
+																	const newVariants = [...variants];
+																	newVariants[index] = {
+																		...variant,
+																		key: e.target.value,
+																	};
+																	setVariants(newVariants);
+																}}
+																placeholder="e.g., 123 or alice|active"
+															/>
+														</div>
+
+														<div className="space-y-2">
+															<Label htmlFor={`variant-status-${index}`}>
+																Status Code
+															</Label>
+															<Select
+																value={String(variant.statusCode)}
+																onValueChange={(value) => {
+																	const newVariants = [...variants];
+																	newVariants[index] = {
+																		...variant,
+																		statusCode: Number.parseInt(value, 10),
+																	};
+																	setVariants(newVariants);
+																}}
+															>
+																<SelectTrigger id={`variant-status-${index}`}>
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	{STATUS_CODES.map((code) => (
+																		<SelectItem key={code.value} value={code.value}>
+																			{code.label}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														</div>
+													</div>
+
+													<div className="space-y-2">
+														<Label htmlFor={`variant-body-${index}`}>
+															Response Body
+														</Label>
+														<Textarea
+															id={`variant-body-${index}`}
+															value={variant.body}
+															onChange={(e) => {
+																const newVariants = [...variants];
+																newVariants[index] = {
+																	...variant,
+																	body: e.target.value,
+																};
+																setVariants(newVariants);
+															}}
+															placeholder='{"message": "Variant response"}'
+															className="font-mono text-sm h-[200px]"
+															rows={8}
+														/>
+													</div>
+
+													<div className="space-y-2">
+														<Label htmlFor={`variant-body-type-${index}`}>
+															Body Type
+														</Label>
+														<Select
+															value={variant.bodyType}
+															onValueChange={(value) => {
+																const newVariants = [...variants];
+																newVariants[index] = {
+																	...variant,
+																	bodyType: value,
+																};
+																setVariants(newVariants);
+															}}
+														>
+															<SelectTrigger id={`variant-body-type-${index}`}>
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="json">JSON</SelectItem>
+																<SelectItem value="text">Text</SelectItem>
+															</SelectContent>
+														</Select>
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
+								) : (
+									<div className="flex items-center justify-center h-[300px] text-muted-foreground">
+										<div className="text-center space-y-2">
+											<p className="text-sm">
+												Wildcard Variants are only available when Match Type is set to <code className="bg-muted px-1 py-0.5 rounded">wildcard</code>
+											</p>
+											<p className="text-xs">
+												Change the Match Type in the left panel to enable this feature.
+											</p>
+										</div>
+									</div>
+								)}
 							</TabsContent>
 						</Tabs>
 					</div>
