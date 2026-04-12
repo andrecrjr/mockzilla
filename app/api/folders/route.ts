@@ -12,6 +12,34 @@ function generateSlug(name: string): string {
 		.replace(/[^a-z0-9-]/g, '');
 }
 
+function validateSlug(slug: string): { valid: boolean; error?: string } {
+	if (!slug || slug.length === 0) {
+		return { valid: false, error: 'Slug cannot be empty' };
+	}
+	if (slug.length > 100) {
+		return { valid: false, error: 'Slug must be 100 characters or less' };
+	}
+	if (!/^[a-z0-9-]+$/.test(slug)) {
+		return { valid: false, error: 'Slug can only contain lowercase letters, numbers, and hyphens' };
+	}
+	if (slug.startsWith('-') || slug.endsWith('-')) {
+		return { valid: false, error: 'Slug cannot start or end with a hyphen' };
+	}
+	return { valid: true };
+}
+
+async function isSlugUnique(slug: string, excludeId?: string): Promise<boolean> {
+	const query = db.select().from(folders).where(eq(folders.slug, slug));
+	const existing = await query;
+	if (existing.length === 0) {
+		return true;
+	}
+	if (excludeId && existing[0]) {
+		return existing[0].id === excludeId;
+	}
+	return false;
+}
+
 export async function GET(request: NextRequest) {
 	try {
 		const searchParams = request.nextUrl.searchParams;
@@ -147,7 +175,25 @@ export async function POST(request: NextRequest) {
 	try {
 		const body: CreateFolderRequest = await request.json();
 
-		const slug = generateSlug(body.name);
+		// Use custom slug if provided, otherwise generate from name
+		let slug = body.slug ? generateSlug(body.slug) : generateSlug(body.name);
+
+		// Validate slug
+		const validation = validateSlug(slug);
+		if (!validation.valid) {
+			return NextResponse.json(
+				{ error: validation.error },
+				{ status: 400 },
+			);
+		}
+
+		// Check slug uniqueness
+		if (!await isSlugUnique(slug)) {
+			return NextResponse.json(
+				{ error: 'A folder with this slug already exists' },
+				{ status: 409 },
+			);
+		}
 
 		const [newFolder] = await db
 			.insert(folders)
@@ -198,11 +244,35 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body: UpdateFolderRequest = await request.json();
-		
-		// Only update slug if the name has actually changed
-		// This preserves -extension suffixes and avoids collisions during mock-only updates
-		const nameChanged = body.name !== existingFolder.name;
-		const slug = nameChanged ? generateSlug(body.name) : existingFolder.slug;
+
+		// Determine slug update strategy
+		// If slug is explicitly provided, use it (after validation)
+		// Otherwise, only regenerate slug if name changed
+		let slug: string;
+		if (body.slug !== undefined) {
+			slug = generateSlug(body.slug);
+			
+			// Validate custom slug
+			const validation = validateSlug(slug);
+			if (!validation.valid) {
+				return NextResponse.json(
+					{ error: validation.error },
+					{ status: 400 },
+				);
+			}
+
+			// Check uniqueness (excluding current folder)
+			if (!await isSlugUnique(slug, id)) {
+				return NextResponse.json(
+					{ error: 'A folder with this slug already exists' },
+					{ status: 409 },
+				);
+			}
+		} else {
+			// Auto-generate slug only if name changed
+			const nameChanged = body.name !== existingFolder.name;
+			slug = nameChanged ? generateSlug(body.name) : existingFolder.slug;
+		}
 
 		const [updatedFolder] = await db
 			.update(folders)

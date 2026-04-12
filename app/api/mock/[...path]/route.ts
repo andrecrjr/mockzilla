@@ -15,8 +15,9 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const pathSegments = params.path;
 	const method = (request.method as HttpMethod) || 'GET';
 
-	// Expected format: /mock/{folderSlug}/{mockPath}
-	if (pathSegments.length < 2) {
+	// Expected format: /mock/{folderSlug}/{mockPath...}
+	// If only folderSlug provided (1 segment), treat as root path "/"
+	if (pathSegments.length < 1) {
 		return NextResponse.json(
 			{ error: 'Invalid mock URL format' },
 			{ status: 400 },
@@ -24,7 +25,9 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	}
 
 	const folderSlug = pathSegments[0];
-	const mockPath = `/${pathSegments.slice(1).join('/')}`;
+	const mockPath = pathSegments.length === 1
+		? '/'
+		: `/${pathSegments.slice(1).join('/')}`;
 
 	// Extract query params from request URL
 	const url = request.nextUrl;

@@ -69,11 +69,13 @@ export interface CreateMockRequest {
 export interface CreateFolderRequest {
 	name: string;
 	description?: string;
+	slug?: string;
 }
 
 export interface UpdateFolderRequest {
 	name: string;
 	description?: string;
+	slug?: string;
 	meta?: Record<string, unknown>;
 }
 

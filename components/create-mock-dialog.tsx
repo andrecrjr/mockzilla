@@ -91,7 +91,7 @@ export function CreateMockDialog({
 				);
 				if (selectedFolder) {
 					mutate(`/api/mocks?folderId=${selectedFolder.id}`);
-					router.push(`/folder/${selectedFolder.slug}`);
+					router.push(`/app/folder/${selectedFolder.slug}`);
 				}
 			}
 			setOpen(false);

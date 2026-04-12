@@ -151,11 +151,11 @@ describe("Mock Serving /mock/[folder]/[path]", () => {
     });
 
     it("serves static text mock", async () => {
-         const textMock = { 
-             ...mockResponse, 
-             bodyType: "text", 
+         const textMock = {
+             ...mockResponse,
+             bodyType: "text",
              response: "Hello World",
-             statusCode: 200 
+             statusCode: 200
          };
 
         let callCount = 0;
@@ -168,10 +168,46 @@ describe("Mock Serving /mock/[folder]/[path]", () => {
 
         const req = new NextRequest("http://localhost:3000/api/mock/api/text");
         const params = Promise.resolve({ path: ["api", "text"] });
-        
+
         const res = await GET(req, { params });
         expect(res.status).toBe(200);
         const text = await res.text();
         expect(text).toBe("Hello World");
+    });
+
+    it("serves root path mock (folder only, path = '/')", async () => {
+        const rootMock = {
+            ...mockResponse,
+            endpoint: "/",
+            name: "Root Mock",
+            response: JSON.stringify({ message: "Root endpoint" }),
+        };
+
+        let callCount = 0;
+        mockDb.select = mock(() => {
+            callCount++;
+            if (callCount === 1) return createMockBuilder([mockFolder]);
+            if (callCount === 2) return createMockBuilder([rootMock]);
+            return createMockBuilder([]);
+        });
+
+        // Test with trailing slash
+        const reqWithSlash = new NextRequest("http://localhost:3000/api/mock/api/");
+        const paramsWithSlash = Promise.resolve({ path: ["api", ""] });
+
+        const resWithSlash = await GET(reqWithSlash, { params: paramsWithSlash });
+        expect(resWithSlash.status).toBe(200);
+        const bodyWithSlash = await resWithSlash.json();
+        expect(bodyWithSlash).toEqual({ message: "Root endpoint" });
+
+        // Test without trailing slash (single segment)
+        callCount = 0;
+        const reqNoSlash = new NextRequest("http://localhost:3000/api/mock/api");
+        const paramsNoSlash = Promise.resolve({ path: ["api"] });
+
+        const resNoSlash = await GET(reqNoSlash, { params: paramsNoSlash });
+        expect(resNoSlash.status).toBe(200);
+        const bodyNoSlash = await resNoSlash.json();
+        expect(bodyNoSlash).toEqual({ message: "Root endpoint" });
     });
 });

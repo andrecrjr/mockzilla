@@ -41,6 +41,7 @@ Tags: #routing #mock #schema #echo #nextjs #drizzle
 - Purpose: Serve configured mock responses by folder slug and path; supports static JSON/text, request-body echo, and JSON Schema–driven dynamic responses.
 - Entry Point: `app/api/mock/[...path]/route.ts`
   - Path format: `/api/mock/{folderSlug}/{mockPath...}` (app/api/mock/[...path]/route.ts:10)
+  - Root path support: `/api/mock/{folderSlug}/` or `/api/mock/{folderSlug}` treats mockPath as "/"
 - Capabilities
   - Resolve folder by slug, then match mock by `endpoint` and `method` (app/api/mock/[...path]/route.ts:19–37).
   - Echo request body back when `echoRequestBody` is enabled (app/api/mock/[...path]/route.ts:45–68).
@@ -48,12 +49,12 @@ Tags: #routing #mock #schema #echo #nextjs #drizzle
   - Content type set by `bodyType` (`json` or `text`) (app/api/mock/[...path]/route.ts:94–114).
 - Inputs
   - HTTP method: `GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS` (lib/db/schema.ts:5–13).
-  - Path segments: `folderSlug`, `mockPath` (app/api/mock/[...path]/route.ts:15–17).
+  - Path segments: `folderSlug` (required), `mockPath` (optional, defaults to "/") (app/api/mock/[...path]/route.ts:15–27).
   - DB tables: `folders`, `mockResponses` (lib/db/schema.ts:20–27, 29–47).
 - Outputs
   - `NextResponse` with configured `statusCode` and body; JSON or text per `bodyType`.
 - Constraints
-  - Requires at least two segments: folder slug + mock path (app/api/mock/[...path]/route.ts:11–13).
+  - Requires at least one segment: folder slug (app/api/mock/[...path]/route.ts:20–25).
   - `jsonSchema` must parse as JSON when dynamic mode is enabled.
 - Error Handling
   - 404 when folder or mock not found (app/api/mock/[...path]/route.ts:22–24, 39–43).

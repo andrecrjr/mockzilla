@@ -91,12 +91,12 @@ export default function MockzillaAdmin() {
 		}
 	};
 
-	const handleUpdateFolder = async (id: string, name: string) => {
+	const handleUpdateFolder = async (id: string, name: string, description?: string, slug?: string) => {
 		try {
 			const response = await fetch(`/api/folders?id=${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name }),
+				body: JSON.stringify({ name, description, slug }),
 			});
 
 			if (!response.ok) {
@@ -251,7 +251,7 @@ export default function MockzillaAdmin() {
 										<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
 												<div className="p-6">
 													<div className="flex items-start justify-between">
-														<Link href={`/folder/${folder.slug}`} key={folder.id}>
+														<Link href={`/app/folder/${folder.slug}`} key={folder.id}>
 														<div className="flex items-center gap-3 flex-1">
 															<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
 																<FolderIcon className="h-6 w-6 text-primary" />
@@ -263,6 +263,11 @@ export default function MockzillaAdmin() {
 																<p className="text-sm text-muted-foreground">
 																	/{folder.slug}
 																</p>
+																{folder.description && (
+																	<p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+																		{folder.description}
+																	</p>
+																)}
 															</div>
 														</div>
 														</Link>

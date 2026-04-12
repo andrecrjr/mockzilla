@@ -136,7 +136,7 @@ export function MockCard({
 					</div>
 					<div className="flex gap-1">
 						<Button variant="ghost" size="icon" asChild>
-							<Link href={`/folder/${folder?.slug}/mock/${mock.id}`}>
+							<Link href={`/app/folder/${folder?.slug}/mock/${mock.id}`}>
 								<Pencil className="h-4 w-4" />
 							</Link>
 						</Button>

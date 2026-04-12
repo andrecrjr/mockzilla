@@ -2,7 +2,7 @@
 
 import { Pencil } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,17 +16,39 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { Folder } from '@/lib/types';
 
 interface EditFolderDialogProps {
 	folder: Folder;
-	onUpdate: (id: string, name: string) => Promise<void>;
+	onUpdate: (id: string, name: string, description?: string, slug?: string) => Promise<void>;
+}
+
+function generateSlug(name: string): string {
+	return name
+		.toLowerCase()
+		.trim()
+		.replace(/\s+/g, '-')
+		.replace(/[^a-z0-9-]/g, '');
 }
 
 export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState(folder.name);
+	const [description, setDescription] = useState(folder.description || '');
+	const [slug, setSlug] = useState(folder.slug);
+	const [useCustomSlug, setUseCustomSlug] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+
+	// Reset form when dialog opens
+	useEffect(() => {
+		if (open) {
+			setName(folder.name);
+			setDescription(folder.description || '');
+			setSlug(folder.slug);
+			setUseCustomSlug(false);
+		}
+	}, [open, folder]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -38,9 +60,21 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 			return;
 		}
 
-		if (name === folder.name) {
+		if (!slug.trim()) {
+			toast.error('Validation Error', {
+				description: 'Slug cannot be empty',
+			});
+			return;
+		}
+
+		const hasChanges = 
+			name !== folder.name || 
+			description !== (folder.description || '') || 
+			slug !== folder.slug;
+
+		if (!hasChanges) {
 			toast.info('No Changes', {
-				description: 'Folder name is the same',
+				description: 'No changes were made',
 			});
 			setOpen(false);
 			return;
@@ -48,7 +82,12 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 
 		setIsLoading(true);
 		try {
-			await onUpdate(folder.id, name);
+			await onUpdate(
+				folder.id, 
+				name, 
+				description.trim() || undefined, 
+				useCustomSlug ? slug.trim() : undefined
+			);
 			setOpen(false);
 		} catch (error) {
 			// Error toast is handled in the parent component via onUpdate
@@ -74,8 +113,7 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 					<DialogHeader>
 						<DialogTitle>Edit Folder</DialogTitle>
 						<DialogDescription>
-							Update the folder name. The URL slug will be automatically
-							updated.
+							Update the folder details. The URL slug can be customized.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -90,6 +128,42 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 								autoFocus
 							/>
 						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="description">Description (Optional)</Label>
+							<Textarea
+								id="description"
+								placeholder="Describe what this folder contains..."
+								value={description}
+								onChange={(e) => setDescription(e.target.value)}
+								rows={3}
+							/>
+						</div>
+
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<Label htmlFor="slug">URL Slug</Label>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+									onClick={() => setUseCustomSlug(!useCustomSlug)}
+								>
+									{useCustomSlug ? "Auto-generate" : "Customize"}
+								</Button>
+							</div>
+							<Input
+								id="slug"
+								value={slug}
+								onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+								disabled={!useCustomSlug}
+								placeholder="e.g., user-apis"
+							/>
+							<p className="text-xs text-muted-foreground">
+								URL: /api/mock/<span className="font-mono">{slug}</span>/...
+							</p>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button
@@ -99,7 +173,7 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 						>
 							Cancel
 						</Button>
-						<Button type="submit" disabled={isLoading || !name.trim()}>
+						<Button type="submit" disabled={isLoading || !name.trim() || !slug.trim()}>
 							{isLoading ? 'Updating...' : 'Update Folder'}
 						</Button>
 					</DialogFooter>

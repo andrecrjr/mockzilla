@@ -1,7 +1,7 @@
 "use client";
 
 import { FolderPlus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CreateFolderDialogProps {
   trigger?: React.ReactNode;
   onSuccess?: () => void;
+}
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
 }
 
 export function CreateFolderDialog({
@@ -27,7 +36,17 @@ export function CreateFolderDialog({
 }: CreateFolderDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [slug, setSlug] = useState("");
+  const [useCustomSlug, setUseCustomSlug] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-generate slug from name when name changes
+  useEffect(() => {
+    if (!useCustomSlug) {
+      setSlug(generateSlug(name));
+    }
+  }, [name, useCustomSlug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +56,11 @@ export function CreateFolderDialog({
       const response = await fetch("/api/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ 
+          name,
+          description: description.trim() || undefined,
+          slug: slug.trim() || undefined,
+        }),
       });
 
       if (!response.ok) {
@@ -55,9 +78,12 @@ export function CreateFolderDialog({
 
       // Mutate relevant SWR keys to refresh data
       mutate((key) => typeof key === 'string' && key.startsWith('/api/folders'), undefined, { revalidate: true });
-      
+
       setOpen(false);
       setName("");
+      setDescription("");
+      setSlug("");
+      setUseCustomSlug(false);
     } catch (error) {
       toast.error("Error", {
         description:
@@ -96,6 +122,45 @@ export function CreateFolderDialog({
               required
             />
           </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="folder-description">Description (Optional)</Label>
+            <Textarea
+              id="folder-description"
+              placeholder="Describe what this folder contains..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="folder-slug">URL Slug</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setUseCustomSlug(!useCustomSlug)}
+              >
+                {useCustomSlug ? "Auto-generate" : "Customize"}
+              </Button>
+            </div>
+            <Input
+              id="folder-slug"
+              placeholder="e.g., user-apis"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              disabled={!useCustomSlug}
+            />
+            {slug && (
+              <p className="text-xs text-muted-foreground">
+                URL: /api/mock/<span className="font-mono">{slug}</span>/...
+              </p>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -104,7 +169,7 @@ export function CreateFolderDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !name.trim() || !slug.trim()}>
               {isSubmitting ? "Creating..." : "Create Folder"}
             </Button>
           </div>

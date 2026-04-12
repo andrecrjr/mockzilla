@@ -102,7 +102,7 @@ export function MockEditor({
 }: MockEditorProps) {
 	const [name, setName] = useState(initial?.name ?? '');
 	const [path, setPath] = useState(
-		initial?.path ?? (mode === 'create' ? '/' : ''),
+		initial?.path ?? '',
 	);
 	const [method, setMethod] = useState<HttpMethod>(initial?.method ?? 'GET');
 	const [statusCode, setStatusCode] = useState<string>(

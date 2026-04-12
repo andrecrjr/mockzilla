@@ -95,6 +95,7 @@ export default function EditMockPage() {
 				description: 'Mock endpoint has been updated successfully',
 			});
 			mutate(`/api/mocks?folderId=${folder.id}`);
+			mutate(`/api/mocks?id=${mock.id}`);
 			router.push(`/app/folder/${slug}`);
 		} catch (error: any) {
 			toast.error('Error', {
@@ -123,7 +124,7 @@ export default function EditMockPage() {
 				<div className="mb-8 flex items-center justify-between">
 					<div className="flex items-center gap-4">
 						<Button variant="ghost" asChild>
-							<Link href={`/folder/${slug}`}>
+							<Link href={`/app/folder/${slug}`}>
 								<ArrowLeft className="mr-2 h-4 w-4" />
 								Back to {folder?.name}
 							</Link>

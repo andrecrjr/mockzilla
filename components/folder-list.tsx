@@ -62,7 +62,7 @@ export function FolderList({
 						key={folder.id}
 						className="border-border bg-card p-0 overflow-hidden group hover:border-primary/50 transition-colors"
 					>
-						<Link href={`/folder/${folder.slug}`}>
+						<Link href={`/app/folder/${folder.slug}`}>
 							<div className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
 								<div className="flex items-center gap-3">
 									<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
