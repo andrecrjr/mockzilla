@@ -31,11 +31,15 @@ else
   echo "DATABASE_URL not set, skipping external database health check"
 fi
 
-echo "Running database migrations..."
-if [ "$NODE_ENV" = "production" ] && [ "$(id -u)" = "0" ] && id "nextjs" >/dev/null 2>&1; then
-  su nextjs -s /bin/sh -c "bun scripts/migrate.mjs"
+if [ "$DEPLOY_MODE" = "landing" ]; then
+  echo "Landing mode: Skipping database migrations"
 else
-  bun scripts/migrate.mjs
+  echo "Running database migrations..."
+  if [ "$NODE_ENV" = "production" ] && [ "$(id -u)" = "0" ] && id "nextjs" >/dev/null 2>&1; then
+    su nextjs -s /bin/sh -c "bun scripts/migrate.mjs"
+  else
+    bun scripts/migrate.mjs
+  fi
 fi
 
 echo "Starting application ($NODE_ENV)..."

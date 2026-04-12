@@ -19,6 +19,12 @@ help:
 	@echo "  make prod-logs     - View production logs"
 	@echo "  make prod-build    - Rebuild production containers"
 	@echo ""
+	@echo "Landing-Only Deploy:"
+	@echo "  make landing-run     - Build and start landing-only deployment"
+	@echo "  make landing-up      - Start landing-only environment"
+	@echo "  make landing-down    - Stop landing-only environment"
+	@echo "  make landing-logs    - View landing-only logs"
+	@echo ""
 	@echo "Utility Commands:"
 	@echo "  make clean         - Remove all containers, volumes, and images"
 	@echo "  make db-shell      - Open PostgreSQL shell"
@@ -71,6 +77,19 @@ prod-logs:
 	docker logs -f mockzilla-prod
 
 prod-run: prod-build prod-up
+
+# Landing-only deploy
+landing-up:
+	docker run -d --env-file .env.landing -p 36666:36666 --name mockzilla-landing mockzilla:latest
+
+landing-down:
+	docker stop mockzilla-landing 2>/dev/null || true
+	docker rm mockzilla-landing 2>/dev/null || true
+
+landing-logs:
+	docker logs -f mockzilla-landing
+
+landing-run: prod-build landing-up
 
 # Utility commands
 clean:
