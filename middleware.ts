@@ -29,6 +29,11 @@ export function middleware(request: NextRequest) {
 		return new NextResponse('Not Found', { status: 404 });
 	}
 
+	// Full mode: redirect root landing page to /app
+	if (DEPLOY_MODE === 'full' && pathname === '/') {
+		return NextResponse.redirect(new URL('/app', request.url));
+	}
+
 	// If not an API route, pass through
 	if (!pathname.startsWith('/api/')) {
 		return NextResponse.next();
