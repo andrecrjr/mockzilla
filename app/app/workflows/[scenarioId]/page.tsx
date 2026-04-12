@@ -105,7 +105,7 @@ export default function ScenarioDetailPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between mb-6 shrink-0">
 				<div className="flex items-center gap-4">
-					<Link href="/workflows">
+					<Link href="/app/workflows">
 						<Button variant="ghost" size="icon">
 							<ArrowLeft className="h-4 w-4" />
 						</Button>

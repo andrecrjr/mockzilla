@@ -60,7 +60,7 @@ export default function ExtensionFolderPage() {
 					<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-12 text-center">
 						<h2 className="text-xl font-bold">Folder not found</h2>
 						<Button asChild className="mt-4">
-							<Link href="/extension-data">Back to Extension Sync</Link>
+							<Link href="/app/extension-data">Back to Extension Sync</Link>
 						</Button>
 					</Card>
 				</div>
@@ -76,7 +76,7 @@ export default function ExtensionFolderPage() {
 			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 				<div className="mb-8 flex items-center justify-between">
 					<Button variant="ghost" asChild>
-						<Link href="/extension-data">
+						<Link href="/app/extension-data">
 							<ArrowLeft className="mr-2 h-4 w-4" />
 							Back to List
 						</Link>

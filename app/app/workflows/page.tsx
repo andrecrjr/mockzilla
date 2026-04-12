@@ -91,7 +91,7 @@ export default function WorkflowsPage() {
 				setNewScenarioName('');
 				setNewScenarioDescription('');
 				mutate(); // Refresh the list
-				router.push(`/workflows/${data.id}`);
+				router.push(`/app/workflows/${data.id}`);
 			},
 			onError: (err) => {
 				toast.error(err.message || 'Failed to create scenario');

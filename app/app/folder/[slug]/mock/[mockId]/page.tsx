@@ -95,7 +95,7 @@ export default function EditMockPage() {
 				description: 'Mock endpoint has been updated successfully',
 			});
 			mutate(`/api/mocks?folderId=${folder.id}`);
-			router.push(`/folder/${slug}`);
+			router.push(`/app/folder/${slug}`);
 		} catch (error: any) {
 			toast.error('Error', {
 				description: error.message || 'Failed to update mock',
