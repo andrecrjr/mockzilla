@@ -1,6 +1,6 @@
 'use client';
 
-import { Info as InfoIcon, Plus, Trash2, X } from 'lucide-react';
+import { ExternalLink as ExternalLinkIcon, Plus, Trash2, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -17,11 +17,14 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { TooltipProvider, Tooltip, TooltipContent } from '@/components/ui/tooltip';
 import {
 	generateFromSchemaString,
 	validateSchema,
 } from '@/lib/schema-generator';
 import type { Folder, HttpMethod, MatchType, MockVariant } from '@/lib/types';
+import { FieldTooltip } from '@/components/folder-tooltips';
+import Link from 'next/link';
 
 type MockFormValues = {
 	name: string;
@@ -294,6 +297,7 @@ export function MockEditor({
 	};
 
 	return (
+		<TooltipProvider delayDuration={300}>
 		<form onSubmit={handleSubmit}>
 			<div className="grid gap-6 py-4 lg:grid-cols-5">
 				<div className="space-y-4 col-span-2">
@@ -383,7 +387,15 @@ export function MockEditor({
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="match-type">Match Type</Label>
+						<div className="flex items-center gap-2">
+							<Label htmlFor="match-type">Match Type</Label>
+							<FieldTooltip
+								label="Match Type"
+								description="Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint."
+								example="exact: /users/123 | wildcard: /users/* | substring: /api/users"
+								docsLink="/docs#wildcard-variants"
+							/>
+						</div>
 						<Select
 							value={matchType}
 							onValueChange={(value) => {
@@ -411,11 +423,15 @@ export function MockEditor({
 					</div>
 
 					<div className="space-y-2">
-						<Label>Query Params (optional)</Label>
-						<p className="text-xs text-muted-foreground">
-							Required query params for this mock to match. Leave empty to match
-							regardless of query params.
-						</p>
+						<div className="flex items-center gap-2">
+							<Label>Query Params (optional)</Label>
+							<FieldTooltip
+								label="Required Query Params"
+								description="Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string."
+								example="?page=1&limit=10"
+								docsLink="/docs#overview"
+							/>
+						</div>
 						{queryParams.map((param, index) => (
 							<div key={index} className="flex items-center gap-2">
 								<Input
@@ -476,12 +492,20 @@ export function MockEditor({
 								onCheckedChange={setEchoRequestBody}
 							/>
 							<div className="space-y-0.5">
-								<Label
-									className="cursor-pointer font-medium"
-									onClick={() => setEchoRequestBody(!echoRequestBody)}
-								>
-									Echo Request Body
-								</Label>
+								<div className="flex items-center gap-2">
+									<Label
+										className="cursor-pointer font-medium"
+										onClick={() => setEchoRequestBody(!echoRequestBody)}
+									>
+										Echo Request Body
+									</Label>
+									<FieldTooltip
+										label="Echo Request Body"
+										description="Returns the exact request body as the response. Useful for testing POST/PUT endpoints where you want to verify what was sent."
+										example='POST {"name":"Alice"} → Response {"name":"Alice"}'
+										docsLink="/docs#overview"
+									/>
+								</div>
 								<p className="text-xs text-muted-foreground">
 									The response will be exactly what was sent in the request
 									body.
@@ -502,9 +526,30 @@ export function MockEditor({
 							onValueChange={(v) => setActiveTab(v as 'manual' | 'schema' | 'advanced')}
 						>
 							<TabsList>
-								<TabsTrigger value="manual">Manual JSON</TabsTrigger>
-								<TabsTrigger value="schema">From Schema</TabsTrigger>
-								<TabsTrigger value="advanced">Advanced Options</TabsTrigger>
+								<TabsTrigger value="manual">
+									Manual JSON
+								</TabsTrigger>
+								<TabsTrigger value="schema">
+									From Schema
+								</TabsTrigger>
+								<Tooltip>
+									<TabsTrigger value="advanced" className="w-full">
+										Advanced Options
+									</TabsTrigger>
+									<TooltipContent side="top" className="max-w-xs">
+										<p className="font-semibold">Advanced Options</p>
+										<p className="mt-1 text-xs text-muted-foreground">
+											Configure wildcard variants to return different responses based on captured URL segments. Only available when Match Type is set to &quot;wildcard&quot;.
+										</p>
+										<Link
+											href="/docs#wildcard-variants"
+											className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline"
+											target="_blank"
+										>
+											Learn more <ExternalLinkIcon className="h-3 w-3" />
+										</Link>
+									</TooltipContent>
+								</Tooltip>
 							</TabsList>
 							<TabsContent value="manual">
 								<Label htmlFor="create-json">JSON Response</Label>
@@ -518,6 +563,15 @@ export function MockEditor({
 								/>
 							</TabsContent>
 							<TabsContent value="schema">
+								<div className="flex items-center gap-2 mb-2">
+									<Label htmlFor="schema">JSON Schema</Label>
+									<FieldTooltip
+										label="From Schema"
+										description="Paste a JSON Schema to auto-generate mock data. Enable 'Dynamic Response' to get new random data on each request. Supports Faker.js formats and string interpolation."
+										example='{"type": "object", "properties": {"name": {"type": "string", "faker": "person.fullName"}}}'
+										docsLink="/docs#syntax"
+									/>
+								</div>
 								<Textarea
 									id="schema"
 									value={jsonSchema}
@@ -532,37 +586,20 @@ export function MockEditor({
 										onCheckedChange={setUseDynamicResponse}
 										required={activeTab === 'schema'}
 									/>
-									<Label
-										className="cursor-pointer"
-										onClick={() => setUseDynamicResponse(!useDynamicResponse)}
-									>
-										Dynamic Response (new data each request){' '}
-										{activeTab === 'schema' && '*'}
-									</Label>
-									<div className="group relative inline-block">
-										<InfoIcon className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help" />
-										<div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-popover border border-border rounded-lg shadow-lg z-50 text-sm">
-											<p className="text-foreground font-semibold mb-1">
-												String Interpolation Supported!
-											</p>
-											<p className="text-muted-foreground mb-2">
-												Use{' '}
-												<code className="bg-muted px-1 py-0.5 rounded text-xs">
-													{'{$.field}'}
-												</code>{' '}
-												to reference other generated fields.
-											</p>
-											<p className="text-xs text-primary">
-												<a
-													href="/docs"
-													target="_blank"
-													className="underline hover:text-primary/80"
-													rel="noopener"
-												>
-													Learn more in the docs →
-												</a>
-											</p>
-										</div>
+									<div className="flex items-center gap-2">
+										<Label
+											className="cursor-pointer"
+											onClick={() => setUseDynamicResponse(!useDynamicResponse)}
+										>
+											Dynamic Response (new data each request){' '}
+											{activeTab === 'schema' && '*'}
+										</Label>
+										<FieldTooltip
+											label="Dynamic Response"
+											description="Generates fresh random data on each request using JSON Schema + Faker. Supports string interpolation with {$.field} syntax to reference other generated fields."
+											example='{"summary": {"const": "Order {$.orderId} confirmed"}}'
+											docsLink="/docs#syntax"
+										/>
 									</div>
 								</div>
 								<Button
@@ -590,14 +627,22 @@ export function MockEditor({
 														onCheckedChange={setWildcardRequireMatch}
 													/>
 													<div className="space-y-0.5">
-														<Label
-															className="cursor-pointer font-medium"
-															onClick={() =>
-																setWildcardRequireMatch(!wildcardRequireMatch)
-															}
-														>
-															Require Match
-														</Label>
+														<div className="flex items-center gap-2">
+															<Label
+																className="cursor-pointer font-medium"
+																onClick={() =>
+																	setWildcardRequireMatch(!wildcardRequireMatch)
+																}
+															>
+																Require Match
+															</Label>
+															<FieldTooltip
+																label="Require Match"
+																description="When enabled, returns 404 if no variant matches the captured URL segments. When disabled, falls back to the base mock response."
+																example="OFF = fallback to base body, ON = 404 Not Found"
+																docsLink="/docs#wildcard-variants"
+															/>
+														</div>
 														<p className="text-xs text-muted-foreground">
 															Return 404 when no variant matches the captured URL segments
 														</p>
@@ -655,9 +700,17 @@ export function MockEditor({
 
 													<div className="grid grid-cols-2 gap-4">
 														<div className="space-y-2">
-															<Label htmlFor={`variant-key-${index}`}>
-																Capture Key
-															</Label>
+															<div className="flex items-center gap-2">
+																<Label htmlFor={`variant-key-${index}`}>
+																	Capture Key
+																</Label>
+																<FieldTooltip
+																	label="Capture Key"
+																	description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Use * as a catch-all fallback."
+																	example="123 for /users/123, alice|42 for /users/*/posts/*"
+																	docsLink="/docs#wildcard-variants"
+																/>
+															</div>
 															<Input
 																id={`variant-key-${index}`}
 																value={variant.key}
@@ -703,9 +756,17 @@ export function MockEditor({
 													</div>
 
 													<div className="space-y-2">
-														<Label htmlFor={`variant-body-${index}`}>
-															Response Body
-														</Label>
+														<div className="flex items-center gap-2">
+															<Label htmlFor={`variant-body-${index}`}>
+																Response Body
+															</Label>
+															<FieldTooltip
+																label="Response Body"
+																description="Static response for this variant. Supports {$.path} interpolation if you reference other fields."
+																example='{"id": "{$.userId}", "name": "Alice"}'
+																docsLink="/docs#examples"
+															/>
+														</div>
 														<Textarea
 															id={`variant-body-${index}`}
 															value={variant.body}
@@ -784,5 +845,6 @@ export function MockEditor({
 				</Button>
 			</div>
 		</form>
+		</TooltipProvider>
 	);
 }

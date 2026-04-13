@@ -1,6 +1,7 @@
 "use client";
 
-import { HelpCircle } from "lucide-react";
+import { ExternalLink, HelpCircle } from "lucide-react";
+import Link from "next/link";
 import {
   Tooltip,
   TooltipContent,
@@ -11,9 +12,10 @@ interface FieldTooltipProps {
   label: string;
   description: string;
   example?: string;
+  docsLink?: string;
 }
 
-export function FieldTooltip({ label, description, example }: FieldTooltipProps) {
+export function FieldTooltip({ label, description, example, docsLink }: FieldTooltipProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -26,6 +28,15 @@ export function FieldTooltip({ label, description, example }: FieldTooltipProps)
           <p className="mt-1 text-xs text-primary">
             Example: <code className="bg-muted px-1 py-0.5 rounded">{example}</code>
           </p>
+        )}
+        {docsLink && (
+          <Link
+            href={docsLink}
+            className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline"
+            target="_blank"
+          >
+            Learn more <ExternalLink className="h-3 w-3" />
+          </Link>
         )}
       </TooltipContent>
     </Tooltip>
