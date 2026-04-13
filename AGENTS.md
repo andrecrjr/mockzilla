@@ -32,6 +32,63 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - API Client Agent
 - Local Storage Agent
 - Agent Skills Reference
+- UI Component Architecture
+
+---
+
+## UI Component Architecture
+Tags: #components #ui #mock-editor #refactoring
+
+- Purpose: Modular, maintainable UI components for mock creation and editing.
+- Last Updated: 2026-04-12
+
+### Component Hierarchy
+```
+MockEditor (orchestrator)
+├── MockBasicFields (folder, name, method, status, path)
+├── AdvancedOptions (match type, query params)
+├── ResponseConfig (echo toggle, manual JSON, schema tabs)
+└── MockVariantManager (wildcard variants)
+```
+
+### MockEditor Component
+- **File**: `components/mock-editor.tsx`
+- **Purpose**: Main form orchestrator (~200 lines, reduced from 851)
+- **Responsibilities**:
+  - Manages form state and submission
+  - Coordinates child components
+  - Handles validation and API calls
+- **Props**: `mode`, `folders`, `initial`, `onSubmit`, `onCancel`
+
+### AdvancedOptions Component
+- **File**: `components/mock-advanced-options.tsx`
+- **Purpose**: Match type and query parameter configuration
+- **Sections**:
+  - **Match Type Section**: Select dropdown (exact, wildcard, substring) with descriptions
+  - **Query Params Section**: Dynamic key/value pair management
+- **Props**: `matchType`, `onMatchTypeChange`, `queryParams`, `onQueryParamsChange`
+
+### ResponseConfig Component
+- **File**: `components/mock-response-config.tsx`
+- **Purpose**: Response body configuration
+- **Features**:
+  - Echo request body toggle (POST/PUT/PATCH only)
+  - Manual JSON tab
+  - From Schema tab with dynamic response toggle and preview
+- **Props**: `method`, `echoRequestBody`, `response`, `jsonSchema`, `useDynamicResponse`, etc.
+
+### MockVariantManager Component
+- **File**: `components/mock-variant-manager.tsx`
+- **Purpose**: Wildcard variant management
+- **Features**:
+  - Require match toggle (404 vs fallback behavior)
+  - Add/remove/edit variant cards
+  - Each variant: capture key, status code, body, body type
+- **Visibility**: Only shown when `matchType === 'wildcard'`
+- **Props**: `variants`, `onVariantsChange`, `requireMatch`, `onRequireMatchChange`
+
+### Related Docs
+- `documentation/component-architecture.md` — detailed component documentation
 
 ---
 

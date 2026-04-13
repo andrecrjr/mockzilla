@@ -1,6 +1,5 @@
 'use client';
 
-import { ExternalLink as ExternalLinkIcon, Plus, Trash2, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -14,17 +13,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { TooltipProvider, Tooltip, TooltipContent } from '@/components/ui/tooltip';
-import {
-	generateFromSchemaString,
-	validateSchema,
-} from '@/lib/schema-generator';
+import { validateSchema } from '@/lib/schema-generator';
 import type { Folder, HttpMethod, MatchType, MockVariant } from '@/lib/types';
-import { FieldTooltip } from '@/components/folder-tooltips';
-import Link from 'next/link';
+import { ResponseConfig } from '@/components/mock-response-config';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 type MockFormValues = {
 	name: string;
@@ -64,15 +56,6 @@ const HTTP_METHODS: HttpMethod[] = [
 	'HEAD',
 	'OPTIONS',
 ];
-
-// All match types are now exposed in UI (wildcard was previously hidden)
-const MATCH_TYPES: MatchType[] = ['exact', 'wildcard', 'substring'];
-
-const MATCH_TYPE_DESCRIPTIONS: Record<MatchType, string> = {
-	exact: 'Path must match exactly',
-	wildcard: 'Use * as wildcard (e.g., /users/*)',
-	substring: 'Path contains the endpoint',
-};
 
 const STATUS_CODES = [
 	{ value: '200', label: '200 - OK' },
@@ -116,11 +99,7 @@ export function MockEditor({
 	);
 
 	const [activeTab, setActiveTab] = useState<'manual' | 'schema' | 'advanced'>(
-		(initial?.matchType as MatchType) === 'wildcard'
-			? 'advanced'
-			: initial?.jsonSchema
-				? 'schema'
-				: 'manual',
+		initial?.jsonSchema ? 'schema' : 'manual',
 	);
 	const [response, setResponse] = useState(initial?.response ?? '');
 	const [jsonSchema, setJsonSchema] = useState(initial?.jsonSchema ?? '');
@@ -149,13 +128,11 @@ export function MockEditor({
 	const [wildcardRequireMatch, setWildcardRequireMatch] = useState<boolean>(
 		Boolean(initial?.wildcardRequireMatch),
 	);
-	const previewJson = useRef<HTMLTextAreaElement>(null);
 	const hydratedRef = useRef<boolean>(false);
 
 	useEffect(() => {
 		const hasInitial = Boolean(initial);
 		if (mode === 'edit' && hasInitial && !hydratedRef.current) {
-			console.log(initial);
 			setName(initial?.name ?? '');
 			setPath(initial?.path ?? '');
 			setMethod((initial?.method ?? 'GET') as HttpMethod);
@@ -177,13 +154,7 @@ export function MockEditor({
 				(initial?.variants as MockVariant[] | null | undefined) ?? [],
 			);
 			setWildcardRequireMatch(Boolean(initial?.wildcardRequireMatch));
-			setActiveTab(
-			(initial?.matchType as MatchType) === 'wildcard'
-				? 'advanced'
-				: initial?.jsonSchema
-					? 'schema'
-					: 'manual',
-		);
+			setActiveTab(initial?.jsonSchema ? 'schema' : 'manual');
 			hydratedRef.current = true;
 		}
 	}, [initial, mode, defaultFolderId]);
@@ -211,39 +182,6 @@ export function MockEditor({
 	const submitText =
 		submitLabel ??
 		(mode === 'create' ? 'Create Mock Endpoint' : 'Save Changes');
-
-	const handleGenerateFromSchema = () => {
-		const schemaString = jsonSchema.trim();
-		if (!schemaString) {
-			toast.error('Schema Required', {
-				description: 'Paste a JSON Schema to generate',
-			});
-			return;
-		}
-		const validation = validateSchema(schemaString);
-		if (!validation.valid) {
-			toast.error('Invalid Schema', {
-				description: validation.error || 'Schema is invalid',
-			});
-			return;
-		}
-		try {
-			const generated = generateFromSchemaString(schemaString);
-			if (previewJson.current) {
-				previewJson.current.value = generated;
-			}
-			toast.success('Generated', {
-				description: 'Sample JSON generated from schema',
-			});
-		} catch (error) {
-			toast.error('Generation Failed', {
-				description:
-					error instanceof Error
-						? error.message
-						: 'Could not generate from schema',
-			});
-		}
-	};
 
 	const validateBeforeSubmit = (): boolean => {
 		if (showFolder && !folderId) {
@@ -298,8 +236,9 @@ export function MockEditor({
 
 	return (
 		<TooltipProvider delayDuration={300}>
-		<form onSubmit={handleSubmit}>
+			<form onSubmit={handleSubmit}>
 			<div className="grid gap-6 py-4 lg:grid-cols-5">
+				{/* Left Column - Basic Fields */}
 				<div className="space-y-4 col-span-2">
 					{showFolder && (
 						<div className="space-y-2">
@@ -385,452 +324,44 @@ export function MockEditor({
 							</p>
 						)}
 					</div>
-
-					<div className="space-y-2">
-						<div className="flex items-center gap-2">
-							<Label htmlFor="match-type">Match Type</Label>
-							<FieldTooltip
-								label="Match Type"
-								description="Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint."
-								example="exact: /users/123 | wildcard: /users/* | substring: /api/users"
-								docsLink="/docs#wildcard-variants"
-							/>
-						</div>
-						<Select
-							value={matchType}
-							onValueChange={(value) => {
-								const newMatchType = value as MatchType;
-								setMatchType(newMatchType);
-								if (newMatchType === 'wildcard') {
-									setActiveTab('advanced');
-								}
-							}}
-						>
-							<SelectTrigger id="match-type">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{MATCH_TYPES.map((mt) => (
-									<SelectItem key={mt} value={mt}>
-										{mt.charAt(0).toUpperCase() + mt.slice(1)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<p className="text-xs text-muted-foreground">
-							{MATCH_TYPE_DESCRIPTIONS[matchType]}
-						</p>
-					</div>
-
-					<div className="space-y-2">
-						<div className="flex items-center gap-2">
-							<Label>Query Params (optional)</Label>
-							<FieldTooltip
-								label="Required Query Params"
-								description="Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string."
-								example="?page=1&limit=10"
-								docsLink="/docs#overview"
-							/>
-						</div>
-						{queryParams.map((param, index) => (
-							<div key={index} className="flex items-center gap-2">
-								<Input
-									placeholder="key"
-									value={param.key}
-									onChange={(e) => {
-										const updated = [...queryParams];
-										updated[index] = { ...updated[index], key: e.target.value };
-										setQueryParams(updated);
-									}}
-									className="font-mono text-sm"
-								/>
-								<span className="text-muted-foreground">=</span>
-								<Input
-									placeholder="value"
-									value={param.value}
-									onChange={(e) => {
-										const updated = [...queryParams];
-										updated[index] = {
-											...updated[index],
-											value: e.target.value,
-										};
-										setQueryParams(updated);
-									}}
-									className="font-mono text-sm"
-								/>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									onClick={() => {
-										setQueryParams(queryParams.filter((_, i) => i !== index));
-									}}
-								>
-									<X className="h-4 w-4" />
-								</Button>
-							</div>
-						))}
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								setQueryParams([...queryParams, { key: '', value: '' }]);
-							}}
-						>
-							<Plus className="mr-1 h-3 w-3" />
-							Add Query Param
-						</Button>
-					</div>
 				</div>
 
-				<div className="space-y-2 flex flex-col col-span-3">
-					{['POST', 'PUT', 'PATCH'].includes(method) && (
-						<div className="flex items-center space-x-2 mb-2 p-3 border border-border rounded-lg bg-card/50">
-							<Switch
-								checked={echoRequestBody}
-								onCheckedChange={setEchoRequestBody}
-							/>
-							<div className="space-y-0.5">
-								<div className="flex items-center gap-2">
-									<Label
-										className="cursor-pointer font-medium"
-										onClick={() => setEchoRequestBody(!echoRequestBody)}
-									>
-										Echo Request Body
-									</Label>
-									<FieldTooltip
-										label="Echo Request Body"
-										description="Returns the exact request body as the response. Useful for testing POST/PUT endpoints where you want to verify what was sent."
-										example='POST {"name":"Alice"} → Response {"name":"Alice"}'
-										docsLink="/docs#overview"
-									/>
-								</div>
-								<p className="text-xs text-muted-foreground">
-									The response will be exactly what was sent in the request
-									body.
-								</p>
-							</div>
-						</div>
-					)}
-
-					<div
-						className={
-							echoRequestBody
-								? 'opacity-40 pointer-events-none select-none transition-opacity'
-								: 'transition-opacity'
-						}
-					>
-						<Tabs
-							value={activeTab}
-							onValueChange={(v) => setActiveTab(v as 'manual' | 'schema' | 'advanced')}
-						>
-							<TabsList>
-								<TabsTrigger value="manual">
-									Manual JSON
-								</TabsTrigger>
-								<TabsTrigger value="schema">
-									From Schema
-								</TabsTrigger>
-								<Tooltip>
-									<TabsTrigger value="advanced" className="w-full">
-										Advanced Options
-									</TabsTrigger>
-									<TooltipContent side="top" className="max-w-xs">
-										<p className="font-semibold">Advanced Options</p>
-										<p className="mt-1 text-xs text-muted-foreground">
-											Configure wildcard variants to return different responses based on captured URL segments. Only available when Match Type is set to &quot;wildcard&quot;.
-										</p>
-										<Link
-											href="/docs#wildcard-variants"
-											className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline"
-											target="_blank"
-										>
-											Learn more <ExternalLinkIcon className="h-3 w-3" />
-										</Link>
-									</TooltipContent>
-								</Tooltip>
-							</TabsList>
-							<TabsContent value="manual">
-								<Label htmlFor="create-json">JSON Response</Label>
-								<Textarea
-									id="create-json"
-									value={response}
-									onChange={(e) => setResponse(e.target.value)}
-									placeholder='{"message": "Hello World"}'
-									className="font-mono text-sm flex-1 h-[600px] scrollbar-thin"
-									required={activeTab === 'manual'}
-								/>
-							</TabsContent>
-							<TabsContent value="schema">
-								<div className="flex items-center gap-2 mb-2">
-									<Label htmlFor="schema">JSON Schema</Label>
-									<FieldTooltip
-										label="From Schema"
-										description="Paste a JSON Schema to auto-generate mock data. Enable 'Dynamic Response' to get new random data on each request. Supports Faker.js formats and string interpolation."
-										example='{"type": "object", "properties": {"name": {"type": "string", "faker": "person.fullName"}}}'
-										docsLink="/docs#syntax"
-									/>
-								</div>
-								<Textarea
-									id="schema"
-									value={jsonSchema}
-									onChange={(e) => setJsonSchema(e.target.value)}
-									className="font-mono text-sm flex-1 h-[600px]"
-									placeholder="Paste JSON Schema here..."
-									required={activeTab === 'schema'}
-								/>
-								<div className="flex items-center space-x-2 my-2">
-									<Switch
-										checked={useDynamicResponse}
-										onCheckedChange={setUseDynamicResponse}
-										required={activeTab === 'schema'}
-									/>
-									<div className="flex items-center gap-2">
-										<Label
-											className="cursor-pointer"
-											onClick={() => setUseDynamicResponse(!useDynamicResponse)}
-										>
-											Dynamic Response (new data each request){' '}
-											{activeTab === 'schema' && '*'}
-										</Label>
-										<FieldTooltip
-											label="Dynamic Response"
-											description="Generates fresh random data on each request using JSON Schema + Faker. Supports string interpolation with {$.field} syntax to reference other generated fields."
-											example='{"summary": {"const": "Order {$.orderId} confirmed"}}'
-											docsLink="/docs#syntax"
-										/>
-									</div>
-								</div>
-								<Button
-									type="button"
-									variant="secondary"
-									onClick={handleGenerateFromSchema}
-								>
-									Generate JSON Preview
-								</Button>
-								<Textarea
-									ref={previewJson}
-									id="preview-json"
-									className="mt-2 font-mono text-sm flex-1 h-[200px]"
-									placeholder="Generated JSON Here"
-								/>
-							</TabsContent>
-							<TabsContent value="advanced" className="space-y-6">
-								{matchType === 'wildcard' ? (
-									<div className="space-y-4">
-										<div className="space-y-4 rounded-lg border border-border p-6 bg-muted/20">
-											<div className="flex items-center justify-between">
-												<div className="flex items-center space-x-2">
-													<Switch
-														checked={wildcardRequireMatch}
-														onCheckedChange={setWildcardRequireMatch}
-													/>
-													<div className="space-y-0.5">
-														<div className="flex items-center gap-2">
-															<Label
-																className="cursor-pointer font-medium"
-																onClick={() =>
-																	setWildcardRequireMatch(!wildcardRequireMatch)
-																}
-															>
-																Require Match
-															</Label>
-															<FieldTooltip
-																label="Require Match"
-																description="When enabled, returns 404 if no variant matches the captured URL segments. When disabled, falls back to the base mock response."
-																example="OFF = fallback to base body, ON = 404 Not Found"
-																docsLink="/docs#wildcard-variants"
-															/>
-														</div>
-														<p className="text-xs text-muted-foreground">
-															Return 404 when no variant matches the captured URL segments
-														</p>
-													</div>
-												</div>
-
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													onClick={() => {
-														setVariants([
-															...variants,
-															{
-																key: '',
-																body: '{}',
-																statusCode: 200,
-																bodyType: 'json',
-															},
-														]);
-													}}
-												>
-													<Plus className="mr-1 h-3 w-3" />
-													Add Variant
-												</Button>
-											</div>
-
-											{variants.length === 0 && (
-												<p className="text-sm text-muted-foreground">
-													No variants yet. Add a variant to handle different captured
-													URL segments.
-												</p>
-											)}
-
-											{variants.map((variant, index) => (
-												<div
-													key={variant.key || `variant-${index}`}
-													className="space-y-4 rounded-lg border border-border bg-card p-6"
-												>
-													<div className="flex items-center justify-between">
-														<span className="text-sm font-semibold">
-															Variant {index + 1}
-														</span>
-														<Button
-															type="button"
-															variant="ghost"
-															size="icon"
-															onClick={() => {
-																setVariants(variants.filter((_, i) => i !== index));
-															}}
-														>
-															<Trash2 className="h-4 w-4 text-destructive" />
-														</Button>
-													</div>
-
-													<div className="grid grid-cols-2 gap-4">
-														<div className="space-y-2">
-															<div className="flex items-center gap-2">
-																<Label htmlFor={`variant-key-${index}`}>
-																	Capture Key
-																</Label>
-																<FieldTooltip
-																	label="Capture Key"
-																	description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Use * as a catch-all fallback."
-																	example="123 for /users/123, alice|42 for /users/*/posts/*"
-																	docsLink="/docs#wildcard-variants"
-																/>
-															</div>
-															<Input
-																id={`variant-key-${index}`}
-																value={variant.key}
-																onChange={(e) => {
-																	const newVariants = [...variants];
-																	newVariants[index] = {
-																		...variant,
-																		key: e.target.value,
-																	};
-																	setVariants(newVariants);
-																}}
-																placeholder="e.g., 123 or alice|active"
-															/>
-														</div>
-
-														<div className="space-y-2">
-															<Label htmlFor={`variant-status-${index}`}>
-																Status Code
-															</Label>
-															<Select
-																value={String(variant.statusCode)}
-																onValueChange={(value) => {
-																	const newVariants = [...variants];
-																	newVariants[index] = {
-																		...variant,
-																		statusCode: Number.parseInt(value, 10),
-																	};
-																	setVariants(newVariants);
-																}}
-															>
-																<SelectTrigger id={`variant-status-${index}`}>
-																	<SelectValue />
-																</SelectTrigger>
-																<SelectContent>
-																	{STATUS_CODES.map((code) => (
-																		<SelectItem key={code.value} value={code.value}>
-																			{code.label}
-																		</SelectItem>
-																	))}
-																</SelectContent>
-															</Select>
-														</div>
-													</div>
-
-													<div className="space-y-2">
-														<div className="flex items-center gap-2">
-															<Label htmlFor={`variant-body-${index}`}>
-																Response Body
-															</Label>
-															<FieldTooltip
-																label="Response Body"
-																description="Static response for this variant. Supports {$.path} interpolation if you reference other fields."
-																example='{"id": "{$.userId}", "name": "Alice"}'
-																docsLink="/docs#examples"
-															/>
-														</div>
-														<Textarea
-															id={`variant-body-${index}`}
-															value={variant.body}
-															onChange={(e) => {
-																const newVariants = [...variants];
-																newVariants[index] = {
-																	...variant,
-																	body: e.target.value,
-																};
-																setVariants(newVariants);
-															}}
-															placeholder='{"message": "Variant response"}'
-															className="font-mono text-sm h-[200px]"
-															rows={8}
-														/>
-													</div>
-
-													<div className="space-y-2">
-														<Label htmlFor={`variant-body-type-${index}`}>
-															Body Type
-														</Label>
-														<Select
-															value={variant.bodyType}
-															onValueChange={(value) => {
-																const newVariants = [...variants];
-																newVariants[index] = {
-																	...variant,
-																	bodyType: value,
-																};
-																setVariants(newVariants);
-															}}
-														>
-															<SelectTrigger id={`variant-body-type-${index}`}>
-																<SelectValue />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="json">JSON</SelectItem>
-																<SelectItem value="text">Text</SelectItem>
-															</SelectContent>
-														</Select>
-													</div>
-												</div>
-											))}
-										</div>
-									</div>
-								) : (
-									<div className="flex items-center justify-center h-[300px] text-muted-foreground">
-										<div className="text-center space-y-2">
-											<p className="text-sm">
-												Wildcard Variants are only available when Match Type is set to <code className="bg-muted px-1 py-0.5 rounded">wildcard</code>
-											</p>
-											<p className="text-xs">
-												Change the Match Type in the left panel to enable this feature.
-											</p>
-										</div>
-									</div>
-								)}
-							</TabsContent>
-						</Tabs>
-					</div>
+				{/* Right Column - Response Config with Tabs */}
+				<div className="space-y-6 col-span-3">
+					<ResponseConfig
+						method={method}
+						echoRequestBody={echoRequestBody}
+						onEchoRequestBodyChange={setEchoRequestBody}
+						response={response}
+						onResponseChange={setResponse}
+						jsonSchema={jsonSchema}
+						onJsonSchemaChange={setJsonSchema}
+						useDynamicResponse={useDynamicResponse}
+						onUseDynamicResponseChange={setUseDynamicResponse}
+						activeTab={activeTab}
+						onActiveTabChange={(newTab) => {
+							setActiveTab(newTab);
+						}}
+						// Advanced Options props
+						matchType={matchType}
+						onMatchTypeChange={(newMatchType) => {
+							setMatchType(newMatchType);
+							if (newMatchType === 'wildcard') {
+								setActiveTab('advanced'); // Switch to advanced tab when wildcard selected
+							}
+						}}
+						queryParams={queryParams}
+						onQueryParamsChange={(newParams) => setQueryParams(newParams)}
+						// MockVariantManager props
+						variants={variants}
+						onVariantsChange={setVariants}
+						requireMatch={wildcardRequireMatch}
+						onRequireMatchChange={setWildcardRequireMatch}
+					/>
 				</div>
 			</div>
 
-			<div className="flex justify-end gap-2">
+			<div className="flex justify-end gap-2 pt-4 border-t border-border">
 				{onCancel && (
 					<Button type="button" variant="outline" onClick={onCancel}>
 						Cancel
