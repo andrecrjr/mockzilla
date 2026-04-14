@@ -1,0 +1,254 @@
+---
+title: Advanced Options
+---
+
+# Advanced Options
+
+Configure how Mockzilla matches incoming requests using **Match Types** and **Query Parameters**. These settings give you fine-grained control over when and how your mocks respond.
+
+![Advanced Options UI](/images/docs/advanced-options-ui.png)
+
+*The Advanced Options tab in the mock editor, showing Match Type and Wildcard Variants configuration.*
+
+## Match Type
+
+The **Match Type** determines how the endpoint path is matched against incoming request URLs.
+
+| Match Type | Behavior | Use Case |
+|------------|----------|----------|
+| **Exact** (default) | Path must match exactly | Static endpoints like `/users` or `/api/login` |
+| **Wildcard** | Use `*` to capture URL segments | Dynamic paths like `/users/*` or `/api/*/posts/*` |
+| **Substring** | Path contains the endpoint | Prefix matching like `/api` matches `/api/v1/users` |
+
+### Exact Match
+
+The default behavior. The request URL must match the endpoint path exactly.
+
+```
+Endpoint:  /users
+Request:   GET /api/mock/myfolder/users    ✅ Match
+Request:   GET /api/mock/myfolder/users/1  ❌ No match
+```
+
+### Wildcard Match
+
+Use `*` in your endpoint to capture URL segments. Each `*` captures a segment, and captured values become **capture keys** that are matched against your variants table.
+
+#### Capture Key Examples
+
+| Endpoint | Request URL | Capture Key |
+|----------|-------------|-------------|
+| `/users/*` | `/users/123` | `123` |
+| `/users/*/posts/*` | `/users/alice/posts/42` | `alice\|42` |
+| `/api/*/status/*` | `/api/bob/status/active` | `bob\|active` |
+
+#### Wildcard Variants
+
+When using wildcard match type, you can configure multiple response variants based on captured URL segments:
+
+```
+Endpoint:  /users/*
+Match:     Wildcard
+
+Variants:
+  key "1"   → {"id":1,"name":"Alice","role":"admin"}
+  key "2"   → {"id":2,"name":"Bob","role":"user"}
+  key "*"   → {"error":"User not found","code":404}
+
+Results:
+  GET /api/mock/myfolder/users/1   → Alice (admin)
+  GET /api/mock/myfolder/users/2   → Bob (user)
+  GET /api/mock/myfolder/users/999 → 404 fallback
+```
+
+#### Wildcard Catch-All Variant (`*` Key)
+
+Use `*` as a variant key to create a **fallback** response. When no exact capture key matches, Mockzilla falls back to this variant. Exact matches always take priority.
+
+**Variants Config:**
+
+```json
+[
+  { "key": "1",   "body": {"name":"Alice"} },
+  { "key": "2",   "body": {"name":"Bob"}   },
+  { "key": "*",   "body": {"error":"Not found"} }
+]
+```
+
+**Request → Response:**
+
+```
+/users/1   → {"name":"Alice"}
+/users/2   → {"name":"Bob"}
+/users/999 → {"error":"Not found"}  ← fallback
+```
+
+#### Require Match Toggle
+
+When **Require Match** is enabled, unmatched URLs return a `404` instead of falling through to the base mock response. This is useful for strict validation — e.g., only known IDs should be served.
+
+| Require Match OFF (default) | Require Match ON |
+|----------------------------|------------------|
+| No match → serve base mock body | No match → 404 Not Found |
+
+**Example:**
+
+```
+Endpoint:  /users/*
+Match:     Wildcard
+Require:   OFF
+
+Base Mock Body: {"default": true}
+
+Variants:
+  key "1"   → {"id":1,"name":"Alice"}
+  key "2"   → {"id":2,"name":"Bob"}
+
+Results:
+  GET /api/mock/myfolder/users/1   → Alice
+  GET /api/mock/myfolder/users/2   → Bob
+  GET /api/mock/myfolder/users/999 → {"default": true}  ← falls back to base
+```
+
+With **Require Match ON**:
+
+```
+Results:
+  GET /api/mock/myfolder/users/1   → Alice
+  GET /api/mock/myfolder/users/2   → Bob
+  GET /api/mock/myfolder/users/999 → 404 Not Found  ← strict validation
+```
+
+### Substring Match
+
+The request URL must **contain** the endpoint path. Useful for matching API prefixes or shared routes.
+
+```
+Endpoint:  /api
+Match:     Substring
+
+Request:   GET /api/mock/myfolder/api            ✅ Match
+Request:   GET /api/mock/myfolder/api/v1/users   ✅ Match
+Request:   GET /api/mock/myfolder/users          ❌ No match
+```
+
+## Query Parameters
+
+Configure **required query parameters** that must be present for the mock to match. This allows you to create different mocks for the same endpoint based on query string values.
+
+![Query Parameters UI](/images/docs/query-parameters-ui.png)
+
+*The Query Parameters section in the Advanced Options tab, showing key/value pair configuration.*
+
+### How It Works
+
+- Mock will **only match** if **ALL** specified query params are present with matching values
+- Leave empty to match regardless of query string
+- Multiple params are AND-ed together (all must match)
+
+### Examples
+
+#### Single Query Parameter
+
+```
+Endpoint:  /users
+Query Params:  page=1
+
+Request:   GET /api/mock/myfolder/users?page=1        ✅ Match
+Request:   GET /api/mock/myfolder/users?page=2        ❌ No match (value mismatch)
+Request:   GET /api/mock/myfolder/users               ❌ No match (missing param)
+```
+
+#### Multiple Query Parameters
+
+```
+Endpoint:  /users
+Query Params:  page=1, limit=10
+
+Request:   GET /api/mock/myfolder/users?page=1&limit=10     ✅ Match
+Request:   GET /api/mock/myfolder/users?page=1              ❌ No match (missing limit)
+Request:   GET /api/mock/myfolder/users?page=1&limit=20     ❌ No match (limit mismatch)
+Request:   GET /api/mock/myfolder/users?page=2&limit=10     ❌ No match (page mismatch)
+```
+
+#### No Query Parameters (Match All)
+
+```
+Endpoint:  /users
+Query Params:  (empty)
+
+Request:   GET /api/mock/myfolder/users                   ✅ Match
+Request:   GET /api/mock/myfolder/users?page=1            ✅ Match
+Request:   GET /api/mock/myfolder/users?foo=bar           ✅ Match
+```
+
+### Use Cases
+
+- **Pagination**: Create separate mocks for different pages
+- **Feature Flags**: Toggle responses based on feature flags in query params
+- **A/B Testing**: Serve different variants based on `?variant=a` or `?variant=b`
+- **API Versioning**: Match `/api?version=v1` vs `/api?version=v2`
+- **Conditional Mocks**: Only respond when specific conditions are met in query string
+
+## Combining Match Types and Query Parameters
+
+Match Types and Query Parameters work together to create powerful matching logic:
+
+### Example 1: Exact Match + Query Params
+
+```
+Endpoint:  /users
+Match:     Exact
+Query:     role=admin
+
+Request:   GET /api/mock/myfolder/users?role=admin    ✅ Match
+Request:   GET /api/mock/myfolder/users?role=user     ❌ No match
+Request:   GET /api/mock/myfolder/users/1             ❌ No match (path mismatch)
+```
+
+### Example 2: Wildcard Match + Query Params
+
+```
+Endpoint:  /users/*
+Match:     Wildcard
+Query:     include=profile
+
+Variants:
+  key "1"   → {"id":1,"name":"Alice","profile":{...}}
+  key "2"   → {"id":2,"name":"Bob","profile":{...}}
+
+Request:   GET /api/mock/myfolder/users/1?include=profile   ✅ Match → Alice
+Request:   GET /api/mock/myfolder/users/2?include=profile   ✅ Match → Bob
+Request:   GET /api/mock/myfolder/users/1                   ❌ No match (missing query param)
+```
+
+### Example 3: Substring Match + Query Params
+
+```
+Endpoint:  /api
+Match:     Substring
+Query:     debug=true
+
+Request:   GET /api/mock/myfolder/api/v1/users?debug=true   ✅ Match
+Request:   GET /api/mock/myfolder/api/v2/posts?debug=true   ✅ Match
+Request:   GET /api/mock/myfolder/api/v1/users              ❌ No match (missing query param)
+```
+
+## Chrome Extension Parity
+
+All advanced options work identically in both the Mockzilla server and the Chrome extension:
+
+- **Match Types** (Exact, Wildcard, Substring) are preserved when syncing
+- **Query Parameters** are included in extension exports
+- **Wildcard Variants** with capture keys and Require Match setting sync seamlessly
+- The same matching logic applies on both sides
+
+## Best Practices
+
+1. **Use Exact Match by default** — It's the most predictable and easiest to debug
+2. **Use Wildcard for dynamic IDs** — When you need different responses for `/users/1`, `/users/2`, etc.
+3. **Use Substring for prefixes** — When mocking entire API trees like `/api/*`
+4. **Add Query Params for conditional logic** — When the same endpoint should behave differently based on query string
+5. **Enable Require Match for strict validation** — When you only want to serve known/mock data
+6. **Use `*` variant as fallback** — Catch-all for unmatched wildcard requests
+7. **Test your matching logic** — Verify edge cases in your mock setup before relying on them in tests
