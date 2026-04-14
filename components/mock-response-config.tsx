@@ -1,7 +1,7 @@
 'use client';
 
-import { ExternalLink as ExternalLinkIcon, Plus, X } from 'lucide-react';
-import { useRef } from 'react';
+import { ChevronDown, ChevronRight, ExternalLink as ExternalLinkIcon, Plus, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,61 @@ import {
 } from '@/lib/schema-generator';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import { FieldTooltip } from '@/components/folder-tooltips';
+import { MockVariantManager } from '@/components/mock-variant-manager';
 import Link from 'next/link';
+
+type CollapsibleSectionProps = {
+	title: string;
+	tooltip?: {
+		label: string;
+		description: string;
+		example: string;
+		docsLink: string;
+	};
+	isExpanded: boolean;
+	onToggle: () => void;
+	children: React.ReactNode;
+};
+
+function CollapsibleSection({
+	title,
+	tooltip,
+	isExpanded,
+	onToggle,
+	children,
+}: CollapsibleSectionProps) {
+	return (
+		<div className="rounded-lg border border-border bg-card">
+			<button
+				type="button"
+				onClick={onToggle}
+				className="flex w-full items-center justify-between gap-2 p-4 text-left hover:bg-muted/50 transition-colors"
+			>
+				<div className="flex items-center gap-2">
+					<span className="text-base font-semibold">{title}</span>
+					{tooltip && (
+						<FieldTooltip
+							label={tooltip.label}
+							description={tooltip.description}
+							example={tooltip.example}
+							docsLink={tooltip.docsLink}
+						/>
+					)}
+				</div>
+				{isExpanded ? (
+					<ChevronDown className="h-4 w-4 text-muted-foreground" />
+				) : (
+					<ChevronRight className="h-4 w-4 text-muted-foreground" />
+				)}
+			</button>
+			{isExpanded && (
+				<div className="border-t border-border p-4">
+					{children}
+				</div>
+			)}
+		</div>
+	);
+}
 
 type ResponseConfigProps = {
 	method: HttpMethod;
@@ -46,6 +100,7 @@ type ResponseConfigProps = {
 	onVariantsChange: (variants: MockVariant[]) => void;
 	requireMatch: boolean;
 	onRequireMatchChange: (value: boolean) => void;
+	endpoint?: string;
 };
 
 export function ResponseConfig({
@@ -70,8 +125,27 @@ export function ResponseConfig({
 	onVariantsChange,
 	requireMatch,
 	onRequireMatchChange,
+	endpoint,
 }: ResponseConfigProps) {
 	const previewJson = useRef<HTMLTextAreaElement>(null);
+
+	// Collapsible section states
+	const [queryExpanded, setQueryExpanded] = useState(queryParams.length > 0);
+	const [matchExpanded, setMatchExpanded] = useState(matchType !== 'exact');
+	const [variantsExpanded, setVariantsExpanded] = useState(variants.length > 0);
+
+	// Auto-expand when content is added
+	useEffect(() => {
+		if (queryParams.length > 0) setQueryExpanded(true);
+	}, [queryParams.length]);
+
+	useEffect(() => {
+		if (matchType !== 'exact') setMatchExpanded(true);
+	}, [matchType]);
+
+	useEffect(() => {
+		if (variants.length > 0) setVariantsExpanded(true);
+	}, [variants.length]);
 
 	const handleGenerateFromSchema = () => {
 		const schemaString = jsonSchema.trim();
@@ -283,77 +357,86 @@ export function ResponseConfig({
 							</div>
 						</TabsContent>
 
-						<TabsContent value="advanced" className="space-y-6">
+						<TabsContent value="advanced" className="space-y-4">
 							{/* Query Parameters Section */}
-							<div className="space-y-3 mt-4">
-								<div className="flex items-center gap-2">
-									<Label className="text-base font-semibold">Query Parameters</Label>
-									<FieldTooltip
-										label="Required Query Params"
-										description="Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string."
-										example="?page=1&limit=10"
-										docsLink="/docs#overview"
-									/>
+							<CollapsibleSection
+								title="Query Parameters"
+								tooltip={{
+									label: "Required Query Params",
+									description: "Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string.",
+									example: "?page=1&limit=10",
+									docsLink: "/docs#overview",
+								}}
+								isExpanded={queryExpanded}
+								onToggle={() => setQueryExpanded(!queryExpanded)}
+							>
+								<div className="space-y-3">
+									{queryParams.length === 0 ? (
+										<p className="text-sm text-muted-foreground">
+											No query parameters required. Mock will match any request to this endpoint.
+										</p>
+									) : (
+										<div className="space-y-2">
+											{queryParams.map((param, index) => (
+												<div key={index} className="flex items-center gap-2">
+													<Input
+														placeholder="key"
+														value={param.key}
+														onChange={(e) => updateParam(index, 'key', e.target.value)}
+														className="font-mono text-sm"
+													/>
+													<span className="text-muted-foreground">=</span>
+													<Input
+														placeholder="value"
+														value={param.value}
+														onChange={(e) => updateParam(index, 'value', e.target.value)}
+														className="font-mono text-sm"
+													/>
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														onClick={() => removeParam(index)}
+													>
+														<X className="h-4 w-4" />
+													</Button>
+												</div>
+											))}
+										</div>
+									)}
+
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={addParam}
+									>
+										<Plus className="mr-1 h-3 w-3" />
+										Add Query Param
+									</Button>
 								</div>
-
-								{queryParams.length === 0 ? (
-									<p className="text-sm text-muted-foreground">
-										No query parameters required. Mock will match any request to this endpoint.
-									</p>
-								) : (
-									<div className="space-y-2">
-										{queryParams.map((param, index) => (
-											<div key={index} className="flex items-center gap-2">
-												<Input
-													placeholder="key"
-													value={param.key}
-													onChange={(e) => updateParam(index, 'key', e.target.value)}
-													className="font-mono text-sm"
-												/>
-												<span className="text-muted-foreground">=</span>
-												<Input
-													placeholder="value"
-													value={param.value}
-													onChange={(e) => updateParam(index, 'value', e.target.value)}
-													className="font-mono text-sm"
-												/>
-												<Button
-													type="button"
-													variant="ghost"
-													size="icon"
-													onClick={() => removeParam(index)}
-												>
-													<X className="h-4 w-4" />
-												</Button>
-											</div>
-										))}
-									</div>
-								)}
-
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onClick={addParam}
-								>
-									<Plus className="mr-1 h-3 w-3" />
-									Add Query Param
-								</Button>
-							</div>
+							</CollapsibleSection>
 
 							{/* Match Type Section */}
-							<div className="space-y-3">
-								<div className="flex items-center gap-2">
-									<Label className="text-base font-semibold">Match Type</Label>
-									<FieldTooltip
-										label="Match Type"
-										description="Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint."
-										example="exact: /users/123 | wildcard: /users/* | substring: /api/users"
-										docsLink="/docs#wildcard-variants"
-									/>
-								</div>
+							<CollapsibleSection
+								title="Match Type"
+								tooltip={{
+									label: "Match Type",
+									description: "Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint.",
+									example: "exact: /users/123 | wildcard: /users/* | substring: /api/users",
+									docsLink: "/docs#wildcard-variants",
+								}}
+								isExpanded={matchExpanded}
+								onToggle={() => setMatchExpanded(!matchExpanded)}
+							>
 								<div className="space-y-2">
-									<Select value={matchType} onValueChange={(v) => onMatchTypeChange(v as MatchType)}>
+									<Select value={matchType} onValueChange={(v) => {
+										const newType = v as MatchType;
+										onMatchTypeChange(newType);
+										if (newType === 'wildcard') {
+											setVariantsExpanded(true);
+										}
+									}}>
 										<SelectTrigger id="match-type">
 											<SelectValue placeholder="Select match type" />
 										</SelectTrigger>
@@ -368,89 +451,43 @@ export function ResponseConfig({
 									<p className="text-xs text-muted-foreground">
 										{MATCH_TYPE_DESCRIPTIONS[matchType]}
 									</p>
+									{matchType === 'wildcard' && endpoint && !endpoint.includes('*') && (
+										<div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
+											<span className="shrink-0 text-amber-600 dark:text-amber-400">⚠</span>
+											<div className="space-y-1">
+												<p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+													No wildcard detected
+												</p>
+												<p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+													Your endpoint <code className="font-mono">{endpoint}</code> doesn't contain <code className="font-mono">*</code>. Add a <code className="font-mono">*</code> to capture URL segments, e.g., <code className="font-mono">/users/*</code> or <code className="font-mono">/users/*/posts/*</code>.
+												</p>
+											</div>
+										</div>
+									)}
 								</div>
-							</div>
+							</CollapsibleSection>
 
 							{/* Mock Variant Manager (only when wildcard) */}
 							{matchType === 'wildcard' && (
-								<div className="space-y-3">
-									<div className="flex items-center gap-2">
-										<Label className="text-base font-semibold">Wildcard Variants</Label>
-										<FieldTooltip
-											label="Wildcard Variants"
-											description="Define multiple response variants with different conditions (headers, body, etc.). The first matching variant will be returned."
-											example="Variant 1: 200 OK | Variant 2: 404 Not Found"
-											docsLink="/docs#wildcard-variants"
-										/>
-									</div>
-
-									<div className="space-y-4 rounded-lg border border-border p-4 bg-muted/50">
-										{variants.length === 0 ? (
-											<p className="text-sm text-muted-foreground">
-												No variants defined. Add your first response variant.
-											</p>
-										) : (
-											variants.map((variant, index) => (
-												<div key={index} className="flex items-start gap-2">
-													<div className="flex-1 space-y-1">
-														<p className="text-sm font-medium">Variant {index + 1}</p>
-														<p className="text-xs text-muted-foreground font-mono">
-															Status: {variant.statusCode} | Weight: {variant.weight ?? 1}
-														</p>
-													</div>
-													<Button
-														type="button"
-														variant="ghost"
-														size="icon"
-														onClick={() => {
-															const newVariants = [...variants];
-															newVariants.splice(index, 1);
-															onVariantsChange(newVariants);
-														}}
-													>
-														<X className="h-4 w-4" />
-													</Button>
-												</div>
-											))
-										)}
-
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											onClick={() => {
-												onVariantsChange([
-													...variants,
-													{ id: `variant-${Date.now()}`, statusCode: 200, weight: 1, conditions: {} },
-												]);
-											}}
-										>
-											<Plus className="mr-1 h-3 w-3" />
-											Add Variant
-										</Button>
-									</div>
-
-									<div className="flex items-center space-x-2">
-										<Switch
-											checked={requireMatch}
-											onCheckedChange={onRequireMatchChange}
-										/>
-										<div className="flex items-center gap-2">
-											<Label
-												className="cursor-pointer"
-												onClick={() => onRequireMatchChange(!requireMatch)}
-											>
-												Require Match
-											</Label>
-											<FieldTooltip
-												label="Require Match"
-												description="When enabled, requests that don't match any variant will return 404 instead of falling back to the default response."
-												example="Enabled: No match → 404 | Disabled: No match → Default response"
-												docsLink="/docs#wildcard-variants"
-											/>
-										</div>
-									</div>
-								</div>
+								<CollapsibleSection
+									title="Wildcard Variants"
+									tooltip={{
+										label: "Wildcard Variants",
+										description: "Define different response variants based on captured URL segments. Each variant has a unique key that matches URL segments captured by * in your endpoint.",
+										example: "123 for /users/123, alice|42 for /users/*/posts/*",
+										docsLink: "/docs#wildcard-variants",
+									}}
+									isExpanded={variantsExpanded}
+									onToggle={() => setVariantsExpanded(!variantsExpanded)}
+								>
+									<MockVariantManager
+										variants={variants}
+										onVariantsChange={onVariantsChange}
+										requireMatch={requireMatch}
+										onRequireMatchChange={onRequireMatchChange}
+										endpoint={endpoint}
+									/>
+								</CollapsibleSection>
 							)}
 						</TabsContent>
 					</Tabs>

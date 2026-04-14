@@ -112,7 +112,7 @@ export function MockCard({
 							<Badge variant="outline" className="text-xs">
 								{mock.matchType || 'exact'}
 							</Badge>
-							{mock.variants && mock.variants.length > 0 && (
+							{mock.matchType === 'wildcard' && mock.variants && mock.variants.length > 0 && (
 								<Badge variant="secondary" className="text-xs">
 									{mock.variants.length} variant
 									{mock.variants.length > 1 ? 's' : ''}

@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { MockVariant } from '@/lib/types';
 import { FieldTooltip } from '@/components/folder-tooltips';
+import { VariantPatternPreview, RequireMatchIndicator } from '@/components/visual-pattern-preview';
 
 const STATUS_CODES = [
 	{ value: '200', label: '200 - OK' },
@@ -38,9 +39,10 @@ type VariantCardProps = {
 	index: number;
 	onUpdate: (variant: MockVariant) => void;
 	onDelete: () => void;
+	endpoint?: string;
 };
 
-function VariantCard({ variant, index, onUpdate, onDelete }: VariantCardProps) {
+function VariantCard({ variant, index, onUpdate, onDelete, endpoint }: VariantCardProps) {
 	return (
 		<div className="space-y-4 rounded-lg border border-border bg-card p-6">
 			<div className="flex items-center justify-between">
@@ -70,7 +72,7 @@ function VariantCard({ variant, index, onUpdate, onDelete }: VariantCardProps) {
 					</div>
 					<Input
 						id={`variant-key-${index}`}
-						value={variant.key}
+						value={variant.key ?? ''}
 						onChange={(e) => onUpdate({ ...variant, key: e.target.value })}
 						placeholder="e.g., 123 or alice|active"
 					/>
@@ -144,6 +146,11 @@ function VariantCard({ variant, index, onUpdate, onDelete }: VariantCardProps) {
 					</SelectContent>
 				</Select>
 			</div>
+
+			{/* Visual Pattern Preview for this variant */}
+			{endpoint && (
+				<VariantPatternPreview endpoint={endpoint} variant={variant} />
+			)}
 		</div>
 	);
 }
@@ -153,6 +160,7 @@ type MockVariantManagerProps = {
 	onVariantsChange: (variants: MockVariant[]) => void;
 	requireMatch: boolean;
 	onRequireMatchChange: (value: boolean) => void;
+	endpoint?: string;
 };
 
 export function MockVariantManager({
@@ -160,6 +168,7 @@ export function MockVariantManager({
 	onVariantsChange,
 	requireMatch,
 	onRequireMatchChange,
+	endpoint,
 }: MockVariantManagerProps) {
 	const addVariant = () => {
 		onVariantsChange([
@@ -240,13 +249,21 @@ export function MockVariantManager({
 					<div className="space-y-4 mt-4">
 						{variants.map((variant, index) => (
 							<VariantCard
-								key={variant.key || `variant-${index}`}
+								key={`variant-${index}`}
 								variant={variant}
 								index={index}
 								onUpdate={(v) => updateVariant(index, v)}
 								onDelete={() => deleteVariant(index)}
+								endpoint={endpoint}
 							/>
 						))}
+					</div>
+				)}
+
+				{/* Require Match Indicator */}
+				{variants.length > 0 && (
+					<div className="mt-2">
+						<RequireMatchIndicator requireMatch={requireMatch} />
 					</div>
 				)}
 			</div>

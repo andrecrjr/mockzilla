@@ -357,6 +357,7 @@ export function MockEditor({
 						onVariantsChange={setVariants}
 						requireMatch={wildcardRequireMatch}
 						onRequireMatchChange={setWildcardRequireMatch}
+						endpoint={path}
 					/>
 				</div>
 			</div>
