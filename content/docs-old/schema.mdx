@@ -1,0 +1,318 @@
+---
+title: Schema & Data Generation
+---
+
+# Schema & Data Generation
+
+Master the art of dynamic mocking with JSON Schema, Faker.js, and Mockzilla's powerful extensions. Paste these schemas into a mock's JSON Schema field when dynamic responses are enabled.
+
+## The Foundation
+
+Mockzilla uses [JSON Schema](https://json-schema.org/) plus [json-schema-faker](https://raw.githubusercontent.com/json-schema-faker/json-schema-faker/refs/heads/master/docs/USAGE.md) to turn schemas into example payloads.
+
+If a schema is valid for json-schema-faker, it will generally work in Mockzilla. You can then layer on the extensions below for cross-field consistency.
+
+## The Randomness
+
+We wire [Faker.js](https://fakerjs.dev/) into json-schema-faker. Use the `faker` keyword (for example `"faker": "internet.email"`) to produce realistic test data.
+
+## Core Syntax
+
+### Using Faker.js
+
+Add a `faker` property to your schema to tell json-schema-faker which Faker method to call.
+
+**Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "faker": "person.fullName"
+    },
+    "email": {
+      "type": "string",
+      "faker": "internet.email"
+    }
+  },
+  "required": ["name", "email"]
+}
+```
+
+**Generated Output:**
+
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane.doe@example.com"
+}
+```
+
+### JSON Schema Faker Features
+
+Mockzilla uses `json-schema-faker v0.5.9` which primarily supports **JSON Schema Draft-04**. It comes pre-configured with options for better data generation.
+
+**Configured Options:**
+
+- `alwaysFakeOptionals: true` — Always generates optional fields.
+- `useDefaultValue: true` — Uses `default` values from schema.
+- `useExamplesValue: true` — Picks random value from `examples` array.
+- `minItems: 1` — At least one item in arrays.
+
+**Passing Arguments:**
+
+Pass arguments to Faker methods using an array:
+
+```json
+{
+  "faker": {
+    "finance.amount": [100, 1000, 2, "$"]
+  }
+}
+```
+
+### Referring to Other Fields
+
+Use the `{$.path.to.field}` syntax to reference values generated elsewhere in the same document. Mockzilla resolves these templates after json-schema-faker finishes.
+
+> **Note:** When a `pattern` contains `{$.` or `{{$.`, Mockzilla treats it as a template string instead of a regular expression.
+
+**Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "user": {
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string", "faker": "person.firstName" }
+      },
+      "required": ["firstName"]
+    },
+    "message": {
+      "type": "string",
+      "pattern": "Hello {$.user.firstName}, welcome back!"
+    }
+  },
+  "required": ["user", "message"]
+}
+```
+
+**Generated Output:**
+
+```json
+{
+  "user": {
+    "firstName": "Lucas"
+  },
+  "message": "Hello Lucas, welcome back!"
+}
+```
+
+## Interpolation Patterns
+
+Compose consistent payloads using only `{$.path}` templates on top of json-schema-faker.
+
+### Reuse IDs Across Fields
+
+Generate a value once, then reference it anywhere else in the document. You can also access array items like `{$.items[0].id}`.
+
+**Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "transactionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "const": "{$.transactionId}"
+    },
+    "receiptId": {
+      "const": "{$.transactionId}"
+    }
+  }
+}
+```
+
+**Generated Output:**
+
+```json
+{
+  "transactionId": "50f2c2f3-3a2e-4f5b-9a1e-123456789abc",
+  "orderId": "50f2c2f3-3a2e-4f5b-9a1e-123456789abc",
+  "receiptId": "50f2c2f3-3a2e-4f5b-9a1e-123456789abc"
+}
+```
+
+### Human-Friendly Summaries
+
+Combine multiple generated fields into one readable string.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "orderId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "enum": ["pending", "shipped", "delivered"]
+    },
+    "summary": {
+      "const": "Order {$.orderId} is currently {$.status}"
+    }
+  }
+}
+```
+
+## Real-World Recipes
+
+Use these patterns as starting points for common API shapes. Each schema can back a mock endpoint; Mockzilla will generate a fresh body on every request.
+
+### 1. Relational Consistency: Order & Line Items
+
+Generate an order ID once and reuse it across line items and summary using JSONPath-style references.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "reference": {
+      "type": "string",
+      "pattern": "REF-{$.id}"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "product": { "type": "string", "faker": "commerce.productName" },
+          "orderId": {
+            "type": "string",
+            "pattern": "{$.id}"
+          }
+        },
+        "required": ["id", "product", "orderId"]
+      }
+    },
+    "summary": {
+      "type": "string",
+      "pattern": "Summary for Order {$.id}: {$.items[0].product}, {$.items[1].product}"
+    }
+  },
+  "required": ["id", "items", "summary"]
+}
+```
+
+### 2. Coherent User Profile
+
+Generate a name once and reuse it to build username, email, and bio using JSONPath-style references.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "faker": "person.firstName"
+    },
+    "lastName": {
+      "type": "string",
+      "faker": "person.lastName"
+    },
+    "username": {
+      "type": "string",
+      "pattern": "{{$.firstName}}.{{$.lastName}}"
+    },
+    "email": {
+      "type": "string",
+      "pattern": "{{$.firstName}}.{{$.lastName}}@example.com"
+    },
+    "bio": {
+      "type": "string",
+      "pattern": "Hi, I'm {$.firstName} {$.lastName}. I love coding!"
+    }
+  },
+  "required": ["firstName", "lastName", "username", "email"]
+}
+```
+
+### 3. Paginated List Endpoint
+
+Shape a typical paginated list response for endpoints like `GET /users` or `GET /orders`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "faker": "string.uuid" },
+          "name": { "type": "string", "faker": "person.fullName" },
+          "email": { "type": "string", "faker": "internet.email" }
+        },
+        "required": ["id", "name", "email"]
+      }
+    },
+    "page": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "pageSize": { "type": "integer", "minimum": 10, "maximum": 50 },
+    "total": { "type": "integer", "minimum": 20, "maximum": 200 },
+    "hasNext": { "type": "boolean" }
+  },
+  "required": ["items", "page", "pageSize", "total"]
+}
+```
+
+### 4. Error Envelope
+
+Simulate structured error responses with stable codes and varied human-readable messages.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": ["USER_NOT_FOUND", "VALIDATION_FAILED", "RATE_LIMITED"]
+        },
+        "message": {
+          "type": "string",
+          "faker": "lorem.sentence"
+        },
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": ["code", "message", "requestId"]
+    },
+    "trace": {
+      "type": "string",
+      "const": "support: attach logs and request {$.error.requestId}"
+    }
+  },
+  "required": ["error"]
+}
+```

@@ -1,0 +1,46 @@
+---
+title: Extension Sync
+---
+
+# Extension Integration
+
+Seamlessly sync mocks between your local Chrome Extension and the Mockzilla Server.
+
+> **High-Fidelity Sync** — Mockzilla uses a smart merge strategy to ensure **zero data loss**. Extension-specific features (like variants) are preserved in the server's database even if the server doesn't natively support them yet.
+
+## Sync to Server
+
+Push your local extension rules to the server. Useful for sharing mocks with teammates or backing up your work.
+
+- Creates generic "Extension" folders.
+- Preserves all extension metadata.
+
+## Import from Server
+
+Pull mocks from the server into your browser. Perfect for onboarding or switching environments.
+
+- Imports folders as groups.
+- Smart merges server edits + extension data.
+
+## How it Works
+
+### Sync Flow (Extension → Server)
+
+When you click **Sync** in the extension:
+
+1. The extension sends a snapshot of your selected rules.
+2. The server checks for existing "Extension" folders.
+3. **Magic Step:** The server stores the *exact raw JSON payload* in a hidden `meta` field.
+4. The server also creates standard Mockzilla mocks for generic use (e.g. by other agents).
+
+### Import Flow (Server → Extension)
+
+When you click **Import** in the extension header:
+
+#### The Merge Strategy
+
+The server combines two sources of truth to give you the best result:
+
+| Source 1: Stored Metadata | Source 2: Server State |
+|--------------------------|------------------------|
+| Restores extension-only fields like `variants`, `delays`, etc. | Applies any recent changes made in the Server UI (e.g. status code, response body). |

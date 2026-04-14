@@ -16,7 +16,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center gap-4 font-bold text-xl">
               <span className="text-foreground">Mockzilla</span>
-              <span className="text-muted-foreground font-normal text-sm">Docs v2</span>
+              <span className="text-muted-foreground font-normal text-sm">Docs</span>
             </Link>
             <Link
               href="/"
@@ -39,7 +39,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
               {sidebar.map(item => (
                 <Link
                   key={item.slug}
-                  href={`/docsv2/${item.slug === 'index' ? '' : item.slug}`}
+                  href={`/docs/${item.slug === 'index' ? '' : item.slug}`}
                   className="block px-2 py-1.5 text-sm font-medium rounded-md transition-colors hover:bg-muted text-foreground/70 hover:text-foreground"
                 >
                   {item.title}

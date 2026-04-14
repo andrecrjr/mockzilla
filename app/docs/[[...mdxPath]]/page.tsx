@@ -4,10 +4,13 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import remarkGfm from 'remark-gfm';
-import { mdxComponents } from '../../../mdx-components';
+import { mdxComponents } from '@/mdx-components';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content/docs');
 const META_FILE = path.join(CONTENT_DIR, '_meta.js');
+
+// Re-export buildSidebar for use in layout
+export { buildSidebar };
 
 interface MetaEntry {
   slug: string;
@@ -109,5 +112,3 @@ export default async function DocPage({ params }: { params: Promise<{ mdxPath?: 
     notFound();
   }
 }
-
-export { buildSidebar };
