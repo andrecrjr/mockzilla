@@ -7,23 +7,49 @@ description: Move your mocks from your browser to your dashboard with one click.
 
 The Mockzilla Chrome Extension is your local assistant. It lets you capture real API requests directly from your browser and turn them into permanent mocks in your Mockzilla Dashboard.
 
-## One-Click Synchronization
+## Extension Integration
 
-Once you've configured your mocks in the browser extension, you can sync them with your server instantly.
+Seamlessly sync mocks between your local Chrome Extension and the Mockzilla Server.
 
-### Why Sync?
-- **Backup:** Save your local browser mocks to the server.
-- **Teamwork:** Share your mocks with teammates.
-- **Deployment:** Use your mocks in a CI/CD environment.
+### High-Fidelity Sync
 
----
+Mockzilla uses a smart merge strategy to ensure **zero data loss**. Extension-specific features (like variants) are preserved in the server's database even if the server doesn't natively support them yet.
 
-## 🛡️ Smart Merge (Zero Data Loss)
+<div className="grid md:grid-cols-2 gap-6 my-8">
+  <Card className="p-4">
+    <CardHeader className="p-0 mb-2">
+      <CardTitle className="text-lg flex items-center gap-2">
+        Sync to Server
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <p className="text-sm text-muted-foreground mb-4">
+        Push your local extension rules to the server. Useful for sharing mocks with teammates or backing up your work.
+      </p>
+      <ul className="space-y-2 text-sm text-muted-foreground">
+        <li className="flex gap-2">✅ Creates generic "Extension" folders.</li>
+        <li className="flex gap-2">✅ Preserves all extension metadata.</li>
+      </ul>
+    </CardContent>
+  </Card>
 
-Mockzilla's "Smart Merge" strategy means you never have to worry about losing your hard work.
-
-- **Local to Server:** We push your browser rules to the server and organize them into "Extension" folders.
-- **Server to Local:** We pull your server mocks back into your browser. If you've added local-only features (like custom delays or status overrides), Mockzilla **preserves them** even after a sync.
+  <Card className="p-4">
+    <CardHeader className="p-0 mb-2">
+      <CardTitle className="text-lg flex items-center gap-2">
+        Import from Server
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <p className="text-sm text-muted-foreground mb-4">
+        Pull mocks from the server into your browser. Perfect for onboarding or switching environments.
+      </p>
+      <ul className="space-y-2 text-sm text-muted-foreground">
+        <li className="flex gap-2">✅ Imports folders as groups.</li>
+        <li className="flex gap-2">✅ Smart merges server edits + extension data.</li>
+      </ul>
+    </CardContent>
+  </Card>
+</div>
 
 ---
 
@@ -35,3 +61,62 @@ Mockzilla's "Smart Merge" strategy means you never have to worry about losing yo
 4. Choose **Import** to bring dashboard mocks into your browser.
 
 > **Pro Tip:** Intercept real-world APIs, save them to Mockzilla, and then edit the response to test edge cases without ever needing the real backend!
+
+---
+
+## Deep Dive: How it Works
+
+<Accordion type="single" collapsible className="space-y-4">
+  <AccordionItem value="sync-flow">
+    <AccordionTrigger>Sync Flow (Extension → Server)</AccordionTrigger>
+    <AccordionContent>
+      <div className="space-y-4 pt-2">
+        <p className="text-sm text-muted-foreground">
+          When you click **Sync** in the extension:
+        </p>
+        <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-2">
+          <li>The extension sends a snapshot of your selected rules.</li>
+          <li>The server checks for existing "Extension" folders.</li>
+          <li>
+            <span className="text-foreground font-medium">Magic Step:</span> The server stores the 
+            <span className="italic"> exact raw JSON payload</span> in a hidden `meta` field.
+          </li>
+          <li>The server also creates standard Mockzilla mocks for generic use (e.g. by other agents).</li>
+        </ol>
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+
+  <AccordionItem value="import-flow">
+    <AccordionTrigger>Import Flow (Server → Extension)</AccordionTrigger>
+    <AccordionContent>
+      <div className="space-y-4 pt-2">
+        <p className="text-sm text-muted-foreground">
+          When you click **Import** in the extension header:
+        </p>
+        <div className="border rounded-lg p-4 bg-muted/20">
+          <CardTitle className="text-sm mb-3 flex items-center gap-2">
+            The Merge Strategy
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mb-3">
+            The server combines two sources of truth to give you the best result:
+          </p>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div className="p-3 bg-background rounded border">
+              <span className="block font-medium mb-1 text-primary">Source 1: Stored Metadata</span>
+              <p className="text-muted-foreground">
+                Restores extension-only fields like `variants`, `delays`, etc.
+              </p>
+            </div>
+            <div className="p-3 bg-background rounded border">
+              <span className="block font-medium mb-1 text-primary">Source 2: Server State</span>
+              <p className="text-muted-foreground">
+                Applies any recent changes made in the Server UI (e.g. status code, response body).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>

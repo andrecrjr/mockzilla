@@ -16,7 +16,60 @@ Go beyond static mocks. Workflow Mode lets you build smart API simulations that 
 
 ---
 
-## 🧠 The "Action-Driven" Philosophy
+## Why Workflow Mode?
+
+Go beyond static mocks. Build stateful, intelligent API simulations.
+
+<div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
+  <div className="font-bold text-sm text-primary mb-2 flex items-center gap-2">
+    Philosophy: Action-Driven State
+  </div>
+  <div className="grid md:grid-cols-2 gap-4 text-xs">
+    <div className="space-y-1">
+      <span className="font-semibold text-red-500">❌ Don't: CRUD State</span>
+      <p className="text-muted-foreground">
+        Creating endpoints just to set data.<br/>
+        Ex: <code>POST /set-data</code>
+      </p>
+    </div>
+    <div className="space-y-1">
+      <span className="font-semibold text-green-500">✅ Do: Business Logic</span>
+      <p className="text-muted-foreground">
+        Transitions trigger state changes.<br/>
+        Ex: <code>POST /checkout</code> updates DB.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div className="grid md:grid-cols-2 gap-6 mb-6">
+  <div className="space-y-3">
+    <h3 className="font-semibold text-lg flex items-center gap-2">
+      <span className="text-muted-foreground line-through">Static Mocks</span>
+      <Badge variant="secondary">The Old Way</Badge>
+    </h3>
+    <ul className="space-y-2 text-sm text-muted-foreground">
+      <li className="flex gap-2">❌ Always returns the same JSON.</li>
+      <li className="flex gap-2">❌ No memory of previous requests.</li>
+      <li className="flex gap-2">❌ Impossible to test logical flows.</li>
+    </ul>
+  </div>
+  <div className="space-y-3">
+    <h3 className="font-semibold text-lg flex items-center gap-2">
+      <span className="text-primary">Workflow Mode</span>
+      <Badge>The New Way</Badge>
+    </h3>
+    <ul className="space-y-2 text-sm">
+      <li className="flex gap-2">✅ **Stateful:** Remembers variables.</li>
+      <li className="flex gap-2">✅ **Dynamic:** CRUD on in-memory DB.</li>
+      <li className="flex gap-2">✅ **Smart:** Context-aware responses.</li>
+    </ul>
+  </div>
+</div>
+
+---
+
+## The "Action-Driven" Philosophy
 
 In Mockzilla, we follow a simple rule: **State variables must not be endpoints.**
 
@@ -27,7 +80,28 @@ In a real app, you rarely "set the database status to 'paid'" via a direct API c
 
 ---
 
-## 🏗️ Core Concepts
+## Core Concepts
+
+<div className="grid md:grid-cols-3 gap-4 my-8">
+  <Card className="p-4 border-l-4 border-l-blue-500">
+    <CardTitle className="text-sm flex items-center gap-2">Scenario</CardTitle>
+    <p className="text-xs text-muted-foreground">
+      An isolated sandbox for state and variables.
+    </p>
+  </Card>
+  <Card className="p-4 border-l-4 border-l-green-500">
+    <CardTitle className="text-sm flex items-center gap-2">Transition</CardTitle>
+    <p className="text-xs text-muted-foreground">
+      Rules defining "WHEN request X, THEN do Y".
+    </p>
+  </Card>
+  <Card className="p-4 border-l-4 border-l-purple-500">
+    <CardTitle className="text-sm flex items-center gap-2">Mini-DB</CardTitle>
+    <p className="text-xs text-muted-foreground">
+      Temporary JSON storage for each scenario.
+    </p>
+  </Card>
+</div>
 
 ### 1. Scenarios
 A **Scenario** is an isolated sandbox. Each scenario has its own independent state and mini-DB. You can have a "Happy Path" scenario and a "Payment Failed" scenario running side-by-side.
@@ -42,6 +116,67 @@ A **Transition** is a rule that defines how Mockzilla should react to a request.
 ### 3. State & Mini-DB
 - **State (`state`)**: A simple key-value store for variables like `isLoggedIn` or `currentUser`.
 - **Mini-DB (`db`)**: A collection of JSON tables (arrays) for storing lists of items like `orders`, `products`, or `cart_items`.
+
+---
+
+## Deep Dive: Core Concepts
+
+<Accordion type="single" collapsible className="space-y-4">
+  <AccordionItem value="wf-transitions">
+    <AccordionTrigger>Transitions & Conditions</AccordionTrigger>
+    <AccordionContent>
+      <div className="space-y-4 pt-2">
+        <p className="text-sm text-muted-foreground">
+          A transition links an incoming request to effects and a response.
+        </p>
+        
+        <div className="border rounded-lg p-4 bg-muted/20">
+          <h4 className="font-semibold text-sm mb-3">Condition Builder</h4>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span className="block font-medium mb-1">Selectors</span>
+              <ul className="space-y-1 font-mono text-muted-foreground">
+                <li>input.body.field</li>
+                <li>input.query.param</li>
+                <li>input.headers.auth</li>
+                <li>input.params.id</li>
+              </ul>
+            </div>
+            <div>
+              <span className="block font-medium mb-1">Operators</span>
+              <ul className="space-y-1 font-mono text-muted-foreground">
+                <li>==, !=</li>
+                <li>&gt;, &lt;, &gt;=, &lt;=</li>
+                <li>exists, contains</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+
+  <AccordionItem value="wf-interpolation">
+    <AccordionTrigger>Dynamic Responses & Interpolation</AccordionTrigger>
+    <AccordionContent>
+      <div className="space-y-4 pt-2">
+        <p className="text-sm text-muted-foreground">
+          Inject data using <code>{`{{ var }}`}</code> syntax.
+        </p>
+        <div className="grid gap-2 text-sm">
+          <div className="border p-2 rounded flex justify-between items-center">
+            <span className="font-mono text-xs text-primary">{`{{ input.body.id }}`}</span>
+            <span className="text-xs text-muted-foreground">Echo request data</span>
+          </div>
+          <div className="border p-2 rounded flex justify-between items-center">
+            <span className="font-mono text-xs text-primary">{`{{ state.token }}`}</span>
+            <span className="text-xs text-muted-foreground">Stored variable</span>
+          </div>
+        </div>
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>
 
 ---
 
@@ -77,12 +212,12 @@ Inject dynamic values into your **Effects** or **Responses** using the `{{ path.
     <TableRow>
       <TableCell><Badge variant="outline">Query</Badge></TableCell>
       <TableCell>`{{input.query.ref}}`</TableCell>
-      <TableCell>Value from URL query parameters (`?ref=abc`).</TableCell>
+      <TableCell>Value from URL query parameters.</TableCell>
     </TableRow>
     <TableRow>
       <TableCell><Badge variant="outline">Params</Badge></TableCell>
       <TableCell>`{{input.params.id}}`</TableCell>
-      <TableCell>Value captured from a `:id` path segment.</TableCell>
+      <TableCell>Value from a `:id` path segment.</TableCell>
     </TableRow>
     <TableRow>
       <TableCell><Badge variant="outline">Headers</Badge></TableCell>
@@ -97,7 +232,7 @@ Inject dynamic values into your **Effects** or **Responses** using the `{{ path.
     <TableRow>
       <TableCell><Badge variant="outline">Database</Badge></TableCell>
       <TableCell>`{{db.items}}`</TableCell>
-      <TableCell>An entire table (array) from the mini-DB.</TableCell>
+      <TableCell>An entire table from the mini-DB.</TableCell>
     </TableRow>
   </TableBody>
 </Table>
@@ -107,82 +242,62 @@ Inject dynamic values into your **Effects** or **Responses** using the `{{ path.
 ## 🛠️ Logic & Control Flow
 
 ### Conditions
-Conditions determine if a transition fires. If multiple transitions match a path, Mockzilla uses the first one whose conditions are met.
+Conditions determine if a transition fires.
 
 | Type | Description | Example |
 |------|-------------|---------|
 | `eq` | Equals | `input.body.role` == `"admin"` |
-| `neq` | Not equals | `state.status` != `"locked"` |
-| `exists` | Field exists | `input.headers.authorization` exists |
-| `gt` / `lt` | Greater/Less than | `input.body.quantity` > `0` |
-| `contains` | Array/String contains | `db.roles` contains `"editor"` |
+| `exists` | Field exists | `input.headers.auth` exists |
+| `contains` | Array contains | `db.roles` contains `"editor"` |
 
 ### Effects
 Effects modify your data when a transition is triggered.
 
 | Type | Description |
 |------|-------------|
-| `state.set` | Update state variables (e.g., `isLoggedIn: true`). |
-| `db.push` | Add a new item to a table (e.g., add to `cart`). |
-| `db.update` | Find rows by a `match` field (e.g., `id`) and `set` new values. |
-| `db.remove` | Delete all rows from a table that `match` a criteria. |
+| `state.set` | Update state variables. |
+| `db.push` | Add a new item to a table. |
+| `db.update` | Find rows and update them. |
+| `db.remove` | Delete matching rows. |
 
 ---
 
 ## 🚀 Example: Shopping Cart Flow
 
-Let's build a flow where a user adds an item to their cart and then views it.
-
 ### Step 1: Add to Cart
 - **Path:** `POST /cart`
 - **Effect:** `db.push` to table `cart` with value `{{input.body}}`.
-- **Response:** `{"success": true, "message": "Item added"}`
+- **Response:** `{"success": true}`
 
 ```bash
 # Add item
 curl -X POST http://localhost:3000/api/workflow/exec/my-store/cart \
   -H "Content-Type: application/json" \
-  -d '{"id": 1, "name": "Coffee Beans", "price": 15}'
+  -d '{"id": 1, "name": "Coffee Beans"}'
 ```
 
 ### Step 2: List Cart
 - **Path:** `GET /cart`
-- **Response:** `{{db.cart}}` (Returns the array of items pushed in Step 1).
+- **Response:** `{{db.cart}}`
 
 ```bash
 # Get cart items
 curl http://localhost:3000/api/workflow/exec/my-store/cart
-# Returns: [{"id": 1, "name": "Coffee Beans", "price": 15}]
-```
-
-### Step 3: Checkout (Conditional)
-- **Path:** `POST /checkout`
-- **Condition:** `exists` on `db.cart[0]` (Only fires if cart is not empty).
-- **Effect:** `db.remove` all from `cart` AND `state.set` `orderComplete: true`.
-- **Response:** `{"status": "Success", "orderId": "ORD-123"}`
-
-```bash
-# Try to checkout
-curl -X POST http://localhost:3000/api/workflow/exec/my-store/checkout
 ```
 
 ---
 
 ## 🔌 Using your Workflow
 
-To trigger your workflow, use the specialized execution endpoint:
+To trigger your workflow, use the execution endpoint:
 
 ```bash
-# POST to: /api/workflow/exec/{scenario-slug}/{path}
-curl -X POST http://localhost:3000/api/workflow/exec/my-store/cart \
-  -H "Content-Type: application/json" \
-  -d '{"id": 1, "name": "Coffee Beans"}'
+# /api/workflow/exec/{scenario-slug}/{path}
 ```
 
-### State Inspector
-While testing, open the **State Inspector** in the Mockzilla Dashboard. It provides a real-time view of:
-- All **State Variables** currently set.
-- All **Database Tables** and their rows.
-- A **Reset** button to wipe the data and start over.
-
-> **Pro Tip:** You can manually edit the state or DB rows in the inspector to test edge cases (like a massive cart or a specific user ID) without having to trigger dozens of API calls.
+<Alert variant="info" className="mt-8">
+  <AlertTitle>Debugging Tip</AlertTitle>
+  <AlertDescription>
+    Use the **State Inspector** in the dashboard to see real-time state and DB tables.
+  </AlertDescription>
+</Alert>

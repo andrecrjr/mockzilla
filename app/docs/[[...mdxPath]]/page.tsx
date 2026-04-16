@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import remarkGfm from 'remark-gfm';
+import rehypeSlug from 'rehype-slug';
 import { mdxComponents } from '@/mdx-components';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -139,7 +140,12 @@ export default async function DocPage({ params }: { params: Promise<{ mdxPath?: 
           <MDXRemote
             source={content}
             components={mdxComponents}
-            options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+            options={{ 
+              mdxOptions: { 
+                remarkPlugins: [remarkGfm],
+                rehypePlugins: [rehypeSlug]
+              } 
+            }}
           />
         </article>
 
