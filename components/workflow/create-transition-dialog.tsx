@@ -37,6 +37,7 @@ import { EffectsEditor, type EffectItem } from './effects-editor';
 import { FieldTooltip } from '@/components/folder-tooltips';
 import type { Transition } from '@/lib/types';
 import type { Condition, Effect } from '@/lib/engine/match';
+import { TooltipProvider } from '../ui/tooltip';
 
 // --- Schema ---
 const transitionSchema = z.object({
@@ -471,6 +472,7 @@ export function TransitionDialog({
 	};
 
 	return (
+		<TooltipProvider>
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{trigger}</DialogTrigger>
 			<DialogContent className="sm:max-w-[90vw] lg:max-w-[1400px] max-h-[85vh] overflow-y-auto">
@@ -993,6 +995,7 @@ export function TransitionDialog({
 				</form>
 			</DialogContent>
 		</Dialog>
+		</TooltipProvider>
 	);
 }
 
