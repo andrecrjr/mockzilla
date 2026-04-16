@@ -113,7 +113,7 @@ export function MockExtensionList() {
 					<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full border-indigo-500/20">
 						<div className="p-6">
 							<div className="flex items-start justify-between">
-								<Link href={`/extension-data/${folder.slug}`} key={folder.id}>
+								<Link href={`/app/extension-data/${folder.slug}`} key={folder.id}>
 									<div className="flex items-center gap-3 flex-1">
 										<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-500/20 transition-all group-hover:bg-indigo-500/30">
 											<FolderIcon className="h-6 w-6 text-indigo-500" />
