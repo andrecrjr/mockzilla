@@ -1,9 +1,8 @@
 export default {
-  index: "Overview",
-  schema: "Schema & Data Generation",
-  "advanced-options": "Advanced Options",
-  examples: "Schema Examples",
-  workflow: "Workflow Mode",
+  index: "Quick Start",
+  routing: "Routing & Matching",
+  "dynamic-data": "Dynamic Data Generation",
+  workflows: "Stateful Workflows",
+  mcp: "AI Integration (MCP)",
   extension: "Extension Sync",
-  mcp: "MCP Integration",
 };

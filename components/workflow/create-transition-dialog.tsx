@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '../ui/textarea';
 import { EffectsEditor, type EffectItem } from './effects-editor';
+import { FieldTooltip } from '@/components/folder-tooltips';
 import type { Transition } from '@/lib/types';
 import type { Condition, Effect } from '@/lib/engine/match';
 
@@ -491,7 +492,14 @@ export function TransitionDialog({
 					{/* Basics */}
 					<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
 						<div className="md:col-span-6 space-y-3">
-							<Label>Name</Label>
+							<Label className="flex items-center gap-2">
+								Name
+								<FieldTooltip
+									label="Name"
+									description="A unique name for this transition."
+									example="Register User"
+								/>
+							</Label>
 							<Input
 								{...form.register('name')}
 								placeholder="e.g. Add Item"
@@ -504,7 +512,14 @@ export function TransitionDialog({
 							)}
 						</div>
 						<div className="md:col-span-6 space-y-3">
-							<Label>Method</Label>
+							<Label className="flex items-center gap-2">
+								Method
+								<FieldTooltip
+									label="Method"
+									description="The HTTP method this transition responds to."
+									example="POST"
+								/>
+							</Label>
 							<Controller
 								control={form.control}
 								name="method"
@@ -528,11 +543,15 @@ export function TransitionDialog({
 					{/* Description & Path */}
 					<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
 						<div className="md:col-span-8 space-y-3">
-							<Label>
+							<Label className="flex items-center gap-2">
 								Description{' '}
 								<span className="text-muted-foreground text-xs">
 									(optional)
 								</span>
+								<FieldTooltip
+									label="Description"
+									description="Internal documentation for what this transition does."
+								/>
 							</Label>
 							<Input
 								{...form.register('description')}
@@ -541,7 +560,15 @@ export function TransitionDialog({
 							/>
 						</div>
 						<div className="md:col-span-4 space-y-3">
-							<Label>Path</Label>
+							<Label className="flex items-center gap-2">
+								Path
+								<FieldTooltip
+									label="Path"
+									description="The URL pattern to match. Supports exact and parameterized paths."
+									example="/users/:id"
+									docsLink="/docs/workflows#path-matching"
+								/>
+							</Label>
 							<Input
 								{...form.register('path')}
 								placeholder="/cart/items"
@@ -561,6 +588,12 @@ export function TransitionDialog({
 							<div className="flex items-center justify-between">
 								<Label className="flex items-center gap-2">
 									Conditions
+									<FieldTooltip
+										label="Conditions"
+										description="Rules that must match for this transition to fire. If empty, it always matches."
+										example='[{"type":"eq", "field":"state.isLoggedIn", "value":true}]'
+										docsLink="/docs/workflows#conditions"
+									/>
 									<Button
 										type="button"
 										variant="ghost"
@@ -748,6 +781,12 @@ export function TransitionDialog({
 							<div className="flex items-center justify-between mb-4">
 								<Label className="flex items-center gap-2">
 									Effects
+									<FieldTooltip
+										label="Effects"
+										description="Actions to modify state or database when this transition fires."
+										example='[{"type":"state.set", "raw":{"isLoggedIn":true}}]'
+										docsLink="/docs/workflows#effects"
+									/>
 									<Button
 										type="button"
 										variant="ghost"
@@ -823,7 +862,14 @@ export function TransitionDialog({
 					{/* Response */}
 					<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
 						<div className="md:col-span-2 space-y-3">
-							<Label>Status</Label>
+							<Label className="flex items-center gap-2">
+								Status
+								<FieldTooltip
+									label="Status"
+									description="The HTTP status code to return."
+									example="200"
+								/>
+							</Label>
 							<Input
 								type="number"
 								{...form.register('responseStatus')}
@@ -837,7 +883,15 @@ export function TransitionDialog({
 						</div>
 						<div className="md:col-span-10 space-y-3">
 							<div className="flex items-center justify-between">
-								<Label>Response Body (JSON)</Label>
+								<Label className="flex items-center gap-2">
+									Response Body (JSON)
+									<FieldTooltip
+										label="Response Body"
+										description="The JSON or text to return. Use {{ interpolation }} to inject dynamic data from state, DB, or request."
+										example='{ "user": "{{ state.username }}" }'
+										docsLink="/docs/workflows#interpolation"
+									/>
+								</Label>
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
 										<Button

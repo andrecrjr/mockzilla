@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { FieldTooltip } from '@/components/folder-tooltips';
 
 import type { Effect, StateSetEffect, DbPushEffect, DbUpdateEffect, DbRemoveEffect } from '@/lib/engine/match';
 
@@ -253,8 +254,14 @@ function StateSetEditor({
 }) {
 	return (
 		<div className="grid gap-2">
-			<Label className="text-xs text-muted-foreground">
+			<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
 				Variables (JSON Object)
+				<FieldTooltip
+					label="Variables"
+					description="Set or update state variables for this scenario. State is a persistent key-value store."
+					example='{ "isLoggedIn": true, "userId": "{{ input.body.id }}" }'
+					docsLink="/docs/workflows#state-set"
+				/>
 			</Label>
 			<JsonOrStringInput
 				value={value}
@@ -284,7 +291,15 @@ function DbPushEditor({
 	return (
 		<div className="grid gap-3">
 			<div className="grid gap-1.5">
-				<Label className="text-xs text-muted-foreground">Table Name</Label>
+				<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+					Table Name
+					<FieldTooltip
+						label="Table Name"
+						description="The name of the mini-database table to operate on. Tables are JSON arrays."
+						example="users"
+						docsLink="/docs/workflows#database-tables"
+					/>
+				</Label>
 				<Input
 					value={table}
 					onChange={(e) => onTableChange(e.target.value)}
@@ -293,8 +308,14 @@ function DbPushEditor({
 				/>
 			</div>
 			<div className="grid gap-1.5">
-				<Label className="text-xs text-muted-foreground">
+				<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
 					Value to Push (Row)
+					<FieldTooltip
+						label="Value to Push"
+						description="The data to append to the table. Can be a static value or interpolated from input/state."
+						example="{{ input.body }}"
+						docsLink="/docs/workflows#db-push"
+					/>
 				</Label>
 				<JsonOrStringInput
 					value={value}
@@ -325,7 +346,15 @@ function DbUpdateEditor({
 	return (
 		<div className="grid gap-3">
 			<div className="grid gap-1.5">
-				<Label className="text-xs text-muted-foreground">Table Name</Label>
+				<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+					Table Name
+					<FieldTooltip
+						label="Table Name"
+						description="The name of the mini-database table to operate on. Tables are JSON arrays."
+						example="users"
+						docsLink="/docs/workflows#database-tables"
+					/>
+				</Label>
 				<Input
 					value={table}
 					onChange={(e) => onTableChange(e.target.value)}
@@ -335,8 +364,14 @@ function DbUpdateEditor({
 			</div>
 			<div className="grid grid-cols-2 gap-3">
 				<div className="grid gap-1.5">
-					<Label className="text-xs text-muted-foreground">
+					<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
 						Match Criteria (Where)
+						<FieldTooltip
+							label="Match Criteria"
+							description="Filter which rows to update. Supports exact matches and interpolation."
+							example='{ "id": "{{ input.params.id }}" }'
+							docsLink="/docs/workflows#db-update"
+						/>
 					</Label>
 					<JsonOrStringInput
 						value={match}
@@ -350,8 +385,14 @@ function DbUpdateEditor({
 					/>
 				</div>
 				<div className="grid gap-1.5">
-					<Label className="text-xs text-muted-foreground">
+					<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
 						Set Fields (Update)
+						<FieldTooltip
+							label="Set Fields"
+							description="Fields to update in the matching rows."
+							example='{ "status": "active" }'
+							docsLink="/docs/workflows#db-update"
+						/>
 					</Label>
 					<JsonOrStringInput
 						value={set}
@@ -383,7 +424,15 @@ function DbRemoveEditor({
 	return (
 		<div className="grid gap-3">
 			<div className="grid gap-1.5">
-				<Label className="text-xs text-muted-foreground">Table Name</Label>
+				<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+					Table Name
+					<FieldTooltip
+						label="Table Name"
+						description="The name of the mini-database table to operate on. Tables are JSON arrays."
+						example="cart"
+						docsLink="/docs/workflows#database-tables"
+					/>
+				</Label>
 				<Input
 					value={table}
 					onChange={(e) => onTableChange(e.target.value)}
@@ -392,8 +441,14 @@ function DbRemoveEditor({
 				/>
 			</div>
 			<div className="grid gap-1.5">
-				<Label className="text-xs text-muted-foreground">
+				<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
 					Match Criteria (Where)
+					<FieldTooltip
+						label="Match Criteria"
+						description="Filter which rows to remove. Supports exact matches and interpolation."
+						example='{ "sku": "{{ input.params.sku }}" }'
+						docsLink="/docs/workflows#db-remove"
+					/>
 				</Label>
 				<JsonOrStringInput
 					value={match}

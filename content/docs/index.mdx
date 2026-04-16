@@ -1,20 +1,70 @@
 ---
 title: Overview
+description: Learn how Mockzilla helps you mock APIs and test user flows with ease.
 ---
 
-# Mockzilla Documentation
+# Overview
 
-Mockzilla is a powerful API mocking tool designed for modern development workflows. It supports dynamic response generation, stateful workflows, and AI integration via MCP.
+Mockzilla is a high-fidelity API mocking tool that lets you simulate complex backend responses without writing a single line of server code. Whether you're building a new feature or debugging a tricky user flow, Mockzilla provides the tools you need to stay in the zone.
 
-## Features
+<div id="overview" />
 
-| Feature | Description |
-|---------|-------------|
-| **Dynamic Mocks** | Generate realistic data using JSON Schema + Faker |
-| **Stateful Workflows** | Simulate complex user flows (Cart → Checkout) with persistent state and logic |
-| **Mini-Database** | Each scenario gets a transient database to push, update, and query items during a session |
-| **MCP Support** | First-class AI agent support — let Claude or other LLMs control your mocks directly |
+## Why Mockzilla?
 
-### Why use Mockzilla over straightforward mocks?
+Traditional mocks are static and boring. Mockzilla makes them **alive**:
 
-> Mockzilla allows for dynamic responses and stateful scenarios, which lets you test complex interactions even when backend APIs aren't ready.
+| Feature | User Value |
+|---------|------------|
+| **Dynamic Data** | Stop handwriting massive JSON files. Generate 1,000 realistic users or orders with one click. |
+| **Routing** | Match requests by exact path, wildcards, or even specific query parameters. |
+| **Workflows** | Simulate stateful flows (like a shopping cart or login) using a built-in mini-database. |
+| **AI Integration** | Let your AI agent (Cursor, Claude) create and manage mocks for you via MCP. |
+| **Extension** | Intercept real browser requests and sync them to your dashboard instantly. |
+
+---
+
+## Installation
+
+Choose the tool that fits your workflow.
+
+### 1. HTTP Server (Docker)
+The standalone server is perfect for teams, local development, or cloud hosting (VPS). It provides a dashboard to manage all your mocks.
+
+```bash
+docker run -d -p 36666:36666 -v mockzilla-data:/app/data --name mockzilla andrecrjr/mockzilla:latest
+```
+
+**Note for VPS users:** Mockzilla runs on port **36666** by default. Ensure this port is open in your firewall/security groups to access the dashboard and mocks remotely.
+
+Once running, access your instance at:
+`http://<your-ip-or-domain>:36666`
+
+### 2. Chrome Extension
+For real-time browser interception, install the official extension. It allows you to mock requests directly in your browser without changing your code.
+
+- **[Install from Chrome Web Store](https://chromewebstore.google.com/detail/gpbfcijfelgnaabjodgifeopbmnbjpnk/preview)**
+
+---
+
+## Quick Start (The UI Way)
+
+Getting started with Mockzilla is designed to be intuitive and visual.
+
+### 1. Create a Folder
+Folders are how you organize your projects. Click **New Folder** on the dashboard to give your workspace a name.
+
+### 2. Add a Mock
+Inside your folder, click **Create Mock**. You can define the endpoint path (e.g., `/users`), the HTTP method, and the status code you want to return.
+
+### 3. Configure the Response
+In the **Response Config** tab, you can paste static JSON or switch to **Dynamic Response** to use powerful templates.
+
+### 4. Test it Out
+Every folder has a unique "Serve URL". Once your mock is saved, any request to that URL will return your configured response!
+
+---
+
+## Ready for more?
+- **[Routing & Matching](/docs/routing)**: Learn how to handle dynamic IDs and query strings.
+- **[Dynamic Data](/docs/dynamic-data)**: Master the art of generating realistic fake data.
+- **[Stateful Workflows](/docs/workflows)**: Build complex simulations with persistent logic.

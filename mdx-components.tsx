@@ -1,4 +1,6 @@
+import React from 'react';
 import { SchemaTesterDialogWrapper } from '@/components/docs/schema-tester-dialog-wrapper';
+import { CopyButton } from '@/components/docs/copy-button';
 import {
   Accordion,
   AccordionContent,
@@ -27,9 +29,30 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
+const Pre = ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
+  // Extract code text from children
+  // In MDX, pre usually has a code child: <pre><code>...</code></pre>
+  const codeContent = React.Children.toArray(children).find(
+    (child) => React.isValidElement(child) && child.type === 'code'
+  ) as React.ReactElement | undefined;
+
+  const textToCopy = codeContent?.props.children || '';
+
+  return (
+    <div className="group relative">
+      <pre {...props} className="relative">
+        {children}
+      </pre>
+      {textToCopy && <CopyButton text={textToCopy} />}
+    </div>
+  );
+};
+
 export const mdxComponents = {
   // Custom interactive components
   SchemaTesterDialog: SchemaTesterDialogWrapper,
+  // HTML overrides
+  pre: Pre,
   // shadcn/ui components
   Accordion,
   AccordionContent,

@@ -317,7 +317,7 @@ export function ResponseConfig({
 										label="Dynamic Response"
 										description="Generates fresh random data on each request using JSON Schema + Faker. Supports string interpolation with {$.field} syntax to reference other generated fields."
 										example='{"summary": {"const": "Order {$.orderId} confirmed"}}'
-										docsLink="/docs#syntax"
+										docsLink="/docs/dynamic-data#interpolation-syntax"
 									/>
 								</div>
 							</div>
@@ -340,7 +340,7 @@ export function ResponseConfig({
 								<div className="flex items-center justify-between">
 									<Label htmlFor="preview-json">Generated Preview</Label>
 									<Link
-										href="/docs#syntax"
+										href="/docs/dynamic-data#interpolation-syntax"
 										className="flex items-center gap-1 text-xs text-primary hover:underline"
 										target="_blank"
 									>
@@ -365,7 +365,7 @@ export function ResponseConfig({
 									label: "Required Query Params",
 									description: "Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string.",
 									example: "?page=1&limit=10",
-									docsLink: "/docs#overview",
+									docsLink: "/docs/routing",
 								}}
 								isExpanded={queryExpanded}
 								onToggle={() => setQueryExpanded(!queryExpanded)}

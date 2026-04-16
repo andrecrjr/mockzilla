@@ -1,46 +1,37 @@
 ---
-title: Extension Sync
+title: Browser Extension Sync
+description: Move your mocks from your browser to your dashboard with one click.
 ---
 
-# Extension Integration
+# Browser Extension Sync
 
-Seamlessly sync mocks between your local Chrome Extension and the Mockzilla Server.
+The Mockzilla Chrome Extension is your local assistant. It lets you capture real API requests directly from your browser and turn them into permanent mocks in your Mockzilla Dashboard.
 
-> **High-Fidelity Sync** — Mockzilla uses a smart merge strategy to ensure **zero data loss**. Extension-specific features (like variants) are preserved in the server's database even if the server doesn't natively support them yet.
+## One-Click Synchronization
 
-## Sync to Server
+Once you've configured your mocks in the browser extension, you can sync them with your server instantly.
 
-Push your local extension rules to the server. Useful for sharing mocks with teammates or backing up your work.
+### Why Sync?
+- **Backup:** Save your local browser mocks to the server.
+- **Teamwork:** Share your mocks with teammates.
+- **Deployment:** Use your mocks in a CI/CD environment.
 
-- Creates generic "Extension" folders.
-- Preserves all extension metadata.
+---
 
-## Import from Server
+## 🛡️ Smart Merge (Zero Data Loss)
 
-Pull mocks from the server into your browser. Perfect for onboarding or switching environments.
+Mockzilla's "Smart Merge" strategy means you never have to worry about losing your hard work.
 
-- Imports folders as groups.
-- Smart merges server edits + extension data.
+- **Local to Server:** We push your browser rules to the server and organize them into "Extension" folders.
+- **Server to Local:** We pull your server mocks back into your browser. If you've added local-only features (like custom delays or status overrides), Mockzilla **preserves them** even after a sync.
 
-## How it Works
+---
 
-### Sync Flow (Extension → Server)
+## How to Sync
 
-When you click **Sync** in the extension:
+1. Open the Mockzilla Chrome Extension in your browser.
+2. Click the **Sync** icon in the header.
+3. Choose **Push** to save your local mocks to the dashboard.
+4. Choose **Import** to bring dashboard mocks into your browser.
 
-1. The extension sends a snapshot of your selected rules.
-2. The server checks for existing "Extension" folders.
-3. **Magic Step:** The server stores the *exact raw JSON payload* in a hidden `meta` field.
-4. The server also creates standard Mockzilla mocks for generic use (e.g. by other agents).
-
-### Import Flow (Server → Extension)
-
-When you click **Import** in the extension header:
-
-#### The Merge Strategy
-
-The server combines two sources of truth to give you the best result:
-
-| Source 1: Stored Metadata | Source 2: Server State |
-|--------------------------|------------------------|
-| Restores extension-only fields like `variants`, `delays`, etc. | Applies any recent changes made in the Server UI (e.g. status code, response body). |
+> **Pro Tip:** Intercept real-world APIs, save them to Mockzilla, and then edit the response to test edge cases without ever needing the real backend!

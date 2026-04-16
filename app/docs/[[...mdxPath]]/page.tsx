@@ -5,6 +5,8 @@ import path from 'path';
 import matter from 'gray-matter';
 import remarkGfm from 'remark-gfm';
 import { mdxComponents } from '@/mdx-components';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content/docs');
 const META_FILE = path.join(CONTENT_DIR, '_meta.js');
@@ -83,11 +85,37 @@ export async function generateMetadata({ params }: { params: Promise<{ mdxPath?:
   try {
     const fileContent = readFileSync(filePath, 'utf-8');
     const { data } = matter(fileContent);
+    const title = data.title ? `${data.title} | Mockzilla Docs` : 'Mockzilla Documentation';
+    const description = data.description || 'Learn how to use Mockzilla for API mocking, browser interception, and stateful workflows.';
+    
     return {
-      title: data.title ? `${data.title} | Mockzilla Docs` : undefined,
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: 'article',
+        url: `https://mockzilla.dev/docs/${slug === 'index' ? '' : slug}`,
+        images: [
+          {
+            url: '/mockzilla-logo.png',
+            width: 800,
+            height: 600,
+            alt: 'Mockzilla Documentation',
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+      },
     };
   } catch {
-    return {};
+    return {
+      title: 'Mockzilla Docs',
+      description: 'Mockzilla documentation',
+    };
   }
 }
 
@@ -99,13 +127,53 @@ export default async function DocPage({ params }: { params: Promise<{ mdxPath?: 
   try {
     const fileContent = readFileSync(filePath, 'utf-8');
     const { content } = matter(fileContent);
+
+    const sidebar = buildSidebar();
+    const currentIndex = sidebar.findIndex(item => item.slug === slug);
+    const prev = currentIndex > 0 ? sidebar[currentIndex - 1] : null;
+    const next = currentIndex < sidebar.length - 1 ? sidebar[currentIndex + 1] : null;
+
     return (
-      <div className="max-w-4xl mx-auto px-6 py-8 prose dark:prose-invert prose-code:before:content-none prose-code:after:content-none">
-        <MDXRemote
-          source={content}
-          components={mdxComponents}
-          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
-        />
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <article className="prose dark:prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none">
+          <MDXRemote
+            source={content}
+            components={mdxComponents}
+            options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+          />
+        </article>
+
+        <nav className="mt-16 pt-8 border-t flex flex-col sm:flex-row gap-4 justify-between items-center">
+          {prev ? (
+            <Link
+              href={`/docs/${prev.slug === 'index' ? '' : prev.slug}`}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl border bg-card hover:bg-muted transition-colors w-full sm:w-auto group"
+            >
+              <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Previous</span>
+                <span className="text-sm font-medium">{prev.title}</span>
+              </div>
+            </Link>
+          ) : (
+            <div />
+          )}
+
+          {next ? (
+            <Link
+              href={`/docs/${next.slug === 'index' ? '' : next.slug}`}
+              className="flex items-center justify-end gap-2 px-4 py-3 rounded-xl border bg-card hover:bg-muted transition-colors w-full sm:w-auto group text-right ml-auto"
+            >
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Next</span>
+                <span className="text-sm font-medium">{next.title}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </Link>
+          ) : (
+            <div />
+          )}
+        </nav>
       </div>
     );
   } catch {

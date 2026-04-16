@@ -10,12 +10,48 @@ const _inter = Inter({ subsets: ['latin'] });
 const _jetbrainsMono = JetBrains_Mono({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-	title: 'Mockzilla - Mock APIs in 30 Seconds',
+	metadataBase: new URL('https://mockzilla.dev'),
+	title: {
+		template: '%s | Mockzilla',
+		default: 'Mockzilla - The Open Source API Mocking Platform',
+	},
 	description:
-		'Self-hosted Docker-based mock server with JSON Schema + Faker, MCP integration, and stateful workflows',
+		'Chrome Extension for instant interception. HTTP Server for dynamic mocking. JSON Schema + Faker, MCP integration, and stateful workflows.',
+	keywords: [
+		'API Mocking',
+		'Chrome Extension',
+		'JSON Schema',
+		'Faker.js',
+		'MCP',
+		'Model Context Protocol',
+		'Next.js',
+		'Docker',
+		'PostgreSQL',
+	],
 	generator: 'v0.app',
 	icons: {
 		icon: '/mockzilla-logo.png',
+	},
+	openGraph: {
+		title: 'Mockzilla - API Mocking Ecosystem',
+		description: 'The dual-tool platform for frontend developers and QA teams.',
+		url: 'https://mockzilla.dev',
+		siteName: 'Mockzilla',
+		images: [
+			{
+				url: '/mockzilla-logo.png',
+				width: 800,
+				height: 600,
+			},
+		],
+		locale: 'en_US',
+		type: 'website',
+	},
+	twitter: {
+		card: 'summary_large_image',
+		title: 'Mockzilla - API Mocking Ecosystem',
+		description: 'Chrome Extension for instant interception. HTTP Server for dynamic mocking.',
+		images: ['/mockzilla-logo.png'],
 	},
 };
 
