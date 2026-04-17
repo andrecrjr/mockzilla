@@ -25,6 +25,7 @@ interface ExtensionMock {
     id: string;
     name: string;
     pattern: string;
+    method: string;
     body: string;
     response: string;
     statusCode: number;
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
                         await tx.insert(mockResponses).values({
                             name: mock.name,
                             endpoint: mock.pattern,
-                            method: 'GET', // Internal default as extension no longer sends it
+                            method: (mock.method as any) || 'GET',
                             statusCode: mock.statusCode,
                             response: mock.response || mock.body || '', // Fallback
                             folderId: folderId,

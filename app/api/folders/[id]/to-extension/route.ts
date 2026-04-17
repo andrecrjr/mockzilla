@@ -78,18 +78,13 @@ export async function GET(
             const wildcardRequireMatch = mock.wildcardRequireMatch || false;
 
             if (originalMock) {
+                // If we found the original mock in meta, it means it was edited in the server UI
+                // or synced from the extension. We should trust it as the source of truth
+                // but we can still overlay server-side status/enabled if they were changed.
                 return {
                     ...originalMock,
-                    pattern: mock.endpoint,
-                    method: mock.method || 'GET',
-                    body: mock.response,
-                    response: mock.response,
-                    statusCode: mock.statusCode,
-                    enabled: mock.enabled,
-                    bodyType: mock.bodyType || originalMock.bodyType || 'json',
-                    id: originalMock.id,
-                    variants: variants.length > 0 ? variants : originalMock.variants || [],
-                    wildcardRequireMatch: wildcardRequireMatch || originalMock.wildcardRequireMatch || false,
+                    // These fields might have been updated in ExtensionMockTable (which updates meta)
+                    // so we trust originalMock here.
                 };
             }
             return {
