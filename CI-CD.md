@@ -32,7 +32,7 @@
 
 ## Semantic Versioning
 
-Version format: **`MAJOR.MINOR.PATCH`** (e.g., `v1.4.2`)
+Version format: **`MAJOR.MINOR.PATCH`** (e.g., `1.4.2`)
 
 ### Version Bump Rules (Conventional Commits)
 
@@ -44,7 +44,7 @@ Version format: **`MAJOR.MINOR.PATCH`** (e.g., `v1.4.2`)
 
 ### Version Source of Truth
 - `package.json` → `"version"` field
-- Git tag → `v1.4.2` (created manually or via CD)
+- Git tag → `1.4.2` (created manually or via CD)
 - Docker image → tagged with the same semver
 
 ---
@@ -200,7 +200,7 @@ docker run -d \
   --env-file .env \
   -p 36666:36666 \
   --restart unless-stopped \
-  youruser/mockzilla:v1.4.2
+  youruser/mockzilla:1.4.2
 ```
 
 ### Required Environment Variables
@@ -254,7 +254,7 @@ docker run -d \
   --env-file .env \
   -p 36666:36666 \
   --restart unless-stopped \
-  youruser/mockzilla:v1.4.1  # previous version
+  youruser/mockzilla:1.4.1  # previous version
 ```
 
 ### Rollback via Git
