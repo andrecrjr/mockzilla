@@ -99,14 +99,6 @@ export default function ExtensionFolderPage() {
 				</div>
 
 				<div className="grid gap-8">
-					{/* Read-Only Warning */}
-					<div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4 text-yellow-600 dark:text-yellow-400 flex items-center gap-3">
-						<Ban className="h-5 w-5" />
-						<p className="text-sm font-medium">
-							This folder is synced from the browser extension. Mocks here are read-only and managed by the extension.
-						</p>
-					</div>
-
 					<div>
 						<h2 className="mb-4 text-2xl font-semibold text-foreground">
 							Synced Mocks

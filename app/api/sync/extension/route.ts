@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
             mocksSynced: 0
         };
 
+        const folderMapping: Record<string, string> = {};
+
         await db.transaction(async (tx) => {
             for (const group of body.groups) {
                 const cleanedName = group.name.replace(/\s*\(Extension\)$/i, '').trim();
@@ -104,6 +106,8 @@ export async function POST(request: NextRequest) {
                     results.foldersCreated++;
                 }
 
+                folderMapping[group.id || group.name] = folderId;
+
                 // 2. Insert Mocks
                 if (group.mocks && group.mocks.length > 0) {
                     for (const mock of group.mocks) {
@@ -129,7 +133,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            results
+            results,
+            folderMapping
         });
 
     } catch (error: unknown) {
