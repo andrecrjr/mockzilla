@@ -377,7 +377,7 @@ export default function WorkflowsPage() {
 					{scenarios.map((scenario) => (
 						<Card key={scenario.id} className="h-full flex flex-col">
 							<div className="flex justify-between items-start p-6">
-								<Link href={`/workflows/${scenario.id}`}>
+								<Link href={`/app/workflows/${scenario.id}`}>
 									<div className="cursor-pointer">
 										<div className="flex items-center justify-between mb-4">
 											<div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">

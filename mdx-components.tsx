@@ -31,14 +31,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
+interface CodeProps {
+  children?: string;
+}
+
+function isCodeElement(child: unknown): child is React.ReactElement<CodeProps> {
+  return React.isValidElement(child) && child.type === 'code';
+}
+
 const Pre = ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
   // Extract code text from children
   // In MDX, pre usually has a code child: <pre><code>...</code></pre>
-  const codeContent = React.Children.toArray(children).find(
-    (child) => React.isValidElement(child) && child.type === 'code'
-  ) as React.ReactElement | undefined;
+  const codeContent = React.Children.toArray(children).find(isCodeElement);
 
-  const textToCopy = codeContent?.props.children || '';
+  const textToCopy = codeContent?.props?.children || '';
 
   return (
     <div className="group relative">

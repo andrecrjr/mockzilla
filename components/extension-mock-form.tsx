@@ -167,9 +167,6 @@ export function ExtensionMockForm({
 									placeholder='{ "success": true }'
 									onChange={(e) => updateField('response', e.target.value)}
 								/>
-								<p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider pt-1">
-									Supports interpolation like {'{$.path}'}
-								</p>
 							</div>
 						</div>
 					</div>
