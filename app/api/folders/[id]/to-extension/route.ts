@@ -68,10 +68,9 @@ export async function GET(
         const extensionSyncData = meta?.extensionSyncData;
 
         const extensionMocks: ExtensionMock[] = mocks.map(mock => {
+            // Find the original extension data using the stable serverMockId link
             const originalMock = extensionSyncData?.mocks?.find(m =>
-                m.name === mock.name &&
-                m.pattern === mock.endpoint &&
-                m.method === mock.method
+                (m as any).serverMockId === mock.id
             );
 
             const variants = mock.variants ? (mock.variants as { key: string; bodyType: string; statusCode: number; body: string }[]) : [];
@@ -79,12 +78,18 @@ export async function GET(
 
             if (originalMock) {
                 // If we found the original mock in meta, it means it was edited in the server UI
-                // or synced from the extension. We should trust it as the source of truth
-                // but we can still overlay server-side status/enabled if they were changed.
+                // or synced from the extension. We should trust it as the source of truth.
+                // NOTE: The name, method, status, etc. in originalMock are updated by ExtensionMockTable.tsx
                 return {
                     ...originalMock,
-                    // These fields might have been updated in ExtensionMockTable (which updates meta)
-                    // so we trust originalMock here.
+                    name: mock.name, // Ensure DB-level edits win if meta wasn't updated (redundant but safe)
+                    method: mock.method || 'GET',
+                    statusCode: mock.statusCode,
+                    enabled: mock.enabled,
+                    response: mock.response,
+                    body: mock.response,
+                    variants: variants.length > 0 ? variants : originalMock.variants || [],
+                    wildcardRequireMatch: wildcardRequireMatch || originalMock.wildcardRequireMatch || false,
                 };
             }
             return {

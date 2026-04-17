@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Edit2, Loader2, Save, X } from 'lucide-react';
+import { Check, Edit2, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { mutate } from 'swr';
@@ -10,19 +10,9 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
 import {
 	Table,
 	TableBody,
@@ -31,27 +21,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
-
-interface ExtensionMock {
-	id: string;
-	name: string;
-	method: string;
-	statusCode: number;
-	enabled: boolean;
-	pattern?: string;
-	body?: string;
-	response?: string;
-	matchType?: string;
-	variants?: Array<{
-		id?: string;
-		key?: string;
-		name?: string;
-		statusCode: number;
-		body?: string;
-		bodyType?: string;
-	}>;
-}
+import { ExtensionMockForm, type ExtensionMock } from './extension-mock-form';
 
 interface ExtensionMockTableProps {
 	mocks: ExtensionMock[];
@@ -79,9 +49,10 @@ export function ExtensionMockTable({
 
 	const handleUpdateMock = async (updatedMock: ExtensionMock) => {
 		// Basic JSON validation if response is present
-		if (updatedMock.response) {
+		const responseBody = updatedMock.response || updatedMock.body || '';
+		if (responseBody) {
 			try {
-				JSON.parse(updatedMock.response);
+				JSON.parse(responseBody);
 			} catch {
 				toast.error('Invalid JSON response');
 				return;
@@ -92,7 +63,7 @@ export function ExtensionMockTable({
 		try {
 			// 1. Update the local state
 			const newMocks = mocks.map((m) =>
-				m.id === updatedMock.id ? updatedMock : m,
+				m.id === updatedMock.id ? { ...m, ...updatedMock, response: responseBody } : m,
 			);
 
 			// 2. Prepare the new meta object
@@ -104,45 +75,53 @@ export function ExtensionMockTable({
 				extensionSyncData: {
 					...extensionSyncData,
 					mocks: newMocks.map((m) => {
-						const originalMock = mocks.find((orig) => orig.id === m.id);
-						const merged = {
+						const originalMock = (extensionSyncData as any)?.mocks?.find((orig: any) => orig.id === m.id);
+						return {
 							...originalMock,
 							...m,
-							pattern: m.pattern || (originalMock as unknown as Record<string, unknown>)?.pattern || (originalMock as unknown as Record<string, unknown>)?.endpoint || '',
+							response: responseBody,
+							body: responseBody,
 						};
-						return merged;
 					}),
 				},
 			};
 
-			const name = folderName || (folderMeta as Record<string, unknown>)?.name as string || 'Synced Folder';
-			console.log('[ExtensionMockTable] Updating folder:', { folderId, name, meta: newMeta });
+			console.log('[ExtensionMockTable] Updating folder and mock:', { folderId, mockId: updatedMock.id, newName: updatedMock.name });
 
 			// 3. Call the API to update the folder meta
-			const res = await fetch(`/api/folders?id=${folderId}`, {
+			const folderRes = await fetch(`/api/folders?id=${folderId}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					name,
+					name: folderName,
 					meta: newMeta,
 				}),
 			});
 
-			if (!res.ok) {
-				let errorData: Record<string, unknown> | null = null;
-				try {
-					errorData = await res.json();
-				} catch {
-					/* ignore */
-				}
-				throw new Error((errorData?.error as string) || 'Failed to update folder metadata');
-			}
+			if (!folderRes.ok) throw new Error('Failed to update folder metadata');
+
+			// 4. Also update individual mock response in DB for consistency
+			// This ensures the server-side mock serving logic uses the updated data
+			const mockIdToUpdate = (updatedMock as any).serverMockId || updatedMock.id;
+			await fetch(`/api/mocks?id=${mockIdToUpdate}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: updatedMock.name,
+					method: updatedMock.method,
+					statusCode: updatedMock.statusCode,
+					response: responseBody,
+					matchType: updatedMock.matchType,
+					enabled: updatedMock.enabled,
+					folderId: folderId,
+				}),
+			});
 
 			setMocks(newMocks);
 			setEditingMock(null);
 			toast.success('Mock updated successfully');
 
-			// Refresh folder data
+			// Refresh folder data to keep everything in sync
 			mutate(`/api/folders?slug=${folderSlug}`);
 		} catch (error) {
 			console.error('Update error:', error);
@@ -196,10 +175,10 @@ export function ExtensionMockTable({
 									<div className="flex flex-col gap-1">
 										{mock.variants.map((v, idx) => (
 											<div
-												key={v.id || `variant-${idx}`}
+												key={v.id || v.key || `variant-${idx}`}
 												className="text-xs text-muted-foreground flex items-center gap-2"
 											>
-												<span>• {v.name}</span>
+												<span>• {v.name || v.key}</span>
 												<span className="text-[10px] bg-secondary px-1 rounded">
 													{v.statusCode}
 												</span>
@@ -243,199 +222,31 @@ export function ExtensionMockTable({
 			</Table>
 
 			<Dialog open={!!editingMock} onOpenChange={() => setEditingMock(null)}>
-				<DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-					<DialogHeader>
-						<DialogTitle>Edit Extension Mock</DialogTitle>
-						<DialogDescription>
-							Update metadata for this synced mock. Changes are saved to the
-							folder metadata.
-						</DialogDescription>
-					</DialogHeader>
-					{editingMock && (
-						<div className="grid gap-4 py-4 overflow-y-auto pr-2">
-							<div className="grid grid-cols-2 gap-4">
-								<div className="grid gap-2">
-									<Label htmlFor="name">Name</Label>
-									<Input
-										id="name"
-										value={editingMock.name}
-										onChange={(e) =>
-											setEditingMock({ ...editingMock, name: e.target.value })
-										}
-									/>
-								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="method">Method</Label>
-									<Select
-										value={editingMock.method || 'GET'}
-										onValueChange={(value) =>
-											setEditingMock({ ...editingMock, method: value })
-										}
-									>
-										<SelectTrigger id="method">
-											<SelectValue placeholder="Select method" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="GET">GET</SelectItem>
-											<SelectItem value="POST">POST</SelectItem>
-											<SelectItem value="PUT">PUT</SelectItem>
-											<SelectItem value="PATCH">PATCH</SelectItem>
-											<SelectItem value="DELETE">DELETE</SelectItem>
-											<SelectItem value="HEAD">HEAD</SelectItem>
-											<SelectItem value="OPTIONS">OPTIONS</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							</div>
-							<div className="grid grid-cols-2 gap-4">
-								<div className="grid gap-2">
-									<Label htmlFor="statusCode">Status Code</Label>
-									<Input
-										id="statusCode"
-										type="number"
-										value={editingMock.statusCode}
-										onChange={(e) =>
-											setEditingMock({
-												...editingMock,
-												statusCode: Number.parseInt(e.target.value, 10) || 200,
-											})
-										}
-									/>
-								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="matchType">Match Type</Label>
-									<Select
-										value={editingMock.matchType || 'substring'}
-										onValueChange={(value) =>
-											setEditingMock({ ...editingMock, matchType: value })
-										}
-									>
-										<SelectTrigger id="matchType">
-											<SelectValue placeholder="Match Type" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="exact">Exact</SelectItem>
-											<SelectItem value="substring">Substring</SelectItem>
-											<SelectItem value="wildcard">Wildcard</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="response">Response Body (JSON)</Label>
-								<Textarea
-									id="response"
-									className="font-mono text-xs min-h-[150px]"
-									value={editingMock.response || editingMock.body || ''}
-									placeholder='{ "success": true }'
-									onChange={(e) =>
-										setEditingMock({ ...editingMock, response: e.target.value })
-									}
-								/>
-							</div>
-							{editingMock.variants && editingMock.variants.length > 0 && (
-								<div className="grid gap-4 pt-4 border-t mt-4">
-									<Label className="text-sm font-semibold text-primary">
-										Variants ({editingMock.variants.length})
-									</Label>
-									<div className="grid gap-6">
-										{editingMock.variants.map((variant, idx) => (
-											<div 
-												key={variant.id || variant.key || idx} 
-												className="grid gap-3 bg-secondary/10 p-4 rounded-xl border border-secondary/50"
-											>
-												<div className="grid grid-cols-4 gap-3 items-end">
-													<div className="col-span-3 grid gap-1.5">
-														<Label htmlFor={`v-name-${idx}`} className="text-[10px] text-muted-foreground uppercase font-bold">
-															Variant Name / Key
-														</Label>
-														<Input
-															id={`v-name-${idx}`}
-															value={variant.name || variant.key || ''}
-															className="h-9 text-sm"
-															onChange={(e) => {
-																const newVariants = [...(editingMock.variants || [])];
-																newVariants[idx] = { 
-																	...variant, 
-																	name: variant.name !== undefined ? e.target.value : undefined,
-																	key: variant.key !== undefined ? e.target.value : undefined 
-																};
-																setEditingMock({ ...editingMock, variants: newVariants });
-															}}
-														/>
-													</div>
-													<div className="grid gap-1.5">
-														<Label htmlFor={`v-status-${idx}`} className="text-[10px] text-muted-foreground uppercase font-bold">
-															Status
-														</Label>
-														<Input
-															id={`v-status-${idx}`}
-															type="number"
-															value={variant.statusCode}
-															className="h-9 text-sm"
-															onChange={(e) => {
-																const newVariants = [...(editingMock.variants || [])];
-																newVariants[idx] = { 
-																	...variant, 
-																	statusCode: Number.parseInt(e.target.value, 10) || 200 
-																};
-																setEditingMock({ ...editingMock, variants: newVariants });
-															}}
-														/>
-													</div>
-												</div>
-												<div className="grid gap-1.5">
-													<Label htmlFor={`v-body-${idx}`} className="text-[10px] text-muted-foreground uppercase font-bold">
-														Variant Response (JSON)
-													</Label>
-													<Textarea
-														id={`v-body-${idx}`}
-														value={variant.body || ''}
-														className="font-mono text-[11px] min-h-[80px] bg-background/50"
-														placeholder='{ "status": "variant" }'
-														onChange={(e) => {
-															const newVariants = [...(editingMock.variants || [])];
-															newVariants[idx] = { ...variant, body: e.target.value };
-															setEditingMock({ ...editingMock, variants: newVariants });
-														}}
-													/>
-												</div>
-											</div>
-										))}
-									</div>
-								</div>
-							)}
-						</div>
-					)}
-					<DialogFooter className="pt-4 border-t">
-						<Button
-							variant="outline"
-							onClick={() => setEditingMock(null)}
-							disabled={isUpdating}
-						>
-							Cancel
-						</Button>
-						<Button
-							onClick={() => editingMock && handleUpdateMock(editingMock)}
-							disabled={isUpdating}
-						>
-							{isUpdating ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Saving...
-								</>
-							) : (
-								<>
-									<Save className="mr-2 h-4 w-4" />
-									Save Changes
-								</>
-							)}
-						</Button>
-					</DialogFooter>
+				<DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col p-0">
+					<div className="p-6 pb-2">
+						<DialogHeader>
+							<DialogTitle className="text-2xl">Edit Extension Mock</DialogTitle>
+							<DialogDescription>
+								Update metadata and variants for this synced mock.
+							</DialogDescription>
+						</DialogHeader>
+					</div>
+					
+					<div className="flex-1 overflow-hidden px-6 pb-6">
+						{editingMock && (
+							<ExtensionMockForm 
+								mock={editingMock}
+								onSave={handleUpdateMock}
+								onCancel={() => setEditingMock(null)}
+								isUpdating={isUpdating}
+							/>
+						)}
+					</div>
 				</DialogContent>
 			</Dialog>
 		</div>
 	);
 }
+
 
 

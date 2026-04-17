@@ -54,12 +54,6 @@ export default function AppLayout({
 							</div>
 						</div>
 						<div className="flex items-center gap-2">
-							<Link href="/">
-								<Button variant="ghost" size="sm" className="gap-2">
-									<Home className="h-4 w-4" />
-									<span className="hidden sm:inline">Landing</span>
-								</Button>
-							</Link>
 							<Link href="/docs">
 								<Button variant="ghost" size="sm" className="gap-2">
 									<BookOpen className="h-4 w-4" />

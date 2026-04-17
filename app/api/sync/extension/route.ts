@@ -80,13 +80,6 @@ export async function POST(request: NextRequest) {
 
                 if (existingFolder) {
                     folderId = existingFolder.id;
-                    await tx.update(folders)
-                        .set({ 
-                            name: folderName,
-                            updatedAt: new Date(),
-                            meta: { extensionSyncData: group }
-                        })
-                        .where(eq(folders.id, folderId));
                     results.foldersUpdated++;
                     
                     // CLEAR existing mocks in this folder to ensure exact sync
@@ -108,10 +101,10 @@ export async function POST(request: NextRequest) {
 
                 folderMapping[group.id || group.name] = folderId;
 
-                // 2. Insert Mocks
+                // 2. Insert Mocks and capture their IDs
                 if (group.mocks && group.mocks.length > 0) {
                     for (const mock of group.mocks) {
-                        await tx.insert(mockResponses).values({
+                        const [insertedMock] = await tx.insert(mockResponses).values({
                             name: mock.name,
                             endpoint: mock.pattern,
                             method: (mock.method as any) || 'GET',
@@ -124,10 +117,22 @@ export async function POST(request: NextRequest) {
                             useDynamicResponse: false,
                             variants: mock.variants || null,
                             wildcardRequireMatch: mock.wildcardRequireMatch || false,
-                        });
+                        }).returning();
+
+                        // Link extension mock to server mock UUID
+                        (mock as any).serverMockId = insertedMock.id;
                         results.mocksSynced++;
                     }
                 }
+
+                // 3. Final update to folder metadata with the serverMockId links
+                await tx.update(folders)
+                    .set({ 
+                        name: folderName,
+                        updatedAt: new Date(),
+                        meta: { extensionSyncData: group }
+                    })
+                    .where(eq(folders.id, folderId));
             }
         });
 
