@@ -2,9 +2,9 @@
 
 import { Check, Copy, Globe, Server } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { toast } from 'sonner';
 
 const dockerCommand =
 	'docker run -d -p 36666:36666 -v mockzilla-data:/app/data --name mockzilla andrecrjr/mockzilla:latest';
@@ -15,7 +15,9 @@ export function QuickInstall() {
 	const handleCopyDocker = () => {
 		navigator.clipboard.writeText(dockerCommand);
 		setCopied(true);
-		toast.success('Copied!', { description: 'Docker command copied to clipboard' });
+		toast.success('Copied!', {
+			description: 'Docker command copied to clipboard',
+		});
 		setTimeout(() => setCopied(false), 2000);
 	};
 
@@ -40,7 +42,9 @@ export function QuickInstall() {
 							</div>
 							<div>
 								<h3 className="text-xl font-bold text-white">HTTP Server</h3>
-								<p className="text-sm text-white/70">Docker-based mock server</p>
+								<p className="text-sm text-white/70">
+									Docker-based mock server
+								</p>
 							</div>
 						</div>
 
@@ -55,7 +59,11 @@ export function QuickInstall() {
 								onClick={handleCopyDocker}
 								className="gap-2 bg-white text-primary hover:bg-white/90"
 							>
-								{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+								{copied ? (
+									<Check className="h-4 w-4" />
+								) : (
+									<Copy className="h-4 w-4" />
+								)}
 								Copy Command
 							</Button>
 							<a
@@ -74,8 +82,12 @@ export function QuickInstall() {
 								<Globe className="h-6 w-6 text-white" />
 							</div>
 							<div>
-								<h3 className="text-xl font-bold text-white">Chrome Extension</h3>
-								<p className="text-sm text-white/70">Browser-based interception</p>
+								<h3 className="text-xl font-bold text-white">
+									Chrome Extension
+								</h3>
+								<p className="text-sm text-white/70">
+									Browser-based interception
+								</p>
 							</div>
 						</div>
 
@@ -116,7 +128,9 @@ export function QuickInstall() {
 
 				<p className="text-center text-sm text-white/60 mt-8">
 					Your server will be available at{' '}
-					<span className="underline text-white/80">http://localhost:36666</span>
+					<span className="underline text-white/80">
+						http://localhost:36666
+					</span>
 				</p>
 			</div>
 		</section>

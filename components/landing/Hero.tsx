@@ -1,12 +1,11 @@
 'use client';
 
-import { ArrowRight, BookOpen, Code2, Copy, Terminal } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowRight, Copy, Terminal } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { DynamicHeadline } from '@/components/landing/DynamicHeadline';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { DynamicHeadline } from '@/components/landing/DynamicHeadline';
-import { toast } from 'sonner';
 
 const dockerCommand =
 	'docker run -d -p 36666:36666 -v mockzilla-data:/app/data --name mockzilla andrecrjr/mockzilla:latest';
@@ -17,7 +16,9 @@ export function Hero() {
 	const copyToClipboard = () => {
 		navigator.clipboard.writeText(dockerCommand);
 		setCopied(true);
-		toast.success('Copied!', { description: 'Docker command copied to clipboard' });
+		toast.success('Copied!', {
+			description: 'Docker command copied to clipboard',
+		});
 		setTimeout(() => setCopied(false), 2000);
 	};
 
@@ -108,10 +109,10 @@ export function Hero() {
 								/api/orders/123
 							</div>
 							<div className="text-xs text-muted-foreground">
-								// Dynamic responses with Faker.js
-							</div>
+								{/* Dynamic responses with Faker.js */}
+							</div>{' '}
 							<pre className="text-xs overflow-x-auto text-foreground mt-1">
-{`{
+								{`{
   "id": "{{faker.string.uuid()}}",
   "name": "{{faker.person.fullName()}}",
   "email": "{{faker.internet.email()}}"

@@ -6,7 +6,7 @@
  * @param data - The object to resolve the path in
  * @returns The resolved value or undefined
  */
-export function resolvePath(path: string, data: any): any {
+export function resolvePath(path: string, data: unknown): unknown {
 	// Remove leading $. if present (for JSONPath compatibility)
 	const cleanPath = path.startsWith('$.')
 		? path.slice(2)
@@ -31,10 +31,10 @@ export function resolvePath(path: string, data: any): any {
 		// Check if part is an array index
 		const arrayIndex = parseInt(part, 10);
 		if (!Number.isNaN(arrayIndex)) {
-            // Check if current supports number indexing (Array or generic object)
-			current = current[arrayIndex];
+			// Check if current supports number indexing (Array or generic object)
+			current = (current as Record<string, unknown>)[arrayIndex];
 		} else {
-			current = current[part];
+			current = (current as Record<string, unknown>)[part];
 		}
 	}
 

@@ -33,13 +33,7 @@ interface MockCardProps {
 	onCopy: (text: string) => void;
 }
 
-export function MockCard({
-	mock,
-	folder,
-	onDelete,
-	onUpdate,
-	onCopy,
-}: MockCardProps) {
+export function MockCard({ mock, folder, onDelete, onCopy }: MockCardProps) {
 	const getMockUrl = (folderSlug: string, path: string) => {
 		if (typeof window !== 'undefined') {
 			return `${window.location.origin}/api/mock/${folderSlug}${path}`;
@@ -112,12 +106,14 @@ export function MockCard({
 							<Badge variant="outline" className="text-xs">
 								{mock.matchType || 'exact'}
 							</Badge>
-							{mock.matchType === 'wildcard' && mock.variants && mock.variants.length > 0 && (
-								<Badge variant="secondary" className="text-xs">
-									{mock.variants.length} variant
-									{mock.variants.length > 1 ? 's' : ''}
-								</Badge>
-							)}
+							{mock.matchType === 'wildcard' &&
+								mock.variants &&
+								mock.variants.length > 0 && (
+									<Badge variant="secondary" className="text-xs">
+										{mock.variants.length} variant
+										{mock.variants.length > 1 ? 's' : ''}
+									</Badge>
+								)}
 						</div>
 						{queryParamsString && (
 							<div className="mt-2 flex flex-wrap items-center gap-1">

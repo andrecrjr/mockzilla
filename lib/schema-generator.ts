@@ -8,7 +8,7 @@ const DEFAULT_MAX_ITEMS = 1000;
 const envMaxItems = process.env.MOCKZILLA_MAX_ITEMS
 	? parseInt(process.env.MOCKZILLA_MAX_ITEMS, 10)
 	: DEFAULT_MAX_ITEMS;
-const MAX_ITEMS = isNaN(envMaxItems) ? DEFAULT_MAX_ITEMS : envMaxItems;
+const MAX_ITEMS = Number.isNaN(envMaxItems) ? DEFAULT_MAX_ITEMS : envMaxItems;
 
 jsf.option({
 	alwaysFakeOptionals: true,
@@ -20,14 +20,15 @@ jsf.option({
 	fillProperties: false,
 });
 
-import { resolvePath } from './utils/path-resolver';
 import { interpolate } from './engine/interpolation';
-
 
 /**
  * Applies template replacement to a string or object using provided context
  */
-export function replaceTemplates(data: any, context: any = {}): any {
+export function replaceTemplates(
+	data: unknown,
+	context: Record<string, unknown> = {},
+): unknown {
 	return interpolate(data, context);
 }
 
@@ -38,17 +39,20 @@ export function replaceTemplates(data: any, context: any = {}): any {
  * @param schema - JSON Schema object
  * @returns JSON string with generated data
  */
-export function generateFromSchema(schema: object, context: any = {}): string {
+export function generateFromSchema(
+	schema: object,
+	context: Record<string, unknown> = {},
+): string {
 	try {
 		const generated = jsf.generate(schema);
-		
+
 		// Merge generated data with context for template resolution
 		// The context (e.g. request query params) takes precedence if there are naming collisions
-		const rootData = { 
+		const rootData = {
 			...generated,
-			...context 
+			...context,
 		};
-		
+
 		const processed = interpolate(generated, rootData);
 
 		return JSON.stringify(processed, null, 2);
@@ -64,7 +68,10 @@ export function generateFromSchema(schema: object, context: any = {}): string {
  * Ensures that pattern fields containing template syntax are preserved as-is,
  * instead of being treated as regular expressions by json-schema-faker.
  */
-function preprocessSchema(schema: any, visited = new WeakSet()): any {
+function preprocessSchema(
+	schema: unknown,
+	visited = new WeakSet<object>(),
+): unknown {
 	// Prevent circular reference infinite loops
 	if (schema && typeof schema === 'object') {
 		if (visited.has(schema)) {
@@ -76,11 +83,14 @@ function preprocessSchema(schema: any, visited = new WeakSet()): any {
 	if (Array.isArray(schema)) {
 		return schema.map((item) => preprocessSchema(item, visited));
 	} else if (schema && typeof schema === 'object') {
-		const processed: any = {};
+		const processed: Record<string, unknown> = {};
 
 		for (const key in schema) {
 			if (Object.hasOwn(schema, key)) {
-				processed[key] = preprocessSchema(schema[key], visited);
+				processed[key] = preprocessSchema(
+					(schema as Record<string, unknown>)[key],
+					visited,
+				);
 			}
 		}
 		return processed;
@@ -130,5 +140,5 @@ export function generateFromSchemaString(schemaString: string): string {
 	const schema = JSON.parse(schemaString);
 	const preprocessedSchema = preprocessSchema(schema);
 
-	return generateFromSchema(preprocessedSchema);
+	return generateFromSchema(preprocessedSchema as object);
 }

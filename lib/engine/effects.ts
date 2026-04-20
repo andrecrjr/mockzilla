@@ -1,5 +1,5 @@
-import type { Effect, MatchContext } from './match';
 import { interpolate } from './interpolation';
+import type { Effect, MatchContext } from './match';
 
 export { interpolate };
 
@@ -19,7 +19,10 @@ export function applyEffects(
 						return { type: 'db.push', table: parts[1], value: v };
 					}
 					if (parts[0] === 'db' && parts[2] === 'update') {
-						const val = v as { match: Record<string, unknown>; set: Record<string, unknown> };
+						const val = v as {
+							match: Record<string, unknown>;
+							set: Record<string, unknown>;
+						};
 						return {
 							type: 'db.update',
 							table: parts[1],

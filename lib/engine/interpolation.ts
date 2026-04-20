@@ -9,8 +9,8 @@ export type InterpolationContext = {
 	};
 	state?: Record<string, unknown>;
 	tables?: Record<string, unknown[]>;
-    // For schema-generator compatibility
-    [key: string]: any;
+	// For schema-generator compatibility
+	[key: string]: unknown;
 };
 
 /**
@@ -20,83 +20,103 @@ export type InterpolationContext = {
  * 3. Basic arithmetic: {{state.count + 1}} or {{3 - db.items.length}}
  * 4. Type preservation: returns raw type if template is the entire string
  */
-export function interpolate(value: unknown, context: InterpolationContext): unknown {
+export function interpolate(
+	value: unknown,
+	context: InterpolationContext,
+): unknown {
 	if (typeof value !== 'string') {
-        // Deep interpolation for objects/arrays
-        if (value && typeof value === 'object') {
-            if (Array.isArray(value)) {
-                return value.map((v) => interpolate(v, context));
-            }
-            const result: Record<string, unknown> = {};
-            for (const k in value) {
-                if (Object.prototype.hasOwnProperty.call(value, k)) {
-                    result[k] = interpolate((value as Record<string, unknown>)[k], context);
-                }
-            }
-            return result;
-        }
-        return value;
-    }
+		// Deep interpolation for objects/arrays
+		if (value && typeof value === 'object') {
+			if (Array.isArray(value)) {
+				return value.map((v) => interpolate(v, context));
+			}
+			const result: Record<string, unknown> = {};
+			for (const k in value) {
+				if (Object.hasOwn(value, k)) {
+					result[k] = interpolate(
+						(value as Record<string, unknown>)[k],
+						context,
+					);
+				}
+			}
+			return result;
+		}
+		return value;
+	}
 
-    const trimmed = value.trim();
-    
-    // Check for "exact match" templates to preserve types
-    // Supports both {{...}} and {$. ...} / {$ ...}
-    const exactMatch = trimmed.match(/^\{\{\s*(.+?)\s*\}\}$/) || trimmed.match(/^\{(?!\$)\s*(.+?)\s*\}$/) || trimmed.match(/^\{\s*\$\.(.+?)\s*\}$/);
-    
-    if (exactMatch) {
-        const path = exactMatch[1].trim();
-        const resolved = resolveTemplatePath(path, context);
-        return resolved !== undefined ? resolved : value;
-    }
+	const trimmed = value.trim();
 
-    // Handle embedded templates: "Hello {{user.name}}, your ID is {$.query.id}"
-    return value.replace(/\{\{\s*(.+?)\s*\}\}|\{\s*\$\.(.+?)\s*\}|\{(?!\$)\s*(.+?)\s*\}/g, (match, p1, p2, p3) => {
-        const path = (p1 || p2 || p3).trim();
-        const resolved = resolveTemplatePath(path, context);
-        return resolved !== undefined ? String(resolved) : match;
-    });
+	// Check for "exact match" templates to preserve types
+	// Supports both {{...}} and {$. ...} / {$ ...}
+	const exactMatch =
+		trimmed.match(/^\{\{\s*(.+?)\s*\}\}$/) ||
+		trimmed.match(/^\{(?!\$)\s*(.+?)\s*\}$/) ||
+		trimmed.match(/^\{\s*\$\.(.+?)\s*\}$/);
+
+	if (exactMatch) {
+		const path = exactMatch[1].trim();
+		const resolved = resolveTemplatePath(path, context);
+		return resolved !== undefined ? resolved : value;
+	}
+
+	// Handle embedded templates: "Hello {{user.name}}, your ID is {$.query.id}"
+	return value.replace(
+		/\{\{\s*(.+?)\s*\}\}|\{\s*\$\.(.+?)\s*\}|\{(?!\$)\s*(.+?)\s*\}/g,
+		(match, p1, p2, p3) => {
+			const path = (p1 || p2 || p3).trim();
+			const resolved = resolveTemplatePath(path, context);
+			return resolved !== undefined ? String(resolved) : match;
+		},
+	);
 }
 
-function resolveTemplatePath(path: string, context: InterpolationContext): unknown {
-    // 1. Handle Arithmetic: {{state.count + 1}}
-    const mathMatch = path.match(/^(.+?)\s*([+\-])\s*(.+?)$/);
-    if (mathMatch) {
-        const leftRaw = mathMatch[1].trim();
-        const operator = mathMatch[2];
-        const rightRaw = mathMatch[3].trim();
+function resolveTemplatePath(
+	path: string,
+	context: InterpolationContext,
+): unknown {
+	// 1. Handle Arithmetic: {{state.count + 1}}
+	const mathMatch = path.match(/^(.+?)\s*([+-])\s*(.+?)$/);
+	if (mathMatch) {
+		const leftRaw = mathMatch[1].trim();
+		const operator = mathMatch[2];
+		const rightRaw = mathMatch[3].trim();
 
-        const left = resolveSinglePath(leftRaw, context);
-        const right = resolveSinglePath(rightRaw, context);
+		const left = resolveSinglePath(leftRaw, context);
+		const right = resolveSinglePath(rightRaw, context);
 
-        const leftNum = typeof left === 'number' ? left : parseInt(String(left), 10);
-        const rightNum = typeof right === 'number' ? right : parseInt(String(right), 10);
+		const leftNum =
+			typeof left === 'number' ? left : parseInt(String(left), 10);
+		const rightNum =
+			typeof right === 'number' ? right : parseInt(String(right), 10);
 
-        if (!Number.isNaN(leftNum) && !Number.isNaN(rightNum)) {
-            return operator === '+' ? leftNum + rightNum : leftNum - rightNum;
-        }
-    }
+		if (!Number.isNaN(leftNum) && !Number.isNaN(rightNum)) {
+			return operator === '+' ? leftNum + rightNum : leftNum - rightNum;
+		}
+	}
 
-    return resolveSinglePath(path, context);
+	return resolveSinglePath(path, context);
 }
 
-function resolveSinglePath(path: string, context: InterpolationContext): unknown {
-    let lookupPath = path;
+function resolveSinglePath(
+	path: string,
+	context: InterpolationContext,
+): unknown {
+	let lookupPath = path;
 
-    // Normalize "db" -> "tables"
-    if (lookupPath.startsWith('db.') || lookupPath === 'db') {
-        lookupPath = lookupPath.replace(/^db/, 'tables');
-    }
+	// Normalize "db" -> "tables"
+	if (lookupPath.startsWith('db.') || lookupPath === 'db') {
+		lookupPath = lookupPath.replace(/^db/, 'tables');
+	}
 
-    // If path starts with $. (JSONPath style), normalize it for resolvePath
-    if (lookupPath.startsWith('$.')) {
-        lookupPath = lookupPath.substring(2);
-    }
+	// If path starts with $. (JSONPath style), normalize it for resolvePath
+	if (lookupPath.startsWith('$.')) {
+		lookupPath = lookupPath.substring(2);
+	}
 
-    // Try resolving from root (context.state, context.tables, context.input)
-    const direct = resolvePath(lookupPath, context);
-    if (direct !== undefined) return direct;
+	// Try resolving from root (context.state, context.tables, context.input)
+	const direct = resolvePath(lookupPath, context);
+	if (direct !== undefined) return direct;
 
-    // Fallback for schema-generator: check context directly (where query/params might be at root)
-    return resolvePath(lookupPath, context);
+	// Fallback for schema-generator: check context directly (where query/params might be at root)
+	return resolvePath(lookupPath, context);
 }

@@ -1,12 +1,11 @@
-import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
-import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
+import fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
+import type { PgliteDatabase } from 'drizzle-orm/pglite';
+import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { Pool } from 'pg';
 import * as schema from './schema';
-import fs from 'node:fs';
-
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { PgliteDatabase } from 'drizzle-orm/pglite';
 
 let db: NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;
 

@@ -96,7 +96,7 @@ export function MockForm({ folders, onSuccess, onError }: MockFormProps) {
 				path,
 				method,
 				response: jsonData,
-				statusCode: Number.parseInt(statusCode),
+				statusCode: Number.parseInt(statusCode, 10),
 				folderId,
 			};
 

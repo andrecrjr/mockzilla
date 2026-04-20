@@ -26,9 +26,7 @@ export function wildcardToRegex(p: string): RegExp {
 	const s = String(p || '');
 	const parts = s.split('*').map(escapeRegex);
 	const pattern = parts.join('(.+?)');
-	const anchored = s.includes('://')
-		? '^' + pattern + '$'
-		: '^' + pattern + '$';
+	const anchored = s.includes('://') ? `^${pattern}$` : `^${pattern}$`;
 	return new RegExp(anchored);
 }
 
@@ -95,7 +93,9 @@ function scoreCandidate(
 	requestPath: string,
 	urlQueryParams: Record<string, string>,
 ): number {
-	if (!pathMatchesPattern(requestPath, candidate.endpoint, candidate.matchType)) {
+	if (
+		!pathMatchesPattern(requestPath, candidate.endpoint, candidate.matchType)
+	) {
 		return 0;
 	}
 	if (!queryParamsMatch(candidate.queryParams, urlQueryParams)) {
@@ -171,5 +171,5 @@ export function selectVariant(
 	if (exactMatch) return exactMatch;
 
 	// Fall back to wildcard catch-all variant
-	return variants.find((v) => v.key === "*") ?? null;
+	return variants.find((v) => v.key === '*') ?? null;
 }

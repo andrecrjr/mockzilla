@@ -22,8 +22,6 @@ export const httpMethodEnum = pgEnum('http_method', [
 	'OPTIONS',
 ]);
 
-
-
 export const bodyTypeEnum = pgEnum('body_type', ['json', 'text']);
 
 // Tables
@@ -101,4 +99,3 @@ export const scenarios = pgTable('scenarios', {
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at'),
 });
-

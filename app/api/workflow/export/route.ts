@@ -1,8 +1,8 @@
+import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scenarios, transitions } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import type { WorkflowExportData, Scenario, Transition } from '@/lib/types';
+import type { Scenario, Transition, WorkflowExportData } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 		transitionsList = transitionsData.map((t) => ({
 			...t,
-			conditions: t.conditions as any,
-			effects: t.effects as any,
-			response: t.response as any,
+			conditions: t.conditions as unknown,
+			effects: t.effects as unknown,
+			response: t.response as unknown,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
 		})) as Transition[];
@@ -58,9 +58,9 @@ export async function GET(request: NextRequest): Promise<Response> {
 		const transitionsData = await db.select().from(transitions);
 		transitionsList = transitionsData.map((t) => ({
 			...t,
-			conditions: t.conditions as any,
-			effects: t.effects as any,
-			response: t.response as any,
+			conditions: t.conditions as unknown,
+			effects: t.effects as unknown,
+			response: t.response as unknown,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
 		})) as Transition[];

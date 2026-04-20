@@ -1,20 +1,15 @@
 'use client';
 
-import {
-	Download,
-	FolderIcon,
-	Trash2,
-	Upload,
-} from 'lucide-react';
+import { Download, FolderIcon, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
-import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { CreateFolderDialog } from '@/components/create-folder-dialog';
-import { OpenApiImportDialog } from '@/components/openapi-import-dialog';
+import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
+import { OpenApiImportDialog } from '@/components/openapi-import-dialog';
 // import { FolderForm } from '@/components/folder-form'; // Removed
 import { PaginationControls } from '@/components/pagination-controls';
 import { Button } from '@/components/ui/button';
@@ -64,7 +59,6 @@ export default function MockzillaAdmin() {
 		mutate('/api/folders?all=true');
 	};
 
-
 	const handleDeleteFolder = async (id: string) => {
 		const response = await fetch(`/api/mocks?folderId=${id}`);
 		const mocksData = await response.json();
@@ -92,7 +86,12 @@ export default function MockzillaAdmin() {
 		}
 	};
 
-	const handleUpdateFolder = async (id: string, name: string, description?: string, slug?: string) => {
+	const handleUpdateFolder = async (
+		id: string,
+		name: string,
+		description?: string,
+		slug?: string,
+	) => {
 		try {
 			const response = await fetch(`/api/folders?id=${id}`, {
 				method: 'PUT',
@@ -112,7 +111,8 @@ export default function MockzillaAdmin() {
 			mutate('/api/folders?all=true');
 		} catch (error: unknown) {
 			toast.error('Error', {
-				description: error instanceof Error ? error.message : 'Failed to update folder',
+				description:
+					error instanceof Error ? error.message : 'Failed to update folder',
 			});
 			throw error;
 		}
@@ -207,9 +207,11 @@ export default function MockzillaAdmin() {
 									<Upload className="mr-2 h-4 w-4" />
 									Import
 								</Button>
-								<OpenApiImportDialog 
+								<OpenApiImportDialog
 									onSuccess={() => {
-										mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
+										mutate(
+											`/api/folders?page=${page}&limit=${limit}&type=standard`,
+										);
 										mutate('/api/folders?all=true');
 									}}
 								/>
@@ -255,10 +257,16 @@ export default function MockzillaAdmin() {
 							<>
 								<div className="grid gap-4 grid-cols-3">
 									{folders.map((folder) => (
-										<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full">
-												<div className="p-6">
-													<div className="flex items-start justify-between">
-														<Link href={`/app/folder/${folder.slug}`} key={folder.id}>
+										<Card
+											key={folder.id}
+											className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full"
+										>
+											<div className="p-6">
+												<div className="flex items-start justify-between">
+													<Link
+														href={`/app/folder/${folder.slug}`}
+														key={folder.id}
+													>
 														<div className="flex items-center gap-3 flex-1">
 															<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
 																<FolderIcon className="h-6 w-6 text-primary" />
@@ -277,27 +285,27 @@ export default function MockzillaAdmin() {
 																)}
 															</div>
 														</div>
-														</Link>
-													</div>
-													<div className="flex gap-1 border-t border-border mt-4 pt-3">
-														<EditFolderDialog
-															folder={folder}
-															onUpdate={handleUpdateFolder}
-														/>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={(e) => {
-																e.preventDefault();
-																handleDeleteFolder(folder.id);
-															}}
-															className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-														>
-															<Trash2 className="h-4 w-4" />
-														</Button>
-													</div>
+													</Link>
 												</div>
-											</Card>
+												<div className="flex gap-1 border-t border-border mt-4 pt-3">
+													<EditFolderDialog
+														folder={folder}
+														onUpdate={handleUpdateFolder}
+													/>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.preventDefault();
+															handleDeleteFolder(folder.id);
+														}}
+														className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												</div>
+											</div>
+										</Card>
 									))}
 								</div>
 								<PaginationControls

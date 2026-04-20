@@ -160,7 +160,9 @@ export function SchemaDocs() {
 								</p>
 								<div className="grid md:grid-cols-2 gap-6">
 									<div className="space-y-3">
-										<h4 className="text-sm font-semibold">Configured Options</h4>
+										<h4 className="text-sm font-semibold">
+											Configured Options
+										</h4>
 										<ul className="text-xs space-y-2 text-muted-foreground list-disc pl-4">
 											<li>
 												<code>alwaysFakeOptionals: true</code> — Always
@@ -171,8 +173,8 @@ export function SchemaDocs() {
 												<code>default</code> values from schema.
 											</li>
 											<li>
-												<code>useExamplesValue: true</code> — Picks random value from{' '}
-												<code>examples</code> array.
+												<code>useExamplesValue: true</code> — Picks random value
+												from <code>examples</code> array.
 											</li>
 											<li>
 												<code>minItems: 1</code> — At least one item in arrays.
@@ -284,7 +286,8 @@ export function SchemaDocs() {
 						</h3>
 						<p className="text-sm text-muted-foreground mb-4">
 							Generate a value once, then reference it anywhere else in the
-							document. You can also access array items like <code>{`{$.items[0].id}`}</code>.
+							document. You can also access array items like{' '}
+							<code>{`{$.items[0].id}`}</code>.
 						</p>
 						<div className="grid md:grid-cols-2 gap-4">
 							<div className="space-y-2">

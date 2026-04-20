@@ -20,7 +20,10 @@ function validateSlug(slug: string): { valid: boolean; error?: string } {
 		return { valid: false, error: 'Slug must be 100 characters or less' };
 	}
 	if (!/^[a-z0-9-]+$/.test(slug)) {
-		return { valid: false, error: 'Slug can only contain lowercase letters, numbers, and hyphens' };
+		return {
+			valid: false,
+			error: 'Slug can only contain lowercase letters, numbers, and hyphens',
+		};
 	}
 	if (slug.startsWith('-') || slug.endsWith('-')) {
 		return { valid: false, error: 'Slug cannot start or end with a hyphen' };
@@ -28,7 +31,10 @@ function validateSlug(slug: string): { valid: boolean; error?: string } {
 	return { valid: true };
 }
 
-async function isSlugUnique(slug: string, excludeId?: string): Promise<boolean> {
+async function isSlugUnique(
+	slug: string,
+	excludeId?: string,
+): Promise<boolean> {
 	const query = db.select().from(folders).where(eq(folders.slug, slug));
 	const existing = await query;
 	if (existing.length === 0) {
@@ -62,7 +68,7 @@ export async function GET(request: NextRequest) {
 			}
 
 			const isExtension = Boolean(
-				(folder.meta as Record<string, unknown>)?.extensionSyncData
+				(folder.meta as Record<string, unknown>)?.extensionSyncData,
 			);
 
 			return NextResponse.json({
@@ -82,10 +88,10 @@ export async function GET(request: NextRequest) {
 				.select()
 				.from(folders)
 				.orderBy(folders.createdAt);
-			
+
 			const mappedFolders = allFolders.map((folder) => {
 				const isExtension = Boolean(
-					(folder.meta as Record<string, unknown>)?.extensionSyncData
+					(folder.meta as Record<string, unknown>)?.extensionSyncData,
 				);
 				return {
 					id: folder.id,
@@ -112,10 +118,10 @@ export async function GET(request: NextRequest) {
 		const limit = Number.parseInt(searchParams.get('limit') || '10', 10);
 		const offset = (page - 1) * limit;
 
-		// Note: We're doing client-side filtering for 'type' because 'meta' is a JSONB column 
+		// Note: We're doing client-side filtering for 'type' because 'meta' is a JSONB column
 		// and simple SQL filtering might be complex or inefficient depending on the query structure.
 		// For a small number of folders this is fine, but for scale we should consider a dedicated column.
-		
+
 		const paginatedFolders = await db
 			.select()
 			.from(folders)
@@ -132,7 +138,7 @@ export async function GET(request: NextRequest) {
 		// Map database fields to API format
 		const formattedFolders = paginatedFolders.map((folder) => {
 			const isExtension = Boolean(
-				(folder.meta as Record<string, unknown>)?.extensionSyncData
+				(folder.meta as Record<string, unknown>)?.extensionSyncData,
 			);
 			return {
 				id: folder.id,
@@ -147,7 +153,7 @@ export async function GET(request: NextRequest) {
 		});
 
 		// Apply filter if requested
-		const finalFolders = formattedFolders.filter(f => {
+		const finalFolders = formattedFolders.filter((f) => {
 			if (filterType === 'extension') return f.isExtension;
 			if (filterType === 'standard') return !f.isExtension;
 			return true;
@@ -163,7 +169,10 @@ export async function GET(request: NextRequest) {
 			},
 		});
 	} catch (error: unknown) {
-		console.error('[API] Error fetching folders:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error fetching folders:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
 			{ error: 'Failed to fetch folders' },
 			{ status: 500 },
@@ -181,14 +190,11 @@ export async function POST(request: NextRequest) {
 		// Validate slug
 		const validation = validateSlug(slug);
 		if (!validation.valid) {
-			return NextResponse.json(
-				{ error: validation.error },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: validation.error }, { status: 400 });
 		}
 
 		// Check slug uniqueness
-		if (!await isSlugUnique(slug)) {
+		if (!(await isSlugUnique(slug))) {
 			return NextResponse.json(
 				{ error: 'A folder with this slug already exists' },
 				{ status: 409 },
@@ -216,9 +222,15 @@ export async function POST(request: NextRequest) {
 			{ status: 201 },
 		);
 	} catch (error: unknown) {
-		console.error('[API] Error creating folder:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error creating folder:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to create folder' },
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to create folder',
+			},
 			{ status: 500 },
 		);
 	}
@@ -251,18 +263,15 @@ export async function PUT(request: NextRequest) {
 		let slug: string;
 		if (body.slug !== undefined) {
 			slug = generateSlug(body.slug);
-			
+
 			// Validate custom slug
 			const validation = validateSlug(slug);
 			if (!validation.valid) {
-				return NextResponse.json(
-					{ error: validation.error },
-					{ status: 400 },
-				);
+				return NextResponse.json({ error: validation.error }, { status: 400 });
 			}
 
 			// Check uniqueness (excluding current folder)
-			if (!await isSlugUnique(slug, id)) {
+			if (!(await isSlugUnique(slug, id))) {
 				return NextResponse.json(
 					{ error: 'A folder with this slug already exists' },
 					{ status: 409 },
@@ -300,9 +309,15 @@ export async function PUT(request: NextRequest) {
 			updatedAt: updatedFolder.updatedAt?.toISOString(),
 		});
 	} catch (error: unknown) {
-		console.error('[API] Error updating folder:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error updating folder:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to update folder' },
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to update folder',
+			},
 			{ status: 500 },
 		);
 	}
@@ -322,9 +337,15 @@ export async function DELETE(request: NextRequest) {
 
 		return NextResponse.json({ success: true });
 	} catch (error: unknown) {
-		console.error('[API] Error deleting folder:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error deleting folder:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to delete folder' },
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to delete folder',
+			},
 			{ status: 500 },
 		);
 	}

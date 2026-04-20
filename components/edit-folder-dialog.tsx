@@ -1,9 +1,11 @@
 'use client';
 
-import { Pencil, HelpCircle } from 'lucide-react';
+import { HelpCircle, Pencil } from 'lucide-react';
+import Link from 'next/link';
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -17,22 +19,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { Folder } from '@/lib/types';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { FieldTooltip } from '@/components/folder-tooltips';
-import Link from 'next/link';
+import type { Folder } from '@/lib/types';
 
 interface EditFolderDialogProps {
 	folder: Folder;
-	onUpdate: (id: string, name: string, description?: string, slug?: string) => Promise<void>;
-}
-
-function generateSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
+	onUpdate: (
+		id: string,
+		name: string,
+		description?: string,
+		slug?: string,
+	) => Promise<void>;
 }
 
 export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
@@ -89,10 +86,10 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 				folder.id,
 				name,
 				description.trim() || undefined,
-				useCustomSlug ? slug.trim() : undefined
+				useCustomSlug ? slug.trim() : undefined,
 			);
 			setOpen(false);
-		} catch (error) {
+		} catch (_error) {
 			// Error toast is handled in the parent component via onUpdate
 		} finally {
 			setIsLoading(false);
@@ -117,8 +114,11 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 						<DialogHeader>
 							<DialogTitle>Edit Folder</DialogTitle>
 							<DialogDescription>
-								Update the folder details.{" "}
-								<Link href="/docs#overview" className="text-primary hover:underline inline-flex items-center gap-1">
+								Update the folder details.{' '}
+								<Link
+									href="/docs#overview"
+									className="text-primary hover:underline inline-flex items-center gap-1"
+								>
 									Learn more <HelpCircle className="h-3 w-3" />
 								</Link>
 							</DialogDescription>
@@ -176,13 +176,17 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 										className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
 										onClick={() => setUseCustomSlug(!useCustomSlug)}
 									>
-										{useCustomSlug ? "Auto-generate" : "Customize"}
+										{useCustomSlug ? 'Auto-generate' : 'Customize'}
 									</Button>
 								</div>
 								<Input
 									id="slug"
 									value={slug}
-									onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+									onChange={(e) =>
+										setSlug(
+											e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+										)
+									}
 									disabled={!useCustomSlug}
 									placeholder="e.g., user-apis"
 								/>
@@ -199,7 +203,10 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={isLoading || !name.trim() || !slug.trim()}>
+							<Button
+								type="submit"
+								disabled={isLoading || !name.trim() || !slug.trim()}
+							>
 								{isLoading ? 'Updating...' : 'Update Folder'}
 							</Button>
 						</DialogFooter>

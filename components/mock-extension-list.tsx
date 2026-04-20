@@ -43,7 +43,8 @@ export function MockExtensionList() {
 		try {
 			await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
 			toast.success('Folder Deleted', {
-				description: 'Folder and its synced mocks have been removed (only in server)',
+				description:
+					'Folder and its synced mocks have been removed (only in server)',
 			});
 			mutate(`/api/folders?page=${page}&limit=${limit}&type=extension`);
 		} catch {
@@ -72,7 +73,8 @@ export function MockExtensionList() {
 			mutate(`/api/folders?page=${page}&limit=${limit}&type=extension`);
 		} catch (error: unknown) {
 			toast.error('Error', {
-				description: error instanceof Error ? error.message : 'Failed to update folder',
+				description:
+					error instanceof Error ? error.message : 'Failed to update folder',
 			});
 		}
 	};
@@ -80,7 +82,9 @@ export function MockExtensionList() {
 	if (isLoading) {
 		return (
 			<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
-				<p className="text-center text-muted-foreground">Loading extension data...</p>
+				<p className="text-center text-muted-foreground">
+					Loading extension data...
+				</p>
 			</Card>
 		);
 	}
@@ -110,10 +114,16 @@ export function MockExtensionList() {
 			</div>
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{folders.map((folder) => (
-					<Card key={folder.id} className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full border-indigo-500/20">
+					<Card
+						key={folder.id}
+						className="mockzilla-border mockzilla-card-hover group border-2 bg-card/50 backdrop-blur-sm h-full border-indigo-500/20"
+					>
 						<div className="p-6">
 							<div className="flex items-start justify-between">
-								<Link href={`/app/extension-data/${folder.slug}`} key={folder.id}>
+								<Link
+									href={`/app/extension-data/${folder.slug}`}
+									key={folder.id}
+								>
 									<div className="flex items-center gap-3 flex-1">
 										<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-500/20 transition-all group-hover:bg-indigo-500/30">
 											<FolderIcon className="h-6 w-6 text-indigo-500" />
@@ -127,15 +137,25 @@ export function MockExtensionList() {
 											</p>
 											{(() => {
 												const meta = folder.meta as Record<string, unknown>;
-												const extData = meta?.extensionSyncData as { mocks?: Array<{ variants?: unknown[] }> } | undefined;
+												const extData = meta?.extensionSyncData as
+													| { mocks?: Array<{ variants?: unknown[] }> }
+													| undefined;
 												const mockCount = extData?.mocks?.length || 0;
-												const variantCount = extData?.mocks?.reduce((acc, m) => acc + (m.variants?.length || 0), 0) || 0;
-												
+												const variantCount =
+													extData?.mocks?.reduce(
+														(acc, m) => acc + (m.variants?.length || 0),
+														0,
+													) || 0;
+
 												return (
 													<div className="mt-2 flex gap-4 text-xs text-muted-foreground">
 														{mockCount > 0 && <span>{mockCount} Mocks</span>}
-														{variantCount > 0 && <span>{variantCount} Variants</span>}
-														{!mockCount && !variantCount && <span>Synced Data</span>}
+														{variantCount > 0 && (
+															<span>{variantCount} Variants</span>
+														)}
+														{!mockCount && !variantCount && (
+															<span>Synced Data</span>
+														)}
 													</div>
 												);
 											})()}
@@ -164,7 +184,7 @@ export function MockExtensionList() {
 					</Card>
 				))}
 			</div>
-			
+
 			<div className="mt-8">
 				<PaginationControls
 					currentPage={page}

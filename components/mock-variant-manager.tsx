@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
+import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,9 +14,11 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import {
+	RequireMatchIndicator,
+	VariantPatternPreview,
+} from '@/components/visual-pattern-preview';
 import type { MockVariant } from '@/lib/types';
-import { FieldTooltip } from '@/components/folder-tooltips';
-import { VariantPatternPreview, RequireMatchIndicator } from '@/components/visual-pattern-preview';
 
 const STATUS_CODES = [
 	{ value: '200', label: '200 - OK' },
@@ -42,17 +45,18 @@ type VariantCardProps = {
 	endpoint?: string;
 };
 
-function VariantCard({ variant, index, onUpdate, onDelete, endpoint }: VariantCardProps) {
+function VariantCard({
+	variant,
+	index,
+	onUpdate,
+	onDelete,
+	endpoint,
+}: VariantCardProps) {
 	return (
 		<div className="space-y-4 rounded-lg border border-border bg-card p-6">
 			<div className="flex items-center justify-between">
 				<span className="text-sm font-semibold">Variant {index + 1}</span>
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon"
-					onClick={onDelete}
-				>
+				<Button type="button" variant="ghost" size="icon" onClick={onDelete}>
 					<Trash2 className="h-4 w-4 text-destructive" />
 				</Button>
 			</div>
@@ -60,9 +64,7 @@ function VariantCard({ variant, index, onUpdate, onDelete, endpoint }: VariantCa
 			<div className="grid grid-cols-2 gap-4">
 				<div className="space-y-2">
 					<div className="flex items-center gap-2">
-						<Label htmlFor={`variant-key-${index}`}>
-							Capture Key
-						</Label>
+						<Label htmlFor={`variant-key-${index}`}>Capture Key</Label>
 						<FieldTooltip
 							label="Capture Key"
 							description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Use * as a catch-all fallback."
@@ -79,9 +81,7 @@ function VariantCard({ variant, index, onUpdate, onDelete, endpoint }: VariantCa
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor={`variant-status-${index}`}>
-						Status Code
-					</Label>
+					<Label htmlFor={`variant-status-${index}`}>Status Code</Label>
 					<Select
 						value={String(variant.statusCode)}
 						onValueChange={(value) => {
@@ -107,9 +107,7 @@ function VariantCard({ variant, index, onUpdate, onDelete, endpoint }: VariantCa
 
 			<div className="space-y-2">
 				<div className="flex items-center gap-2">
-					<Label htmlFor={`variant-body-${index}`}>
-						Response Body
-					</Label>
+					<Label htmlFor={`variant-body-${index}`}>Response Body</Label>
 					<FieldTooltip
 						label="Response Body"
 						description="Static response for this variant. Supports {$.path} interpolation if you reference other fields."
@@ -128,9 +126,7 @@ function VariantCard({ variant, index, onUpdate, onDelete, endpoint }: VariantCa
 			</div>
 
 			<div className="space-y-2">
-				<Label htmlFor={`variant-body-type-${index}`}>
-					Body Type
-				</Label>
+				<Label htmlFor={`variant-body-type-${index}`}>Body Type</Label>
 				<Select
 					value={variant.bodyType}
 					onValueChange={(value) => {
@@ -249,7 +245,7 @@ export function MockVariantManager({
 					<div className="space-y-4 mt-4">
 						{variants.map((variant, index) => (
 							<VariantCard
-								key={`variant-${index}`}
+								key={`variant-${variant.key || index}-${index}`}
 								variant={variant}
 								index={index}
 								onUpdate={(v) => updateVariant(index, v)}

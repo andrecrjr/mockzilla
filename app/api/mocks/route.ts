@@ -111,9 +111,14 @@ export async function GET(request: NextRequest) {
 			},
 		});
 	} catch (error: unknown) {
-		console.error('[API] Error fetching mocks:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error fetching mocks:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to fetch mocks' },
+			{
+				error: error instanceof Error ? error.message : 'Failed to fetch mocks',
+			},
 			{ status: 500 },
 		);
 	}
@@ -168,9 +173,14 @@ export async function POST(request: NextRequest) {
 			{ status: 201 },
 		);
 	} catch (error: unknown) {
-		console.error('[API] Error creating mock:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error creating mock:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to create mock' },
+			{
+				error: error instanceof Error ? error.message : 'Failed to create mock',
+			},
 			{ status: 500 },
 		);
 	}
@@ -235,9 +245,14 @@ export async function PUT(request: NextRequest) {
 			updatedAt: updatedMock.updatedAt?.toISOString(),
 		});
 	} catch (error: unknown) {
-		console.error('[API] Error updating mock:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error updating mock:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to update mock' },
+			{
+				error: error instanceof Error ? error.message : 'Failed to update mock',
+			},
 			{ status: 500 },
 		);
 	}
@@ -257,9 +272,14 @@ export async function DELETE(request: NextRequest) {
 
 		return NextResponse.json({ success: true });
 	} catch (error: unknown) {
-		console.error('[API] Error deleting mock:', error instanceof Error ? error.message : String(error));
+		console.error(
+			'[API] Error deleting mock:',
+			error instanceof Error ? error.message : String(error),
+		);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to delete mock' },
+			{
+				error: error instanceof Error ? error.message : 'Failed to delete mock',
+			},
 			{ status: 500 },
 		);
 	}

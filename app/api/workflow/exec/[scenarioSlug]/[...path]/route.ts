@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { findTransition } from '@/lib/engine/router';
 import { processWorkflowRequest } from '@/lib/engine/processor';
+import { findTransition } from '@/lib/engine/router';
 import type { Transition } from '@/lib/types';
 
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> }
+	{ params }: { params: Promise<{ scenarioSlug: string; path: string[] }> },
 ): Promise<NextResponse> {
 	// Await the params to resolve the promise
 	const resolvedParams = await params;
@@ -17,26 +17,36 @@ export async function POST(
 	const method = request.method;
 
 	// 1. Find Transition Candidates - filter by the specific scenario from the URL
-	const candidates = await findTransition(path, method, resolvedParams.scenarioSlug);
+	const candidates = await findTransition(
+		path,
+		method,
+		resolvedParams.scenarioSlug,
+	);
 
 	if (!candidates || (Array.isArray(candidates) && candidates.length === 0)) {
 		return NextResponse.json(
-			{ error: 'No matching transition found for this scenario, path and method', path, method, scenario: resolvedParams.scenarioSlug },
-			{ status: 404 }
+			{
+				error:
+					'No matching transition found for this scenario, path and method',
+				path,
+				method,
+				scenario: resolvedParams.scenarioSlug,
+			},
+			{ status: 404 },
 		);
 	}
 
 	// 2. Parse Body and Query
 	let body = {};
 	try {
-        const text = await request.text();
-        if (text) {
-            try {
-                body = JSON.parse(text);
-            } catch (e) {
-                console.warn('Failed to parse body as JSON', e);
-            }
-        }
+		const text = await request.text();
+		if (text) {
+			try {
+				body = JSON.parse(text);
+			} catch (e) {
+				console.warn('Failed to parse body as JSON', e);
+			}
+		}
 	} catch (_e) {
 		// Ignore body reading errors
 	}
@@ -51,42 +61,50 @@ export async function POST(
 	});
 
 	// 3. Process Request - Try candidates until one works (conditions match)
-    let lastError = null;
-    const matches = Array.isArray(candidates) ? candidates : [candidates];
+	let lastError = null;
+	const matches = Array.isArray(candidates) ? candidates : [candidates];
 
-    for (const match of matches) {
-        try {
-            const result = await processWorkflowRequest(
-                match.transition as unknown as Transition,
-                match.params,
-                body,
-                query,
-                headers
-            );
+	for (const match of matches) {
+		try {
+			const result = await processWorkflowRequest(
+				match.transition as unknown as Transition,
+				match.params,
+				body,
+				query,
+				headers,
+			);
 
-            // If it returned 400 with "Transition conditions not met", we continue to next candidate
-            if (result.status === 400 && result.body && (result.body as any).error === 'Transition conditions not met') {
-                lastError = result;
-                continue;
-            }
+			// If it returned 400 with "Transition conditions not met", we continue to next candidate
+			if (
+				result.status === 400 &&
+				result.body &&
+				(result.body as Record<string, unknown>).error ===
+					'Transition conditions not met'
+			) {
+				lastError = result;
+				continue;
+			}
 
-            return NextResponse.json(result.body, {
-                status: result.status,
-                headers: result.headers
-            });
-        } catch (e) {
-            console.error('Workflow processing error:', e);
-            return NextResponse.json(
-                { error: 'Internal workflow processing error' },
-                { status: 500 }
-            );
-        }
-    }
+			return NextResponse.json(result.body, {
+				status: result.status,
+				headers: result.headers,
+			});
+		} catch (e) {
+			console.error('Workflow processing error:', e);
+			return NextResponse.json(
+				{ error: 'Internal workflow processing error' },
+				{ status: 500 },
+			);
+		}
+	}
 
-    // If we get here, no candidate matched their conditions
-    return NextResponse.json(lastError?.body || { error: 'No transition matched conditions' }, {
-        status: lastError?.status || 400
-    });
+	// If we get here, no candidate matched their conditions
+	return NextResponse.json(
+		lastError?.body || { error: 'No transition matched conditions' },
+		{
+			status: lastError?.status || 400,
+		},
+	);
 }
 
 // Support other methods if needed, or mapping GET to transitions too?

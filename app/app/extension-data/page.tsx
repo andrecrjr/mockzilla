@@ -11,7 +11,9 @@ export default function ExtensionDataPage() {
 						Browser Extension Sync
 					</h1>
 					<p className="mt-2 text-muted-foreground">
-						Manage mock data synced from the Mockzilla Browser Extension. These folders must be used to share easily mock data between you and your teammates.
+						Manage mock data synced from the Mockzilla Browser Extension. These
+						folders must be used to share easily mock data between you and your
+						teammates.
 					</p>
 				</div>
 				<MockExtensionList />

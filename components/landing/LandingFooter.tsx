@@ -1,6 +1,14 @@
 'use client';
 
-import { BookOpen, ExternalLink, Github, Globe, Heart, Mail, Server } from 'lucide-react';
+import {
+	BookOpen,
+	ExternalLink,
+	Github,
+	Globe,
+	Heart,
+	Mail,
+	Server,
+} from 'lucide-react';
 import Link from 'next/link';
 
 export function LandingFooter() {
@@ -16,7 +24,9 @@ export function LandingFooter() {
 								alt="Mockzilla logo"
 								className="h-8 w-8 invert dark:filter-none"
 							/>
-							<span className="font-bold text-lg text-foreground">Mockzilla</span>
+							<span className="font-bold text-lg text-foreground">
+								Mockzilla
+							</span>
 						</div>
 						<p className="mt-4 text-sm text-muted-foreground">
 							Two powerful tools, one ecosystem. Self-hosted mock server and
@@ -130,7 +140,10 @@ export function LandingFooter() {
 				</div>
 
 				<div className="mt-12 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-					<p>&copy; {new Date().getFullYear()} Mockzilla. Open source and free to use.</p>
+					<p>
+						&copy; {new Date().getFullYear()} Mockzilla. Open source and free to
+						use.
+					</p>
 				</div>
 			</div>
 		</footer>

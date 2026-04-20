@@ -7,28 +7,35 @@ const features = [
 	{
 		icon: Bolt,
 		title: 'Real-time Interception',
-		description: 'Intercept fetch() and XMLHttpRequest instantly as they happen in your browser.',
+		description:
+			'Intercept fetch() and XMLHttpRequest instantly as they happen in your browser.',
 	},
 	{
 		icon: Sliders,
 		title: 'Flexible Matching',
-		description: 'Pattern-based matching with wildcards, regex, and exact URL matching.',
+		description:
+			'Pattern-based matching with wildcards, regex, and exact URL matching.',
 	},
 	{
 		icon: BarChart3,
 		title: 'Hit Tracking',
-		description: 'Track how many times each mock rule is triggered with built-in analytics.',
+		description:
+			'Track how many times each mock rule is triggered with built-in analytics.',
 	},
 	{
 		icon: FolderSync,
 		title: 'Cross-device Sync',
-		description: 'Sync your mock rules across machines with the HTTP Server integration.',
+		description:
+			'Sync your mock rules across machines with the HTTP Server integration.',
 	},
 ];
 
 export function ChromeExtension() {
 	return (
-		<section id="extension" className="py-20 md:py-28 bg-gradient-to-br from-primary/5 to-purple-500/5 dark:from-primary/5 dark:to-purple-900/10">
+		<section
+			id="extension"
+			className="py-20 md:py-28 bg-gradient-to-br from-primary/5 to-purple-500/5 dark:from-primary/5 dark:to-purple-900/10"
+		>
 			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="grid lg:grid-cols-2 gap-12 items-start">
 					{/* Left: Extension Preview */}
@@ -63,7 +70,9 @@ export function ChromeExtension() {
 										</span>
 									</div>
 									<div className="bg-muted/50 rounded p-2 font-mono text-xs mb-2">
-										<span className="text-muted-foreground">// Response Body</span>
+										<span className="text-muted-foreground">
+											{/* Response Body */}
+										</span>
 										<div className="text-foreground mt-1">
 											{'{'} "users": [{'{'} "id": 1, "name": "John" {'}'}] {'}'}
 										</div>
@@ -88,9 +97,12 @@ export function ChromeExtension() {
 										</span>
 									</div>
 									<div className="bg-muted/50 rounded p-2 font-mono text-xs mb-2">
-										<span className="text-muted-foreground">// Response Body</span>
+										<span className="text-muted-foreground">
+											{/* Response Body */}
+										</span>
 										<div className="text-foreground mt-1">
-											{'{'} "products": [{'{'} "id": 42, "price": 29.99 {'}'}] {'}'}
+											{'{'} "products": [{'{'} "id": 42, "price": 29.99 {'}'}]{' '}
+											{'}'}
 										</div>
 									</div>
 									<div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -127,8 +139,8 @@ export function ChromeExtension() {
 						<p className="text-muted-foreground mb-8">
 							A lightweight Chrome extension that intercepts fetch() and
 							XMLHttpRequest calls in real-time, allowing you to mock API
-							responses without any server setup. Perfect for frontend developers
-							who need instant feedback.
+							responses without any server setup. Perfect for frontend
+							developers who need instant feedback.
 						</p>
 
 						<div className="space-y-6 mb-8">

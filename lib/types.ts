@@ -121,7 +121,7 @@ export interface LegacyImportFormat {
 	}>;
 }
 
-export type { MatchContext, Condition, Effect } from './engine/match';
+export type { Condition, Effect, MatchContext } from './engine/match';
 
 export interface Scenario {
 	id: string;

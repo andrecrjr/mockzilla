@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Edit2, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { mutate } from 'swr';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { ExtensionMockForm, type ExtensionMock } from './extension-mock-form';
+import { type ExtensionMock, ExtensionMockForm } from './extension-mock-form';
 
 interface ExtensionMockTableProps {
 	mocks: ExtensionMock[];
@@ -63,19 +63,23 @@ export function ExtensionMockTable({
 		try {
 			// 1. Update the local state
 			const newMocks = mocks.map((m) =>
-				m.id === updatedMock.id ? { ...m, ...updatedMock, response: responseBody } : m,
+				m.id === updatedMock.id
+					? { ...m, ...updatedMock, response: responseBody }
+					: m,
 			);
 
 			// 2. Prepare the new meta object
 			const extensionSyncData =
-				(folderMeta?.extensionSyncData as Record<string, unknown>) || {};
-			
+				(folderMeta?.extensionSyncData as { mocks?: ExtensionMock[] }) || {};
+
 			const newMeta = {
 				...folderMeta,
 				extensionSyncData: {
 					...extensionSyncData,
 					mocks: newMocks.map((m) => {
-						const originalMock = (extensionSyncData as any)?.mocks?.find((orig: any) => orig.id === m.id);
+						const originalMock = extensionSyncData.mocks?.find(
+							(orig) => orig.id === m.id,
+						);
 						return {
 							...originalMock,
 							...m,
@@ -86,7 +90,11 @@ export function ExtensionMockTable({
 				},
 			};
 
-			console.log('[ExtensionMockTable] Updating folder and mock:', { folderId, mockId: updatedMock.id, newName: updatedMock.name });
+			console.log('[ExtensionMockTable] Updating folder and mock:', {
+				folderId,
+				mockId: updatedMock.id,
+				newName: updatedMock.name,
+			});
 
 			// 3. Call the API to update the folder meta
 			const folderRes = await fetch(`/api/folders?id=${folderId}`, {
@@ -102,7 +110,7 @@ export function ExtensionMockTable({
 
 			// 4. Also update individual mock response in DB for consistency
 			// This ensures the server-side mock serving logic uses the updated data
-			const mockIdToUpdate = (updatedMock as any).serverMockId || updatedMock.id;
+			const mockIdToUpdate = updatedMock.serverMockId || updatedMock.id;
 			await fetch(`/api/mocks?id=${mockIdToUpdate}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -125,7 +133,9 @@ export function ExtensionMockTable({
 			mutate(`/api/folders?slug=${folderSlug}`);
 		} catch (error) {
 			console.error('Update error:', error);
-			toast.error(error instanceof Error ? error.message : 'Failed to update mock');
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to update mock',
+			);
 		} finally {
 			setIsUpdating(false);
 		}
@@ -225,16 +235,18 @@ export function ExtensionMockTable({
 				<DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col p-0">
 					<div className="p-6 pb-2">
 						<DialogHeader>
-							<DialogTitle className="text-2xl">Edit Extension Mock</DialogTitle>
+							<DialogTitle className="text-2xl">
+								Edit Extension Mock
+							</DialogTitle>
 							<DialogDescription>
 								Update metadata and variants for this synced mock.
 							</DialogDescription>
 						</DialogHeader>
 					</div>
-					
+
 					<div className="flex-1 overflow-hidden px-6 pb-6">
 						{editingMock && (
-							<ExtensionMockForm 
+							<ExtensionMockForm
 								mock={editingMock}
 								onSave={handleUpdateMock}
 								onCancel={() => setEditingMock(null)}
@@ -247,6 +259,3 @@ export function ExtensionMockTable({
 		</div>
 	);
 }
-
-
-

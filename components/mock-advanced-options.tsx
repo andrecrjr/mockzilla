@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, X } from 'lucide-react';
+import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +12,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { FieldTooltip } from '@/components/folder-tooltips';
 import type { MatchType } from '@/lib/types';
 
 type MatchTypeSectionProps = {
@@ -98,12 +98,16 @@ function QueryParamsSection({ params, onChange }: QueryParamsSectionProps) {
 
 			{params.length === 0 ? (
 				<p className="text-sm text-muted-foreground">
-					No query parameters required. Mock will match any request to this endpoint.
+					No query parameters required. Mock will match any request to this
+					endpoint.
 				</p>
 			) : (
 				<div className="space-y-2">
 					{params.map((param, index) => (
-						<div key={index} className="flex items-center gap-2">
+						<div
+							key={`${param.key}-${index}`}
+							className="flex items-center gap-2"
+						>
 							<Input
 								placeholder="key"
 								value={param.key}
@@ -130,12 +134,7 @@ function QueryParamsSection({ params, onChange }: QueryParamsSectionProps) {
 				</div>
 			)}
 
-			<Button
-				type="button"
-				variant="outline"
-				size="sm"
-				onClick={addParam}
-			>
+			<Button type="button" variant="outline" size="sm" onClick={addParam}>
 				<Plus className="mr-1 h-3 w-3" />
 				Add Query Param
 			</Button>

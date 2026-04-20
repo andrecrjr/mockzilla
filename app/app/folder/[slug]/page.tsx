@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -49,12 +49,6 @@ export default function FolderPage() {
 		mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`);
 	};
 
-	const handleError = (message: string) => {
-		toast.error('Error', {
-			description: message,
-		});
-	};
-
 	const handleDeleteMock = async (id: string) => {
 		try {
 			await fetch(`/api/mocks?id=${id}`, { method: 'DELETE' });
@@ -79,7 +73,12 @@ export default function FolderPage() {
 			statusCode: number;
 			matchType?: string;
 			queryParams?: Record<string, string> | null;
-			variants?: Array<{ key: string; body: string; statusCode: number; bodyType: string }> | null;
+			variants?: Array<{
+				key: string;
+				body: string;
+				statusCode: number;
+				bodyType: string;
+			}> | null;
 			wildcardRequireMatch?: boolean;
 		},
 	) => {
@@ -99,9 +98,10 @@ export default function FolderPage() {
 				description: 'Mock endpoint has been updated successfully',
 			});
 			mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			toast.error('Error', {
-				description: error.message || 'Failed to update mock',
+				description:
+					error instanceof Error ? error.message : 'Failed to update mock',
 			});
 			throw error;
 		}

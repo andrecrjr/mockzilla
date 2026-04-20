@@ -1,7 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { transitions } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
 	try {
@@ -20,8 +20,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 		if (!scenarioId || !path || !method || !response) {
 			return NextResponse.json(
-				{ error: 'Missing required fields: scenarioId, path, method, response' },
-				{ status: 400 }
+				{
+					error: 'Missing required fields: scenarioId, path, method, response',
+				},
+				{ status: 400 },
 			);
 		}
 
@@ -50,8 +52,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 	} catch (error) {
 		console.error('Error creating transition:', error);
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
-			{ status: 500 }
+			{
+				error: 'Internal Server Error',
+				details: error instanceof Error ? error.message : String(error),
+			},
+			{ status: 500 },
 		);
 	}
 }
@@ -64,7 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 		if (!scenarioId) {
 			return NextResponse.json(
 				{ error: 'scenarioId is required' },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -77,8 +82,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	} catch (error) {
 		console.error('Error fetching transitions:', error);
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
-			{ status: 500 }
+			{
+				error: 'Internal Server Error',
+				details: error instanceof Error ? error.message : String(error),
+			},
+			{ status: 500 },
 		);
 	}
 }

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 
 const headlines = [
 	'🚀 Mock APIs in 30 Seconds',
-	'🤖 Your QA Team\'s Best Friend',
+	"🤖 Your QA Team's Best Friend",
 	'⚡ Stop Waiting for Backend Teams',
 	'🎯 Test Any API Response Instantly',
 	'🔨 Build Faster with Realistic Mocks',
-	'💻 Your Frontend Team\'s Best Friend',
-	'🛠️ Your Backend Team\'s Best Friend',
+	"💻 Your Frontend Team's Best Friend",
+	"🛠️ Your Backend Team's Best Friend",
 	'🌐 Deploy Your Mock Server Now',
 	'🔄 Intercept Requests in Real-Time',
 	'✨ Ship Features Without Backend Delays',

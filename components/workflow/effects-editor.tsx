@@ -1,11 +1,8 @@
 'use client';
 
-import {
-	Plus,
-	Trash2,
-	Braces,
-} from 'lucide-react';
+import { Braces, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { FieldTooltip } from '@/components/folder-tooltips';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,18 +15,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import type {
+	DbPushEffect,
+	DbRemoveEffect,
+	DbUpdateEffect,
+	Effect,
+	StateSetEffect,
+} from '@/lib/engine/match';
 import { cn } from '@/lib/utils';
-import { FieldTooltip } from '@/components/folder-tooltips';
-
-import type { Effect, StateSetEffect, DbPushEffect, DbUpdateEffect, DbRemoveEffect } from '@/lib/engine/match';
 
 export type EffectType = Effect['type'];
 
@@ -40,10 +34,7 @@ interface EffectsEditorProps {
 	onChange: (effects: EffectItem[]) => void;
 }
 
-export function EffectsEditor({
-	effects,
-	onChange,
-}: EffectsEditorProps) {
+export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 	const [activeTab, setActiveTab] = useState<'all' | 'state' | 'db'>('all');
 
 	const addEffect = (type: EffectType) => {
@@ -94,7 +85,9 @@ export function EffectsEditor({
 						</Badge>
 						{effect.type.startsWith('db.') && (
 							<span className="text-xs text-muted-foreground font-mono">
-								table: {(effect as DbPushEffect | DbUpdateEffect | DbRemoveEffect).table || '(empty)'}
+								table:{' '}
+								{(effect as DbPushEffect | DbUpdateEffect | DbRemoveEffect)
+									.table || '(empty)'}
 							</span>
 						)}
 					</div>
@@ -114,15 +107,21 @@ export function EffectsEditor({
 					{effect.type === 'state.set' && (
 						<StateSetEditor
 							value={(effect as StateSetEffect).raw || {}}
-							onChange={(val) => updateEffect(index, { raw: val } as Partial<StateSetEffect>)}
+							onChange={(val) =>
+								updateEffect(index, { raw: val } as Partial<StateSetEffect>)
+							}
 						/>
 					)}
 					{effect.type === 'db.push' && (
 						<DbPushEditor
 							table={(effect as DbPushEffect).table || ''}
 							value={(effect as DbPushEffect).value}
-							onTableChange={(t) => updateEffect(index, { table: t } as Partial<DbPushEffect>)}
-							onValueChange={(v) => updateEffect(index, { value: v } as Partial<DbPushEffect>)}
+							onTableChange={(t) =>
+								updateEffect(index, { table: t } as Partial<DbPushEffect>)
+							}
+							onValueChange={(v) =>
+								updateEffect(index, { value: v } as Partial<DbPushEffect>)
+							}
 						/>
 					)}
 					{effect.type === 'db.update' && (
@@ -130,17 +129,27 @@ export function EffectsEditor({
 							table={(effect as DbUpdateEffect).table || ''}
 							match={(effect as DbUpdateEffect).match}
 							set={(effect as DbUpdateEffect).set}
-							onTableChange={(t) => updateEffect(index, { table: t } as Partial<DbUpdateEffect>)}
-							onMatchChange={(m) => updateEffect(index, { match: m } as Partial<DbUpdateEffect>)}
-							onSetChange={(s) => updateEffect(index, { set: s } as Partial<DbUpdateEffect>)}
+							onTableChange={(t) =>
+								updateEffect(index, { table: t } as Partial<DbUpdateEffect>)
+							}
+							onMatchChange={(m) =>
+								updateEffect(index, { match: m } as Partial<DbUpdateEffect>)
+							}
+							onSetChange={(s) =>
+								updateEffect(index, { set: s } as Partial<DbUpdateEffect>)
+							}
 						/>
 					)}
 					{effect.type === 'db.remove' && (
 						<DbRemoveEditor
 							table={(effect as DbRemoveEffect).table || ''}
 							match={(effect as DbRemoveEffect).match}
-							onTableChange={(t) => updateEffect(index, { table: t } as Partial<DbRemoveEffect>)}
-							onMatchChange={(m) => updateEffect(index, { match: m } as Partial<DbRemoveEffect>)}
+							onTableChange={(t) =>
+								updateEffect(index, { table: t } as Partial<DbRemoveEffect>)
+							}
+							onMatchChange={(m) =>
+								updateEffect(index, { match: m } as Partial<DbRemoveEffect>)
+							}
 						/>
 					)}
 				</div>
@@ -153,24 +162,33 @@ export function EffectsEditor({
 			<div className="flex items-center justify-between">
 				<div className="w-[200px]">
 					<div className="grid w-full grid-cols-3 h-8 border rounded-md p-1 bg-muted/50">
-						<button 
+						<button
 							type="button"
 							onClick={() => setActiveTab('all')}
-							className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded", activeTab === 'all' && "bg-background shadow-sm")}
+							className={cn(
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
+								activeTab === 'all' && 'bg-background shadow-sm',
+							)}
 						>
 							All
 						</button>
-						<button 
+						<button
 							type="button"
 							onClick={() => setActiveTab('state')}
-							className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded", activeTab === 'state' && "bg-background shadow-sm")}
+							className={cn(
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
+								activeTab === 'state' && 'bg-background shadow-sm',
+							)}
 						>
 							State
 						</button>
-						<button 
+						<button
 							type="button"
 							onClick={() => setActiveTab('db')}
-							className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded", activeTab === 'db' && "bg-background shadow-sm")}
+							className={cn(
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
+								activeTab === 'db' && 'bg-background shadow-sm',
+							)}
 						>
 							DB
 						</button>
@@ -494,7 +512,9 @@ function JsonOrStringInput({
 		setInternalValue(val);
 	}, [value]);
 
-	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => {
+	const handleChange = (
+		e: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } },
+	) => {
 		const newVal = e.target.value;
 		setInternalValue(newVal);
 

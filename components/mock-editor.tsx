@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ResponseConfig } from '@/components/mock-response-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,10 +14,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { validateSchema } from '@/lib/schema-generator';
 import type { Folder, HttpMethod, MatchType, MockVariant } from '@/lib/types';
-import { ResponseConfig } from '@/components/mock-response-config';
-import { TooltipProvider } from '@/components/ui/tooltip';
 
 type MockFormValues = {
 	name: string;
@@ -87,9 +87,7 @@ export function MockEditor({
 	onSubmit,
 }: MockEditorProps) {
 	const [name, setName] = useState(initial?.name ?? '');
-	const [path, setPath] = useState(
-		initial?.path ?? '',
-	);
+	const [path, setPath] = useState(initial?.path ?? '');
 	const [method, setMethod] = useState<HttpMethod>(initial?.method ?? 'GET');
 	const [statusCode, setStatusCode] = useState<string>(
 		initial?.statusCode ?? '200',
@@ -163,7 +161,7 @@ export function MockEditor({
 		if (mode !== 'edit' || !initial) return;
 		setMethod((initial.method ?? method) as HttpMethod);
 		setStatusCode(String(initial.statusCode ?? statusCode));
-	}, [initial?.method, initial?.statusCode, mode]);
+	}, [initial, mode, method, statusCode]);
 
 	const origin = typeof window !== 'undefined' ? window.location.origin : '';
 	const selectedFolder = useMemo(() => {
@@ -237,146 +235,146 @@ export function MockEditor({
 	return (
 		<TooltipProvider delayDuration={300}>
 			<form onSubmit={handleSubmit}>
-			<div className="grid gap-6 py-4 lg:grid-cols-5">
-				{/* Left Column - Basic Fields */}
-				<div className="space-y-4 col-span-2">
-					{showFolder && (
-						<div className="space-y-2">
-							<Label htmlFor="create-folder">Folder</Label>
-							<Select value={folderId} onValueChange={setFolderId}>
-								<SelectTrigger id="create-folder">
-									<SelectValue placeholder="Select a folder" />
-								</SelectTrigger>
-								<SelectContent>
-									{folders.map((folder) => (
-										<SelectItem key={folder.id} value={folder.id}>
-											{folder.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					)}
-
-					<div className="space-y-2">
-						<Label htmlFor="create-name">Mock Name</Label>
-						<Input
-							id="create-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder="e.g., User List API"
-							required
-						/>
-					</div>
-
-					<div className="grid grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<Label htmlFor="create-method">HTTP Method</Label>
-							<Select
-								value={method}
-								onValueChange={(value) => setMethod(value as HttpMethod)}
-							>
-								<SelectTrigger id="create-method">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{HTTP_METHODS.map((m) => (
-										<SelectItem key={m} value={m}>
-											{m}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div className="space-y-2">
-							<Label htmlFor="create-status">Status Code</Label>
-							<Select value={statusCode} onValueChange={setStatusCode}>
-								<SelectTrigger id="create-status">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{STATUS_CODES.map((code) => (
-										<SelectItem key={code.value} value={code.value}>
-											{code.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="create-path">Endpoint Path</Label>
-						<Input
-							id="create-path"
-							value={path}
-							onChange={(e) => setPath(e.target.value)}
-							placeholder="/users"
-							required
-						/>
-						{previewUrl && (
-							<p className="text-xs text-muted-foreground font-mono">
-								Preview:{' '}
-								<span className="text-foreground wrap-break-word">
-									{previewUrl}
-								</span>
-							</p>
+				<div className="grid gap-6 py-4 lg:grid-cols-5">
+					{/* Left Column - Basic Fields */}
+					<div className="space-y-4 col-span-2">
+						{showFolder && (
+							<div className="space-y-2">
+								<Label htmlFor="create-folder">Folder</Label>
+								<Select value={folderId} onValueChange={setFolderId}>
+									<SelectTrigger id="create-folder">
+										<SelectValue placeholder="Select a folder" />
+									</SelectTrigger>
+									<SelectContent>
+										{folders.map((folder) => (
+											<SelectItem key={folder.id} value={folder.id}>
+												{folder.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
 						)}
+
+						<div className="space-y-2">
+							<Label htmlFor="create-name">Mock Name</Label>
+							<Input
+								id="create-name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder="e.g., User List API"
+								required
+							/>
+						</div>
+
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-2">
+								<Label htmlFor="create-method">HTTP Method</Label>
+								<Select
+									value={method}
+									onValueChange={(value) => setMethod(value as HttpMethod)}
+								>
+									<SelectTrigger id="create-method">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{HTTP_METHODS.map((m) => (
+											<SelectItem key={m} value={m}>
+												{m}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="create-status">Status Code</Label>
+								<Select value={statusCode} onValueChange={setStatusCode}>
+									<SelectTrigger id="create-status">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{STATUS_CODES.map((code) => (
+											<SelectItem key={code.value} value={code.value}>
+												{code.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="create-path">Endpoint Path</Label>
+							<Input
+								id="create-path"
+								value={path}
+								onChange={(e) => setPath(e.target.value)}
+								placeholder="/users"
+								required
+							/>
+							{previewUrl && (
+								<p className="text-xs text-muted-foreground font-mono">
+									Preview:{' '}
+									<span className="text-foreground wrap-break-word">
+										{previewUrl}
+									</span>
+								</p>
+							)}
+						</div>
+					</div>
+
+					{/* Right Column - Response Config with Tabs */}
+					<div className="space-y-6 col-span-3">
+						<ResponseConfig
+							method={method}
+							echoRequestBody={echoRequestBody}
+							onEchoRequestBodyChange={setEchoRequestBody}
+							response={response}
+							onResponseChange={setResponse}
+							jsonSchema={jsonSchema}
+							onJsonSchemaChange={setJsonSchema}
+							useDynamicResponse={useDynamicResponse}
+							onUseDynamicResponseChange={setUseDynamicResponse}
+							activeTab={activeTab}
+							onActiveTabChange={(newTab) => {
+								setActiveTab(newTab);
+							}}
+							// Advanced Options props
+							matchType={matchType}
+							onMatchTypeChange={(newMatchType) => {
+								setMatchType(newMatchType);
+								if (newMatchType === 'wildcard') {
+									setActiveTab('advanced'); // Switch to advanced tab when wildcard selected
+								}
+							}}
+							queryParams={queryParams}
+							onQueryParamsChange={(newParams) => setQueryParams(newParams)}
+							// MockVariantManager props
+							variants={variants}
+							onVariantsChange={setVariants}
+							requireMatch={wildcardRequireMatch}
+							onRequireMatchChange={setWildcardRequireMatch}
+							endpoint={path}
+						/>
 					</div>
 				</div>
 
-				{/* Right Column - Response Config with Tabs */}
-				<div className="space-y-6 col-span-3">
-					<ResponseConfig
-						method={method}
-						echoRequestBody={echoRequestBody}
-						onEchoRequestBodyChange={setEchoRequestBody}
-						response={response}
-						onResponseChange={setResponse}
-						jsonSchema={jsonSchema}
-						onJsonSchemaChange={setJsonSchema}
-						useDynamicResponse={useDynamicResponse}
-						onUseDynamicResponseChange={setUseDynamicResponse}
-						activeTab={activeTab}
-						onActiveTabChange={(newTab) => {
-							setActiveTab(newTab);
-						}}
-						// Advanced Options props
-						matchType={matchType}
-						onMatchTypeChange={(newMatchType) => {
-							setMatchType(newMatchType);
-							if (newMatchType === 'wildcard') {
-								setActiveTab('advanced'); // Switch to advanced tab when wildcard selected
-							}
-						}}
-						queryParams={queryParams}
-						onQueryParamsChange={(newParams) => setQueryParams(newParams)}
-						// MockVariantManager props
-						variants={variants}
-						onVariantsChange={setVariants}
-						requireMatch={wildcardRequireMatch}
-						onRequireMatchChange={setWildcardRequireMatch}
-						endpoint={path}
-					/>
-				</div>
-			</div>
-
-			<div className="flex justify-end gap-2 pt-4 border-t border-border">
-				{onCancel && (
-					<Button type="button" variant="outline" onClick={onCancel}>
-						Cancel
+				<div className="flex justify-end gap-2 pt-4 border-t border-border">
+					{onCancel && (
+						<Button type="button" variant="outline" onClick={onCancel}>
+							Cancel
+						</Button>
+					)}
+					<Button type="submit" disabled={isSubmitting}>
+						{isSubmitting
+							? mode === 'create'
+								? 'Creating...'
+								: 'Saving...'
+							: submitText}
 					</Button>
-				)}
-				<Button type="submit" disabled={isSubmitting}>
-					{isSubmitting
-						? mode === 'create'
-							? 'Creating...'
-							: 'Saving...'
-						: submitText}
-				</Button>
-			</div>
-		</form>
+				</div>
+			</form>
 		</TooltipProvider>
 	);
 }

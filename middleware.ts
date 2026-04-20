@@ -9,15 +9,15 @@ const PUBLIC_ROUTES = ['/', '/docs', '/docsv2'];
 // Routes blocked in landing-only mode
 const BLOCKED_PREFIXES = ['/app', '/api'];
 
-function isPublicRoute(pathname: string): boolean {
-	return PUBLIC_ROUTES.some(route => {
+function _isPublicRoute(pathname: string): boolean {
+	return PUBLIC_ROUTES.some((route) => {
 		if (route === '/') return pathname === '/';
 		return pathname === route || pathname.startsWith(`${route}/`);
 	});
 }
 
 function isBlockedRoute(pathname: string): boolean {
-	return BLOCKED_PREFIXES.some(prefix => pathname.startsWith(prefix));
+	return BLOCKED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 // Global CORS middleware for all /api/* routes
@@ -73,5 +73,7 @@ export function middleware(request: NextRequest) {
 
 // Run middleware on all routes except static assets
 export const config = {
-	matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2|ttf|json)$).*)'],
+	matcher: [
+		'/((?!_next/static|_next/image|favicon.ico|.*\\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2|ttf|json)$).*)',
+	],
 };

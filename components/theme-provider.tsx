@@ -22,6 +22,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
 		const stored = localStorage.getItem('mockzilla-theme') as Theme | null;
 		const initialTheme = stored || 'system';
+
+		const applyTheme = (newTheme: Theme) => {
+			const isDarkMode =
+				newTheme === 'dark' ||
+				(newTheme === 'system' &&
+					window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+			if (isDarkMode) {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
+			}
+			setIsDark(isDarkMode);
+		};
+
 		setThemeState(initialTheme);
 		applyTheme(initialTheme);
 		setMounted(true);

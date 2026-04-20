@@ -1,9 +1,8 @@
 'use client';
 
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import type React from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -22,12 +21,12 @@ export default function EditMockPage() {
 	const slug = params.slug as string;
 	const mockId = params.mockId as string;
 
-	const { data: folder, isLoading: isFolderLoading } = useSWR<Folder>(
+	const { data: folder } = useSWR<Folder>(
 		slug ? `/api/folders?slug=${slug}` : null,
 		fetcher,
 	);
 
-	const { data: mock, isLoading: isMockLoading } = useSWR<Mock>(
+	const { data: mock } = useSWR<Mock>(
 		mockId ? `/api/mocks?id=${mockId}` : null,
 		fetcher,
 	);
@@ -44,7 +43,12 @@ export default function EditMockPage() {
 		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
-		variants?: Array<{ key: string; body: string; statusCode: number; bodyType: string }> | null;
+		variants?: Array<{
+			key: string;
+			body: string;
+			statusCode: number;
+			bodyType: string;
+		}> | null;
 		wildcardRequireMatch?: boolean;
 	}) => {
 		if (!mock || !folder) return;
@@ -78,7 +82,7 @@ export default function EditMockPage() {
 					path: values.path,
 					method: values.method,
 					response: values.response,
-					statusCode: Number.parseInt(values.statusCode),
+					statusCode: Number.parseInt(values.statusCode, 10),
 					matchType: values.matchType,
 					queryParams: values.queryParams,
 					jsonSchema: values.jsonSchema,
@@ -97,9 +101,10 @@ export default function EditMockPage() {
 			mutate(`/api/mocks?folderId=${folder.id}`);
 			mutate(`/api/mocks?id=${mock.id}`);
 			router.push(`/app/folder/${slug}`);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			toast.error('Error', {
-				description: error.message || 'Failed to update mock',
+				description:
+					error instanceof Error ? error.message : 'Failed to update mock',
 			});
 		} finally {
 			setIsLoading(false);

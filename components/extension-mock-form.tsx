@@ -1,8 +1,9 @@
 'use client';
 
 import { Loader2, Save } from 'lucide-react';
-import React, { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +15,6 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 
 export interface ExtensionMock {
 	id: string;
@@ -26,6 +26,7 @@ export interface ExtensionMock {
 	body?: string;
 	response?: string;
 	matchType?: string;
+	serverMockId?: string;
 	variants?: Array<{
 		id?: string;
 		key?: string;
@@ -50,10 +51,10 @@ export function ExtensionMockForm({
 	isUpdating,
 }: ExtensionMockFormProps) {
 	// Initialize state with a shallow copy to avoid direct mutation
-	const [formState, setFormState] = useState<ExtensionMock>({ 
+	const [formState, setFormState] = useState<ExtensionMock>({
 		...initialMock,
 		// Ensure response is synced with body if one is missing
-		response: initialMock.response || initialMock.body || ''
+		response: initialMock.response || initialMock.body || '',
 	});
 
 	const handleSubmit = async (e: FormEvent) => {
@@ -62,18 +63,21 @@ export function ExtensionMockForm({
 		await onSave(formState);
 	};
 
-	const updateField = (field: keyof ExtensionMock, value: any) => {
-		setFormState(prev => ({ ...prev, [field]: value }));
+	const updateField = (field: keyof ExtensionMock, value: unknown) => {
+		setFormState((prev) => ({ ...prev, [field]: value }));
 	};
 
-	const updateVariant = (idx: number, field: string, value: any) => {
+	const updateVariant = (idx: number, field: string, value: unknown) => {
 		const newVariants = [...(formState.variants || [])];
 		newVariants[idx] = { ...newVariants[idx], [field]: value };
-		setFormState(prev => ({ ...prev, variants: newVariants }));
+		setFormState((prev) => ({ ...prev, variants: newVariants }));
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+		<form
+			onSubmit={handleSubmit}
+			className="flex flex-col h-full overflow-hidden"
+		>
 			<div className="flex-1 overflow-y-auto pr-2 py-4 space-y-8">
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 					{/* Left Column: Basic Fields */}
@@ -94,7 +98,7 @@ export function ExtensionMockForm({
 										className="bg-background/50"
 									/>
 								</div>
-								
+
 								<div className="grid gap-4 sm:grid-cols-2">
 									<div className="space-y-2">
 										<Label htmlFor="method">HTTP Method</Label>
@@ -116,7 +120,7 @@ export function ExtensionMockForm({
 											</SelectContent>
 										</Select>
 									</div>
-									
+
 									<div className="space-y-2">
 										<Label htmlFor="statusCode">Status Code</Label>
 										<Input
@@ -124,7 +128,10 @@ export function ExtensionMockForm({
 											type="number"
 											value={formState.statusCode}
 											onChange={(e) =>
-												updateField('statusCode', Number.parseInt(e.target.value, 10) || 200)
+												updateField(
+													'statusCode',
+													Number.parseInt(e.target.value, 10) || 200,
+												)
 											}
 											required
 											className="bg-background/50"
@@ -188,7 +195,7 @@ export function ExtensionMockForm({
 								{formState.variants.length} Variants
 							</Badge>
 						</div>
-						
+
 						<div className="grid gap-6 md:grid-cols-2">
 							{formState.variants.map((variant, idx) => (
 								<div
@@ -207,7 +214,9 @@ export function ExtensionMockForm({
 												id={`v-name-${idx}`}
 												value={variant.key || variant.name || ''}
 												className="h-10 text-sm bg-background/50 border-secondary/20"
-												onChange={(e) => updateVariant(idx, 'key', e.target.value)}
+												onChange={(e) =>
+													updateVariant(idx, 'key', e.target.value)
+												}
 											/>
 										</div>
 										<div className="space-y-1.5">
@@ -222,8 +231,12 @@ export function ExtensionMockForm({
 												type="number"
 												value={variant.statusCode}
 												className="h-10 text-sm bg-background/50 border-secondary/20 text-center"
-												onChange={(e) => 
-													updateVariant(idx, 'statusCode', Number.parseInt(e.target.value, 10) || 200)
+												onChange={(e) =>
+													updateVariant(
+														idx,
+														'statusCode',
+														Number.parseInt(e.target.value, 10) || 200,
+													)
 												}
 											/>
 										</div>
@@ -240,7 +253,9 @@ export function ExtensionMockForm({
 											value={variant.body || ''}
 											className="font-mono text-xs min-h-[120px] bg-background/50 border-secondary/20"
 											placeholder='{ "status": "variant matched" }'
-											onChange={(e) => updateVariant(idx, 'body', e.target.value)}
+											onChange={(e) =>
+												updateVariant(idx, 'body', e.target.value)
+											}
 										/>
 									</div>
 								</div>
@@ -259,7 +274,11 @@ export function ExtensionMockForm({
 				>
 					Cancel
 				</Button>
-				<Button type="submit" disabled={isUpdating} className="min-w-[140px] font-semibold">
+				<Button
+					type="submit"
+					disabled={isUpdating}
+					className="min-w-[140px] font-semibold"
+				>
 					{isUpdating ? (
 						<>
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />

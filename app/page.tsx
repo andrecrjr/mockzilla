@@ -1,9 +1,9 @@
+import { ChromeExtension } from '@/components/landing/ChromeExtension';
 import { FAQ } from '@/components/landing/FAQ';
 import { Features } from '@/components/landing/Features';
 import { Hero } from '@/components/landing/Hero';
-import { HttpServer } from '@/components/landing/HttpServer';
-import { ChromeExtension } from '@/components/landing/ChromeExtension';
 import { HowItWorks } from '@/components/landing/HowItWorks';
+import { HttpServer } from '@/components/landing/HttpServer';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { MCPSection } from '@/components/landing/MCPSection';

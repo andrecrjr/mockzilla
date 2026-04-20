@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 'use client';
 
 import {
@@ -109,7 +108,7 @@ export default function WorkflowsPage() {
 		return res.json();
 	}
 
-	const { trigger: triggerDelete, isMutating: isDeleting } = useSWRMutation(
+	const { trigger: triggerDelete } = useSWRMutation(
 		'/api/workflow/scenarios',
 		deleteScenario,
 		{
@@ -123,23 +122,12 @@ export default function WorkflowsPage() {
 		},
 	);
 
-	// Update scenario mutation
-	async function updateScenario(url: string, { arg }: { arg: any }) {
-		const res = await fetch(url, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(arg),
-		});
-		if (!res.ok) {
-			const err = await res.json();
-			throw new Error(err.error || 'Failed to update scenario');
-		}
-		return res.json();
-	}
-
 	const { trigger: triggerUpdate, isMutating: isUpdating } = useSWRMutation(
 		editingScenario ? `/api/workflow/scenarios/${editingScenario.id}` : null,
-		async (url: string, { arg }: { arg: { id: string; name: string; description?: string } }) => {
+		async (
+			url: string,
+			{ arg }: { arg: { id: string; name: string; description?: string } },
+		) => {
 			const res = await fetch(url, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -293,7 +281,9 @@ export default function WorkflowsPage() {
 										id="edit-name"
 										value={editingScenario?.name || ''}
 										onChange={(e) =>
-											setEditingScenario(prev => prev ? {...prev, name: e.target.value} : null)
+											setEditingScenario((prev) =>
+												prev ? { ...prev, name: e.target.value } : null,
+											)
 										}
 										placeholder="e.g. Checkout Flow"
 									/>
@@ -304,7 +294,9 @@ export default function WorkflowsPage() {
 										id="edit-description"
 										value={editingScenario?.description || ''}
 										onChange={(e) =>
-											setEditingScenario(prev => prev ? {...prev, description: e.target.value} : null)
+											setEditingScenario((prev) =>
+												prev ? { ...prev, description: e.target.value } : null,
+											)
 										}
 										placeholder="Optional description of this scenario..."
 										rows={3}
@@ -312,16 +304,10 @@ export default function WorkflowsPage() {
 								</div>
 							</div>
 							<DialogFooter>
-								<Button
-									variant="outline"
-									onClick={() => setIsEditOpen(false)}
-								>
+								<Button variant="outline" onClick={() => setIsEditOpen(false)}>
 									Cancel
 								</Button>
-								<Button
-									onClick={handleUpdate}
-									disabled={isUpdating}
-								>
+								<Button onClick={handleUpdate} disabled={isUpdating}>
 									{isUpdating && (
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 									)}
@@ -336,8 +322,8 @@ export default function WorkflowsPage() {
 			{/* Loading State */}
 			{isLoading && (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{[...Array(3)].map((_, index) => (
-						<Card key={index} className="p-6">
+					{[1, 2, 3].map((skeletonId) => (
+						<Card key={`skeleton-${skeletonId}`} className="p-6">
 							<Skeleton className="h-10 w-10 rounded-lg mb-4" />
 							<Skeleton className="h-6 w-3/4 mb-2" />
 							<Skeleton className="h-4 w-1/2" />
@@ -345,7 +331,6 @@ export default function WorkflowsPage() {
 					))}
 				</div>
 			)}
-
 			{/* Error State */}
 			{error && (
 				<div className="text-center py-12 border-2 border-dashed border-destructive/50 rounded-lg bg-destructive/5">

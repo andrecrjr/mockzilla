@@ -6,7 +6,9 @@ import type { MockVariant } from '@/lib/types';
 /**
  * Splits the endpoint pattern into segments, highlighting wildcards
  */
-export function splitEndpointPattern(pattern: string): Array<{ text: string; isWildcard: boolean }> {
+export function splitEndpointPattern(
+	pattern: string,
+): Array<{ text: string; isWildcard: boolean }> {
 	const parts = pattern.split(/(\*)/g);
 	return parts.map((part) => ({
 		text: part,
@@ -17,7 +19,10 @@ export function splitEndpointPattern(pattern: string): Array<{ text: string; isW
 /**
  * Generates an example URL from the pattern and variant key
  */
-export function generateExampleUrl(pattern: string, variantKey: string | undefined): string {
+export function generateExampleUrl(
+	pattern: string,
+	variantKey: string | undefined,
+): string {
 	const segments = splitEndpointPattern(pattern);
 	const key = variantKey ?? '';
 	const keyParts = key === '*' ? ['*'] : key.split('|');
@@ -49,14 +54,16 @@ export function VariantPatternPreview({
 	const vKey = variant.key ?? '';
 	const isFallback = vKey === '*';
 	const exampleUrl = generateExampleUrl(endpoint, vKey);
-	const segments = splitEndpointPattern(endpoint);
+	const _segments = splitEndpointPattern(endpoint);
 
 	return (
-		<div className={`mt-3 rounded-md border px-3 py-2.5 ${
-			isFallback
-				? 'border-amber-500/30 bg-amber-500/5'
-				: 'border-border bg-muted/30'
-		}`}>
+		<div
+			className={`mt-3 rounded-md border px-3 py-2.5 ${
+				isFallback
+					? 'border-amber-500/30 bg-amber-500/5'
+					: 'border-border bg-muted/30'
+			}`}
+		>
 			<div className="flex items-center gap-2 flex-wrap">
 				{/* Capture Key Badge */}
 				<Badge
@@ -67,7 +74,8 @@ export function VariantPatternPreview({
 							: ''
 					}`}
 				>
-					{isFallback ? '★ ' : ''}{vKey || '(empty)'}
+					{isFallback ? '★ ' : ''}
+					{vKey || '(empty)'}
 				</Badge>
 
 				{/* Arrow */}
@@ -98,7 +106,11 @@ export function VariantPatternPreview({
 /**
  * Require match indicator
  */
-export function RequireMatchIndicator({ requireMatch }: { requireMatch: boolean }) {
+export function RequireMatchIndicator({
+	requireMatch,
+}: {
+	requireMatch: boolean;
+}) {
 	return (
 		<div className="flex items-center gap-2 pt-1">
 			{requireMatch ? (

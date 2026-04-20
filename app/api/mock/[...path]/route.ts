@@ -2,15 +2,14 @@ import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
-import type { HttpMethod, MatchType } from '@/lib/types';
-import type { MockVariant } from '@/lib/types';
+import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
+import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
+	extractCaptureKey,
 	findBestMatch,
 	queryParamsMatch,
 	selectVariant as selectMockVariant,
-	extractCaptureKey,
 } from '@/lib/utils/mock-matcher';
-import type { MockCandidate } from '@/lib/utils/mock-matcher';
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const pathSegments = params.path;
@@ -26,10 +25,9 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	}
 
 	const folderSlug = pathSegments[0];
-	let mockPath = pathSegments.length === 1
-		? '/'
-		: `/${pathSegments.slice(1).join('/')}`;
-	
+	let mockPath =
+		pathSegments.length === 1 ? '/' : `/${pathSegments.slice(1).join('/')}`;
+
 	// Normalize: remove trailing slash for consistency
 	if (mockPath.endsWith('/') && mockPath.length > 1) {
 		mockPath = mockPath.slice(0, -1);
@@ -121,7 +119,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		const bestMock = allMocks.find(
 			(m) =>
 				m.endpoint === best.endpoint &&
-				(m.matchType as MatchType || 'exact') === best.matchType &&
+				((m.matchType as MatchType) || 'exact') === best.matchType &&
 				JSON.stringify(m.queryParams) === JSON.stringify(best.queryParams),
 		);
 
@@ -143,7 +141,11 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			const wildcardRequireMatch = bestMock.wildcardRequireMatch || false;
 
 			if (variants && variants.length > 0) {
-				const variant = selectMockVariant(variants, mockPath, bestMock.endpoint);
+				const variant = selectMockVariant(
+					variants,
+					mockPath,
+					bestMock.endpoint,
+				);
 				if (variant) {
 					// Use variant's body, statusCode, bodyType
 					const variantMock = {
@@ -153,7 +155,8 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 						bodyType: variant.bodyType as 'json' | 'text',
 						useDynamicResponse: false, // Ensure variants always return their static body
 					};
-					const captures = extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
+					const captures =
+						extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
 					const paramsMap: Record<string, string> = {};
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
@@ -177,9 +180,10 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			}
 		}
 
-		const captures = bestMock.matchType === 'wildcard' 
-			? extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || []
-			: [];
+		const captures =
+			bestMock.matchType === 'wildcard'
+				? extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || []
+				: [];
 		const paramsMap: Record<string, string> = {};
 		for (let i = 0; i < captures.length; i++) {
 			paramsMap[String(i)] = captures[i];
@@ -200,9 +204,9 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 }
 
 async function buildResponse(
-	mock: typeof mockResponses.$inferSelect, 
+	mock: typeof mockResponses.$inferSelect,
 	request: NextRequest,
-	paramsMap: Record<string, string> = {}
+	paramsMap: Record<string, string> = {},
 ): Promise<NextResponse> {
 	// Check if we should echo the request body
 	if (mock.echoRequestBody) {
@@ -219,7 +223,7 @@ async function buildResponse(
 			query: urlQueryParams,
 			params: paramsMap,
 			headers: requestHeaders,
-		}
+		},
 	};
 
 	// Check if this mock uses dynamic schema-based responses
@@ -229,7 +233,7 @@ async function buildResponse(
 
 	// Apply template replacement to static responses
 	const { replaceTemplates } = await import('@/lib/schema-generator');
-	const responseBody = replaceTemplates(mock.response, context);
+	const responseBody = replaceTemplates(mock.response, context) as string;
 
 	// Return the mock response with the configured status code
 	const contentType =
@@ -284,14 +288,20 @@ async function handleEchoRequestBody(
 
 async function handleDynamicResponse(
 	mock: typeof mockResponses.$inferSelect,
-	context: any = {},
+	context: Record<string, unknown> = {},
 ): Promise<NextResponse> {
 	try {
 		// Import the schema generator utility
 		const { generateFromSchema } = await import('@/lib/schema-generator');
 
 		// Generate fresh JSON from the schema on each request
-		const generatedJson = generateFromSchema(JSON.parse(mock.jsonSchema!), context);
+		if (!mock.jsonSchema) {
+			throw new Error('JSON Schema is required for dynamic response');
+		}
+		const generatedJson = generateFromSchema(
+			JSON.parse(mock.jsonSchema),
+			context,
+		);
 
 		return NextResponse.json(JSON.parse(generatedJson), {
 			status: mock.statusCode,

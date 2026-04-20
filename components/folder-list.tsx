@@ -12,9 +12,7 @@ interface FolderListProps {
 	mocks: Mock[];
 	isLoading: boolean;
 	onDeleteFolder: (id: string) => void;
-	onDeleteMock: (id: string) => void;
 	onUpdateFolder: (id: string, name: string) => Promise<void>;
-	onUpdateMock: (id: string, data: Partial<Mock>) => Promise<void>;
 	onCopy: (text: string) => void;
 }
 
@@ -23,10 +21,7 @@ export function FolderList({
 	mocks,
 	isLoading,
 	onDeleteFolder,
-	onDeleteMock,
 	onUpdateFolder,
-	onUpdateMock,
-	onCopy,
 }: FolderListProps) {
 	if (isLoading) {
 		return (

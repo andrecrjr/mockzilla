@@ -1,12 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Braces, Loader2, Pencil, Plus, X } from 'lucide-react';
+import { Braces, Loader2, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import useSWRMutation from 'swr/mutation';
 import * as z from 'zod';
+import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -32,12 +33,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '../ui/textarea';
-import { EffectsEditor, type EffectItem } from './effects-editor';
-import { FieldTooltip } from '@/components/folder-tooltips';
-import type { Transition } from '@/lib/types';
 import type { Condition, Effect } from '@/lib/engine/match';
+import type { Transition } from '@/lib/types';
+import { Textarea } from '../ui/textarea';
 import { TooltipProvider } from '../ui/tooltip';
+import { type EffectItem, EffectsEditor } from './effects-editor';
 
 // --- Schema ---
 const transitionSchema = z.object({
@@ -71,7 +71,10 @@ interface TransitionDialogProps {
 }
 
 // SWR Mutation fetchers
-async function createTransition(url: string, { arg }: { arg: Omit<Transition, 'id' | 'createdAt' | 'updatedAt'> }) {
+async function createTransition(
+	url: string,
+	{ arg }: { arg: Omit<Transition, 'id' | 'createdAt' | 'updatedAt'> },
+) {
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -84,7 +87,10 @@ async function createTransition(url: string, { arg }: { arg: Omit<Transition, 'i
 	return res.json();
 }
 
-async function updateTransition(url: string, { arg }: { arg: Partial<Transition> }) {
+async function updateTransition(
+	url: string,
+	{ arg }: { arg: Partial<Transition> },
+) {
 	const res = await fetch(url, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -173,7 +179,9 @@ export function TransitionDialog({
 
 			// Populate effects
 			if (Array.isArray(transition.effects)) {
-				const parsedEffects: EffectItem[] = (transition.effects as Effect[]).map((e) => {
+				const parsedEffects: EffectItem[] = (
+					transition.effects as Effect[]
+				).map((e) => {
 					if (e.type === 'state.set') {
 						return {
 							type: 'state.set',
@@ -223,7 +231,6 @@ export function TransitionDialog({
 			setEffectsList([]);
 		}
 	}, [open, isEditMode, form]);
-
 
 	const { trigger: triggerCreate, isMutating: isCreating } = useSWRMutation(
 		'/api/workflow/transitions',
@@ -275,9 +282,15 @@ export function TransitionDialog({
 		]);
 	};
 
-	const updateCondition = (index: number, key: keyof typeof conditionsList[0], val: string) => {
+	const updateCondition = (
+		index: number,
+		key: keyof (typeof conditionsList)[0],
+		val: string,
+	) => {
 		const newConditions = [...conditionsList];
-		(newConditions[index] as any)[key] = val;
+		const condition = { ...newConditions[index] };
+		(condition as Record<string, unknown>)[key] = val;
+		newConditions[index] = condition as (typeof conditionsList)[0];
 		setConditionsList(newConditions);
 	};
 
@@ -473,196 +486,473 @@ export function TransitionDialog({
 
 	return (
 		<TooltipProvider>
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>{trigger}</DialogTrigger>
-			<DialogContent className="sm:max-w-[90vw] lg:max-w-[1400px] max-h-[85vh] overflow-y-auto">
-				<DialogHeader>
-					<DialogTitle>
-						{isEditMode ? 'Edit Transition' : 'Create Transition'}
-					</DialogTitle>
-					<DialogDescription>
-						{isEditMode
-							? 'Update this transition rule.'
-							: 'Define a new rule for this scenario.'}
-					</DialogDescription>
-				</DialogHeader>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogTrigger asChild>{trigger}</DialogTrigger>
+				<DialogContent className="sm:max-w-[90vw] lg:max-w-[1400px] max-h-[85vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle>
+							{isEditMode ? 'Edit Transition' : 'Create Transition'}
+						</DialogTitle>
+						<DialogDescription>
+							{isEditMode
+								? 'Update this transition rule.'
+								: 'Define a new rule for this scenario.'}
+						</DialogDescription>
+					</DialogHeader>
 
-				<form
-					onSubmit={form.handleSubmit(onSubmit)}
-					className="grid gap-x-6 gap-y-4 py-6"
-				>
-					{/* Basics */}
-					<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
-						<div className="md:col-span-6 space-y-3">
-							<Label className="flex items-center gap-2">
-								Name
-								<FieldTooltip
-									label="Name"
-									description="A unique name for this transition."
-									example="Register User"
-								/>
-							</Label>
-							<Input
-								{...form.register('name')}
-								placeholder="e.g. Add Item"
-								className="h-9"
-							/>
-							{form.formState.errors.name && (
-								<p className="text-destructive text-xs">
-									{form.formState.errors.name.message}
-								</p>
-							)}
-						</div>
-						<div className="md:col-span-6 space-y-3">
-							<Label className="flex items-center gap-2">
-								Method
-								<FieldTooltip
-									label="Method"
-									description="The HTTP method this transition responds to."
-									example="POST"
-								/>
-							</Label>
-							<Controller
-								control={form.control}
-								name="method"
-								render={({ field }) => (
-									<Select onValueChange={field.onChange} value={field.value}>
-										<SelectTrigger className="h-9">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="GET">GET</SelectItem>
-											<SelectItem value="POST">POST</SelectItem>
-											<SelectItem value="PUT">PUT</SelectItem>
-											<SelectItem value="DELETE">DELETE</SelectItem>
-										</SelectContent>
-									</Select>
-								)}
-							/>
-						</div>
-					</div>
-
-					{/* Description & Path */}
-					<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
-						<div className="md:col-span-8 space-y-3">
-							<Label className="flex items-center gap-2">
-								Description{' '}
-								<span className="text-muted-foreground text-xs">
-									(optional)
-								</span>
-								<FieldTooltip
-									label="Description"
-									description="Internal documentation for what this transition does."
-								/>
-							</Label>
-							<Input
-								{...form.register('description')}
-								placeholder="Adds an item to the shopping cart"
-								className="h-9"
-							/>
-						</div>
-						<div className="md:col-span-4 space-y-3">
-							<Label className="flex items-center gap-2">
-								Path
-								<FieldTooltip
-									label="Path"
-									description="The URL pattern to match. Supports exact and parameterized paths."
-									example="/users/:id"
-									docsLink="/docs/workflows#path-matching"
-								/>
-							</Label>
-							<Input
-								{...form.register('path')}
-								placeholder="/cart/items"
-								className="h-9"
-							/>
-							{form.formState.errors.path && (
-								<p className="text-destructive text-xs">
-									{form.formState.errors.path.message}
-								</p>
-							)}
-						</div>
-					</div>
-
-					{/* Conditions Section */}
-					<div className="flex justify-between space-y-3 gap-3">
-						<div className="w-full">
-							<div className="flex items-center justify-between">
+					<form
+						onSubmit={form.handleSubmit(onSubmit)}
+						className="grid gap-x-6 gap-y-4 py-6"
+					>
+						{/* Basics */}
+						<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
+							<div className="md:col-span-6 space-y-3">
 								<Label className="flex items-center gap-2">
-									Conditions
+									Name
 									<FieldTooltip
-										label="Conditions"
-										description="Rules that must match for this transition to fire. If empty, it always matches."
-										example='[{"type":"eq", "field":"state.isLoggedIn", "value":true}]'
-										docsLink="/docs/workflows#conditions"
+										label="Name"
+										description="A unique name for this transition."
+										example="Register User"
 									/>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										className="h-5 px-2 text-[10px] text-muted-foreground bg-muted/50 hover:bg-muted"
-										onClick={() => setUseConditionBuilder(!useConditionBuilder)}
-									>
-										{useConditionBuilder
-											? 'Switch to JSON'
-											: 'Switch to Builder'}
-									</Button>
 								</Label>
-								<div className="flex items-center gap-2">
-									{!useConditionBuilder && (
+								<Input
+									{...form.register('name')}
+									placeholder="e.g. Add Item"
+									className="h-9"
+								/>
+								{form.formState.errors.name && (
+									<p className="text-destructive text-xs">
+										{form.formState.errors.name.message}
+									</p>
+								)}
+							</div>
+							<div className="md:col-span-6 space-y-3">
+								<Label className="flex items-center gap-2">
+									Method
+									<FieldTooltip
+										label="Method"
+										description="The HTTP method this transition responds to."
+										example="POST"
+									/>
+								</Label>
+								<Controller
+									control={form.control}
+									name="method"
+									render={({ field }) => (
+										<Select onValueChange={field.onChange} value={field.value}>
+											<SelectTrigger className="h-9">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="GET">GET</SelectItem>
+												<SelectItem value="POST">POST</SelectItem>
+												<SelectItem value="PUT">PUT</SelectItem>
+												<SelectItem value="DELETE">DELETE</SelectItem>
+											</SelectContent>
+										</Select>
+									)}
+								/>
+							</div>
+						</div>
+
+						{/* Description & Path */}
+						<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
+							<div className="md:col-span-8 space-y-3">
+								<Label className="flex items-center gap-2">
+									Description{' '}
+									<span className="text-muted-foreground text-xs">
+										(optional)
+									</span>
+									<FieldTooltip
+										label="Description"
+										description="Internal documentation for what this transition does."
+									/>
+								</Label>
+								<Input
+									{...form.register('description')}
+									placeholder="Adds an item to the shopping cart"
+									className="h-9"
+								/>
+							</div>
+							<div className="md:col-span-4 space-y-3">
+								<Label className="flex items-center gap-2">
+									Path
+									<FieldTooltip
+										label="Path"
+										description="The URL pattern to match. Supports exact and parameterized paths."
+										example="/users/:id"
+										docsLink="/docs/workflows#path-matching"
+									/>
+								</Label>
+								<Input
+									{...form.register('path')}
+									placeholder="/cart/items"
+									className="h-9"
+								/>
+								{form.formState.errors.path && (
+									<p className="text-destructive text-xs">
+										{form.formState.errors.path.message}
+									</p>
+								)}
+							</div>
+						</div>
+
+						{/* Conditions Section */}
+						<div className="flex justify-between space-y-3 gap-3">
+							<div className="w-full">
+								<div className="flex items-center justify-between">
+									<Label className="flex items-center gap-2">
+										Conditions
+										<FieldTooltip
+											label="Conditions"
+											description="Rules that must match for this transition to fire. If empty, it always matches."
+											example='[{"type":"eq", "field":"state.isLoggedIn", "value":true}]'
+											docsLink="/docs/workflows#conditions"
+										/>
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											className="h-5 px-2 text-[10px] text-muted-foreground bg-muted/50 hover:bg-muted"
+											onClick={() =>
+												setUseConditionBuilder(!useConditionBuilder)
+											}
+										>
+											{useConditionBuilder
+												? 'Switch to JSON'
+												: 'Switch to Builder'}
+										</Button>
+									</Label>
+									<div className="flex items-center gap-2">
+										{!useConditionBuilder && (
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														className="h-6 gap-1 text-xs"
+													>
+														<Braces className="h-3 w-3" />
+														Insert Var
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem
+														onClick={() =>
+															insertVariable(
+																'conditions',
+																'{{ input.body.id }}',
+															)
+														}
+													>
+														Body ID
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() =>
+															insertVariable(
+																'conditions',
+																'{{ input.query.search }}',
+															)
+														}
+													>
+														Query Param
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() =>
+															insertVariable(
+																'conditions',
+																'{{ state.isLoggedIn }}',
+															)
+														}
+													>
+														State Var
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() =>
+															insertVariable(
+																'conditions',
+																'{{ db.users.length }}',
+															)
+														}
+													>
+														DB Count
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										)}
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
 													type="button"
-													variant="ghost"
+													variant="outline"
 													size="sm"
-													className="h-6 gap-1 text-xs"
+													className="h-6 text-xs"
 												>
-													<Braces className="h-3 w-3" />
-													Insert Var
+													Examples
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">
 												<DropdownMenuItem
-													onClick={() =>
-														insertVariable('conditions', '{{ input.body.id }}')
-													}
+													onClick={() => insertConditionExample('loggedIn')}
 												>
-													Body ID
+													Logged-in guard
 												</DropdownMenuItem>
 												<DropdownMenuItem
-													onClick={() =>
-														insertVariable(
-															'conditions',
-															'{{ input.query.search }}',
-														)
-													}
+													onClick={() => insertConditionExample('queryPage')}
 												>
-													Query Param
+													Pagination guard
 												</DropdownMenuItem>
 												<DropdownMenuItem
-													onClick={() =>
-														insertVariable(
-															'conditions',
-															'{{ state.isLoggedIn }}',
-														)
-													}
+													onClick={() => insertConditionExample('headerAuth')}
 												>
-													State Var
+													Require Authorization header
 												</DropdownMenuItem>
 												<DropdownMenuItem
-													onClick={() =>
-														insertVariable(
-															'conditions',
-															'{{ db.users.length }}',
-														)
-													}
+													onClick={() => insertConditionExample('paramEq')}
 												>
-													DB Count
+													Param equals (id)
 												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
-									)}
+									</div>
+								</div>
+
+								{useConditionBuilder ? (
+									<div className="space-y-3 border rounded-md p-4 bg-muted/10">
+										{conditionsList.map((cond, idx) => (
+											<div
+												key={`cond-${idx + cond.type}`}
+												className="grid grid-cols-12 gap-3 items-center"
+											>
+												<Input
+													placeholder="Field (e.g. input.body.id)"
+													className="col-span-5 h-9 text-xs font-mono"
+													value={cond.field}
+													onChange={(e) =>
+														updateCondition(idx, 'field', e.target.value)
+													}
+												/>
+												<Select
+													value={cond.type}
+													onValueChange={(v) => updateCondition(idx, 'type', v)}
+												>
+													<SelectTrigger className="col-span-2 h-9 w-full text-xs">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="eq">==</SelectItem>
+														<SelectItem value="neq">!=</SelectItem>
+														<SelectItem value="gt">&gt;</SelectItem>
+														<SelectItem value="lt">&lt;</SelectItem>
+														<SelectItem value="exists">Exists</SelectItem>
+														<SelectItem value="contains">In</SelectItem>
+													</SelectContent>
+												</Select>
+												{cond.type !== 'exists' && (
+													<Input
+														placeholder="Value"
+														className="col-span-4 h-9 text-xs"
+														value={cond.value}
+														onChange={(e) =>
+															updateCondition(idx, 'value', e.target.value)
+														}
+													/>
+												)}
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="col-span-1 h-9 w-9 justify-self-end text-muted-foreground hover:text-destructive"
+													onClick={() => removeCondition(idx)}
+												>
+													<X className="h-3 w-3" />
+												</Button>
+											</div>
+										))}
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											className="w-full text-xs h-9 border-dashed"
+											onClick={addCondition}
+										>
+											<Plus className="h-3 w-3 mr-1" /> Add Rule
+										</Button>
+									</div>
+								) : (
+									<>
+										<Textarea
+											{...form.register('conditions')}
+											className="font-mono text-xs"
+											rows={8}
+										/>
+										{form.formState.errors.conditions && (
+											<p className="text-destructive text-xs">
+												{String(form.formState.errors.conditions.message)}
+											</p>
+										)}
+									</>
+								)}
+							</div>
+
+							{/* Effects Builder */}
+							<div className="border rounded-md p-4 bg-muted/10 w-full">
+								<div className="flex items-center justify-between mb-4">
+									<Label className="flex items-center gap-2">
+										Effects
+										<FieldTooltip
+											label="Effects"
+											description="Actions to modify state or database when this transition fires."
+											example='[{"type":"state.set", "raw":{"isLoggedIn":true}}]'
+											docsLink="/docs/workflows#effects"
+										/>
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											className="h-5 px-2 text-[10px] text-muted-foreground bg-muted/50 hover:bg-muted"
+											onClick={() => setUseEffectsBuilder(!useEffectsBuilder)}
+										>
+											{useEffectsBuilder
+												? 'Switch to JSON'
+												: 'Switch to Builder'}
+										</Button>
+									</Label>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												className="h-6 text-xs"
+											>
+												Load Example
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem
+												onClick={() => addEffectExample('stateLogin')}
+											>
+												Set login state
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() => addEffectExample('pushUsers')}
+											>
+												Push body to users
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() => addEffectExample('updateUser')}
+											>
+												Update user by param
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() => addEffectExample('removeCartBySku')}
+											>
+												Remove cart by sku
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+
+								{useEffectsBuilder ? (
+									<EffectsEditor
+										effects={effectsList}
+										onChange={setEffectsList}
+									/>
+								) : (
+									<Textarea
+										value={JSON.stringify(effectsList, null, 2)}
+										onChange={(e) => {
+											try {
+												const parsed = JSON.parse(e.target.value);
+												if (Array.isArray(parsed)) {
+													setEffectsList(parsed);
+												}
+											} catch {
+												// If JSON is invalid, we won't update the state
+												// But we should allow the user to continue typing
+											}
+										}}
+										className="font-mono text-xs"
+										rows={8}
+									/>
+								)}
+							</div>
+						</div>
+
+						{/* Response */}
+						<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
+							<div className="md:col-span-2 space-y-3">
+								<Label className="flex items-center gap-2">
+									Status
+									<FieldTooltip
+										label="Status"
+										description="The HTTP status code to return."
+										example="200"
+									/>
+								</Label>
+								<Input
+									type="number"
+									{...form.register('responseStatus')}
+									className="h-9"
+								/>
+								{form.formState.errors.responseStatus && (
+									<p className="text-destructive text-xs">
+										{form.formState.errors.responseStatus.message}
+									</p>
+								)}
+							</div>
+							<div className="md:col-span-10 space-y-3">
+								<div className="flex items-center justify-between">
+									<Label className="flex items-center gap-2">
+										Response Body (JSON)
+										<FieldTooltip
+											label="Response Body"
+											description="The JSON or text to return. Use {{ interpolation }} to inject dynamic data from state, DB, or request."
+											example='{ "user": "{{ state.username }}" }'
+											docsLink="/docs/workflows#interpolation"
+										/>
+									</Label>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												className="h-6 gap-1 text-xs"
+											>
+												<Braces className="h-3 w-3" />
+												Insert Var
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem
+												onClick={() =>
+													insertVariable('responseBody', '{{ db.items }}')
+												}
+											>
+												All Items (DB)
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() =>
+													insertVariable('responseBody', '{{ state.token }}')
+												}
+											>
+												State Token
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() =>
+													insertVariable(
+														'responseBody',
+														'{{ input.body.name }}',
+													)
+												}
+											>
+												Echo Name
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
 											<Button
@@ -676,325 +966,60 @@ export function TransitionDialog({
 										</DropdownMenuTrigger>
 										<DropdownMenuContent align="end">
 											<DropdownMenuItem
-												onClick={() => insertConditionExample('loggedIn')}
+												onClick={() => setResponseExample('successUser')}
 											>
-												Logged-in guard
+												Success + state user
 											</DropdownMenuItem>
 											<DropdownMenuItem
-												onClick={() => insertConditionExample('queryPage')}
+												onClick={() => setResponseExample('usersTable')}
 											>
-												Pagination guard
+												Return users table
 											</DropdownMenuItem>
 											<DropdownMenuItem
-												onClick={() => insertConditionExample('headerAuth')}
+												onClick={() => setResponseExample('echoName')}
 											>
-												Require Authorization header
+												Echo name from body
 											</DropdownMenuItem>
 											<DropdownMenuItem
-												onClick={() => insertConditionExample('paramEq')}
+												onClick={() => setResponseExample('cartCount')}
 											>
-												Param equals (id)
+												Cart count
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() => setResponseExample('paramIdResponse')}
+											>
+												Return param id
 											</DropdownMenuItem>
 										</DropdownMenuContent>
 									</DropdownMenu>
 								</div>
-							</div>
-
-							{useConditionBuilder ? (
-								<div className="space-y-3 border rounded-md p-4 bg-muted/10">
-									{conditionsList.map((cond, idx) => (
-										<div
-											key={`cond-${idx + cond.type}`}
-											className="grid grid-cols-12 gap-3 items-center"
-										>
-											<Input
-												placeholder="Field (e.g. input.body.id)"
-												className="col-span-5 h-9 text-xs font-mono"
-												value={cond.field}
-												onChange={(e) =>
-													updateCondition(idx, 'field', e.target.value)
-												}
-											/>
-											<Select
-												value={cond.type}
-												onValueChange={(v) => updateCondition(idx, 'type', v)}
-											>
-												<SelectTrigger className="col-span-2 h-9 w-full text-xs">
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="eq">==</SelectItem>
-													<SelectItem value="neq">!=</SelectItem>
-													<SelectItem value="gt">&gt;</SelectItem>
-													<SelectItem value="lt">&lt;</SelectItem>
-													<SelectItem value="exists">Exists</SelectItem>
-													<SelectItem value="contains">In</SelectItem>
-												</SelectContent>
-											</Select>
-											{cond.type !== 'exists' && (
-												<Input
-													placeholder="Value"
-													className="col-span-4 h-9 text-xs"
-													value={cond.value}
-													onChange={(e) =>
-														updateCondition(idx, 'value', e.target.value)
-													}
-												/>
-											)}
-											<Button
-												type="button"
-												variant="ghost"
-												size="icon"
-												className="col-span-1 h-9 w-9 justify-self-end text-muted-foreground hover:text-destructive"
-												onClick={() => removeCondition(idx)}
-											>
-												<X className="h-3 w-3" />
-											</Button>
-										</div>
-									))}
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										className="w-full text-xs h-9 border-dashed"
-										onClick={addCondition}
-									>
-										<Plus className="h-3 w-3 mr-1" /> Add Rule
-									</Button>
-								</div>
-							) : (
-								<>
-									<Textarea
-										{...form.register('conditions')}
-										className="font-mono text-xs"
-										rows={8}
-									/>
-									{form.formState.errors.conditions && (
-										<p className="text-destructive text-xs">
-											{String(form.formState.errors.conditions.message)}
-										</p>
-									)}
-								</>
-							)}
-						</div>
-
-						{/* Effects Builder */}
-						<div className="border rounded-md p-4 bg-muted/10 w-full">
-							<div className="flex items-center justify-between mb-4">
-								<Label className="flex items-center gap-2">
-									Effects
-									<FieldTooltip
-										label="Effects"
-										description="Actions to modify state or database when this transition fires."
-										example='[{"type":"state.set", "raw":{"isLoggedIn":true}}]'
-										docsLink="/docs/workflows#effects"
-									/>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										className="h-5 px-2 text-[10px] text-muted-foreground bg-muted/50 hover:bg-muted"
-										onClick={() => setUseEffectsBuilder(!useEffectsBuilder)}
-									>
-										{useEffectsBuilder ? 'Switch to JSON' : 'Switch to Builder'}
-									</Button>
-								</Label>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											type="button"
-											variant="ghost"
-											size="sm"
-											className="h-6 text-xs"
-										>
-											Load Example
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() => addEffectExample('stateLogin')}
-										>
-											Set login state
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => addEffectExample('pushUsers')}
-										>
-											Push body to users
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => addEffectExample('updateUser')}
-										>
-											Update user by param
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => addEffectExample('removeCartBySku')}
-										>
-											Remove cart by sku
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</div>
-
-							{useEffectsBuilder ? (
-								<EffectsEditor
-									effects={effectsList}
-									onChange={setEffectsList}
-								/>
-							) : (
 								<Textarea
-									value={JSON.stringify(effectsList, null, 2)}
-									onChange={(e) => {
-										try {
-											const parsed = JSON.parse(e.target.value);
-											if (Array.isArray(parsed)) {
-												setEffectsList(parsed);
-											}
-										} catch {
-											// If JSON is invalid, we won't update the state
-											// But we should allow the user to continue typing
-										}
-									}}
-									className="font-mono text-xs"
-									rows={8}
+									{...form.register('responseBody')}
+									className="font-mono text-xs min-h-52"
+									rows={12}
 								/>
-							)}
-						</div>
-					</div>
-
-					{/* Response */}
-					<div className="grid md:grid-cols-12 gap-x-6 gap-y-4">
-						<div className="md:col-span-2 space-y-3">
-							<Label className="flex items-center gap-2">
-								Status
-								<FieldTooltip
-									label="Status"
-									description="The HTTP status code to return."
-									example="200"
-								/>
-							</Label>
-							<Input
-								type="number"
-								{...form.register('responseStatus')}
-								className="h-9"
-							/>
-							{form.formState.errors.responseStatus && (
-								<p className="text-destructive text-xs">
-									{form.formState.errors.responseStatus.message}
-								</p>
-							)}
-						</div>
-						<div className="md:col-span-10 space-y-3">
-							<div className="flex items-center justify-between">
-								<Label className="flex items-center gap-2">
-									Response Body (JSON)
-									<FieldTooltip
-										label="Response Body"
-										description="The JSON or text to return. Use {{ interpolation }} to inject dynamic data from state, DB, or request."
-										example='{ "user": "{{ state.username }}" }'
-										docsLink="/docs/workflows#interpolation"
-									/>
-								</Label>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											type="button"
-											variant="ghost"
-											size="sm"
-											className="h-6 gap-1 text-xs"
-										>
-											<Braces className="h-3 w-3" />
-											Insert Var
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() =>
-												insertVariable('responseBody', '{{ db.items }}')
-											}
-										>
-											All Items (DB)
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() =>
-												insertVariable('responseBody', '{{ state.token }}')
-											}
-										>
-											State Token
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() =>
-												insertVariable('responseBody', '{{ input.body.name }}')
-											}
-										>
-											Echo Name
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											className="h-6 text-xs"
-										>
-											Examples
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() => setResponseExample('successUser')}
-										>
-											Success + state user
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => setResponseExample('usersTable')}
-										>
-											Return users table
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => setResponseExample('echoName')}
-										>
-											Echo name from body
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => setResponseExample('cartCount')}
-										>
-											Cart count
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() => setResponseExample('paramIdResponse')}
-										>
-											Return param id
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+								{form.formState.errors.responseBody && (
+									<p className="text-destructive text-xs">
+										{form.formState.errors.responseBody.message}
+									</p>
+								)}
 							</div>
-							<Textarea
-								{...form.register('responseBody')}
-								className="font-mono text-xs min-h-52"
-								rows={12}
-							/>
-							{form.formState.errors.responseBody && (
-								<p className="text-destructive text-xs">
-									{form.formState.errors.responseBody.message}
-								</p>
-							)}
 						</div>
-					</div>
 
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={handleClose}>
-							Cancel
-						</Button>
-						<Button type="submit" disabled={isMutating}>
-							{isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							{isEditMode ? 'Save Changes' : 'Create Rule'}
-						</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
+						<DialogFooter>
+							<Button type="button" variant="outline" onClick={handleClose}>
+								Cancel
+							</Button>
+							<Button type="submit" disabled={isMutating}>
+								{isMutating && (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								)}
+								{isEditMode ? 'Save Changes' : 'Create Rule'}
+							</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
 		</TooltipProvider>
 	);
 }

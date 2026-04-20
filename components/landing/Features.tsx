@@ -108,10 +108,7 @@ export function Features() {
 								<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">
 									<feature.icon className="h-6 w-6 text-primary" />
 								</div>
-								<Badge
-									variant="secondary"
-									className="text-xs"
-								>
+								<Badge variant="secondary" className="text-xs">
 									{productLabels[feature.product]}
 								</Badge>
 							</div>

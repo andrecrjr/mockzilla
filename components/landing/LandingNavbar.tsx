@@ -80,6 +80,7 @@ export function LandingNavbar() {
 						</a>
 						<ThemeSwitcher />
 						<button
+							type="button"
 							className="md:hidden p-2 text-foreground/80 hover:text-foreground"
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 						>
@@ -97,27 +98,42 @@ export function LandingNavbar() {
 			{mobileMenuOpen && (
 				<div className="md:hidden border-t border-border">
 					<div className="px-2 pt-2 pb-3 space-y-1">
-						<a
-							href="#features"
-							className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
-							onClick={() => setMobileMenuOpen(false)}
+						<button
+							type="button"
+							className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
+							onClick={() => {
+								document
+									.getElementById('features')
+									?.scrollIntoView({ behavior: 'smooth' });
+								setMobileMenuOpen(false);
+							}}
 						>
 							Features
-						</a>
-						<a
-							href="#server"
-							className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
-							onClick={() => setMobileMenuOpen(false)}
+						</button>
+						<button
+							type="button"
+							className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
+							onClick={() => {
+								document
+									.getElementById('server')
+									?.scrollIntoView({ behavior: 'smooth' });
+								setMobileMenuOpen(false);
+							}}
 						>
 							HTTP Server
-						</a>
-						<a
-							href="#extension"
-							className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
-							onClick={() => setMobileMenuOpen(false)}
+						</button>
+						<button
+							type="button"
+							className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
+							onClick={() => {
+								document
+									.getElementById('extension')
+									?.scrollIntoView({ behavior: 'smooth' });
+								setMobileMenuOpen(false);
+							}}
 						>
 							Chrome Extension
-						</a>
+						</button>
 						<Link
 							href="/docs"
 							className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"

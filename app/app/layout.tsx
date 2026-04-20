@@ -1,10 +1,10 @@
 import { Analytics } from '@vercel/analytics/next';
-import { BookOpen, Home } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
+import { Toaster } from 'sonner';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
-import { Toaster } from 'sonner';
 
 export default function AppLayout({
 	children,

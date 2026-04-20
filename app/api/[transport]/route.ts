@@ -1,6 +1,6 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -12,7 +12,13 @@ import {
 	transitions,
 } from '@/lib/db/schema';
 import { matches } from '@/lib/engine/match';
-import type { Condition, CreateMockRequest, HttpMethod, Scenario, Transition } from '@/lib/types';
+import type {
+	Condition,
+	CreateMockRequest,
+	HttpMethod,
+	Scenario,
+	Transition,
+} from '@/lib/types';
 
 const ListFoldersArgs = z.object({
 	page: z.number().int().min(1).optional(),
@@ -846,7 +852,10 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 		.where(eq(scenarioState.scenarioId, args.scenarioId));
 
 	const baseState = stateRow
-		? (stateRow.data as { state: Record<string, unknown>; tables: Record<string, unknown[]> })
+		? (stateRow.data as {
+				state: Record<string, unknown>;
+				tables: Record<string, unknown[]>;
+			})
 		: { state: {}, tables: {} };
 
 	const exactCandidates = await db
@@ -867,8 +876,19 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 			tables: baseState.tables || {},
 			input: { body, query, params: {}, headers },
 		};
-		if (matches((t.conditions as Record<string, unknown> | Condition[]) || {}, ctx)) {
-			const result = await processWorkflowRequest(t as unknown as Transition, {}, body, query, headers);
+		if (
+			matches(
+				(t.conditions as Record<string, unknown> | Condition[]) || {},
+				ctx,
+			)
+		) {
+			const result = await processWorkflowRequest(
+				t as unknown as Transition,
+				{},
+				body,
+				query,
+				headers,
+			);
 			return {
 				success: true,
 				transitionId: t.id,
@@ -915,7 +935,12 @@ async function callTestWorkflow(args: z.infer<typeof TestWorkflowArgs>) {
 			tables: baseState.tables || {},
 			input: { body, query, params, headers },
 		};
-		if (matches((t.conditions as Record<string, unknown> | Condition[]) || {}, ctx)) {
+		if (
+			matches(
+				(t.conditions as Record<string, unknown> | Condition[]) || {},
+				ctx,
+			)
+		) {
 			const result = await processWorkflowRequest(
 				t as unknown as Transition,
 				params,
@@ -1041,9 +1066,9 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 
 		transitionsList = transitionsData.map((t) => ({
 			...t,
-			conditions: t.conditions as any,
-			effects: t.effects as any,
-			response: t.response as any,
+			conditions: t.conditions as unknown,
+			effects: t.effects as unknown,
+			response: t.response as unknown,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
 		})) as Transition[];
@@ -1058,9 +1083,9 @@ async function callExportWorkflow(args: z.infer<typeof ExportWorkflowArgs>) {
 		const transitionsData = await db.select().from(transitions);
 		transitionsList = transitionsData.map((t) => ({
 			...t,
-			conditions: t.conditions as any,
-			effects: t.effects as any,
-			response: t.response as any,
+			conditions: t.conditions as unknown,
+			effects: t.effects as unknown,
+			response: t.response as unknown,
 			createdAt: t.createdAt.toISOString(),
 			updatedAt: t.updatedAt?.toISOString(),
 		})) as Transition[];
@@ -1153,7 +1178,7 @@ async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 
 const server = new McpServer(
 	{ name: 'Mockzilla', version: '1.0.1' },
-	{ capabilities: { tools: {} } }
+	{ capabilities: { tools: {} } },
 );
 
 server.registerTool(

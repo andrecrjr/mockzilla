@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Ban } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
@@ -38,10 +38,7 @@ export default function ExtensionFolderPage() {
 		name: string;
 		slug: string;
 		meta?: Record<string, unknown>;
-	}>(
-		slug ? `/api/folders?slug=${slug}` : null,
-		fetcher,
-	);
+	}>(slug ? `/api/folders?slug=${slug}` : null, fetcher);
 
 	if (isLoading) {
 		return (
@@ -68,7 +65,8 @@ export default function ExtensionFolderPage() {
 		);
 	}
 
-	const extensionData = (data.meta?.extensionSyncData as { mocks?: ExtensionMock[] }) || {};
+	const extensionData =
+		(data.meta?.extensionSyncData as { mocks?: ExtensionMock[] }) || {};
 	const mocks = extensionData.mocks || [];
 
 	return (
@@ -94,7 +92,7 @@ export default function ExtensionFolderPage() {
 						</span>
 					</div>
 					<p className="mt-1 text-muted-foreground">/{data.slug}</p>
-					
+
 					{/* Metadata Summary Card could go here */}
 				</div>
 
@@ -103,8 +101,8 @@ export default function ExtensionFolderPage() {
 						<h2 className="mb-4 text-2xl font-semibold text-foreground">
 							Synced Mocks
 						</h2>
-						<ExtensionMockTable 
-							mocks={mocks} 
+						<ExtensionMockTable
+							mocks={mocks}
 							folderId={data.id}
 							folderName={data.name}
 							folderSlug={data.slug}
