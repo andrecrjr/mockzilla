@@ -1,0 +1,79 @@
+---
+title: AI Integration (MCP)
+description: Let your AI assistant (Cursor, Claude) build your mocks for you.
+---
+
+# AI Integration (MCP)
+
+Mockzilla is built for the era of AI. It supports the **Model Context Protocol (MCP)**, which means you can give your AI agent (like Cursor or Claude Desktop) direct access to your Mockzilla server.
+---
+
+## 🤖 AI-First: Agent Skills
+While raw MCP tools are powerful, you can supercharge your AI agent with specialized **Mockzilla Skills**. These are expert instruction sets that teach your agent exactly how to follow our best practices for spec-driven development.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">Install Skills from GitHub</CardTitle>
+      <CardDescription>If you are using the Gemini CLI, you can install these skills directly from our repository.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Mock Maker Skill:</p>
+      <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
+        gemini skills install https://github.com/andrecrjr/mockzilla.git --path .agent/skills/mockzilla-mock-maker
+      </div>
+    </div>
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Workflow Architect Skill:</p>
+      <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
+        gemini skills install https://github.com/andrecrjr/mockzilla.git --path .agent/skills/mockzilla-workflow-architect
+      </div>
+    </div>
+    <Link href="/docs/getting-started/installing-skills">
+      <Button variant="link" className="p-0 h-auto text-sm text-blue-500">View Installation Guide →</Button>
+    </Link>
+  </CardContent>
+</Card>
+
+---
+
+## Why use Mockzilla with AI?
+
+Instead of clicking through the dashboard yourself, you can just **ask your assistant**:
+
+- **"Create a new mock for /api/products."**
+- **"Generate a realistic JSON schema for an e-commerce order."**
+- **"Test the /users endpoint and tell me if it matches the schema."**
+- **"Build a checkout workflow that updates the inventory table."**
+
+---
+
+## Quick Connection
+
+### 1. Cursor
+Go to **Settings > Models > MCP** and add this URL:
+
+```
+http://localhost:36666/api/mcp
+```
+
+### 2. Claude Desktop
+Add Mockzilla to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mockzilla": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:36666/api/mcp"]
+    }
+  }
+}
+```
+
+> **Pro Tip:** Ask your AI assistant to design the perfect API response while you focus on building the UI. It's like having a backend engineer built into your editor!

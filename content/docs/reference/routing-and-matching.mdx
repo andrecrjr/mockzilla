@@ -1,0 +1,63 @@
+---
+title: Routing & Matching Reference
+description: Control how Mockzilla maps requests to your mocks.
+---
+
+# Routing & Matching Reference
+
+Mockzilla's routing engine gives you full control over how your incoming requests match your mocks. This means you can create multiple responses for the same path based on URL segments or query parameters.
+
+## Path Matching Strategies
+
+| Strategy | Description | Best Use Case |
+|----------|-------------|---------------|
+| **Exact** | Path must match character-for-character. | Static routes: `/login`, `/profile`. |
+| **Wildcard** | Use `*` to capture dynamic URL segments. | Routes with IDs: `/users/*`, `/posts/*/comments`. |
+| **Substring** | Matches if the mock path is contained anywhere in the URL. | General prefixes: `/api/v1` to catch everything under it. |
+
+---
+
+## Wildcard Variants
+
+With **Wildcard Match Type**, you can return different data for different captured segments.
+
+### Single Wildcard
+On `/users/*`:
+- **Key**: `1` -> Returns Gold Member profile.
+- **Key**: `2` -> Returns Basic Member profile.
+- **Key**: `*` -> Returns a default 404 or Generic User.
+
+### Multiple Wildcards
+If you use multiple `*`, the **Variant Key** is formed by joining captured segments with a **pipe (`|`)**.
+
+**Example Pattern:** `/api/users/*/orders/*`
+
+| Request Path | Captured Segments | Variant Key to Use |
+|--------------|-------------------|--------------------|
+| `/api/users/123/orders/456` | `123`, `456` | `123|456` |
+| `/api/users/alice/orders/latest` | `alice`, `latest` | `alice|latest` |
+
+---
+
+## Matching by Query Parameters
+
+You can enforce strict matching based on the **Query String**.
+
+1. In **Advanced Options**, add a **Key** (e.g., `role`) and a **Value** (e.g., `admin`).
+2. Mockzilla will only serve this mock if the incoming URL includes `?role=admin`.
+3. You can stack multiple parameters for complex test cases (e.g., `?role=admin&beta=true`).
+
+---
+
+## Strategy Precedence
+
+If multiple mocks could match a single request, Mockzilla follows this precedence:
+1.  **Exact** (Highest priority)
+2.  **Wildcard**
+3.  **Substring** (Lowest priority)
+
+---
+
+## FAQ: Handling URL Overlap
+- **Scenario**: I have `/users/admin` (Exact) and `/users/*` (Wildcard). 
+- **Answer**: Mockzilla will always pick the **Exact** match first. Only if the path is not "admin" (e.g., `/users/123`) will it move to the Wildcard match.

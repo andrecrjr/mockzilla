@@ -59,7 +59,13 @@ export async function POST(
 				scenarioId: scenario,
 				data: initialState
 			})
-			.onConflictDoNothing();
+			.onConflictDoUpdate({
+				target: scenarioState.scenarioId,
+				set: {
+					data: initialState,
+					updatedAt: new Date()
+				}
+			});
 
 		return NextResponse.json({
 			success: true,

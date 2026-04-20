@@ -1,0 +1,175 @@
+---
+title: "Building a Stateful Auth Flow"
+description: Learn how to simulate login, persistent sessions, and protected routes using Mockzilla Workflows.
+---
+
+# Tutorial: Building a Stateful Auth Flow
+
+In this tutorial, you will build a realistic authentication simulation. Unlike static mocks, Mockzilla Workflows can **remember** if a user has logged in, allowing you to test protected routes and session expiration logic in your frontend.
+
+## What You'll Learn
+- How to store data in the **Scenario State**.
+- How to use **Conditions** to protect routes.
+- How to use **Faker.js** to generate dynamic tokens.
+- How to personalize responses based on state.
+
+---
+
+## Step 1: Initialize the Scenario
+1.  Navigate to the **Workflows** tab in the Mockzilla Dashboard.
+2.  Click **Create Scenario** and name it `auth-demo`.
+3.  Note your Execution URL: `http://localhost:36666/api/workflow/exec/auth-demo/`
+
+---
+
+## Step 2: Create the Login Endpoint
+We need an endpoint that accepts credentials and "sets" a session token in our state.
+
+1.  Click **Add Transition**.
+2.  **Name**: `User Login`
+3.  **Path**: `/login`
+4.  **Method**: `POST`
+5.  **Effects**: Add a `state.set` effect.
+    - **Key**: `token`
+    - **Value**: `{{faker.string.alphanumeric(32)}}`
+    - *Also add another `state.set` for the username:*
+    - **Key**: `currentUser`
+    - **Value**: `{{input.body.username}}`
+6.  **Response**:
+    ```json
+    {
+      "success": true,
+      "token": "{{state.token}}",
+      "user": {
+        "name": "{{state.currentUser}}",
+        "lastLogin": "{{faker.date.recent()}}"
+      }
+    }
+    ```
+
+---
+
+## Step 3: Protect the Profile Route
+Now, let's create a `/profile` endpoint that **only** responds if the correct token is provided in the `Authorization` header.
+
+1.  Click **Add Transition**.
+2.  **Name**: `Get User Profile`
+3.  **Path**: `/profile`
+4.  **Method**: `GET`
+5.  **Condition**: This is the secret sauce.
+    - **Selector**: `input.headers.authorization`
+    - **Operator**: `==`
+    - **Value**: `Bearer {{state.token}}`
+6.  **Response**:
+    ```json
+    {
+      "id": "{{faker.string.uuid()}}",
+      "username": "{{state.currentUser}}",
+      "email": "{{faker.internet.email()}}",
+      "roles": ["user", "beta-tester"]
+    }
+    ```
+
+---
+
+## Step 4: Handle "Unauthorized" Errors
+If the token doesn't match, we want a helpful error instead of a generic 404.
+
+1.  Click **Add Transition**.
+2.  **Name**: `Unauthorized Access`
+3.  **Path**: `/profile`
+4.  **Method**: `GET`
+5.  **Condition**: (Leave empty - it will catch anything the previous transition missed).
+6.  **Response**:
+    - **Status Code**: `401`
+    - **Body**:
+      ```json
+      { "error": "Unauthorized", "message": "Valid session token required" }
+      ```
+
+---
+
+## Step 5: Failed Login Lockout (Advanced)
+Let's add logic to "lock" an account after 3 failed attempts. This uses **Arithmetic** to increment a counter and **Conditions** to branch logic.
+
+1.  Click **Add Transition**.
+2.  **Name**: `Login Failed`
+3.  **Path**: `/login`
+4.  **Method**: `POST`
+5.  **Condition**: `input.body.password != "password123"`
+6.  **Effects**: `state.set`
+    - **Key**: `login_attempts`
+    - **Value**: `{{state.login_attempts + 1}}`
+7.  **Response**:
+    ```json
+    { "error": "Invalid credentials", "attempts": "{{state.login_attempts}}" }
+    ```
+
+8.  Click **Add Transition** (and move it to the top of the list).
+9.  **Name**: `Account Locked`
+10. **Path**: `/login`
+11. **Method**: `POST`
+12. **Condition**: `state.login_attempts >= 3`
+13. **Response**:
+    - **Status Code**: `423` (Locked)
+    - **Body**: `{ "error": "Account locked due to 3+ failed attempts." }`
+
+---
+
+## Step 6: Test the Flow
+
+### 1. Attempt unauthorized access
+```bash
+curl -i http://localhost:36666/api/workflow/exec/auth-demo/profile
+```
+**Result**: `401 Unauthorized`.
+
+### 2. Login to generate a session
+```bash
+curl -X POST http://localhost:36666/api/workflow/exec/auth-demo/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "Alice", "password": "password123"}'
+```
+**Result**: You'll get a JSON response with a random token. **Copy that token.**
+
+### 3. Access profile with your token
+Replace `YOUR_TOKEN` with the one from the previous step:
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:36666/api/workflow/exec/auth-demo/profile
+```
+**Result**: `200 OK` with Alice's profile data!
+
+---
+
+## 🤖 AI-First: Agent Instructions
+Building stateful workflows is a **spec-driven** process. Instead of manually creating each transition, let an AI agent (like Cursor or Claude via MCP) design the full state machine based on your existing API spec or logic requirements.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Instruct your AI agent to build a robust auth flow using Mockzilla's workflow engine.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm">
+      "Use **mockzilla-workflow-architect** to build a secure auth flow for my `auth-demo` scenario. It should have a `/login` POST that generates a token, a protected `/profile` GET using header validation, and an account lockout mechanism after 3 failed attempts."
+    </p>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: You can even paste your production auth service code and ask the AI to "mirror it with Mockzilla."
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## Summary
+You've built a secure-feeling API simulation! This allows your frontend to handle login forms, local storage of tokens, and "access denied" states with zero backend code.
+
+### Next Steps
+- Try adding a `POST /logout` transition that uses `state.set` to clear the `token`.
+- Add a "Lockout" state that increments a counter on failed login attempts.

@@ -1,37 +1,7 @@
-
 import type { Effect, MatchContext } from './match';
-import { resolvePath } from '../utils/path-resolver';
+import { interpolate } from './interpolation';
 
-/**
- * Interpolates a string value using context.
- * e.g. "{{input.sku}}" -> "SKU_123"
- * Now supports array access: "{{input.items[0].id}}"
- */
-function interpolate(value: unknown, context: MatchContext): unknown {
-	if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-		let path = value.slice(2, -2).trim();
-		// Support "db" -> "tables" alias
-		if (path.startsWith('db.') || path === 'db') {
-			path = path.replace(/^db/, 'tables');
-		}
-		return resolvePath(path, context);
-	}
-	// Deep interpolation for objects
-	if (typeof value === 'object' && value !== null) {
-		if (Array.isArray(value)) {
-			return value.map((v) => interpolate(v, context));
-		}
-		const result: Record<string, unknown> = {};
-		for (const k in value) {
-			if (Object.prototype.hasOwnProperty.call(value, k)) {
-				result[k] = interpolate((value as Record<string, unknown>)[k], context);
-			}
-		}
-		return result;
-	}
-	return value;
-}
-
+export { interpolate };
 
 export function applyEffects(
 	effects: Record<string, unknown> | Effect[],
@@ -40,12 +10,9 @@ export function applyEffects(
 	const effectsList: Effect[] = Array.isArray(effects)
 		? effects
 		: Object.entries(effects).map(([k, v]): Effect => {
-				// Convert simple map syntax to strictly typed effects if possible
-				// Case: "$db.cartItems.push": { ... }
 				if (k.startsWith('$')) {
 					const parts = k.substring(1).split('.');
 					if (parts[0] === 'state' && parts[1] === 'set') {
-						// "$state.set": { "key": "val" } -> multiple sets
 						return { type: 'state.set', raw: v as Record<string, unknown> };
 					}
 					if (parts[0] === 'db' && parts[2] === 'push') {

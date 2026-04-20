@@ -1,8 +1,8 @@
 export default {
-  index: "Quick Start",
-  routing: "Routing & Matching",
-  "dynamic-data": "Dynamic Data Generation",
-  workflows: "Stateful Workflows",
-  mcp: "AI Integration (MCP)",
-  extension: "Extension Sync",
+  index: "Introduction",
+  "getting-started": "Getting Started",
+  concepts: "Concepts",
+  guides: "How-To Guides",
+  reference: "Reference",
+  tutorials: "Tutorials",
 };

@@ -2,6 +2,13 @@ import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
 
 jsf.extend('faker', () => faker);
+jsf.extend('x-faker', () => faker);
+
+const DEFAULT_MAX_ITEMS = 1000;
+const envMaxItems = process.env.MOCKZILLA_MAX_ITEMS
+	? parseInt(process.env.MOCKZILLA_MAX_ITEMS, 10)
+	: DEFAULT_MAX_ITEMS;
+const MAX_ITEMS = isNaN(envMaxItems) ? DEFAULT_MAX_ITEMS : envMaxItems;
 
 jsf.option({
 	alwaysFakeOptionals: true,
@@ -9,95 +16,19 @@ jsf.option({
 	useExamplesValue: true,
 	fixedProbabilities: true,
 	minItems: 1,
-	maxItems: 5,
+	maxItems: MAX_ITEMS,
+	fillProperties: false,
 });
 
 import { resolvePath } from './utils/path-resolver';
+import { interpolate } from './engine/interpolation';
 
 
 /**
- * Deep traverses the generated object and applies template replacement
- * This is a second-pass traversal that resolves all {$.path} references
- *
- * @param rootData - The complete generated object
- * @param currentData - Current node being processed
- * @param visited - Set to track visited objects (prevent circular refs)
- * @returns Processed data with all templates resolved
+ * Applies template replacement to a string or object using provided context
  */
-function deepReplaceTemplates(
-	rootData: any,
-	currentData: any = rootData,
-	visited = new WeakSet(),
-): any {
-	// Prevent circular reference infinite loops
-	if (currentData && typeof currentData === 'object') {
-		if (visited.has(currentData)) {
-			return currentData;
-		}
-		visited.add(currentData);
-	}
-
-	if (typeof currentData === 'string') {
-		// Replace template syntax: {$.field} or {{$.field}}
-		return currentData.replace(/\{\{?\$\.([\w.[\]]+)\}?\}/g, (match, path) => {
-			const value = resolvePath('$.' + path, rootData);
-
-			if (value === undefined) {
-				console.warn(
-					`[schema-generator] Template reference '${match}' could not be resolved`,
-				);
-				return match;
-			}
-
-			return String(value);
-		});
-	} else if (Array.isArray(currentData)) {
-		return currentData.map((item) =>
-			deepReplaceTemplates(rootData, item, visited),
-		);
-	} else if (currentData && typeof currentData === 'object') {
-		const processed: any = {};
-		for (const key in currentData) {
-			if (Object.hasOwn(currentData, key)) {
-				processed[key] = deepReplaceTemplates(
-					rootData,
-					currentData[key],
-					visited,
-				);
-			}
-		}
-		return processed;
-	}
-
-	return currentData;
-}
-
-/**
- * Validates if a string is valid JSON Schema
- */
-export function validateSchema(schemaString: string): {
-	valid: boolean;
-	error?: string;
-} {
-	try {
-		const schema = JSON.parse(schemaString);
-
-		// Basic validation - check if it has type or properties
-		if (!schema.type && !schema.properties && !schema.$ref) {
-			return {
-				valid: false,
-				error:
-					"Schema must have at least a 'type', 'properties', or '$ref' field",
-			};
-		}
-
-		return { valid: true };
-	} catch (error) {
-		return {
-			valid: false,
-			error: error instanceof Error ? error.message : 'Invalid JSON',
-		};
-	}
+export function replaceTemplates(data: any, context: any = {}): any {
+	return interpolate(data, context);
 }
 
 /**
@@ -107,10 +38,18 @@ export function validateSchema(schemaString: string): {
  * @param schema - JSON Schema object
  * @returns JSON string with generated data
  */
-export function generateFromSchema(schema: object): string {
+export function generateFromSchema(schema: object, context: any = {}): string {
 	try {
 		const generated = jsf.generate(schema);
-		const processed = deepReplaceTemplates(generated);
+		
+		// Merge generated data with context for template resolution
+		// The context (e.g. request query params) takes precedence if there are naming collisions
+		const rootData = { 
+			...generated,
+			...context 
+		};
+		
+		const processed = interpolate(generated, rootData);
 
 		return JSON.stringify(processed, null, 2);
 	} catch (error) {
@@ -148,6 +87,34 @@ function preprocessSchema(schema: any, visited = new WeakSet()): any {
 	}
 
 	return schema;
+}
+
+/**
+ * Validates if a string is valid JSON Schema
+ */
+export function validateSchema(schemaString: string): {
+	valid: boolean;
+	error?: string;
+} {
+	try {
+		const schema = JSON.parse(schemaString);
+
+		// Basic validation - check if it has type or properties
+		if (!schema.type && !schema.properties && !schema.$ref) {
+			return {
+				valid: false,
+				error:
+					"Schema must have at least a 'type', 'properties', or '$ref' field",
+			};
+		}
+
+		return { valid: true };
+	} catch (error) {
+		return {
+			valid: false,
+			error: error instanceof Error ? error.message : 'Invalid JSON',
+		};
+	}
 }
 
 /**

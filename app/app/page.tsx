@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { CreateFolderDialog } from '@/components/create-folder-dialog';
+import { OpenApiImportDialog } from '@/components/openapi-import-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
 // import { FolderForm } from '@/components/folder-form'; // Removed
 import { PaginationControls } from '@/components/pagination-controls';
@@ -206,6 +207,12 @@ export default function MockzillaAdmin() {
 									<Upload className="mr-2 h-4 w-4" />
 									Import
 								</Button>
+								<OpenApiImportDialog 
+									onSuccess={() => {
+										mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
+										mutate('/api/folders?all=true');
+									}}
+								/>
 								<input
 									ref={fileInputRef}
 									type="file"

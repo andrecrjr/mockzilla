@@ -80,6 +80,17 @@ Fetches all enabled mocks for the folder and method, then evaluates them using t
 2. **Find best match**: Uses `findBestMatch()` to score and rank candidates
 3. **Select variant**: For wildcard mocks, selects the appropriate variant if configured
 
+#### Variant Selection for Wildcards
+
+For mocks using `matchType: 'wildcard'`, Mockzilla supports multiple response variants based on the captured wildcard value:
+
+1. **Extract Key**: The captured wildcard segment(s) are joined by `|` to form a key (e.g., `/users/123` matches `/users/*` with key `123`).
+2. **Match Variant**: 
+   - Tries to find a variant with an exact match for the key.
+   - Falls back to a variant with key `*` (catch-all) if available.
+3. **Override Response**: If a variant is matched, its `body`, `statusCode`, and `bodyType` override the default mock configuration. 
+   - **Note**: When a variant is matched, `useDynamicResponse` is automatically disabled for that request to ensure the variant's static body is returned.
+
 **Match types supported:**
 - `exact`: Path must match exactly
 - `wildcard`: Use `*` as wildcard (e.g., `/users/*`)

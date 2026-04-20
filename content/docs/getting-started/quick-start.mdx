@@ -1,0 +1,111 @@
+---
+title: Quick Start
+description: Get Mockzilla up and running in under 5 minutes.
+---
+
+# Quick Start
+
+Let's get you from "zero" to your first mocked API in under 5 minutes.
+
+---
+
+## 1. Choose Your Entry Point
+Mockzilla offers two ways to interact with your API traffic.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+  <Card className="border-primary/20">
+    <CardHeader>
+      <Zap className="w-6 h-6 text-primary mb-2" />
+      <CardTitle className="text-lg">Docker Server (Dashboard)</CardTitle>
+      <CardDescription>Perfect for teams. Provides the UI to manage all folders and mocks.</CardDescription>
+      <div className="mt-4 p-2 bg-muted rounded font-mono text-xs">
+        docker run -d -p 36666:36666 andrecrjr/mockzilla
+      </div>
+    </CardHeader>
+  </Card>
+
+  <Card className="border-primary/20">
+    <CardHeader>
+      <Globe className="w-6 h-6 text-primary mb-2" />
+      <CardTitle className="text-lg">Chrome Extension</CardTitle>
+      <CardDescription>Capture real traffic from your browser without changing any code.</CardDescription>
+      <div className="mt-4">
+        <a href="https://chromewebstore.google.com/detail/gpbfcijfelgnaabjodgifeopbmnbjpnk/preview" target="_blank" className="text-sm font-medium text-primary hover:underline">Install from Web Store →</a>
+      </div>
+    </CardHeader>
+  </Card>
+</div>
+
+---
+
+## 2. Your First Mock in 3 Steps
+
+### <Badge>Step 1</Badge> Create a Folder
+Folders are how you group related endpoints. Click **New Folder** on the dashboard and name it `my-api`.
+
+### <Badge>Step 2</Badge> Add an Endpoint
+Inside your folder, click **Create Mock**:
+- **Path**: `/hello`
+- **Response**: `{"message": "Welcome to Mockzilla!"}`
+- **Status**: `200 OK`
+
+### <Badge>Step 3</Badge> Call It
+Every folder has a "Serve URL" prefix. Open this in your browser:
+`http://localhost:36666/api/mock/my-api/hello`
+
+<Terminal className="inline-block w-4 h-4 mr-2" /> **Or use cURL:**
+```bash
+curl http://localhost:36666/api/mock/my-api/hello
+```
+
+---
+
+## 🤖 AI-First: Agent Instructions
+While manual creation is great for a single endpoint, Mockzilla is designed to be **AI-First**. If you have an existing OpenAPI spec or a JSON sample, let an AI agent (like Cursor or Claude via MCP) bootstrap your entire API in seconds.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Paste this command into your AI chat to instantly create your first folder and mock.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm">
+      "Use **mockzilla-mock-maker** to create a folder called `my-api` and add a GET endpoint `/hello` that returns a JSON message: 'Welcome to Mockzilla!'"
+    </p>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: You can also say "Refactor this mock to use a realistic JSON Schema."
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## Next Steps
+Now that you've served a basic mock, it's time to see the true power of Mockzilla.
+
+<div className="grid grid-cols-1 gap-4 mt-8">
+  <Link href="/docs/getting-started/end-to-end-journey" className="no-underline">
+    <Card className="hover:bg-muted/50 transition-colors cursor-pointer group">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <Layout className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+        <div>
+          <CardTitle className="text-lg">The End-to-End Journey</CardTitle>
+          <CardDescription>Learn how to scale from static mocks to stateful AI-driven simulations.</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  </Link>
+</div>
+
+<Alert className="mt-8 border-yellow-500/50 bg-yellow-500/5">
+  <Zap className="h-4 w-4 text-yellow-500" />
+  <AlertTitle>Mastering Workflows</AlertTitle>
+  <AlertDescription>
+    Want your mocks to "remember" actions? Check out the [Stateful Workflows tutorial](/docs/tutorials/stateful-authentication).
+  </AlertDescription>
+</Alert>

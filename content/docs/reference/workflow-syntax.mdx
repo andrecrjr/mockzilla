@@ -1,0 +1,62 @@
+---
+title: Workflow Syntax Reference
+description: Complete reference for transitions, conditions, and effects in Mockzilla.
+---
+
+# Workflow Syntax Reference
+
+A **Transition** is a rule that defines how Mockzilla should react to a request in **Workflow Mode**.
+
+---
+
+## 1. Conditions
+Conditions determine whether a transition is triggered for a given request.
+
+| Property | Description |
+|----------|-------------|
+| **Selector** | A JSON path to the value you want to check (e.g., `input.body.id`, `state.token`). |
+| **Operator** | `eq` (==), `neq` (!=), `gt`, `lt`, `exists`, `contains`. |
+| **Value** | The value to compare against (supports interpolation with `{{ }}`). |
+
+---
+
+## 2. Effects
+Effects are actions that modify the **State** or **Mini-DB** when a transition fires.
+
+| Effect | Description |
+|--------|-------------|
+| `state.set` | Sets a key in the session state to a value. |
+| `db.push` | Appends a value to an array in the mini-DB. |
+| `db.update` | Modifies existing objects in a mini-DB array. |
+| `db.remove` | Removes objects from a mini-DB array. |
+
+---
+
+## 3. The Mini-DB (`db`)
+The **Mini-DB** is a simple JSON store. Each Scenario has its own isolated database.
+
+### Accessing Database Values:
+- **Entire Table**: `{{db.tableName}}`
+- **Table Length**: `{{db.tableName.length}}`
+- **First Item**: `{{db.tableName[0]}}`
+
+---
+
+## 4. Interpolation Reference
+Inject dynamic values into your **Effects** or **Responses**.
+
+| Source | Syntax | Description |
+|--------|--------|-------------|
+| **Input Body** | `{{input.body.id}}` | Value from the request JSON body. |
+| **URL Params** | `{{input.params.id}}` | Value from a path segment (e.g., `:id`). |
+| **URL Query** | `{{input.query.q}}` | Value from a query string parameter. |
+| **Headers** | `{{input.headers.auth}}`| Value from an HTTP header. |
+| **State** | `{{state.token}}` | Value stored in the session state. |
+| **Database** | `{{db.users}}` | Values from the mini-DB. |
+
+---
+
+## 5. Decision Rules
+1.  **Isolated Scenarios**: Each scenario is its own sandbox. State in `auth-test` is not accessible in `my-store`.
+2.  **Order Matters**: If multiple transitions match a request, the **first one** in the list (ordered in the UI) will fire.
+3.  **Default Match**: If no transitions match, Mockzilla returns a 404.

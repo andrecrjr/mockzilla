@@ -1,6 +1,6 @@
-import { MDXRemote, type MDXRemoteProps } from 'next-mdx-remote/rsc';
-import { notFound } from 'next/navigation';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import { notFound, redirect } from 'next/navigation';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import remarkGfm from 'remark-gfm';
@@ -10,28 +10,42 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content/docs');
-const META_FILE = path.join(CONTENT_DIR, '_meta.js');
 
 // Re-export buildSidebar for use in layout
 export { buildSidebar };
 
-interface MetaEntry {
+export interface MetaEntry {
   slug: string;
   title: string;
-  order: number;
+  isSection?: boolean;
 }
 
-function parseMetaFile(): Record<string, { title: string; order: number }> {
+function parseMetaFile(dir: string): Record<string, { title?: string; hidden?: boolean }> {
+  const metaFile = path.join(dir, '_meta.js');
   try {
-    const content = readFileSync(META_FILE, 'utf-8');
-    // Extract key-value pairs from the JS object
-    const entries: Record<string, { title: string; order: number }> = {};
-    let order = 0;
-    // Match both quoted and unquoted keys: index: "Overview" or "wildcard-variants": "Wildcard"
-    const regex = /['"]?(\w[\w-]*)['"]?\s*:\s*['"]([^'"]+)['"]/g;
+    if (!existsSync(metaFile)) return {};
+    const content = readFileSync(metaFile, 'utf-8');
+    const entries: Record<string, { title?: string; hidden?: boolean }> = {};
+    
+    // Regex to capture keys and their string or object values in the order they appear
+    const regex = /['"]?([\w-]+)['"]?\s*:\s*({[\s\S]*?}|['"][^'"]+['"])/g;
     let match;
     while ((match = regex.exec(content)) !== null) {
-      entries[match[1]] = { title: match[2], order: order++ };
+      const key = match[1];
+      const val = match[2];
+      
+      let title: string | undefined;
+      let hidden = false;
+      
+      if (val.startsWith('{')) {
+        const titleMatch = /title\s*:\s*['"]([^'"]+)['"]/.exec(val);
+        if (titleMatch) title = titleMatch[1];
+        if (/display\s*:\s*['"]hidden['"]/.test(val)) hidden = true;
+      } else {
+        title = val.replace(/['"]/g, '');
+      }
+      
+      entries[key] = { title, hidden };
     }
     return entries;
   } catch {
@@ -39,51 +53,104 @@ function parseMetaFile(): Record<string, { title: string; order: number }> {
   }
 }
 
-function getMdxFiles(dir: string): string[] {
-  const files: string[] = [];
-  for (const file of readdirSync(dir)) {
-    const fullPath = path.join(dir, file);
-    if (statSync(fullPath).isDirectory()) continue;
-    if (file.endsWith('.mdx') && !file.startsWith('_meta')) {
-      files.push(file.replace('.mdx', ''));
+function buildSidebar(dir: string = CONTENT_DIR, base: string = ''): MetaEntry[] {
+  const meta = parseMetaFile(dir);
+  const entries: MetaEntry[] = [];
+  const metaKeys = Object.keys(meta);
+  
+  // Follow the order in _meta.js
+  for (const key of metaKeys) {
+    const metaEntry = meta[key];
+    if (metaEntry.hidden) continue;
+    
+    const slug = base ? `${base}/${key}` : key;
+    const fullPath = path.join(dir, key);
+    
+    // Check if it's an MDX file
+    if (existsSync(`${fullPath}.mdx`)) {
+      entries.push({
+        slug,
+        title: metaEntry.title || key.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      });
+    } else if (existsSync(fullPath) && statSync(fullPath).isDirectory()) {
+      // It's a directory, add a section header then recursively add its children
+      entries.push({
+        slug: `section-${slug}`,
+        title: metaEntry.title || key.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        isSection: true
+      });
+      entries.push(...buildSidebar(fullPath, slug));
     }
   }
-  return files;
-}
-
-function buildSidebar(): MetaEntry[] {
-  const files = getMdxFiles(CONTENT_DIR);
-  const meta = parseMetaFile();
-
-  const entries: MetaEntry[] = files.map((slug) => {
-    const metaEntry = meta[slug];
-    if (metaEntry) {
-      return { slug, title: metaEntry.title, order: metaEntry.order };
+  
+  // Fallback for files not in _meta.js
+  const files = readdirSync(dir);
+  for (const file of files) {
+    if (file.startsWith('_meta') || file === 'index.mdx') continue;
+    const name = file.replace(/\.mdx$/, '');
+    if (metaKeys.includes(name)) continue;
+    
+    const slug = base ? `${base}/${name}` : name;
+    const fullPath = path.join(dir, file);
+    
+    if (file.endsWith('.mdx')) {
+      entries.push({
+        slug,
+        title: name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      });
+    } else if (statSync(fullPath).isDirectory()) {
+      // Only add if we haven't already processed this as a subdirectory from meta
+      if (!entries.some(e => e.slug === `section-${slug}` || e.slug === slug || e.slug.startsWith(`${slug}/`))) {
+         entries.push({
+           slug: `section-${slug}`,
+           title: name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+           isSection: true
+         });
+         entries.push(...buildSidebar(fullPath, slug));
+      }
     }
-    return {
-      slug,
-      title: slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-      order: 999,
-    };
-  });
+  }
 
-  entries.sort((a, b) => a.order - b.order);
   return entries;
 }
 
 export function generateStaticParams() {
-  const files = getMdxFiles(CONTENT_DIR);
-  return files.map(slug => ({
-    mdxPath: slug === 'index' ? [] : slug.split('/'),
+  function getAllFiles(dir: string, base: string = ''): string[] {
+    const files: string[] = [];
+    if (!existsSync(dir)) return [];
+    for (const file of readdirSync(dir)) {
+      const fullPath = path.join(dir, file);
+      if (statSync(fullPath).isDirectory()) {
+        files.push(...getAllFiles(fullPath, base ? `${base}/${file}` : file));
+      } else if (file.endsWith('.mdx')) {
+        const name = file.replace(/\.mdx$/, '');
+        if (name === 'index') {
+          files.push(base || ''); // Empty string for root index, directory name for sub-index
+        } else {
+          files.push(base ? `${base}/${name}` : name);
+        }
+      }
+    }
+    return files;
+  }
+  
+  const allFiles = getAllFiles(CONTENT_DIR);
+  return allFiles.map(slug => ({
+    mdxPath: slug === '' ? [] : slug.split('/'),
   }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ mdxPath?: string[] }> }) {
   const { mdxPath = [] } = await params;
   const slug = mdxPath.length === 0 ? 'index' : mdxPath.join('/');
-  const filePath = path.join(CONTENT_DIR, `${slug}.mdx`);
+
+  let filePath = path.join(CONTENT_DIR, `${slug}.mdx`);
+  if (!existsSync(filePath)) {
+    filePath = path.join(CONTENT_DIR, slug, 'index.mdx');
+  }
 
   try {
+    if (!existsSync(filePath)) throw new Error('File not found');
     const fileContent = readFileSync(filePath, 'utf-8');
     const { data } = matter(fileContent);
     const title = data.title ? `${data.title} | Mockzilla Docs` : 'Mockzilla Documentation';
@@ -96,7 +163,7 @@ export async function generateMetadata({ params }: { params: Promise<{ mdxPath?:
         title,
         description,
         type: 'article',
-        url: `https://mockzilla.dev/docs/${slug === 'index' ? '' : slug}`,
+        url: `https://mockzilla.dev/docs/${mdxPath.join('/')}`,
         images: [
           {
             url: '/mockzilla-logo.png',
@@ -123,16 +190,38 @@ export async function generateMetadata({ params }: { params: Promise<{ mdxPath?:
 export default async function DocPage({ params }: { params: Promise<{ mdxPath?: string[] }> }) {
   const { mdxPath = [] } = await params;
   const slug = mdxPath.length === 0 ? 'index' : mdxPath.join('/');
-  const filePath = path.join(CONTENT_DIR, `${slug}.mdx`);
+
+  let filePath = path.join(CONTENT_DIR, `${slug}.mdx`);
+  let effectiveSlug = slug;
+
+  if (!existsSync(filePath)) {
+    const indexFilePath = path.join(CONTENT_DIR, slug, 'index.mdx');
+    if (existsSync(indexFilePath)) {
+      filePath = indexFilePath;
+    } else if (slug === 'index') {
+      // Root index fallback if index.mdx doesn't exist (though it should now)
+      redirect('/docs/getting-started/quick-start');
+    } else {
+      notFound();
+    }
+  }
 
   try {
     const fileContent = readFileSync(filePath, 'utf-8');
     const { content } = matter(fileContent);
 
     const sidebar = buildSidebar();
-    const currentIndex = sidebar.findIndex(item => item.slug === slug);
-    const prev = currentIndex > 0 ? sidebar[currentIndex - 1] : null;
-    const next = currentIndex < sidebar.length - 1 ? sidebar[currentIndex + 1] : null;
+    const navItems = sidebar.filter(item => !item.isSection);
+    
+    // Normalize slug for sidebar matching: if it's 'index', we might need to match it correctly
+    const matchSlug = slug === 'index' ? '' : slug;
+    const currentIndex = navItems.findIndex(item => {
+      const itemSlug = item.slug === 'index' ? '' : item.slug;
+      return itemSlug === (slug === 'index' ? '' : slug);
+    });
+
+    const prev = currentIndex > 0 ? navItems[currentIndex - 1] : null;
+    const next = currentIndex < navItems.length - 1 ? navItems[currentIndex + 1] : null;
 
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">

@@ -1,0 +1,61 @@
+---
+title: Configuration
+description: Customize Mockzilla via environment variables and Docker settings.
+---
+
+# Configuration
+
+Mockzilla is highly configurable via environment variables. This guide covers the most common settings for development and production.
+
+## Environment Variables
+
+### Core Settings
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | The port Mockzilla runs on inside Docker. | `36666` |
+| `NODE_ENV` | Environment mode (`development` or `production`). | `development` |
+| `DEPLOY_MODE` | Controls available features. `full` enables the complete dashboard. `landing` serves only the marketing page. | `full` |
+| `NEXT_PUBLIC_APP_URL` | The base URL where Mockzilla is hosted. | `http://localhost:36666` |
+| `NEXT_TELEMETRY_DISABLED` | Disables anonymous data collection by Next.js. | `1` |
+
+### Database
+Mockzilla uses PostgreSQL with Drizzle ORM.
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Full PostgreSQL connection string. |
+| `POSTGRES_USER` | Database user (development only). |
+| `POSTGRES_PASSWORD` | Database password (development only). |
+| `POSTGRES_DB` | Database name (development only). |
+
+### Data Generation
+Control how JSON Schema Faker behaves.
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MOCKZILLA_MAX_ITEMS` | Maximum number of items in generated arrays. | `1000` |
+
+### Next.js Specifics
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NEXT_DISABLE_ESLINT` | Skips ESLint checks during the build process to speed up iteration. | `true` |
+
+### Docker Configuration
+Mockzilla is designed to be run with Docker Compose.
+
+```yaml
+# docker-compose.yaml snippet
+services:
+  app:
+    environment:
+      - DATABASE_URL=postgres://mockzilla:password@postgres:5432/mockzilla
+      - NEXT_PUBLIC_APP_URL=http://localhost:36666
+    ports:
+      - "36666:36666"
+```
+
+## Advanced Settings
+
+### CORS Configuration
+Mockzilla handles CORS automatically in `middleware.ts`, allowing all origins in development and restricted origins in production based on `NEXT_PUBLIC_APP_URL`.
+
+### MCP (Model Context Protocol)
+To use Mockzilla with AI agents (like Claude Desktop or Cursor), ensure the MCP endpoint is accessible at `/api/mcp`. No additional configuration is required beyond standard environment setup.

@@ -134,7 +134,36 @@ Mockzilla configures JSF with several default options to ensure high-quality dat
 | `useDefaultValue` | `true` | Uses the `default` keyword if present in the schema. |
 | `useExamplesValue` | `true` | Uses the `examples` keyword if present (picks a random example). |
 | `minItems` | `1` | Forces at least 1 item in arrays if not specified. |
-| `maxItems` | `5` | Limits arrays to 5 items if not specified. **Important**: Requests for `minItems > 5` will be capped at 5 unless the schema generator config is updated. |
+| `maxItems` | `1000` | Limits arrays to 1000 items if not specified. |
+
+---
+
+## Request Context & Interpolation
+
+Mockzilla provides the request context to the schema generator, allowing you to reference request data in your schema templates.
+
+### Referencing Query Parameters
+
+You can access query parameters using the `{$.query.paramName}` syntax.
+
+**Example: Paginated Response echoing query params**
+```json
+{
+  "type": "object",
+  "properties": {
+    "items": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "type": "object", "properties": { "id": { "type": "string", "faker": "string.uuid" } } } },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "page": { "const": "{$.query.page}" },
+        "limit": { "const": "{$.query.limit}" }
+      }
+    }
+  }
+}
+```
+
+When calling `?page=2&limit=50`, the response will echo these values back in the `meta` object.
 
 ---
 

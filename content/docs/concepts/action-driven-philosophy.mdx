@@ -1,0 +1,45 @@
+---
+title: Action-Driven State Philosophy
+description: Understand the paradigm shift from static mocks to stateful API simulations.
+---
+
+# Action-Driven State Philosophy
+
+Stateful workflows are one of Mockzilla's most powerful features, but they require a different mental model than static mocks.
+
+## The Problem: "Static Mocks are Dead"
+In a real application, APIs are not static. When you click "Checkout," the database changes. When you log in, your session remembers you.
+
+Traditional mocking tools force you to create "static snapshots" for every possible state:
+- `/cart-empty`
+- `/cart-one-item`
+- `/cart-after-checkout`
+
+This approach is fragile and doesn't scale as your application's logic grows more complex.
+
+---
+
+## The Solution: "Action-Driven State"
+Mockzilla follows a simple rule: **State variables must not be modified via direct "setter" endpoints.**
+
+In a real app, you rarely "set the database status to 'paid'" directly via an API call. Instead, you "process a payment" (`POST /checkout`), and as a *side effect* of that action, the database status becomes 'paid'.
+
+### ❌ The "Bad" Way (CRUD on State):
+Creating endpoints just to manually set variables for your tests.
+- `POST /set-login-status?val=true`
+- `POST /add-to-cart-variable`
+
+### ✅ The "Action-Driven" Way:
+Creating transitions that mirror real business logic.
+- **Action**: `POST /login`
+- **Effect**: Internal state `isLoggedIn` is set to `true`.
+- **Outcome**: Future requests to `GET /profile` will now match the "logged-in" transition.
+
+---
+
+## The Benefits
+1.  **Logical Consistency**: Your mock server mirrors the behavior of your real backend.
+2.  **Reduced Mock Fatigue**: Instead of dozens of static files, you have a single scenario that "lives" and "reacts."
+3.  **Real-World Testing**: Your frontend code can trigger real actions and observe the cascading effects on the UI, exactly like it would with a production API.
+
+> **Get Started**: See the [Authentication Tutorial](/docs/tutorials/stateful-authentication) to build your first action-driven flow.

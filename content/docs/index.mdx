@@ -1,70 +1,98 @@
 ---
-title: Overview
-description: Learn how Mockzilla helps you mock APIs and test user flows with ease.
+title: Documentation
+description: Master API mocking with Mockzilla.
 ---
 
-# Overview
+# Welcome to Mockzilla
 
-Mockzilla is a high-fidelity API mocking tool that lets you simulate complex backend responses without writing a single line of server code. Whether you're building a new feature or debugging a tricky user flow, Mockzilla provides the tools you need to stay in the zone.
+Mockzilla is a high-fidelity API mocking platform designed to bridge the gap between frontend development and backend reality. From simple static responses to complex stateful simulations, we've got you covered.
 
-<div id="overview" />
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+  <Link href="/docs/getting-started/quick-start" className="no-underline">
+    <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-primary/20">
+      <CardHeader>
+        <Zap className="w-8 h-8 text-primary mb-2" />
+        <CardTitle>Quick Start</CardTitle>
+        <CardDescription>Get up and running in under 5 minutes with Docker or our Chrome Extension.</CardDescription>
+      </CardHeader>
+    </Card>
+  </Link>
 
-## Why Mockzilla?
+  <Link href="/docs/getting-started/end-to-end-journey" className="no-underline">
+    <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-primary/20">
+      <CardHeader>
+        <Globe className="w-8 h-8 text-primary mb-2" />
+        <CardTitle>End-to-End Journey</CardTitle>
+        <CardDescription>Explore the "Meta-Workflow" from capturing real traffic to scaling with AI.</CardDescription>
+      </CardHeader>
+    </Card>
+  </Link>
+</div>
 
-Traditional mocks are static and boring. Mockzilla makes them **alive**:
+## Explore the Journey
 
-| Feature | User Value |
-|---------|------------|
-| **Dynamic Data** | Stop handwriting massive JSON files. Generate 1,000 realistic users or orders with one click. |
-| **Routing** | Match requests by exact path, wildcards, or even specific query parameters. |
-| **Workflows** | Simulate stateful flows (like a shopping cart or login) using a built-in mini-database. |
-| **AI Integration** | Let your AI agent (Cursor, Claude) create and manage mocks for you via MCP. |
-| **Extension** | Intercept real browser requests and sync them to your dashboard instantly. |
+<div className="space-y-4 mt-8">
+  <Link href="/docs/guides/browser-extension-sync" className="no-underline block group">
+    <Card className="hover:bg-muted/50 transition-colors border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <span className="font-bold text-primary">1</span>
+        </div>
+        <div>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">Capture & Bootstrap</CardTitle>
+          <CardDescription>Use the Chrome Extension to capture real API traffic or import OpenAPI specs.</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  </Link>
 
----
+  <Link href="/docs/concepts/static-vs-dynamic" className="no-underline block group">
+    <Card className="hover:bg-muted/50 transition-colors border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <span className="font-bold text-primary">2</span>
+        </div>
+        <div>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">Dynamic Scaling</CardTitle>
+          <CardDescription>Turn static JSON into infinite realistic data using JSON Schema and Faker.js.</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  </Link>
 
-## Installation
+  <Link href="/docs/tutorials" className="no-underline block group">
+    <Card className="hover:bg-muted/50 transition-colors border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <span className="font-bold text-primary">3</span>
+        </div>
+        <div>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">Stateful Workflows</CardTitle>
+          <CardDescription>Build simulations that remember user actions, like shopping carts and auth flows.</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  </Link>
 
-Choose the tool that fits your workflow.
+  <Link href="/docs/guides/ai-integration-mcp" className="no-underline block group">
+    <Card className="hover:bg-muted/50 transition-colors border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <span className="font-bold text-primary">4</span>
+        </div>
+        <div>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">AI-Driven Development</CardTitle>
+          <CardDescription>Connect Mockzilla to Cursor or Claude via MCP and let AI build your mocks for you.</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  </Link>
+</div>
 
-### 1. HTTP Server (Docker)
-The standalone server is perfect for teams, local development, or cloud hosting (VPS). It provides a dashboard to manage all your mocks.
-
-```bash
-docker run -d -p 36666:36666 -v mockzilla-data:/app/data --name mockzilla andrecrjr/mockzilla:latest
-```
-
-**Note for VPS users:** Mockzilla runs on port **36666** by default. Ensure this port is open in your firewall/security groups to access the dashboard and mocks remotely.
-
-Once running, access your instance at:
-`http://<your-ip-or-domain>:36666`
-
-### 2. Chrome Extension
-For real-time browser interception, install the official extension. It allows you to mock requests directly in your browser without changing your code.
-
-- **[Install from Chrome Web Store](https://chromewebstore.google.com/detail/gpbfcijfelgnaabjodgifeopbmnbjpnk/preview)**
-
----
-
-## Quick Start (The UI Way)
-
-Getting started with Mockzilla is designed to be intuitive and visual.
-
-### 1. Create a Folder
-Folders are how you organize your projects. Click **New Folder** on the dashboard to give your workspace a name.
-
-### 2. Add a Mock
-Inside your folder, click **Create Mock**. You can define the endpoint path (e.g., `/users`), the HTTP method, and the status code you want to return.
-
-### 3. Configure the Response
-In the **Response Config** tab, you can paste static JSON or switch to **Dynamic Response** to use powerful templates.
-
-### 4. Test it Out
-Every folder has a unique "Serve URL". Once your mock is saved, any request to that URL will return your configured response!
-
----
-
-## Ready for more?
-- **[Routing & Matching](/docs/routing)**: Learn how to handle dynamic IDs and query strings.
-- **[Dynamic Data](/docs/dynamic-data)**: Master the art of generating realistic fake data.
-- **[Stateful Workflows](/docs/workflows)**: Build complex simulations with persistent logic.
+<div className="mt-12 flex justify-center">
+  <Link href="/docs/getting-started/quick-start">
+    <Button size="lg" className="gap-2">
+      Start the Journey <ChevronRight className="w-4 h-4" />
+    </Button>
+  </Link>
+</div>

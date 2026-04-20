@@ -1,0 +1,182 @@
+---
+title: "Advanced Systems: Full-Stack SaaS Simulation"
+description: Master Mockzilla's workflow engine by simulating subscription tiers, idempotency, and asynchronous job polling.
+---
+
+# Tutorial: Full-Stack SaaS Simulation
+
+In this tutorial, we will push Mockzilla to its limits by simulating a complex SaaS application. You will learn how to build high-fidelity workflows for **Subscription Management**, **Idempotent Payments**, and **Asynchronous Job Polling**. 
+
+This is essential for testing how your frontend handles usage limits, duplicate requests, and background processing states without needing a real backend.
+
+## What You'll Learn
+- How to simulate **Usage Limits** and **Trial Periods**.
+- How to perform **Idempotent Operations** (like preventing duplicate charges).
+- How to simulate **Async Polling** (Loading -> Processing -> Success).
+- How to use **Headers** to branch account tiers.
+
+---
+
+## Scenario A: The SaaS Trial (Usage Limits)
+Imagine an API that allows free users only 3 requests. Once they hit the limit, they must upgrade. We use a Mini-DB table to track usage.
+
+### 1. Process Request (Free Tier Active)
+Triggered when a user is under the limit. It adds to a log and processes the request.
+- **Path**: `/process`
+- **Method**: `POST`
+- **Conditions**: `[{"type": "lt", "field": "db.usage_log.length", "value": 3}]`
+- **Effects**: `[{"type": "db.push", "table": "usage_log", "value": {"endpoint": "/process"} }]`
+- **Response**: 
+  ```json
+  {
+    "status": "success", 
+    "data": "Processed!",
+    "requests_remaining": "{{3 - db.usage_log.length}}"
+  }
+  ```
+
+### 2. Process Request (Free Tier Expired)
+Triggered when the limit is reached.
+- **Path**: `/process`
+- **Method**: `POST`
+- **Conditions**: `[{"type": "gt", "field": "db.usage_log.length", "value": 2}]`
+- **Response**: 
+  ```json
+  {
+    "status": 402, 
+    "error": "Trial expired. Please upgrade to Pro."
+  }
+  ```
+
+---
+
+## Scenario B: Strict Idempotency (Payments)
+Ensure that a destructive action (like a payment charge) only happens once per client-side request ID, even if the user clicks "Pay" twice.
+
+### 1. The Duplicate Request (Cached Response)
+If the exact same `x-idempotency-key` is sent again, return a cached success response instead of charging again. We place this condition first so it catches repeats.
+- **Path**: `/charge`
+- **Method**: `POST`
+- **Conditions**: `[{"type": "contains", "field": "db.processed_payments", "value": "{{input.headers.x-idempotency-key}}"}]`
+- **Response**: 
+  ```json
+  {
+    "status": 200, 
+    "body": {
+      "transaction_id": "TXN_{{input.headers.x-idempotency-key}}", 
+      "status": "success",
+      "cached": true
+    }
+  }
+  ```
+
+### 2. The First Request (Charge)
+Processes the payment and records the idempotency key in the database.
+- **Path**: `/charge`
+- **Method**: `POST`
+- **Conditions**: `[{"type": "exists", "field": "input.headers.x-idempotency-key"}]`
+- **Effects**: `[{"type": "db.push", "table": "processed_payments", "value": "{{input.headers.x-idempotency-key}}"}]`
+- **Response**: 
+  ```json
+  {
+    "status": 201, 
+    "body": {
+      "transaction_id": "TXN_{{input.headers.x-idempotency-key}}", 
+      "status": "success",
+      "cached": false
+    }
+  }
+  ```
+
+---
+
+## Scenario C: Asynchronous Job Polling
+Simulate an endpoint that returns "Processing" for the first few hits, then "Completed". This is perfect for testing frontend polling logic and loading spinners.
+
+**Method**: Use a hidden `job_stage` counter in the state.
+
+### 1. Start Job
+- **Path**: `/jobs`
+- **Method**: `POST`
+- **Effects**: `[{"type": "state.set", "raw": {"job_stage": 0}}]`
+- **Response**: 
+  ```json
+  {
+    "job_id": "job-123", 
+    "status": "processing"
+  }
+  ```
+
+### 2. Poll Status (Processing)
+- **Path**: `/jobs/job-123`
+- **Method**: `GET`
+- **Conditions**: `[{"type": "lt", "field": "state.job_stage", "value": 2}]`
+- **Effects**: `[{"type": "state.set", "raw": {"job_stage": "{{state.job_stage + 1}}"}}]`
+- **Response**: 
+  ```json
+  {
+    "id": "job-123", 
+    "status": "processing"
+  }
+  ```
+
+### 3. Poll Status (Completed)
+- **Path**: `/jobs/job-123`
+- **Method**: `GET`
+- **Conditions**: `[{"type": "gt", "field": "state.job_stage", "value": 1}]`
+- **Response**: 
+  ```json
+  {
+    "id": "job-123", 
+    "status": "completed", 
+    "result": "Video successfully encoded!"
+  }
+  ```
+
+---
+
+## Why simulate these patterns?
+
+### 1. Hard-to-Reproduce States
+It is notoriously difficult to test "Out of Limits" or "Payment Failed" states in a real staging environment. With Workflows, you have deterministic control over these edge cases.
+
+### 2. Testing Asynchronicity
+If your frontend polls an API, you can test the **Loading -> Processing -> Success** transition instantly, without waiting for a real background worker to finish a 10-minute task.
+
+### 3. Idempotency Validation
+Verify that your frontend correctly generates and sends idempotency keys on retry attempts, ensuring users are never double-charged.
+
+---
+
+## 🤖 AI-First: Agent Instructions
+Simulating complex SaaS systems is where Mockzilla's **AI-First** architecture truly shines. Instead of manually mapping every edge case, use an AI agent to build the full architecture from your product requirements or existing backend logic.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Ask your AI agent to design a complete SaaS simulation with Mockzilla.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm">
+      "Use **mockzilla-workflow-architect** to build an advanced SaaS simulation in my `saas-demo` scenario. It should handle trial usage limits (3 free requests), payment idempotency using the `x-idempotency-key` header, and an asynchronous job polling flow that transitions from 'processing' to 'completed' after 3 GET requests."
+    </p>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: You can even ask the AI to "Refactor this logic into a cleaner state machine" if it gets too complex.
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## Summary
+You have now seen how Mockzilla can simulate entire system architectures. 
+- **State** is for single values and counters (like `job_stage`).
+- **Mini-DB** is for collections and tracking (like `usage_log` and `processed_payments`).
+- **Conditions** act as the routing brain to choose the right path based on the current context.
+
+> **Pro Tip**: Use the **State Inspector** in the Mockzilla UI to watch your variables change in real-time as your application makes API calls!

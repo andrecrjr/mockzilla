@@ -28,7 +28,7 @@ export function wildcardToRegex(p: string): RegExp {
 	const pattern = parts.join('(.+?)');
 	const anchored = s.includes('://')
 		? '^' + pattern + '$'
-		: '.*' + pattern + '$';
+		: '^' + pattern + '$';
 	return new RegExp(anchored);
 }
 

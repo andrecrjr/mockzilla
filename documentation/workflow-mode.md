@@ -11,132 +11,58 @@ Mockzilla Workflow Mode enables stateful, scenario-based mocking with dynamic da
 | State | ❌ | ✅ Per-scenario state |
 | Mini-Database | ❌ | ✅ CRUD on JSON tables |
 | Conditions | ❌ | ✅ Match on state/input |
-| Multi-step flows | ❌ | ✅ Transitions with effects |
+| Interpolation | Basic | ✅ Advanced (Arithmetic + Relational) |
+| multi-step flows | ❌ | ✅ Transitions with effects |
 
-**Use Cases**: User registration, shopping carts, authentication flows, wizards, any stateful API simulation.
+**Use Cases**: SaaS subscription lifecycles, idempotent payment processing, polling job queues, complex e-commerce checkouts.
 
 ---
 
-## Architecture
-
-## Philosophy: Action-Driven State
+## Architecture: Action-Driven State
 
 **State variables must not be endpoints.**
 
-In a real application, you rarely "set the database status to 'paid'" via a direct API call. Instead, you "process a payment," and the *result* is that the status becomes 'paid'. Mockzilla workflows should mirror this.
+In a real application, you rarely "set the database status to 'paid'" via a direct API call. Instead, you "process a payment," and the *result* is that the status becomes 'paid'. Mockzilla workflows mirror this by making state changes a **side-effect** of business actions.
 
-### The "State as Endpoint" Anti-Pattern (Bad)
-Creating "utility" transitions just to manipulate state makes your mock fragile and unrealistic.
-- ❌ `POST /set-state` with body `{"key": "value"}`
-- ❌ `POST /db/insert` with body `{"table": "users", "data": ...}`
-
-### The "Action-Driven" Pattern (Good)
+### The "Action-Driven" Pattern (Best Practice)
 Trigger business logic that internally updates multiple state variables and db tables as a side effect.
 - ✅ `POST /checkout` -> Updates `db.orders`, decrements `db.inventory`, clears `state.cart_id`.
-
-**Why?**
-This ensures your mock tests the *application flow* and logic, ensuring your frontend handles the *consequences* of actions correctly, rather than just verifying it can read static data.
-
----
-
-## Architecture
-
-```
-Request → Router → Processor → Response
-             ↓          ↓
-         Match Path   1. Load State
-                      2. Check Conditions
-                      3. Apply Effects
-                      4. Save State
-                      5. Return Response
-```
-
-### Database Tables
-
-| Table | Purpose |
-|-------|---------|
-| `scenarios` | Named workflow containers (id, name, description) |
-| `transitions` | Rules defining path, conditions, effects, response |
-| `scenario_state` | Persisted state and mini-db tables per scenario |now
 
 ---
 
 ## Core Concepts
 
 ### Scenarios
-A container that isolates state and transitions. Create via UI at `/workflows` or API.
+Isolated containers for state and transitions. Access via `/api/workflow/exec/{scenarioSlug}/{path}`.
 
 ### Transitions
-Define how requests are processed:
-- **Path**: URL pattern (e.g., `/users`, `/users/:id`)
-- **Method**: HTTP method (GET, POST, PUT, DELETE)
-- **Conditions**: Rules that must match for transition to fire
-- **Effects**: Actions to modify state/db
-- **Response**: What to return
+Rules that define request processing. Mockzilla supports **multi-transition matching**: if multiple transitions match a path, the engine iterates through them until it finds one where the **Conditions** match.
 
-### State (`state.{}`)
-Key-value store per scenario. Access via `{{state.keyName}}`.
+### Advanced Interpolation
+Use `{{ path.to.value }}` to inject dynamic values. Mockzilla supports **Basic Arithmetic** inside templates:
 
-### Mini-DB (`db.{}`)
-JSON array tables. Access via `{{db.tableName}}`.
+| Feature | Example | Result |
+|---------|---------|--------|
+| **Path Access** | `{{input.body.id}}` | Value from body |
+| **Relational** | `{{db.users[0].name}}` | Data from Mini-DB |
+| **Addition** | `{{state.count + 1}}` | Incremented value |
+| **Subtraction** | `{{10 - db.items.length}}` | Remaining capacity |
 
-### Interpolation
-Use `{{ path.to.value }}` to inject dynamic values:
-
-| Path | Description |
-|------|-------------|
-| `{{input.body.field}}` | Request body field |
-| `{{input.body.items[0]}}` | First element of array in body |
-| `{{input.query.param}}` | Query parameter |
-| `{{input.params.id}}` | URL parameter from `:id` |
-| `{{state.key}}` | State variable |
-| `{{state.users[0].name}}` | Nested array access in state |
-| `{{db.tableName}}` | Entire table array |
-| `{{db.items[0].id}}` | First item's id from table |
-
----
-
-## Path Matching
-
-Supports exact and parameterized paths:
-
-```
-/users          → Exact match
-/users/:id      → Captures id as {{input.params.id}}
-/cart/:sku/add  → Multiple params allowed
-```
+> [!IMPORTANT]
+> **Type Preservation**: If a template contains *only* the reference (e.g. `{{db.items}}`), Mockzilla returns the raw JSON type (Array/Object/Number). If it is embedded in text (e.g. `Count: {{db.items.length}}`), it returns a String.
 
 ---
 
 ## Conditions Reference
 
-Conditions determine if a transition fires. Empty conditions always match.
+Conditions determine if a transition fires. **Mockzilla supports interpolation in condition values.**
 
 | Type | Description | Example |
 |------|-------------|---------|
-| `eq` | Equals | `{"type":"eq", "field":"input.body.role", "value":"admin"}` |
-| `neq` | Not equals | `{"type":"neq", "field":"state.status", "value":"locked"}` |
-| `exists` | Field exists | `{"type":"exists", "field":"input.body.token"}` |
-| `gt` | Greater than | `{"type":"gt", "field":"input.body.quantity", "value":0}` |
-| `lt` | Less than | `{"type":"lt", "field":"state.attempts", "value":3}` |
-| `contains` | String/array contains | `{"type":"contains", "field":"db.roles", "value":"admin"}` |
-
-### Header-Based Conditions
-Check HTTP headers in conditions:
-```json
-[
-  {"type": "exists", "field": "input.headers.authorization"},
-  {"type": "eq", "field": "input.headers.x-api-key", "value": "secret-key"}
-]
-```
-
-### Condition Array (AND logic)
-```json
-[
-  {"type": "exists", "field": "input.body.email"},
-  {"type": "eq", "field": "state.registered", "value": false}
-]
-```
+| `eq` / `neq` | Equality | `{"type":"eq", "field":"input.headers.auth", "value":"Bearer {{state.token}}"}` |
+| `exists` | Presence | `{"type":"exists", "field":"input.body.email"}` |
+| `gt` / `lt` | Numeric | `{"type":"lt", "field":"db.usage.length", "value": 5}` |
+| `contains` | Inclusion | `{"type":"contains", "field":"db.keys", "value":"{{input.headers.x-id}}"}` |
 
 ---
 
@@ -144,101 +70,56 @@ Check HTTP headers in conditions:
 
 Effects modify state or mini-db when a transition fires.
 
-### `state.set` - Set State Variables
+### `state.set` - Atomic Updates
 ```json
-{"type": "state.set", "raw": {"isLoggedIn": true, "userId": "{{input.body.id}}"}}
+{"type": "state.set", "raw": {"usage": "{{state.usage + 1}}", "last_active": "{{now}}"}}
 ```
 
-### `db.push` - Append to Table
-```json
-{"type": "db.push", "table": "users", "value": "{{input.body}}"}
-```
+### `db.push` / `db.update` / `db.remove`
+Manage collections. `db.update` and `db.remove` use a `match` object to target specific rows.
 
-### `db.update` - Update Matching Rows
-```json
-{"type": "db.update", "table": "users", "match": {"id": "{{input.body.id}}"}, "set": {"status": "active"}}
-```
+---
 
-### `db.remove` - Delete Matching Rows
-```json
-{"type": "db.remove", "table": "cart", "match": {"sku": "{{input.params.sku}}"}}
-```
+## Advanced Masterclass Patterns
+
+### 1. The Strict Idempotency Pattern (Payments)
+Prevent duplicate charges by recording request IDs.
+
+- **Transition A (Duplicate)**:
+    - **Condition**: `db.processed_ids` contains `{{input.headers.x-request-id}}`
+    - **Response**: `{"status": 200, "body": {"id": "TXN_PREV", "cached": true}}`
+- **Transition B (New)**:
+    - **Condition**: `input.headers.x-request-id` exists
+    - **Effect**: `db.push` request ID to `processed_ids`
+    - **Response**: `{"status": 201, "body": {"id": "TXN_NEW", "cached": false}}`
+
+### 2. The Async Polling Simulation
+Test frontend loading states by progressing through "Stages".
+
+1. **Start**: `POST /jobs` sets `state.job_stage = 0`.
+2. **Poll**: `GET /jobs/123`:
+    - **Stage 1**: `Condition: state.job_stage < 2`
+      - **Effect**: `state.set` `job_stage` to `{{state.job_stage + 1}}`
+      - **Response**: `{"status": "processing"}`
+    - **Stage 2**: `Condition: state.job_stage >= 2`
+      - **Response**: `{"status": "completed", "data": "..."}`
 
 ---
 
 ## API Endpoints
 
-### Trigger Transitions
-```http
-POST /api/workflow/exec/my-scenario/users
-Content-Type: application/json
-
-{"name": "John", "email": "john@example.com"}
-```
-
-Response determined by matching transition.
-
-### Get State
-```http
-GET /api/workflow/state/{scenarioId}
-```
-Returns: `{"data": {"state": {...}, "tables": {...}}}`
-
-### Reset State
-```http
-DELETE /api/workflow/state/{scenarioId}
-```
-
-### Manage Scenarios
-```http
-GET  /api/workflow/scenarios          # List all
-POST /api/workflow/scenarios          # Create new
-```
-
-### Manage Transitions
-```http
-GET  /api/workflow/transitions?scenarioId=xxx   # List for scenario
-POST /api/workflow/transitions                   # Create
-GET  /api/workflow/transitions/{id}              # Get one
-PUT  /api/workflow/transitions/{id}              # Update
-DELETE /api/workflow/transitions/{id}            # Delete
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/workflow/exec/{scenario}/{path}` | `ANY` | Execute a transition |
+| `/api/workflow/state/{scenario}` | `GET` | Inspect current state/DB |
+| `/api/workflow/state/{scenario}` | `POST` | Initialize/Upsert state |
+| `/api/workflow/state/{scenario}` | `DELETE` | Wipe scenario state |
 
 ---
 
-## Complete Example: User Registration
+## MCP Integration
 
-### Scenario: `user-signup`
-
-#### Transition 1: Register User
-| Field | Value |
-|-------|-------|
-| Path | `/register` |
-| Method | `POST` |
-| Conditions | `[]` (always matches) |
-| Effects | `[{"type":"db.push", "table":"users", "value":"{{input.body}}"}]` |
-| Response | `{"status":201, "body":{"success":true, "message":"User created"}}` |
-
-#### Transition 2: List Users
-| Field | Value |
-|-------|-------|
-| Path | `/users` |
-| Method | `GET` |
-| Conditions | `[]` |
-| Effects | `[]` |
-| Response | `{"status":200, "body":"{{db.users}}"}` |
-
-### Testing
-```bash
-# Register a user in the 'auth' scenario
-curl -X POST http://localhost:36666/api/workflow/exec/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Alice", "email":"alice@test.com"}'
-
-# List users in the 'users' scenario
-curl http://localhost:36666/api/workflow/exec/users/list
-# Returns: [{"name":"Alice", "email":"alice@test.com"}]
-```
+Mockzilla exposes **24 specialized tools** to AI assistants (Claude, Cursor, etc.). Use `inspect_workflow_state` during development to watch your Mini-DB tables evolve in real-time as your application makes API calls.
 
 ---
 

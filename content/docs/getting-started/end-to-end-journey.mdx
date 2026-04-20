@@ -1,0 +1,136 @@
+---
+title: End-to-End Journey
+description: Master the Mockzilla workflow from zero to AI-driven simulations.
+---
+
+# The End-to-End Journey
+
+Mockzilla is designed to grow with your project. Whether you're just starting a feature or building a complex stateful simulation, there's a "Level" of mocking that's right for you.
+
+---
+
+## Level 1: Capture & Bootstrap
+<Badge variant="outline" className="mb-4">The Starting Line</Badge>
+
+Most developers start by needing a quick mock of an existing API. Instead of manually typing JSON, you use our specialized tools to bootstrap your environment.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+  <Card>
+    <CardHeader>
+      <MousePointer2 className="w-6 h-6 text-blue-500 mb-2" />
+      <CardTitle className="text-lg">Chrome Extension</CardTitle>
+      <CardDescription>Navigate your app, "capture" real traffic, and save it as a local mock instantly.</CardDescription>
+    </CardHeader>
+  </Card>
+  <Card>
+    <CardHeader>
+      <FileCode className="w-6 h-6 text-green-500 mb-2" />
+      <CardTitle className="text-lg">OpenAPI Import</CardTitle>
+      <CardDescription>Drop a Swagger/OpenAPI spec and generate an entire mocked backend in seconds.</CardDescription>
+    </CardHeader>
+  </Card>
+</div>
+
+**Outcome**: A perfect replica of your API structure and basic data without writing a single line of code.
+
+---
+
+## Level 2: Dynamic Scaling
+<Badge variant="outline" className="mb-4">Beyond Static JSON</Badge>
+
+Static mocks get "stale" fast. Once your routes are set up, you can switch to **Dynamic Responses** using JSON Schema and Faker.js.
+
+<Alert className="bg-primary/5 border-primary/20 my-6">
+  <Sparkles className="h-4 w-4 text-primary" />
+  <AlertTitle>Pro Tip</AlertTitle>
+  <AlertDescription>
+    Use `{{faker.name.fullName}}` or `{{faker.image.avatar}}` in your schemas to generate realistic, varied data for every single request.
+  </AlertDescription>
+</Alert>
+
+- **Infinite Lists**: Test infinite scroll by generating 100+ items with a single schema.
+- **UI Resilience**: Test how your UI handles long names, empty states, or missing optional fields.
+- **Zero-Maintenance**: Update one schema instead of 50 static JSON files.
+
+---
+
+## Level 3: Stateful Workflows
+<Badge variant="outline" className="mb-4">Intelligent Simulations</Badge>
+
+For complex user journeys—like adding an item to a cart and then seeing it in the checkout list—you need **Stateful Workflows**. This turns Mockzilla into a "Mini-Backend."
+
+<Tabs defaultValue="actions" className="my-6">
+  <TabsList className="grid w-full grid-cols-2">
+    <TabsTrigger value="actions">Actions</TabsTrigger>
+    <TabsTrigger value="state">State</TabsTrigger>
+  </TabsList>
+  <TabsContent value="actions" className="p-4 border rounded-md">
+    **Trigger side effects** when an endpoint is called. `POST /login` sets an `isLoggedIn` flag in your session.
+  </TabsContent>
+  <TabsContent value="state" className="p-4 border rounded-md">
+    **Store and recall data** using the internal **Mini-DB**. A `POST /cart` pushes data into a table that `GET /cart` can then read.
+  </TabsContent>
+</Tabs>
+
+**Outcome**: You can test complete business logic flows (Auth, Checkout, Multi-step forms) without a real backend.
+
+---
+
+## Level 4: AI-Driven Development
+<Badge variant="outline" className="mb-4">The Future of Mocking</Badge>
+
+The final level of maturity is **AI-Driven Mocking**. By connecting Mockzilla to your AI assistant (Cursor, Claude) via the **Model Context Protocol (MCP)**, you stop building mocks entirely and start *directing* them.
+
+<div className="flex flex-col md:flex-row gap-6 items-center my-8 p-6 bg-secondary/30 rounded-2xl border border-secondary">
+  <BrainCircuit className="w-16 h-16 text-purple-500 shrink-0" />
+  <div>
+    <h3 className="text-xl font-bold mb-2">"Ask, Don't Build"</h3>
+    <p className="text-muted-foreground">
+      "Hey Cursor, create a mock for my new products API with realistic pricing and stock levels."
+    </p>
+    <p className="text-sm mt-4 text-purple-600 font-medium italic">
+      The AI agent uses Mockzilla's tools to design, build, and test your mocks for you.
+    </p>
+  </div>
+</div>
+
+---
+
+## 🤖 AI-First: Agent Instructions
+The entire Mockzilla journey is optimized for **AI-First** development. Instead of moving through these levels manually, you can lead an AI agent to progress your mocks from level 1 to level 4 automatically.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Ask your AI agent to manage your entire mocking lifecycle.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm">
+      "Use **mockzilla-mock-maker** to import my OpenAPI spec, then refactor the `/products` endpoint to use a high-fidelity JSON Schema. Finally, use **mockzilla-workflow-architect** to add a stateful checkout flow that tracks inventory in the Mini-DB."
+    </p>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: The AI acts as your senior backend engineer, handling all the complex Mockzilla logic for you.
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## Next Steps
+
+Ready to start your journey?
+
+1.  **[Quick Start](/docs/getting-started/quick-start)**: Install Mockzilla and serve your first mock.
+2.  **[Tutorials](/docs/tutorials)**: Build a Shopping Cart or an Auth Flow.
+3.  **[MCP Guide](/docs/guides/ai-integration-mcp)**: Connect your AI assistant.
+
+<div className="mt-12 p-8 bg-primary text-primary-foreground rounded-3xl text-center">
+  <Rocket className="w-12 h-12 mx-auto mb-4" />
+  <h2 className="text-2xl font-bold mb-2 text-white text-center">Let's Build Something Great</h2>
+  <p className="opacity-90 mb-6 text-white text-center">Stop waiting for the backend. Start building the future.</p>
+</div>

@@ -1,0 +1,111 @@
+---
+title: "How-to: Mocking Infinite Scroll"
+description: Use Dynamic Data to simulate large datasets and test UI loading states.
+---
+
+# How-to: Mocking Infinite Scroll
+
+Testing infinite scroll or pagination in a UI can be painful if you have to manually create dozens of JSON objects. Mockzilla’s **Dynamic Data** feature makes this effortless.
+
+## The Goal
+Create an endpoint `/api/posts` that returns a different number of realistic posts based on a `limit` query parameter, or just generates a large list by default.
+
+---
+
+## Step 1: Define the Post Schema
+In your mock's **Response Config**, enable **From Schema** and paste this JSON Schema:
+
+```json
+{
+  "type": "array",
+  "minItems": 10,
+  "maxItems": 20,
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string", "faker": "string.uuid" },
+      "title": { "type": "string", "faker": "lorem.sentence" },
+      "author": { "type": "string", "faker": "person.fullName" },
+      "content": { "type": "string", "faker": "lorem.paragraphs" },
+      "createdAt": { "type": "string", "faker": "date.past" }
+    },
+    "required": ["id", "title", "author"]
+  }
+}
+```
+
+### Why this works:
+- **`minItems`/`maxItems`**: Ensures you always get a varied number of results, helping you test how your UI handles different list lengths.
+- **Faker integration**: Generates realistic sentences and names instead of "test 1", "test 2".
+
+---
+
+## Step 2: Simulating Empty States
+To test how your UI looks when there is **no data**, you don't need a new mock. Just temporarily change your schema:
+
+```json
+{
+  "type": "array",
+  "maxItems": 0
+}
+```
+**Outcome**: Your endpoint will now return `[]`, allowing you to verify your "No posts found" UI state.
+
+---
+
+## Step 3: Dynamic Pagination
+Instead of creating multiple mocks, you can now use a single mock that echoes back your `page` and `limit` query parameters using **Request Context Interpolation**.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "items": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "type": "object", "properties": { "id": { "type": "string", "faker": "string.uuid" } } } },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "page": { "const": "{$.query.page}" },
+        "limit": { "const": "{$.query.limit}" }
+      }
+    }
+  }
+}
+```
+
+When you call `?page=2&limit=50`, the response will automatically reflect those values in the `meta` object.
+
+---
+
+## 🤖 AI-First: Agent Instructions
+Mockzilla is a **developer and AI-first** platform. Instead of writing JSON Schemas yourself, you should leverage an AI agent (like Claude Desktop or Cursor via MCP) to do it for you based on your production spec.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Paste this command into your AI chat session to generate high-fidelity infinite scroll mocks.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm">
+      "Use **mockzilla-mock-maker** to build a paginated API endpoint `/api/posts` for my `my-api` folder. It should use JSON Schema + Faker to return realistic content, supporting `page` and `limit` query parameters in the metadata."
+    </p>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: Provide a sample post object for 100% accuracy.
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## Summary
+By using Dynamic Data, you can:
+1.  **Test Large Lists**: Set `maxItems` to 100+. (Capped by `MOCKZILLA_MAX_ITEMS` env var, default 1000).
+2.  **Test Varied Content**: Use Faker to generate long and short strings.
+3.  **Test Empty States**: Set `maxItems` to 0.
+4.  **Echo Request Data**: Use `{$.query.field}` to simulate paginated APIs realistically.
+
+> **Next Step**: See all configuration options in the [Configuration Reference](/docs/getting-started/configuration).

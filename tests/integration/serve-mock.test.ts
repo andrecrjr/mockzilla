@@ -210,4 +210,43 @@ describe("Mock Serving /mock/[folder]/[path]", () => {
         const bodyNoSlash = await resNoSlash.json();
         expect(bodyNoSlash).toEqual({ message: "Root endpoint" });
     });
+
+    it("serves a dynamic JSON mock from schema", async () => {
+        const schemaMock = {
+            ...mockResponse,
+            useDynamicResponse: true,
+            jsonSchema: JSON.stringify({
+                type: "object",
+                properties: {
+                    id: { type: "string", format: "uuid" },
+                    name: { type: "string", "x-faker": "person.fullName" }
+                },
+                required: ["id", "name"]
+            }),
+            response: JSON.stringify({ fallback: true }), // Static fallback
+            statusCode: 200
+        };
+
+        let callCount = 0;
+        mockDb.select = mock(() => {
+            callCount++;
+            if (callCount === 1) return createMockBuilder([mockFolder]);
+            if (callCount === 2) return createMockBuilder([schemaMock]);
+            return createMockBuilder([]);
+        });
+
+        const req = new NextRequest("http://localhost:3000/api/mock/api/dynamic");
+        const params = Promise.resolve({ path: ["api", "dynamic"] });
+
+        const res = await GET(req, { params });
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body).toHaveProperty("id");
+        expect(body).toHaveProperty("name");
+        expect(body.id).toMatch(/^[0-9a-f-]{36}$/i); // Valid UUID
+        expect(typeof body.name).toBe("string");
+        // Verify 'fillProperties: false' - no other keys
+        expect(Object.keys(body).length).toBe(2);
+    });
 });

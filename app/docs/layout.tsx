@@ -33,17 +33,20 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
           {/* Sidebar */}
           <aside className="w-full md:w-64 flex-shrink-0">
             <nav className="sticky top-24 space-y-1">
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                Documentation
-              </div>
               {sidebar.map(item => (
-                <Link
-                  key={item.slug}
-                  href={`/docs/${item.slug === 'index' ? '' : item.slug}`}
-                  className="block px-2 py-1.5 text-sm font-medium rounded-md transition-colors hover:bg-muted text-foreground/70 hover:text-foreground"
-                >
-                  {item.title}
-                </Link>
+                item.isSection ? (
+                  <div key={item.slug} className="px-2 py-1.5 mt-4 first:mt-0 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    {item.title}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.slug}
+                    href={`/docs/${item.slug === 'index' ? '' : item.slug}`}
+                    className="block px-2 py-1.5 text-sm font-medium rounded-md transition-colors hover:bg-muted text-foreground/70 hover:text-foreground"
+                  >
+                    {item.title}
+                  </Link>
+                )
               ))}
             </nav>
           </aside>

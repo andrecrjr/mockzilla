@@ -29,31 +29,35 @@ function matchRoute(pattern: string, actual: string): Record<string, string> | n
 	return params;
 }
 
-export async function findTransition(path: string, method: string) {
-	// First try exact match
-	const exactMatches = await db.select().from(transitions).where(
-		and(
-			eq(transitions.path, path),
-			eq(transitions.method, method)
-		)
+export async function findTransition(path: string, method: string, scenarioId?: string) {
+	const baseFilter = and(
+		eq(transitions.path, path),
+		eq(transitions.method, method),
+		scenarioId ? eq(transitions.scenarioId, scenarioId) : undefined
 	);
+
+	// First try exact matches
+	const exactMatches = await db.select().from(transitions).where(baseFilter);
 
 	if (exactMatches.length > 0) {
-		return { transition: exactMatches[0], params: {} };
+		return exactMatches.map(t => ({ transition: t, params: {} }));
 	}
 
-	// If no exact match, fetch ALL transitions for this method (inefficient but works for MVP)
-	// Optimization: Filter by prefix or smart segments later.
-	const allTransitions = await db.select().from(transitions).where(
-		eq(transitions.method, method)
+	// Fallback to pattern matching
+	const patternFilter = and(
+		eq(transitions.method, method),
+		scenarioId ? eq(transitions.scenarioId, scenarioId) : undefined
 	);
+	
+	const allTransitions = await db.select().from(transitions).where(patternFilter);
 
+	const matches: { transition: any; params: Record<string, string> }[] = [];
 	for (const t of allTransitions) {
 		const params = matchRoute(t.path, path);
 		if (params) {
-			return { transition: t, params };
+			matches.push({ transition: t, params });
 		}
 	}
 
-	return null;
+	return matches.length > 0 ? matches : null;
 }

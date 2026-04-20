@@ -1,0 +1,84 @@
+---
+title: Dynamic Data Syntax
+description: Master interpolation and Faker for rich, varied API responses.
+---
+
+# Dynamic Data Syntax
+
+Mockzilla lets you build cohesive data where one field references another using a powerful interpolation system.
+
+## 1. Internal Referencing (`{$.path}`)
+You can build objects where one property depends on the value of another property in the same object.
+
+| Syntax | What it Does | Example |
+|--------|--------------|---------|
+| `{$.id}` | Injects the value of the `id` field. | `{ "id": "123", "orderRef": "ORD-{$.id}" }` |
+| `{{$.name}}` | Injects a value into a string. | `"Hello {{$.name}}!"` |
+
+### Complex Example:
+```json
+{
+  "firstName": { "faker": "person.firstName" },
+  "lastName": { "faker": "person.lastName" },
+  "email": { "pattern": "{{$.firstName}}.{{$.lastName}}@example.com" }
+}
+```
+
+---
+
+## 2. Request Context Interpolation (`{$.query.field}`)
+Mockzilla provides the request context to the mocking engine, allowing you to reuse what the frontend sent in **ANY** response (Static, Variant, or Dynamic Schema).
+
+| Syntax | What it Does | Example |
+|--------|--------------|---------|
+| `{$.query.page}` | Injects a URL query parameter. | `?page=2` → `{ "meta": { "page": "{$.query.page}" } }` |
+| `{$.query.limit}`| Injects a limit parameter. | `?limit=50` → `{ "limit": "{$.query.limit}" }` |
+
+### Where to use it:
+- **Static Response Tab**: Echo back query params in your hand-written JSON.
+- **Dynamic Schema**: Reference query params in `const` or `pattern` fields.
+- **Wildcard Variants**: Personalize variant responses based on the request.
+
+### Practical Use:
+If your mock response is:
+`{"message": "Your value is {$.query.val}"}`
+
+Calling `?val=banana` will return:
+`{"message": "Your value is banana"}`
+
+---
+
+## 3. Faker Integration
+Mockzilla supports [Faker.js](https://fakerjs.dev/) to generate realistic data. Use the `faker` keyword in your JSON Schema.
+
+### Common Faker Methods:
+- **`person.fullName`**: Generates a full name.
+- **`internet.email`**: Generates a realistic email.
+- **`commerce.price`**: Generates a random price.
+- **`date.past`**: Generates a past ISO date string.
+- **`string.uuid`**: Generates a unique ID.
+
+### Example in Schema:
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "faker": "string.uuid" },
+    "name": { "type": "string", "faker": "person.fullName" }
+  }
+}
+```
+
+---
+
+## 3. Formatting Rules
+When using **Response Templates** (not JSON Schema), you can still interpolate request data:
+
+| Source | Syntax | Description |
+|--------|--------|-------------|
+| **Path** | `{{input.params.id}}` | Value from a path parameter. |
+| **Body** | `{{input.body.name}}` | Value from the JSON request body. |
+| **Headers**| `{{input.headers.auth}}` | Value from an HTTP header. |
+| **Query** | `{{input.query.limit}}` | Value from the URL query string. |
+
+> **Pro Tip**: Use these in the **Static Response** tab to echo back what the user sent you!

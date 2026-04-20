@@ -1,0 +1,65 @@
+---
+title: Tutorials
+description: Learn how to build complex, stateful API simulations with Mockzilla.
+---
+
+# Tutorials
+
+Step-by-step guides to help you master Mockzilla's most powerful features, from simple authentication to complex stateful workflows.
+
+<div className="grid grid-cols-1 gap-6 mt-8">
+  <Link href="/docs/tutorials/stateful-authentication" className="no-underline">
+    <Card className="hover:bg-muted/50 transition-colors cursor-pointer group border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+          <Shield className="w-6 h-6 text-blue-500" />
+        </div>
+        <div className="flex-1">
+          <CardTitle className="text-xl group-hover:text-primary transition-colors">Building an Auth Flow</CardTitle>
+          <CardDescription>Learn how to manage login states, session tokens, and protected routes using transitions.</CardDescription>
+        </div>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </CardHeader>
+    </Card>
+  </Link>
+
+  <Link href="/docs/tutorials/shopping-cart-simulation" className="no-underline">
+    <Card className="hover:bg-muted/50 transition-colors cursor-pointer group border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+          <ShoppingCart className="w-6 h-6 text-green-500" />
+        </div>
+        <div className="flex-1">
+          <CardTitle className="text-xl group-hover:text-primary transition-colors">Creating a Shopping Cart</CardTitle>
+          <CardDescription>Simulate a full e-commerce experience where items are added, removed, and persistent across requests.</CardDescription>
+        </div>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </CardHeader>
+    </Card>
+  </Link>
+
+  <Link href="/docs/tutorials/advanced-systems-simulation" className="no-underline">
+    <Card className="hover:bg-muted/50 transition-colors cursor-pointer group border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+          <Database className="w-6 h-6 text-purple-500" />
+        </div>
+        <div className="flex-1">
+          <CardTitle className="text-xl group-hover:text-primary transition-colors">Advanced Queues & CRUD</CardTitle>
+          <CardDescription>Master the mini-database, complex state management, and mimicking asynchronous backend processes.</CardDescription>
+        </div>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </CardHeader>
+    </Card>
+  </Link>
+</div>
+
+<div className="mt-12 p-6 bg-muted rounded-2xl border border-dashed">
+  <h3 className="text-lg font-semibold mb-2">Need a specific tutorial?</h3>
+  <p className="text-muted-foreground mb-4">
+    If you're trying to mock a specific backend pattern not covered here, ask Mockzilla's AI assistant for help! It can design and implement custom workflows for you.
+  </p>
+  <Link href="/docs/guides/ai-integration-mcp">
+    <Button variant="outline" size="sm">Explore AI Integration</Button>
+  </Link>
+</div>

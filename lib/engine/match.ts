@@ -1,4 +1,5 @@
 import { resolvePath } from '../utils/path-resolver';
+import { interpolate } from './interpolation';
 
 export type Condition = {
 	/**
@@ -75,7 +76,7 @@ export type MatchContext = {
 };
 
 /**
- * Resolves a field path (e.g. \"input.body.id\" or \"state.authorized\") to a value.
+ * Resolves a field path (e.g. "input.body.id" or "state.authorized") to a value.
  * Falls back to input.body for convenience if not found in root.
  */
 function resolveOp(path: string, context: MatchContext): unknown {
@@ -129,21 +130,22 @@ export function matches(conditions: Record<string, unknown> | Condition[], conte
 }
 
 /**
- * matchesConditionSet allows the more verbose syntax if we store it as a list of rules
+ * evaluateCondition allows the more verbose syntax if we store it as a list of rules
  * or strict operator objects.
  */
 export function evaluateCondition(condition: Condition, context: MatchContext): boolean {
 	const actual = resolveOp(condition.field, context);
+    const expected = interpolate(condition.value, context);
 	
 	switch (condition.type) {
-		case 'eq': return actual == condition.value;
-		case 'neq': return actual != condition.value;
+		case 'eq': return actual == expected;
+		case 'neq': return actual != expected;
 		case 'exists': return actual !== undefined && actual !== null;
-		case 'gt': return Number(actual) > Number(condition.value);
-		case 'lt': return Number(actual) < Number(condition.value);
+		case 'gt': return Number(actual) > Number(expected);
+		case 'lt': return Number(actual) < Number(expected);
 		case 'contains': 
-			return (Array.isArray(actual) && actual.includes(condition.value)) || 
-				   String(actual).includes(String(condition.value));
+			return (Array.isArray(actual) && actual.includes(expected)) || 
+				   String(actual).includes(String(expected));
 		default: return false;
 	}
 }

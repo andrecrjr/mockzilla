@@ -31,6 +31,27 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Zap, 
+  Globe, 
+  Database, 
+  Cpu, 
+  Sparkles, 
+  MousePointer2, 
+  FileCode, 
+  BrainCircuit, 
+  Rocket,
+  Layout,
+  Terminal,
+  CheckCircle2,
+  AlertCircle,
+  Shield,
+  ShoppingCart
+} from 'lucide-react';
+import Link from 'next/link';
+
 interface CodeProps {
   children?: string;
 }
@@ -59,6 +80,25 @@ const Pre = ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
 export const mdxComponents = {
   // Custom interactive components
   SchemaTesterDialog: SchemaTesterDialogWrapper,
+  Link,
+  // Icons
+  ChevronLeft,
+  ChevronRight,
+  Zap,
+  Globe,
+  Database,
+  Cpu,
+  Sparkles,
+  MousePointer2,
+  FileCode,
+  BrainCircuit,
+  Rocket,
+  Layout,
+  Terminal,
+  CheckCircle2,
+  AlertCircle,
+  Shield,
+  ShoppingCart,
   // HTML overrides
   pre: Pre,
   h1: (props: any) => <Heading level={1} {...props} />,

@@ -1,0 +1,49 @@
+---
+title: Static vs. Dynamic Mocks
+description: Decide which mocking approach is best for your current development phase.
+---
+
+# Static vs. Dynamic Mocks
+
+Mockzilla offers two ways to define the data your API returns: **Static Response** and **Dynamic Response (via JSON Schema)**.
+
+---
+
+## 1. Static Responses
+A **Static Response** is simple: what you type in the box is exactly what the server returns.
+
+### Best for:
+- **Quick Prototyping**: You just need *any* data to show in a UI component.
+- **Fixed Values**: Endpoints that rarely change (e.g., a "Privacy Policy" URL).
+- **One-off Testing**: Simulating a specific, static error code (e.g., a 403 Forbidden).
+
+---
+
+## 2. Dynamic Responses
+A **Dynamic Response** uses a **JSON Schema** and **Faker.js** to generate fresh, varied data on every request.
+
+### Best for:
+- **Massive Datasets**: Testing lists of 100+ items without manually writing the JSON.
+- **Realistic UI Testing**: Seeing how your UI handles long vs. short strings, different names, and various dates.
+- **Empty States**: Testing the "No data found" scenario by setting `maxItems: 0`.
+
+---
+
+## Comparative Table
+
+| Feature | Static Response | Dynamic Response |
+|---------|-----------------|------------------|
+| **Setup Time** | Instant (Copy/Paste) | Minutes (Write Schema) |
+| **Realistic Data** | No (Same every time) | Yes (Randomized) |
+| **Maintenance** | Manual (Edit every time)| Automatic (Update schema) |
+| **Testing Scope** | Specific cases | Broad, unpredictable cases |
+
+---
+
+## The "Clean Generation" Rule
+By default, Mockzilla only generates the fields you explicitly define in your `properties` block. This ensures your API responses are clean and match your documentation exactly, without auto-generated "garbage" fields.
+
+- **Explicit Properties**: Only keys defined in the schema are included.
+- **No Surprises**: If it's not in the JSON Schema, it won't be in the response.
+
+> **Next Step**: Learn how to write these schemas in the [Dynamic Data Guide](/docs/guides/mocking-infinite-scroll).

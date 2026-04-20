@@ -88,26 +88,26 @@ Run `make help` to see all available commands:
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and customize as needed:
+Copy `.env.example` to `.env` and customize as needed. Here are the key configuration variables:
 
-```bash
-# Database Configuration
-POSTGRES_USER=mockzilla
-POSTGRES_PASSWORD=mockzilla
-POSTGRES_DB=mockzilla
+### Database Configuration
+- `POSTGRES_USER`: The username for the PostgreSQL database (default: `mockzilla`).
+- `POSTGRES_PASSWORD`: The password for the PostgreSQL database (default: `mockzilla`).
+- `POSTGRES_DB`: The name of the database (default: `mockzilla`).
+- `DATABASE_URL`: The connection string for Drizzle ORM.
+  - Docker dev: `postgresql://mockzilla:mockzilla@postgres:5432/mockzilla`
+  - Local dev: `postgresql://mockzilla:mockzilla@localhost:5432/mockzilla`
 
-# Application Database URL
-DATABASE_URL=postgresql://mockzilla:mockzilla@postgres:5432/mockzilla
+### Next.js & System
+- `NODE_ENV`: Set to `development` or `production`.
+- `NEXT_TELEMETRY_DISABLED`: Set to `1` to disable Next.js telemetry.
+- `NEXT_DISABLE_ESLINT`: Set to `true` to skip ESLint during builds.
 
-# Next.js Configuration
-NODE_ENV=development
-NEXT_TELEMETRY_DISABLED=1
-```
-
-### Database URL Formats
-
-- **For Docker development**: `postgresql://mockzilla:mockzilla@postgres:5432/mockzilla`
-- **For local development (outside Docker)**: `postgresql://mockzilla:mockzilla@localhost:5432/mockzilla`
+### Mockzilla Specifics
+- `MOCKZILLA_MAX_ITEMS`: **(New)** Controls the maximum number of items generated in arrays when using Dynamic Responses (JSON Schema). Default is `1000`. This prevents accidental memory exhaustion from massive schemas.
+- `DEPLOY_MODE`: Controls the application's feature set.
+  - `full` (default): Enables the complete Mockzilla dashboard and API mocking engine.
+  - `landing`: Hides the dashboard and API routes, serving only the marketing landing page. Useful for public-facing informational sites.
 
 ## Database Management
 

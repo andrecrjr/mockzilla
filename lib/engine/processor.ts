@@ -2,14 +2,9 @@ import { db } from '../db';
 import { scenarioState } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { matches } from './match';
-import { applyEffects } from './effects';
+import { applyEffects, interpolate } from './effects';
 import type { MatchContext } from './match';
 import type { Transition } from '@/lib/types';
-import { resolvePath } from '../utils/path-resolver';
-
-// Processor.ts has its own interpolate with slightly different logic (regex replace).
-
-
 
 export async function processWorkflowRequest(
 	transition: Transition,
@@ -45,9 +40,6 @@ export async function processWorkflowRequest(
 	if (transition.conditions) {
 		const conditions = transition.conditions;
 		if (!matches(conditions, scenarioData)) {
-			// Conditions failed, logic to return failure or fallthrough?
-			// For this MVP, we 404 or specific error if conditions fail?
-			// Or maybe we just return a default "condition failed" match?
 			return {
 				status: 400,
 				headers: {},
@@ -88,17 +80,17 @@ export async function processWorkflowRequest(
 function interpolateProcessor(template: unknown, context: MatchContext): unknown {
 	if (typeof template === 'string') {
         const trimmed = template.trim();
-        // Check for exact variable match to preserve type (Array/Object)
-        // e.g. "{{ db.items }}" -> returns Array, not stringified array
+        // Check for exact variable match to preserve type (Array/Object/Number)
+        // e.g. "{{ db.items }}" or "{{ state.count + 1 }}"
         const exactMatch = trimmed.match(/^\{\{\s*([^}]+)\s*\}\}$/);
         if (exactMatch) {
-            const val = getHelper(context, exactMatch[1].trim());
+            const val = interpolate(trimmed, context);
             return val !== undefined ? val : template;
         }
 
 		// Replace {{ path.to.val }} with actual value stringified for embedded interpolation
 		return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, path) => {
-			const val = getHelper(context, (path as string).trim());
+			const val = interpolate(`{{${path.trim()}}}`, context);
 			return val !== undefined ? String(val) : '';
 		});
 	} else if (Array.isArray(template)) {
@@ -111,17 +103,4 @@ function interpolateProcessor(template: unknown, context: MatchContext): unknown
 		return result;
 	}
 	return template;
-}
-
-// Simple get helper
-function getHelper(context: MatchContext, path: string): unknown {
-	let lookupPath = path;
-
-	// Support "db" -> "tables" alias
-	// e.g. "db.users[0]" -> "tables.users[0]"
-	if (lookupPath.startsWith('db.') || lookupPath === 'db') {
-		lookupPath = lookupPath.replace(/^db/, 'tables');
-	}
-
-	return resolvePath(lookupPath, context);
 }

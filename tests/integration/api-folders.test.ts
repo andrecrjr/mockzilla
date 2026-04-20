@@ -107,6 +107,7 @@ describe("API /api/folders", () => {
     });
 
     it("POST creates a new folder", async () => {
+        mockResolvedValue = []; // Ensure uniqueness check passes
         const payload = { name: "New Folder", description: "Desc" };
         const req = new NextRequest("http://localhost:3000/api/folders", {
             method: "POST",
@@ -117,7 +118,7 @@ describe("API /api/folders", () => {
         const body = await res.json();
 
         expect(res.status).toBe(201);
-        expect(body.name).toBe("Test Folder");
+        expect(body.name).toBe("Test Folder"); // Note: mockDb.insert returns mockFolder in setup
         expect(mockDb.insert).toHaveBeenCalled();
     });
 

@@ -1,0 +1,88 @@
+---
+title: OpenAPI Import
+description: Instantly bootstrap your entire API from an OpenAPI specification.
+---
+
+# OpenAPI Import
+
+Mockzilla can ingest any **OpenAPI 3.x** specification (YAML or JSON) and automatically generate a complete mocked backend for you. This is the fastest way to get started if you already have a documented API or if you're building a frontend for an existing service.
+
+<div id="openapi-import" />
+
+## How it Works
+
+1. **Paste your Spec**: Click the **Import OpenAPI** button on the dashboard.
+2. **Parsing**: Mockzilla parses each path and method (GET, POST, etc.) defined in your spec.
+3. **Folder Creation**: A new folder is created using the `info.title` from your specification.
+4. **Mock Generation**: For each route:
+   - **Path Parameters**: `/users/{id}` is converted into a **Wildcard** mock (`/users/*`).
+   - **JSON Schema**: If your spec defines a schema for the `200` response, Mockzilla will automatically enable **Dynamic Data** generation using that schema.
+   - **Status Codes**: Successful responses (200, 201) are prioritized.
+
+---
+
+## What to Expect
+
+### 1. High-Fidelity Data Generation
+Mockzilla only returns the fields you've explicitly defined in your specification's `properties` block. No random "garbage" fields (like `dolore_19`) will be generated, keeping your responses clean and predictable.
+
+- **Formats**: Supports standard OpenAPI formats like `email`, `uuid`, `date-time`, `ipv4`, and `uri`.
+- **Constraints**: Respects `minimum`, `maximum`, `minLength`, `maxLength`, and `enum` values.
+- **Collections**: Correctly generates arrays with `minItems` and `maxItems`.
+
+### 2. Custom Faker Extensions
+You can gain even finer control over the generated data by using the `x-faker` extension directly in your OpenAPI spec. Mockzilla supports both standard and `x-faker` keywords to hook into [Faker.js](https://fakerjs.dev/).
+
+```yaml
+properties:
+  full_name:
+    type: string
+    x-faker: person.fullName
+  user_email:
+    type: string
+    x-faker: internet.email
+  avatar:
+    type: string
+    x-faker: image.avatar
+```
+
+### 3. Wildcard Matching
+OpenAPI path parameters (like `{userId}`) are seamlessly mapped to Mockzilla's wildcard system. This ensures your frontend can call any valid ID and get a mocked response back without extra configuration.
+
+### 4. Conflict Resolution
+If you import the same specification twice, Mockzilla will update the existing folder (based on its slug) instead of creating a duplicate. This makes it easy to keep your mocks in sync as your API spec evolves.
+
+---
+
+## 🤖 AI-First: Agent Instructions
+OpenAPI import is the foundation of Mockzilla's **spec-driven** philosophy. While the dashboard UI is powerful, you can automate the entire bootstrapping process by simply giving your spec to an AI agent.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Ask your AI agent to bootstrap your mocks directly from an OpenAPI file or URL.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm">
+      "Use **mockzilla-mock-maker** to import my OpenAPI specification from `https://api.example.com/openapi.json`. It should create a new folder `billing-api` and generate high-fidelity mocks for all GET and POST routes."
+    </p>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: You can also just paste a raw YAML/JSON spec directly into the chat!
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## Best Practices
+
+- **Provide Detailed Schemas**: The more detail you provide in your OpenAPI `components/schemas`, the higher fidelity your mocked data will be.
+- **Set Summaries**: Mockzilla uses the `summary` field from your spec to name the generated mocks in the dashboard.
+- **Check Paths**: After importing, review your mock paths to ensure they align with your frontend's expected "Serve URL" structure.
+
+> **Pro Tip:** Combine OpenAPI import with the **[Chrome Extension](/docs/guides/browser-extension-sync)** for a complete development environment.
