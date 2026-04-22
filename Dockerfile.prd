@@ -16,7 +16,13 @@ COPY . .
 ENV NODE_ENV=production
 RUN bun run build
 
-# 3. Final Stage: Production runner
+# 3. Clean Migration dependencies (Minimal)
+FROM base AS migration-deps
+WORKDIR /app/scripts
+COPY scripts/package.json ./
+RUN bun install --production
+
+# 4. Final Stage: Production runner
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -34,17 +40,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# IMPORTANT: If migrate.mjs is missing dependencies, we copy ONLY the ones it needs.
-# Based on migrate.mjs imports: @electric-sql/pglite, drizzle-orm, pg.
-# These are MUCH smaller than copying the whole node_modules.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@electric-sql ./node_modules/@electric-sql
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg ./node_modules/pg
-# Also need any peer deps if they are missing
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-array ./node_modules/postgres-array
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-bytea ./node_modules/postgres-bytea
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-date ./node_modules/postgres-date
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-interval ./node_modules/postgres-interval
+# Copy migration dependencies (the Clean way)
+COPY --from=migration-deps --chown=nextjs:nodejs /app/scripts/node_modules ./node_modules
 
 # Copy migration files and configuration
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
