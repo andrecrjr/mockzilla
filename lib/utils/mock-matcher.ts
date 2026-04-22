@@ -26,7 +26,7 @@ export function wildcardToRegex(p: string): RegExp {
 	const s = String(p || '');
 	const parts = s.split('*').map(escapeRegex);
 	const pattern = parts.join('(.+?)');
-	const anchored = s.includes('://') ? `^${pattern}$` : `^${pattern}$`;
+	const anchored = s.includes('://') ? `^${pattern}$` : `${pattern}$`;
 	return new RegExp(anchored);
 }
 
@@ -52,7 +52,8 @@ export function queryParamsMatch(
 ): boolean {
 	if (!required || Object.keys(required).length === 0) return true;
 	for (const [key, value] of Object.entries(required)) {
-		if (actual[key] !== value) return false;
+		// Compare as strings to handle numeric defaults in database
+		if (String(actual[key] ?? "") !== String(value ?? "")) return false;
 	}
 	return true;
 }

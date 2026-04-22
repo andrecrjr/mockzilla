@@ -10,9 +10,11 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@apidevtools/json-schema-ref-parser": "^15.3.5",
 		"@electric-sql/pglite": "^0.3.15",
 		"@faker-js/faker": "^10.2.0",
 		"@hookform/resolvers": "^3.10.0",

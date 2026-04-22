@@ -84,5 +84,96 @@ describe('lib/schema-generator', () => {
 			expect(data.fullName).toContain('full name:');
 			expect(data.fullName).toContain(data.firstName);
 		});
+
+		describe('formats', () => {
+			it('supports password format', () => {
+				const schema = {
+					type: 'object',
+					properties: {
+						password: { type: 'string', format: 'password' },
+					},
+					required: ['password'],
+				};
+				const json = generateFromSchema(schema);
+				const data = JSON.parse(json);
+				expect(data.password).toBeDefined();
+				expect(typeof data.password).toBe('string');
+			});
+
+			it('supports byte and binary formats', () => {
+				const schema = {
+					type: 'object',
+					properties: {
+						b: { type: 'string', format: 'byte' },
+						bin: { type: 'string', format: 'binary' },
+					},
+					required: ['b', 'bin'],
+				};
+				const json = generateFromSchema(schema);
+				const data = JSON.parse(json);
+				expect(data.b).toBeDefined();
+				expect(data.bin).toBeDefined();
+			});
+
+			it('supports uri and hostname formats', () => {
+				const schema = {
+					type: 'object',
+					properties: {
+						u: { type: 'string', format: 'uri' },
+						h: { type: 'string', format: 'hostname' },
+					},
+					required: ['u', 'h'],
+				};
+				const json = generateFromSchema(schema);
+				const data = JSON.parse(json);
+				expect(data.u).toMatch(/^http/);
+				expect(data.h).toBeDefined();
+			});
+
+			it('supports ip formats', () => {
+				const schema = {
+					type: 'object',
+					properties: {
+						ipv4: { type: 'string', format: 'ipv4' },
+						ipv6: { type: 'string', format: 'ipv6' },
+					},
+					required: ['ipv4', 'ipv6'],
+				};
+				const json = generateFromSchema(schema);
+				const data = JSON.parse(json);
+				expect(data.ipv4).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
+				expect(data.ipv6).toBeDefined();
+			});
+
+			it('supports more realistic formats (phone, country, currency)', () => {
+				const schema = {
+					type: 'object',
+					properties: {
+						phone: { type: 'string', format: 'phone' },
+						country: { type: 'string', format: 'country' },
+						currency: { type: 'string', format: 'currency' },
+					},
+					required: ['phone', 'country', 'currency'],
+				};
+				const json = generateFromSchema(schema);
+				const data = JSON.parse(json);
+				expect(data.phone).toBeDefined();
+				expect(data.country).toBeDefined();
+				expect(data.currency).toBeDefined();
+			});
+		});
+
+		it('supports faker direct calls in templates', () => {
+			const schema = {
+				type: 'object',
+				properties: {
+					email: { type: 'string', const: '{{faker.internet.email}}' },
+				},
+				required: ['email'],
+			};
+			const json = generateFromSchema(schema);
+			const data = JSON.parse(json);
+			expect(data.email).toContain('@');
+		});
 	});
 });

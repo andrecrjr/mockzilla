@@ -140,7 +140,21 @@ Mockzilla configures JSF with several default options to ensure high-quality dat
 
 ## Request Context & Interpolation
 
-Mockzilla provides the request context to the schema generator, allowing you to reference request data in your schema templates.
+Mockzilla provides the request context to the schema generator, allowing you to reference request data and **even use Faker directly** in your schema templates.
+
+### Faker in Templates
+You can now call Faker methods directly within your templates using `{{faker.method.submethod}}` or `{faker.method.submethod}`.
+
+**Example: Direct Faker Call**
+```json
+{
+  "type": "object",
+  "properties": {
+    "randomEmail": { "type": "string", "const": "{{faker.internet.email}}" },
+    "greeting": { "type": "string", "const": "Hello, {{faker.person.fullName}}!" }
+  }
+}
+```
 
 ### Referencing Query Parameters
 
@@ -164,6 +178,26 @@ You can access query parameters using the `{$.query.paramName}` syntax.
 ```
 
 When calling `?page=2&limit=50`, the response will echo these values back in the `meta` object.
+
+---
+
+## Supported Formats
+
+Mockzilla supports all standard JSON Schema formats plus these additional OpenAPI and realistic data formats:
+
+| Format | Generator |
+| :--- | :--- |
+| `password` | `faker.internet.password()` |
+| `email` | `faker.internet.email()` |
+| `uuid` | `faker.string.uuid()` |
+| `phone` | `faker.phone.number()` |
+| `country` | `faker.location.country()` |
+| `currency` | `faker.finance.currencyCode()` |
+| `uri` | `faker.internet.url()` |
+| `ipv4` / `ipv6` | IP Addresses |
+| `mac` | MAC Address |
+| `user-agent`| Browser user agent |
+| `color` | Human readable color |
 
 ---
 

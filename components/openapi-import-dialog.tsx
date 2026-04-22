@@ -136,7 +136,7 @@ paths:
 								value={spec}
 								onChange={(e) => setSpec(e.target.value)}
 								rows={15}
-								className="font-mono text-xs"
+								className="font-mono text-xs max-h-[200px]"
 								required
 							/>
 						</div>

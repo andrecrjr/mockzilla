@@ -102,6 +102,28 @@ function resolveSinglePath(
 	context: InterpolationContext,
 ): unknown {
 	let lookupPath = path;
+	let args: unknown;
+	let _hasArgs = false;
+
+	// Detect function call with arguments: faker.number.int({"min": 1})
+	const callMatch = lookupPath.match(/^(.*?)\((.*)\)$/);
+	if (callMatch) {
+		lookupPath = callMatch[1].trim();
+		const argsString = callMatch[2].trim();
+		if (argsString) {
+			_hasArgs = true;
+			try {
+				args = JSON.parse(argsString);
+			} catch {
+				// Fallback for simple values
+				if (/^-?\d+\.?\d*$/.test(argsString)) {
+					args = Number(argsString);
+				} else {
+					args = argsString.replace(/^["']|["']$/g, '');
+				}
+			}
+		}
+	}
 
 	// Normalize "db" -> "tables"
 	if (lookupPath.startsWith('db.') || lookupPath === 'db') {
@@ -115,8 +137,11 @@ function resolveSinglePath(
 
 	// Try resolving from root (context.state, context.tables, context.input)
 	const direct = resolvePath(lookupPath, context);
-	if (direct !== undefined) return direct;
+	if (direct !== undefined) {
+		return typeof direct === 'function' ? direct(args) : direct;
+	}
 
 	// Fallback for schema-generator: check context directly (where query/params might be at root)
-	return resolvePath(lookupPath, context);
+	const fallback = resolvePath(lookupPath, context);
+	return typeof fallback === 'function' ? fallback(args) : fallback;
 }

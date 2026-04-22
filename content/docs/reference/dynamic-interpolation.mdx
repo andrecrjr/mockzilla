@@ -47,31 +47,115 @@ Calling `?val=banana` will return:
 `{"message": "Your value is banana"}`
 
 ---
+## 3. Supercharged Faker
 
-## 3. Faker Integration
-Mockzilla supports [Faker.js](https://fakerjs.dev/) to generate realistic data. Use the `faker` keyword in your JSON Schema.
+Mockzilla doesn't just support standard Faker—it gives you two ways to generate incredibly realistic data.
 
-### Common Faker Methods:
-- **`person.fullName`**: Generates a full name.
-- **`internet.email`**: Generates a realistic email.
-- **`commerce.price`**: Generates a random price.
-- **`date.past`**: Generates a past ISO date string.
-- **`string.uuid`**: Generates a unique ID.
+### Method A: JSON Schema Formats (The Easy Way)
+We've added high-level **semantic formats** to JSON Schema. Just set the `format` and Mockzilla does the rest!
 
-### Example in Schema:
+| Format | Output Example |
+|--------|----------------|
+| `password` | `zP8_x9L1q` |
+| `phone` | `(555) 123-4567` |
+| `country` | `United Kingdom` |
+| `currency`| `USD` |
+| `color` | `sky blue` |
+
+**Example:**
 ```json
 {
-  "type": "object",
-  "properties": {
-    "id": { "type": "string", "faker": "string.uuid" },
-    "name": { "type": "string", "faker": "person.fullName" }
+  "user_password": { "type": "string", "format": "password" },
+  "support_phone": { "type": "string", "format": "phone" }
+}
+```
+
+### Method B: Direct Faker Calls (The Flexible Way)
+Want to use Faker anywhere—even in static JSON or custom strings? Use the `{{faker.path}}` syntax.
+
+| Syntax | Result |
+|--------|--------|
+| `{{faker.internet.email}}` | `john.doe@gmail.com` |
+| `Hello, {{faker.person.firstName}}!` | `Hello, Alice!` |
+| `{{faker.number.int({"min": 10, "max": 100})}}` | `42` (Deterministic range) |
+| `{{faker.string.alphanumeric(10)}}` | `a1b2c3d4e5` (Fixed length) |
+
+> **Pro Tip**: You can pass **JSON objects** or simple values as arguments to any Faker method! This works even in **Static Responses**.
+
+---
+
+## 4. Power Moves: Advanced Examples
+
+Combine internal referencing, request context, and direct Faker calls to create "Production-Ready" mocks.
+
+### A. The "Smart" E-commerce Product
+Generate a product that respects its ID format and has a realistic price range.
+```json
+{
+  "id": "PRD-{{faker.string.alphanumeric(8)}}",
+  "name": "{{faker.commerce.productName}}",
+  "price": {{faker.commerce.price({"min": 100, "max": 500, "symbol": "$"})}},
+  "description": "This {{faker.commerce.productAdjective}} item is a must-have!",
+  "stock": {{faker.number.int({"min": 0, "max": 50})}}
+}
+```
+
+### B. Personalized API Greeting
+Echo a user's name from a query parameter and generate a unique session token.
+```json
+{
+  "message": "Welcome back, {{input.query.name}}!",
+  "session": {
+    "id": "{{faker.string.uuid}}",
+    "token": "{{faker.string.alphanumeric(32)}}",
+    "expires": "{{faker.date.future({"years": 1})}}"
+  }
+}
+```
+
+### C. Realistic Transaction List
+Use arguments to constrain data types and ensure they match your database expectations.
+```json
+{
+  "transactions": [
+    {
+      "id": "{{faker.string.nanoid(10)}}",
+      "amount": "{{faker.finance.amount({"min": 5, "max": 1000})}}",
+      "currency": "{{faker.finance.currencyCode}}",
+      "status": "{{faker.helpers.arrayElement(["pending", "completed", "failed"])}}",
+      "card": "**** **** **** {{faker.finance.creditCardCVV}}"
+    }
+  ]
+}
+```
+
+### D. Deeply Nested Profile
+Construct complex objects that match your exact frontend requirements.
+```json
+{
+  "user": {
+    "profile": {
+      "username": "{{faker.internet.userName}}",
+      "avatar": "{{faker.image.avatar}}",
+      "preferences": {
+        "theme": "{{faker.helpers.arrayElement(["dark", "light", "system"])}}",
+        "notifications": {{faker.datatype.boolean}}
+      }
+    },
+    "history": {
+      "lastLogin": "{{faker.date.recent}}",
+      "location": {
+        "city": "{{faker.location.city}}",
+        "zip": "{{faker.location.zipCode("#####")}}"
+      }
+    }
   }
 }
 ```
 
 ---
 
-## 3. Formatting Rules
+## 5. Formatting Rules
 When using **Response Templates** (not JSON Schema), you can still interpolate request data:
 
 | Source | Syntax | Description |

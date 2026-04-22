@@ -1,9 +1,42 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import * as yaml from 'yaml';
+import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
 import { generateFromSchema } from '@/lib/schema-generator';
 import type { HttpMethod, MatchType } from '@/lib/types';
+
+/**
+ * Basic OpenAPI types for dereferenced spec
+ */
+interface OpenApiSpec {
+	info?: {
+		title?: string;
+		description?: string;
+	};
+	paths?: Record<string, Record<string, OpenApiOperation>>;
+}
+
+interface OpenApiOperation {
+	summary?: string;
+	operationId?: string;
+	parameters?: Array<{
+		name: string;
+		in: string;
+		schema?: {
+			default?: unknown;
+		};
+		example?: unknown;
+	}>;
+	responses?: Record<string, {
+		description?: string;
+		content?: Record<string, {
+			schema?: unknown;
+			example?: unknown;
+			examples?: Record<string, { value?: unknown }>;
+		}>;
+	}>;
+}
 
 function generateSlug(name: string): string {
 	return name
@@ -92,15 +125,124 @@ function generateFallbackResponse(
 	}
 }
 
+/**
+ * Processes OpenAPI paths and methods, creating mock responses in the database.
+ * This is the "wiring" logic that converts the dereferenced spec into Mockzilla records.
+ */
+async function processOpenApiPaths(
+	spec: OpenApiSpec,
+	folderId: string,
+	tx: { insert: (table: unknown) => any }, // Minimal interface for Drizzle transaction (return any is common for builders)
+): Promise<number> {
+	let mocksCount = 0;
+
+	if (!spec.paths) return 0;
+
+	for (const [path, methods] of Object.entries(spec.paths)) {
+		for (const [method, operation] of Object.entries(methods)) {
+			if (
+				!['get', 'post', 'put', 'patch', 'delete', 'head', 'options'].includes(
+					method.toLowerCase(),
+				)
+			) {
+				continue;
+			}
+
+			const op = operation;
+			// Normalize path: remove trailing slash for consistency
+			const normalizedPath =
+				path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+			const { endpoint, matchType } = convertOpenApiPathToMockzilla(normalizedPath);
+
+			// Try to find a successful response (200, 201, or first 2xx)
+			const responses = op.responses || {};
+			const successCode = Object.keys(responses).find((code) => code.startsWith('2')) || '200';
+			const successResponse = responses[successCode] || responses.default;
+			
+			const jsonContent = successResponse?.content?.['application/json'];
+			const schema = jsonContent?.schema;
+			const examples = jsonContent?.examples;
+			const example = jsonContent?.example;
+
+			// Extract query parameters
+			const queryParams: Record<string, unknown> = {};
+			if (op.parameters) {
+				for (const param of op.parameters) {
+					if (param.in === 'query') {
+						queryParams[param.name] = param.schema?.default ?? param.example ?? '';
+					}
+				}
+			}
+
+			let responseBody = '{}';
+			let jsonSchema = null;
+			let useDynamicResponse = false;
+			let echoRequestBody = false;
+
+			const isWriteMethod = ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase());
+			let variants = null;
+
+			if (schema) {
+				// With $RefParser, schemas are already dereferenced, so no need to manual component injection
+				try {
+					const limitedSchema = limitArrayItems(schema) as Record<string, unknown>;
+					responseBody = generateFromSchema(limitedSchema);
+				} catch (genError) {
+					console.error(`[API] Generation error for ${method.toUpperCase()} ${path}:`, genError);
+					responseBody = JSON.stringify(generateFallbackResponse(schema as Record<string, unknown>), null, 2);
+				}
+				jsonSchema = JSON.stringify(schema);
+			} else if (examples && typeof examples === 'object') {
+				const firstExampleKey = Object.keys(examples)[0];
+				const firstExample = examples[firstExampleKey];
+				responseBody = JSON.stringify(firstExample.value || firstExample, null, 2);
+			} else if (example !== undefined) {
+				responseBody = JSON.stringify(example, null, 2);
+			} else if (isWriteMethod) {
+				echoRequestBody = true;
+			}
+
+			if (matchType === 'wildcard') {
+				variants = [
+					{
+						key: '*',
+						body: responseBody,
+						statusCode: Number.parseInt(successCode, 10) || 200,
+						bodyType: 'json',
+					},
+				];
+			}
+
+			await tx.insert(mockResponses).values({
+				name: op.summary || op.operationId || `${method.toUpperCase()} ${path}`,
+				endpoint,
+				method: method.toUpperCase() as HttpMethod,
+				statusCode: Number.parseInt(successCode, 10) || 200,
+				response: responseBody,
+				folderId,
+				matchType: matchType as MatchType,
+				bodyType: 'json',
+				enabled: true,
+				queryParams: Object.keys(queryParams).length > 0 ? queryParams : null,
+				variants,
+				jsonSchema,
+				useDynamicResponse,
+				echoRequestBody,
+			});
+
+			mocksCount++;
+		}
+	}
+
+	return mocksCount;
+}
+
 export async function POST(request: NextRequest) {
 	try {
 		const { spec } = await request.json();
 
 		if (!spec) {
-			return NextResponse.json(
-				{ error: 'No OpenAPI specification provided' },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: 'No OpenAPI specification provided' }, { status: 400 });
 		}
 
 		let parsedSpec: Record<string, unknown>;
@@ -108,25 +250,37 @@ export async function POST(request: NextRequest) {
 			parsedSpec = yaml.parse(spec) as Record<string, unknown>;
 		} catch (_e) {
 			return NextResponse.json(
-				{
-					error:
-						'Failed to parse specification. Ensure it is valid YAML or JSON.',
-				},
+				{ error: 'Failed to parse specification. Ensure it is valid YAML or JSON.' },
 				{ status: 400 },
 			);
 		}
 
-		const info = (parsedSpec.info as Record<string, unknown>) || {};
-		const folderName = (info.title as string) || 'Imported OpenAPI';
-		const folderSlug = generateSlug(folderName);
-		const folderDescription =
-			(info.description as string) ||
-			`Imported from OpenAPI spec: ${folderName}`;
+		// Use $RefParser to dereference the spec, resolving all internal and external references.
+		// This is the core of our robust, spec-driven logic.
+		let dereferencedSpec: OpenApiSpec;
+		try {
+			// We pass a dummy base URL to prevent errors in some environments (like happy-dom)
+			// that can't resolve a base for a root object.
+			dereferencedSpec = (await $RefParser.dereference(
+				'http://mockzilla.local/',
+				parsedSpec as Record<string, unknown>,
+				{},
+			)) as OpenApiSpec;
+		} catch (refError) {
+			console.error('[API] Dereference error:', refError);
+			return NextResponse.json(
+				{ error: `Failed to resolve references in specification: ${(refError as Error).message}` },
+				{ status: 400 },
+			);
+		}
 
-		const results = {
-			mocks: 0,
-			folderId: '',
-		};
+		const info = dereferencedSpec.info || {};
+		const folderName = info.title || 'Imported OpenAPI';
+		const folderSlug = generateSlug(folderName);
+		const folderDescription = info.description || `Imported from OpenAPI spec: ${folderName}`;
+
+		let folderId = '';
+		let importedCount = 0;
 
 		await db.transaction(async (tx) => {
 			const [newFolder] = await tx
@@ -146,184 +300,19 @@ export async function POST(request: NextRequest) {
 				})
 				.returning();
 
-			results.folderId = newFolder.id;
-
-			if (parsedSpec.paths) {
-				for (const [path, methods] of Object.entries(
-					parsedSpec.paths as Record<string, unknown>,
-				)) {
-					for (const [method, operation] of Object.entries(
-						methods as Record<string, unknown>,
-					)) {
-						if (
-							![
-								'get',
-								'post',
-								'put',
-								'patch',
-								'delete',
-								'head',
-								'options',
-							].includes(method.toLowerCase())
-						) {
-							continue;
-						}
-
-						const op = operation as Record<string, unknown>;
-						// Normalize path: remove trailing slash for consistency
-						const normalizedPath =
-							path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
-						const { endpoint, matchType } =
-							convertOpenApiPathToMockzilla(normalizedPath);
-
-						// Try to find a successful response (200, 201, or first 2xx)
-						const successCode =
-							Object.keys((op.responses as Record<string, unknown>) || {}).find(
-								(code) => code.startsWith('2'),
-							) || '200';
-						const successResponse =
-							(op.responses as Record<string, unknown>)?.[successCode] ||
-							(op.responses as Record<string, unknown>)?.default;
-						const jsonContent = (successResponse as Record<string, unknown>)
-							?.content as Record<string, unknown>;
-						const applicationJson = jsonContent?.['application/json'] as Record<
-							string,
-							unknown
-						>;
-						const schema = applicationJson?.schema;
-						const examples = applicationJson?.examples;
-						const example = applicationJson?.example;
-
-						// Extract query parameters
-						const queryParams: Record<string, string> = {};
-						if (op.parameters) {
-							for (const param of op.parameters as Record<string, unknown>[]) {
-								if (param.in === 'query') {
-									queryParams[param.name as string] =
-										((param.schema as Record<string, unknown>)
-											?.default as string) ||
-										(param.example as string) ||
-										'';
-								}
-							}
-						}
-
-						// Basic response body if no schema is found
-						let responseBody = '{}';
-						let jsonSchema = null;
-						let useDynamicResponse = false;
-						let echoRequestBody = false;
-
-						const isWriteMethod = ['POST', 'PUT', 'PATCH'].includes(
-							method.toUpperCase(),
-						);
-						let variants = null;
-
-						if (schema) {
-							// Include components in the schema to resolve $refs
-							const fullSchema = {
-								...(schema as Record<string, unknown>),
-								components: parsedSpec.components,
-							};
-
-							try {
-								// Optimize schema for lighter generation
-								const limitedSchema = limitArrayItems(fullSchema) as Record<
-									string,
-									unknown
-								>;
-								// Pre-generate the response payload instead of setting useDynamicResponse: true
-								// This makes the UI much faster by avoiding heavy JSON generation on every load
-								responseBody = generateFromSchema(limitedSchema);
-							} catch (genError) {
-								console.error(
-									`[API] Generation error for ${method.toUpperCase()} ${path}:`,
-									genError,
-								);
-								// Fallback to a basic but clean structure if generation fails
-								responseBody = JSON.stringify(
-									generateFallbackResponse(
-										fullSchema as Record<string, unknown>,
-									),
-									null,
-									2,
-								);
-							}
-
-							// We store the original schema for reference/manual editing,
-							// but keep useDynamicResponse: false to ensure immediate speed.
-							jsonSchema = JSON.stringify(fullSchema);
-						} else if (examples && typeof examples === 'object') {
-							// If we have examples but no schema, use the first example
-							const firstExampleKey = Object.keys(examples)[0];
-							const firstExample = (examples as Record<string, unknown>)[
-								firstExampleKey
-							] as Record<string, unknown>;
-							responseBody = JSON.stringify(
-								firstExample.value || firstExample,
-								null,
-								2,
-							);
-						} else if (example !== undefined) {
-							// If we have a single example
-							responseBody = JSON.stringify(example, null, 2);
-						} else if (isWriteMethod) {
-							// If it's a POST/PUT/PATCH and we have no response schema to generate from,
-							// enable echoing the request body as a sensible default.
-							echoRequestBody = true;
-						}
-
-						// For wildcard mocks, create a default catch-all variant
-						if (matchType === 'wildcard') {
-							variants = [
-								{
-									key: '*',
-									body: responseBody,
-									statusCode: Number.parseInt(successCode, 10) || 200,
-									bodyType: 'json',
-								},
-							];
-						}
-
-						await tx.insert(mockResponses).values({
-							name:
-								(op.summary as string) ||
-								(op.operationId as string) ||
-								`${method.toUpperCase()} ${path}`,
-							endpoint,
-							method: method.toUpperCase() as HttpMethod,
-							statusCode: Number.parseInt(successCode, 10) || 200,
-							response: responseBody,
-							folderId: newFolder.id,
-							matchType: matchType as MatchType,
-							bodyType: 'json',
-							enabled: true,
-							queryParams:
-								Object.keys(queryParams).length > 0 ? queryParams : null,
-							variants,
-							jsonSchema,
-							useDynamicResponse,
-							echoRequestBody,
-						});
-
-						results.mocks++;
-					}
-				}
-			}
+			folderId = newFolder.id;
+			importedCount = await processOpenApiPaths(dereferencedSpec, folderId, tx);
 		});
 
 		return NextResponse.json({
 			success: true,
-			folderId: results.folderId,
-			importedCount: results.mocks,
+			folderId,
+			importedCount,
 		});
 	} catch (error: unknown) {
 		console.error('[API] OpenAPI Import error:', error);
 		return NextResponse.json(
-			{
-				error:
-					(error as Error).message || 'Failed to import OpenAPI specification',
-			},
+			{ error: (error as Error).message || 'Failed to import OpenAPI specification' },
 			{ status: 500 },
 		);
 	}

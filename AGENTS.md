@@ -13,6 +13,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - **Docker Usage**: Always prefer to use Docker (via `Makefile`) to run commands. Never run scripts like `migrate` or `db:generate` locally; execute them inside the container.
 - **Migrations**: Always use `bun run db:generate` inside Docker (or `make db-generate`) to create migrations.
 - **Bun**: Use `bun` as the primary runtime and package manager inside Docker.
+- **Biome** : Lint and prettier default
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.
 - Terminology: "folder" groups mocks; "mock" is an individual endpoint response.
@@ -21,6 +22,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Must use `z.infer<typeof schema>` to extract types from Zod schemas.
 - **Always** in the end update `documentation/` folder with updated docs.
 - Use **Agent Skills** (`.agent/skills/`) for complex mocking or logic tasks.
+
 
 ## Index
 - Mock Serving Agent

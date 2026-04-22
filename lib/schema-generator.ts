@@ -4,6 +4,26 @@ import jsf from 'json-schema-faker';
 jsf.extend('faker', () => faker);
 jsf.extend('x-faker', () => faker);
 
+// Add support for common OpenAPI/JSON Schema formats
+jsf.format('password', () => faker.internet.password());
+jsf.format('byte', () => faker.string.alphanumeric(10)); // Base64 encoded placeholder
+jsf.format('binary', () => faker.string.alphanumeric(10));
+jsf.format('uri', () => faker.internet.url());
+jsf.format('hostname', () => faker.internet.domainName());
+jsf.format('ipv4', () => faker.internet.ipv4());
+jsf.format('ipv6', () => faker.internet.ipv6());
+
+// Even more faker formats
+jsf.format('phone', () => faker.phone.number());
+jsf.format('country', () => faker.location.country());
+jsf.format('country-code', () => faker.location.countryCode());
+jsf.format('currency', () => faker.finance.currencyCode());
+jsf.format('currency-symbol', () => faker.finance.currencySymbol());
+jsf.format('credit-card', () => faker.finance.creditCardNumber());
+jsf.format('user-agent', () => faker.internet.userAgent());
+jsf.format('mac', () => faker.internet.mac());
+jsf.format('color', () => faker.color.human());
+
 const DEFAULT_MAX_ITEMS = 1000;
 const envMaxItems = process.env.MOCKZILLA_MAX_ITEMS
 	? parseInt(process.env.MOCKZILLA_MAX_ITEMS, 10)
@@ -49,6 +69,7 @@ export function generateFromSchema(
 		// Merge generated data with context for template resolution
 		// The context (e.g. request query params) takes precedence if there are naming collisions
 		const rootData = {
+			faker, // Add faker to context for template interpolation
 			...generated,
 			...context,
 		};
