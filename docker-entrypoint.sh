@@ -36,9 +36,9 @@ if [ "$DEPLOY_MODE" = "landing" ]; then
 else
   echo "Running database migrations..."
   if [ "$NODE_ENV" = "production" ] && [ "$(id -u)" = "0" ] && id "nextjs" >/dev/null 2>&1; then
-    su nextjs -s /bin/sh -c "bun scripts/migrate.mjs"
+    su nextjs -s /bin/sh -c "node scripts/migrate.mjs"
   else
-    bun scripts/migrate.mjs
+    node scripts/migrate.mjs
   fi
 fi
 

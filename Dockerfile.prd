@@ -4,56 +4,60 @@ FROM oven/bun:1-alpine AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install dependencies
+# 1. Install all dependencies (for build)
 FROM base AS deps
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
-# Build the Next.js app (standalone output)
+# 2. Build the Next.js app (standalone output)
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 ENV NODE_ENV=production
 RUN bun run build
 
-# Production runner with Bun on Alpine
-FROM oven/bun:1-alpine AS runner
+# 3. Final Stage: Production runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=36666
 
 # Install runtime utilities
-RUN apk add --no-cache postgresql-client curl
+RUN apk add --no-cache curl
 
 # Create non-root user
 RUN addgroup -S nodejs -g 1001 && adduser -S nextjs -u 1001
 
-RUN mkdir -p .next data && chown -R nextjs:nodejs .next data
-
-# Copy standalone output as application root
+# Copy standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy node_modules from deps stage (contains drizzle-kit and dependencies)
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+# IMPORTANT: If migrate.mjs is missing dependencies, we copy ONLY the ones it needs.
+# Based on migrate.mjs imports: @electric-sql/pglite, drizzle-orm, pg.
+# These are MUCH smaller than copying the whole node_modules.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@electric-sql ./node_modules/@electric-sql
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg ./node_modules/pg
+# Also need any peer deps if they are missing
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-array ./node_modules/postgres-array
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-bytea ./node_modules/postgres-bytea
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-date ./node_modules/postgres-date
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-interval ./node_modules/postgres-interval
 
 # Copy migration files and configuration
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
-
-# Copy migration runner script and entrypoint
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/migrate.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-# Start as root to allow the entrypoint to fix volume permissions
-USER root
+# Ensure the data directory is created and owned by nextjs
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
+# Start as root to allow the entrypoint to fix volume permissions if needed
+USER root
 EXPOSE 36666
 
 # Run migrations on container start, then start the server
-ENV START_CMD="node server.js"
 ENTRYPOINT ["./docker-entrypoint.sh"]

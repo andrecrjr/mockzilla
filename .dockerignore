@@ -10,6 +10,10 @@ bun.lock
 .next
 out
 build
+.env
+.env.local
+.env.production
+.env.development
 
 # Testing
 coverage

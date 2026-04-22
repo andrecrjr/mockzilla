@@ -132,7 +132,7 @@ function generateFallbackResponse(
 async function processOpenApiPaths(
 	spec: OpenApiSpec,
 	folderId: string,
-	tx: { insert: (table: unknown) => any }, // Minimal interface for Drizzle transaction (return any is common for builders)
+	tx: any,
 ): Promise<number> {
 	let mocksCount = 0;
 
