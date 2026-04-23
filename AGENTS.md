@@ -242,6 +242,8 @@ Tags: #skills #automation #creator #architect
 - Skills:
   - `mockzilla-mock-maker`: Expert for high-quality, high-fidelity data generation.
   - `mockzilla-workflow-architect`: Expert for stateful API workflows and scenarios.
+  - `mockzilla-spec-translator`: Expert for rapid project bootstrapping from OpenAPI/Markdown specs.
+  - `mockzilla-logic-doctor`: Forensic specialist for debugging workflow matching and state.
 - Usage: "Use [skill-name] to [task description]".
 - Related Docs: `documentation/skills.md`.
 

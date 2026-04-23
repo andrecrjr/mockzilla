@@ -15,13 +15,29 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 - [JSON Faker Mock References](./resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
 
+## �️ Available MCP Tools
+
+| Tool | Purpose | Key Parameters |
+| :--- | :--- | :--- |
+| `create_folder` | Create a folder to group mocks | `name`, `description` |
+| `get_folder` | Fetch folder by ID or slug | `id` or `slug` |
+| `list_folders` | List all folders (paginated) | `page`, `limit` |
+| `create_schema_mock` | Create a mock with JSON Schema + dynamic data | `name`, `path`, `method`, `statusCode`, `folderSlug`, `jsonSchema` |
+| `create_mock` | Create a static mock | `name`, `path`, `method`, `statusCode`, `folderSlug`, `response` |
+| `update_mock` | Update an existing mock | `id` + any fields to change |
+| `get_mock` | Fetch a mock by ID | `id` |
+| `list_mocks` | List mocks (paginated, filterable by folder) | `folderSlug`, `page`, `limit` |
+| `delete_mock` | Delete a mock | `id` |
+| `preview_mock` | Preview a mock response without calling the live URL | `folderSlug`, `path`, `method`, `queryParams`, `headers`, `bodyJson` |
+
 ## 🛡️ Constraints & Boundaries
 
-- **Always** use `create_schema_mock` for dynamic/static lists.
+- **Always** use `create_schema_mock` for dynamic/realistic data.
 - **Always** set `minItems` and `maxItems` to keep responses manageable.
 - **Never** include state-changing logic (e.g., `db.push`) when using this skill.
-- **Strict Schemas**: Always set `additionalProperties: false` on objects and `additionalItems: false` on arrays to prevent "ugly" or unwanted random data by default.
+- **Strict Schemas**: Always set `additionalProperties: false` on objects to prevent unwanted random data.
 - **Never** use hardcoded data for more than 3 fields; use Faker instead.
+- **Always** call `preview_mock` after creating a mock to verify the response looks correct before finishing.
 
 ## Core Principles
 
@@ -29,6 +45,19 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 2.  **Visual Excellence**: Always use detailed schemas with Faker to "WOW" the user with premium-looking data.
 3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
 4.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
+5.  **Verify Always**: Call `preview_mock` to validate every mock immediately after creation.
+
+---
+
+## 🔄 Standard Workflow
+
+```
+create_folder (if needed)
+  └─> create_schema_mock (for dynamic) | create_mock (for static)
+        └─> preview_mock (verify output)
+              └─> update_mock (iterate if needed)
+                    └─> preview_mock (confirm fix)
+```
 
 ---
 
@@ -36,13 +65,14 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 | Task | Recommended Tool | Why? |
 | :--- | :--- | :--- |
-| **Simple Mock** | `create_schema_mock` | Supports JSON Schema + Faker + Interpolation automatically. |
-| **Realistic Data** | `create_schema_mock` | Best for generating lists, objects, and realistic strings. |
-| **Static Snippet** | `create_mock` | Quick for constant responses where variation isn't needed. |
+| **Realistic / Dynamic Data** | `create_schema_mock` | JSON Schema + Faker + Interpolation. Auto-generates varied data on each request. |
+| **Static / Constant Response** | `create_mock` | Quick for fixed responses (health checks, feature flags, enums). |
+| **Iteration / Fix** | `update_mock` + `preview_mock` | Surgically update one field, re-verify. |
+| **Inspect existing** | `get_mock` / `list_mocks` | Read before modifying to avoid overwriting fields. |
 
 ---
 
-## 🎨 premium JSON Schema Patterns
+## 🎨 Premium JSON Schema Patterns
 
 Use these patterns to generate data that feels like a real production API.
 
@@ -129,7 +159,10 @@ Reference generated fields within the same object to ensure data consistency. Us
 - **Faker Arguments**: Use **object notation** for named parameters: `{"faker": {"finance.amount": {"min": 10, "max": 100}}}`.
 - **Array Content**: Always provide an `items` subschema for arrays, fixed or dynamic.
 - **Strictness**: Use `additionalProperties: false` (objects) and `additionalItems: false` (arrays) to ensure the output matches the schema *exactly*.
-- **Validation**: Use `preview_mock` to test your schema before saving.
+- **Always validate**: Call `preview_mock` immediately after `create_schema_mock` to check the generated data quality. Iterate with `update_mock` if needed.
+- **Prefer `folderSlug`**: Use `folderSlug` parameter instead of `folderId` when creating mocks—it's human-readable and avoids needing an extra lookup.
+- **Wildcard paths**: For path params like `/users/:id`, set `matchType: "wildcard"` and add `variants` for specific ID cases (e.g., `test-admin`).
+- **Query param matching**: Use `queryParams` to lock a mock to a specific query string signature.
 
 ---
 
@@ -156,3 +189,10 @@ If you need:
 - Delayed responses or error toggling
 
 **👉 Switch to `mockzilla-workflow-architect`**
+
+If you need:
+- Importing a full OpenAPI/Swagger spec
+- Bootstrapping an entire project from scratch
+- Mass-creating mocks across many endpoints
+
+**👉 Switch to `mockzilla-spec-translator`**

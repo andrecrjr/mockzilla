@@ -17,6 +17,16 @@ Expert for stateful, interactive API scenarios and business logic.
 - **Best for**: Checkouts, Authentication flows, Inventory management, State-dependent responses.
 - **Principle**: "Action-Driven" - Endpoints are actions, and state changes are side-effects stored in the mini-DB.
 
+### 3. Mockzilla Spec Translator (`mockzilla-spec-translator`)
+High-velocity architect for project bootstrapping from external specs.
+- **Best for**: Migrating from OpenAPI, Jira requirements, or legacy documentation.
+- **Workflow**: Automated creation of folders and high-fidelity schema mocks.
+
+### 4. Mockzilla Logic Doctor (`mockzilla-logic-doctor`)
+Forensic specialist for debugging complex workflow matching and state issues.
+- **Best for**: Resolving "No matching transition found" and state corruption errors.
+- **Method**: Step-by-step reproduction and surgical fixes using MCP tools.
+
 ---
 
 ## 🚀 Installation
