@@ -1,0 +1,143 @@
+---
+title: JSON Schema Reference
+description: Guide to using JSON Schema and Faker.js for dynamic data generation.
+---
+
+# JSON Schema Reference
+
+Mockzilla uses [json-schema-faker](https://github.com/json-schema-faker/json-schema-faker) (JSF) to generate dynamic, realistic data from your JSON Schemas. It provides a bridge between standard JSON Schema validation and data generation libraries like Faker.js.
+
+## Supported Specifications
+
+Mockzilla currently uses **json-schema-faker v0.5.9**, which primarily supports **JSON Schema Draft-04**. Many common keywords from later drafts (like `oneOf`, `anyOf`, `allOf`) are also supported for generation.
+
+## Supported Keywords
+
+JSF supports a wide range of standard JSON Schema keywords to guide data generation:
+
+- **Logic**: `allOf`, `anyOf`, `oneOf`, `not` (partially)
+- **Objects**: `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`
+- **Arrays**: `items` (mandatory for validation), `minItems`, `maxItems`, `uniqueItems`
+- **Strings**: `minLength`, `maxLength`, `pattern` (RegExp), `format`, `enum`
+- **Numbers**: `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`
+- **Metadata**: `default`, `examples`, `const`
+
+---
+
+## Faker.js Integration (v10)
+
+Mockzilla integrates [Faker.js](https://fakerjs.dev/) v10 directly into the schema generation process. You can use the `faker` (or `x-faker` in OpenAPI) keyword on any schema property.
+
+### Passing Arguments to Faker
+
+Modern Faker uses **object notation** for named parameters. This is the preferred syntax in Mockzilla.
+
+```json
+{
+  "faker": {
+    "finance.amount": { "min": 100, "max": 1000, "dec": 2, "symbol": "$" }
+  }
+}
+```
+
+### Common Faker Fields
+
+| Category | Method Examples |
+| :--- | :--- |
+| **👤 Person** | `fullName`, `firstName`, `lastName`, `jobTitle` |
+| **🌐 Internet** | `email`, `userName`, `password`, `url`, `ipv4` |
+| **💰 Finance** | `amount`, `accountNumber`, `currencyCode`, `iban` |
+| **📍 Location**| `streetAddress`, `city`, `zipCode`, `country` |
+| **📅 Date** | `recent`, `future`, `past`, `birthdate` |
+| **📦 Lorem** | `word`, `sentence`, `paragraph`, `slug` |
+| **🔢 System** | `string.uuid`, `string.alphanumeric`, `number.int` |
+
+---
+
+## High-Fidelity Patterns
+
+### Paginated List Response
+```json
+{
+  "type": "object",
+  "properties": {
+    "data": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "faker": "string.uuid" },
+          "title": { "type": "string", "faker": "lorem.sentence" }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "page": { "const": 1 },
+        "total": { "type": "integer", "faker": { "number.int": { "min": 50, "max": 100 } } }
+      }
+    }
+  }
+}
+```
+
+---
+
+## Request Context & Interpolation
+
+Mockzilla provides the request context to the schema generator, allowing you to reference request data directly in your schema.
+
+### Faker in Templates
+You can call Faker methods directly within your templates using `{{faker.method.submethod}}`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "randomEmail": { "type": "string", "const": "{{faker.internet.email}}" },
+    "greeting": { "type": "string", "const": "Hello, {{faker.person.fullName}}!" }
+  }
+}
+```
+
+### Referencing Query Parameters
+Access query parameters using the `{$.query.paramName}` syntax.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "page": { "const": "{$.query.page}" },
+        "limit": { "const": "{$.query.limit}" }
+      }
+    }
+  }
+}
+```
+
+---
+
+## Supported Formats
+
+| Format | Generator |
+| :--- | :--- |
+| `password` | `faker.internet.password()` |
+| `email` | `faker.internet.email()` |
+| `uuid` | `faker.string.uuid()` |
+| `phone` | `faker.phone.number()` |
+| `uri` | `faker.internet.url()` |
+| `ipv4` / `ipv6` | IP Addresses |
+
+---
+
+## Best Practices
+
+- **Mandatory `items`**: For `type: "array"`, an `items` subschema **must** be provided.
+- **Explicit Types**: Always specify a `type` for every property to ensure consistent generation.
+- **Array Size Capped**: By default, Mockzilla's OpenAPI import caps auto-generated arrays at `maxItems: 3` for performance. You can manually increase this in the dashboard.

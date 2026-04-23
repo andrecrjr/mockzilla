@@ -36,7 +36,7 @@ function MatchTypeSection({ value, onChange }: MatchTypeSectionProps) {
 					label="Match Type"
 					description="Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint."
 					example="exact: /users/123 | wildcard: /users/* | substring: /api/users"
-					docsLink="/docs#wildcard-variants"
+					docsLink="/docs/reference/routing-and-matching#wildcard-matching"
 				/>
 			</div>
 			<div className="space-y-2">
@@ -92,7 +92,7 @@ function QueryParamsSection({ params, onChange }: QueryParamsSectionProps) {
 					label="Required Query Params"
 					description="Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string."
 					example="?page=1&limit=10"
-					docsLink="/docs#overview"
+					docsLink="/docs/reference/routing-and-matching#query-parameters"
 				/>
 			</div>
 

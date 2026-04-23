@@ -581,7 +581,7 @@ export function TransitionDialog({
 										label="Path"
 										description="The URL pattern to match. Supports exact and parameterized paths."
 										example="/users/:id"
-										docsLink="/docs/workflows#path-matching"
+										docsLink="/docs/reference/workflow-syntax"
 									/>
 								</Label>
 								<Input
@@ -607,7 +607,7 @@ export function TransitionDialog({
 											label="Conditions"
 											description="Rules that must match for this transition to fire. If empty, it always matches."
 											example='[{"type":"eq", "field":"state.isLoggedIn", "value":true}]'
-											docsLink="/docs/workflows#conditions"
+											docsLink="/docs/reference/workflow-syntax#1-conditions"
 										/>
 										<Button
 											type="button"
@@ -805,7 +805,7 @@ export function TransitionDialog({
 											label="Effects"
 											description="Actions to modify state or database when this transition fires."
 											example='[{"type":"state.set", "raw":{"isLoggedIn":true}}]'
-											docsLink="/docs/workflows#effects"
+											docsLink="/docs/reference/workflow-syntax#2-effects"
 										/>
 										<Button
 											type="button"
@@ -1026,3 +1026,4 @@ export function TransitionDialog({
 
 // Keep backward compatible export
 export { TransitionDialog as CreateTransitionDialog };
+Dialog };

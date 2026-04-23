@@ -233,7 +233,7 @@ export function ResponseConfig({
 								label="Echo Request Body"
 								description="Returns the exact request body as the response. Useful for testing POST/PUT endpoints where you want to verify what was sent."
 								example='POST {"name":"Alice"} → Response {"name":"Alice"}'
-								docsLink="/docs#overview"
+								docsLink="/docs"
 							/>
 						</div>
 						<p className="text-xs text-muted-foreground">
@@ -275,7 +275,7 @@ export function ResponseConfig({
 								label="Manual JSON"
 								description="Enter a static JSON response that will be returned for every request matching this endpoint."
 								example='{"message": "Hello World", "status": "success"}'
-								docsLink="/docs#overview"
+								docsLink="/docs"
 							/>
 						</div>
 						<Textarea
@@ -295,7 +295,7 @@ export function ResponseConfig({
 								label="From Schema"
 								description="Paste a JSON Schema to auto-generate mock data. Enable 'Dynamic Response' to get new random data on each request. Supports Faker.js formats and string interpolation."
 								example='{"type": "object", "properties": {"name": {"type": "string", "faker": "person.fullName"}}}'
-								docsLink="/docs#syntax"
+								docsLink="/docs/guides/openapi-import"
 							/>
 						</div>
 						<Textarea
@@ -325,7 +325,7 @@ export function ResponseConfig({
 									label="Dynamic Response"
 									description="Generates fresh random data on each request using JSON Schema + Faker. Supports string interpolation with {$.field} syntax to reference other generated fields."
 									example='{"summary": {"const": "Order {$.orderId} confirmed"}}'
-									docsLink="/docs/dynamic-data#interpolation-syntax"
+									docsLink="/docs/reference/dynamic-interpolation#internal-referencing-path"
 								/>
 							</div>
 						</div>
@@ -348,7 +348,7 @@ export function ResponseConfig({
 							<div className="flex items-center justify-between">
 								<Label htmlFor="preview-json">Generated Preview</Label>
 								<Link
-									href="/docs/dynamic-data#interpolation-syntax"
+									href="/docs/reference/dynamic-interpolation#internal-referencing-path"
 									className="flex items-center gap-1 text-xs text-primary hover:underline"
 									target="_blank"
 								>
@@ -374,7 +374,7 @@ export function ResponseConfig({
 								description:
 									'Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string.',
 								example: '?page=1&limit=10',
-								docsLink: '/docs/routing',
+								docsLink: '/docs/reference/routing-and-matching#query-parameters',
 							}}
 							isExpanded={queryExpanded}
 							onToggle={() => setQueryExpanded(!queryExpanded)}
@@ -443,7 +443,7 @@ export function ResponseConfig({
 									'Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint.',
 								example:
 									'exact: /users/123 | wildcard: /users/* | substring: /api/users',
-								docsLink: '/docs#wildcard-variants',
+								docsLink: '/docs/reference/routing-and-matching#wildcard-matching',
 							}}
 							isExpanded={matchExpanded}
 							onToggle={() => setMatchExpanded(!matchExpanded)}
@@ -508,7 +508,7 @@ export function ResponseConfig({
 									description:
 										'Define different response variants based on captured URL segments. Each variant has a unique key that matches URL segments captured by * in your endpoint.',
 									example: '123 for /users/123, alice|42 for /users/*/posts/*',
-									docsLink: '/docs#wildcard-variants',
+									docsLink: '/docs/reference/routing-and-matching#wildcard-matching',
 								}}
 								isExpanded={variantsExpanded}
 								onToggle={() => setVariantsExpanded(!variantsExpanded)}

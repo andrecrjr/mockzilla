@@ -465,7 +465,7 @@ function DbRemoveEditor({
 						label="Match Criteria"
 						description="Filter which rows to remove. Supports exact matches and interpolation."
 						example='{ "sku": "{{ input.params.sku }}" }'
-						docsLink="/docs/workflows#db-remove"
+						docsLink="/docs/reference/workflow-syntax#2-effects"
 					/>
 				</Label>
 				<JsonOrStringInput
@@ -618,5 +618,11 @@ function InsertVariableMenu({ onInsert }: { onInsert: (v: string) => void }) {
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
+	);
+}
+downMenu>
+	);
+}
+ropdownMenu>
 	);
 }
