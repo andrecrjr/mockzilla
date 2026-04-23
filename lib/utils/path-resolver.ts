@@ -28,9 +28,9 @@ export function resolvePath(path: string, data: unknown): unknown {
 			return undefined;
 		}
 
-		// Check if part is an array index
-		const arrayIndex = parseInt(part, 10);
-		if (!Number.isNaN(arrayIndex)) {
+		// Check if part is a pure array index (only digits)
+		if (/^\d+$/.test(part)) {
+			const arrayIndex = parseInt(part, 10);
 			// Check if current supports number indexing (Array or generic object)
 			current = (current as Record<string, unknown>)[arrayIndex];
 		} else {

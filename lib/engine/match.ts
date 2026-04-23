@@ -158,6 +158,7 @@ export function evaluateCondition(
 		case 'lt':
 			return Number(actual) < Number(expected);
 		case 'contains':
+			if (actual === undefined || actual === null) return false;
 			return (
 				(Array.isArray(actual) && actual.includes(expected)) ||
 				String(actual).includes(String(expected))

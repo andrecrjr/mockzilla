@@ -125,23 +125,33 @@ function resolveSinglePath(
 		}
 	}
 
-	// Normalize "db" -> "tables"
+	// 1. Handle Literals (Numeric)
+	if (/^-?\d+\.?\d*$/.test(lookupPath)) {
+		return Number(lookupPath);
+	}
+
+	// 2. Handle Literals (Quoted Strings)
+	if (/^["'](.*)["']$/.test(lookupPath)) {
+		return lookupPath.replace(/^["']|["']$/g, '');
+	}
+
+	// 3. Normalize "db" -> "tables"
 	if (lookupPath.startsWith('db.') || lookupPath === 'db') {
 		lookupPath = lookupPath.replace(/^db/, 'tables');
 	}
 
-	// If path starts with $. (JSONPath style), normalize it for resolvePath
+	// 4. If path starts with $. (JSONPath style), normalize it for resolvePath
 	if (lookupPath.startsWith('$.')) {
 		lookupPath = lookupPath.substring(2);
 	}
 
-	// Try resolving from root (context.state, context.tables, context.input)
+	// 5. Try resolving from root (context.state, context.tables, context.input)
 	const direct = resolvePath(lookupPath, context);
 	if (direct !== undefined) {
 		return typeof direct === 'function' ? direct(args) : direct;
 	}
 
-	// Fallback for schema-generator: check context directly (where query/params might be at root)
-	const fallback = resolvePath(lookupPath, context);
-	return typeof fallback === 'function' ? fallback(args) : fallback;
+	// 6. Fallback for schema-generator: check context directly (where query/params might be at root)
+	// Some tools might pass flattened context where query/params are top-level
+	return resolvePath(lookupPath, context);
 }
