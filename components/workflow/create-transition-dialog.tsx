@@ -1025,5 +1025,4 @@ export function TransitionDialog({
 }
 
 // Keep backward compatible export
-export { TransitionDialog as CreateTransitionDialog };
-Dialog };
+export { TransitionDialog as CreateTransitionDialog, Dialog };

@@ -620,9 +620,3 @@ function InsertVariableMenu({ onInsert }: { onInsert: (v: string) => void }) {
 		</DropdownMenu>
 	);
 }
-downMenu>
-	);
-}
-ropdownMenu>
-	);
-}
