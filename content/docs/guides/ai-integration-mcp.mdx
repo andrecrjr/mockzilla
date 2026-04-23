@@ -1,11 +1,11 @@
 ---
 title: AI Integration (MCP)
-description: Let your AI assistant (Cursor, Claude) build your mocks for you.
+description: Let your AI assistant build your mocks for you using the Model Context Protocol.
 ---
 
 # AI Integration (MCP)
 
-Mockzilla is built for the era of AI. It supports the **Model Context Protocol (MCP)**, which means you can give your AI agent (like Cursor or Claude Desktop) direct access to your Mockzilla server.
+Mockzilla is built for the era of AI. It supports the **Model Context Protocol (MCP)**, which means you can give any modern AI agent direct access to your Mockzilla server tools.
 ---
 
 ## 🤖 AI-First: Agent Skills
@@ -17,21 +17,21 @@ While raw MCP tools are powerful, you can supercharge your AI agent with special
       <Shield className="w-6 h-6 text-blue-500" />
     </div>
     <div>
-      <CardTitle className="text-lg">Install Skills from GitHub</CardTitle>
-      <CardDescription>If you are using the Gemini CLI, you can install these skills directly from our repository.</CardDescription>
+      <CardTitle className="text-lg">Universal Installation</CardTitle>
+      <CardDescription>You can install our expert skills into any compatible agent using the universal npx skills tool.</CardDescription>
     </div>
   </CardHeader>
   <CardContent className="space-y-4">
     <div className="space-y-2">
       <p className="text-sm font-medium">Mock Maker Skill:</p>
       <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-        gemini skills install https://github.com/andrecrjr/mockzilla.git --path .agent/skills/mockzilla-mock-maker
+        npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
       </div>
     </div>
     <div className="space-y-2">
       <p className="text-sm font-medium">Workflow Architect Skill:</p>
       <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-        gemini skills install https://github.com/andrecrjr/mockzilla.git --path .agent/skills/mockzilla-workflow-architect
+        npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
       </div>
     </div>
     <Link href="/docs/getting-started/installing-skills">
@@ -55,15 +55,17 @@ Instead of clicking through the dashboard yourself, you can just **ask your assi
 
 ## Quick Connection
 
-### 1. Cursor
-Go to **Settings > Models > MCP** and add this URL:
+To connect Mockzilla to your preferred AI assistant, use the following configuration details:
+
+### MCP Server URL
+For web-based or editor-integrated agents, add this URL to your MCP settings:
 
 ```
 http://localhost:36666/api/mcp
 ```
 
-### 2. Claude Desktop
-Add Mockzilla to your `claude_desktop_config.json`:
+### Local Configuration
+For desktop-based agents that require a local configuration file, add Mockzilla as an MCP server:
 
 ```json
 {
@@ -75,5 +77,7 @@ Add Mockzilla to your `claude_desktop_config.json`:
   }
 }
 ```
+
+> **Pro Tip:** Ask your AI assistant to design the perfect API response while you focus on building the UI. It's like having a backend engineer built into your editor!
 
 > **Pro Tip:** Ask your AI assistant to design the perfect API response while you focus on building the UI. It's like having a backend engineer built into your editor!

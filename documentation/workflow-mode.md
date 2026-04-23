@@ -134,6 +134,7 @@ Mockzilla exposes **24 specialized tools** to AI assistants. They are grouped in
 #### 1. Folders & Mocks
 - `list_folders`, `create_folder`, `get_folder`, `update_folder`, `delete_folder`
 - `list_mocks`, `get_mock`, `create_mock`, `update_mock`, `delete_mock`
+  - Note: `create_mock` and `list_mocks` support `folderSlug` for easier AI automation.
 - `create_schema_mock` (**Recommended** for dynamic data)
 - `preview_mock` (Validate responses)
 
@@ -180,8 +181,13 @@ When using `create_workflow_transition` or `update_workflow_transition`, you MUS
 - ✅ **Business Logic**: State updates must be side effects of business logic transitions (e.g., `POST /submit-order` updates `db.orders` and `state.cart_count`).
 
 #### 5. Response
-
-#### 5. Response
+- **Strict Format**: Responses must be an object with `status` and `body`.
+  ```json
+  {
+    "status": 201,
+    "body": { "id": "{{input.body.id}}", "status": "created" }
+  }
+  ```
 - **Interpolation**: Supported for `{{state}}`, `{{db}}`, `{{input}}`.
 - ❌ **NO Faker/Random**: Responses must be deterministic based on state/inputs.
 

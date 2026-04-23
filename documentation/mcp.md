@@ -1,12 +1,12 @@
 # Model Context Protocol (MCP) Integration
 
-Mockzilla exposes a first-class **Model Context Protocol (MCP)** server, allowing AI agents (like Claude Desktop, Cursor, or specialized agents) to fully control and automate your mocking environment.
+Mockzilla exposes a first-class **Model Context Protocol (MCP)** server, allowing AI agents (like Gemini CLI, Claude, Cursor, or specialized sub-agents) to fully control and automate your mocking environment.
 
 ---
 
 ## What is MCP?
 
-The Model Context Protocol (MCP) is an open-standard connector that enables LLMs to interact with external tools and data sources. In Mockzilla, it allows an AI assistant to:
+The Model Context Protocol (MCP) is an open-standard connector that enables LLMs and AI Agents to interact with external tools and data sources. In Mockzilla, it allows an AI assistant to:
 - Create and manage mocks dynamically.
 - Setup complex, stateful workflow scenarios.
 - Inspect and reset in-memory database states.
@@ -16,14 +16,14 @@ The Model Context Protocol (MCP) is an open-standard connector that enables LLMs
 
 ## Installation & Setup
 
-Mockzilla uses the **WebStandardStreamableHTTPServerTransport**, which supports the MCP Streamable HTTP protocol.
+Mockzilla supports the MCP Streamable HTTP protocol, making it compatible with any modern MCP client.
 
-### Option 1: Direct URL (Preferred)
-Modern MCP clients (like Cursor or custom agents) can connect directly to the HTTP endpoint.
+### Option 1: Direct URL (Preferred for AI IDEs)
+Most MCP-native clients (like Cursor, Windsurf, or custom agents) can connect directly to the HTTP endpoint.
 
 **Endpoint URL**: `http://localhost:36666/api/mcp`
 
-### Option 2: Stdio Bridge (For Claude Desktop)
+### Option 2: Stdio Bridge (For Claude Desktop & CLI tools)
 If your client only supports local `stdio` servers, use `mcp-remote` as a bridge:
 
 ```json
@@ -39,6 +39,23 @@ If your client only supports local `stdio` servers, use `mcp-remote` as a bridge
     }
   }
 }
+```
+
+---
+
+## 🚀 Supercharge with Agent Skills
+
+While the raw MCP tools are powerful, you can provide your agent with **expert capabilities** by installing Mockzilla Skills. Skills are specialized instruction sets that teach your AI how to build high-fidelity mocks and complex workflows following our best practices.
+
+### Universal Installation
+You can use the universal `npx skills` tool to install these into any compatible agent (like Gemini CLI):
+
+```bash
+# Install the Mock Maker skill
+npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
+
+# Install the Workflow Architect skill
+npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
 ```
 
 ---

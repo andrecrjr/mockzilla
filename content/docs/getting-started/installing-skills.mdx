@@ -5,56 +5,52 @@ description: Supercharge your AI agent with specialized Mockzilla instruction se
 
 # Installing AI Skills
 
-Mockzilla is an **AI-first** platform. While the standard MCP tools are powerful, you can supercharge your AI assistant (like Cursor, Claude, or Gemini CLI) by installing **Agent Skills**.
+Mockzilla is an **AI-first** platform. While the standard MCP tools are powerful, you can supercharge your AI assistant (including specialized agents and compatible CLI tools) by installing **Agent Skills**.
 
 Skills are specialized instruction sets that teach your AI how to build high-fidelity mocks and complex workflows following Mockzilla's best practices.
 
 ---
 
-## 1. Prerequisites
-You must have the **Gemini CLI** (or a compatible agent) installed on your machine.
-
----
-
-## 2. Installing from GitHub
-You can install Mockzilla's official skills directly from our GitHub repository using the `gemini skills install` command.
+## 1. Universal Installation
+You can use the universal `npx skills` tool to install Mockzilla's expert skills into any compatible agent.
 
 ### Official Mock Maker Skill
 Teaches the AI how to use JSON Schema + Faker for high-fidelity data.
 ```bash
-gemini skills install https://github.com/andrecrjr/mockzilla.git --path .agent/skills/mockzilla-mock-maker
+npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
 ```
 
 ### Official Workflow Architect Skill
 Teaches the AI how to design stateful transitions and manage the mini-DB.
 ```bash
-gemini skills install https://github.com/andrecrjr/mockzilla.git --path .agent/skills/mockzilla-workflow-architect
+npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
 ```
 
 ---
 
-## 3. Verifying Installation
-Once installed, you can verify the skills are available in your interactive session:
+## 2. Verifying Installation
+Once installed, you can verify that the skills are available in your interactive session. For most compatible CLI agents:
 
-1.  Start a Gemini session: `gemini chat`
-2.  Run the list command: `/skills list`
-3.  You should see `mockzilla-mock-maker` and `mockzilla-workflow-architect` in the list.
+1.  Start your AI agent session.
+2.  Run the skills listing command (e.g., `/skills list`).
+3.  Verify that `mockzilla-mock-maker` and `mockzilla-workflow-architect` appear in the list.
 
 ---
 
-## 4. Using Skills in Chat
-After installation, you can invoke these skills by name to get better results:
+## 3. How to Use Skills
+Skills are activated automatically when you prompt your agent with relevant tasks. For better results, explicitly mention the skill name:
 
-> "Use **mockzilla-mock-maker** to generate a realistic user profile API based on this JSON spec."
+> **"Use mockzilla-mock-maker to generate a realistic product catalog API."**
 
-> "Use **mockzilla-workflow-architect** to design a checkout flow that updates inventory levels."
+> **"Use mockzilla-workflow-architect to design a stateful login flow."**
 
 ---
 
 ## Why use Skills?
-- **Spec-Driven**: Skills prioritize building from OpenAPI or JSON Schema.
+- **Expert-Guided**: Skills embed our best practices directly into the AI's logic.
+- **Spec-Driven**: They prioritize building from OpenAPI or JSON Schema.
 - **Developer-First**: They follow idiomatic Mockzilla patterns (e.g., "Stateless First").
-- **Consistency**: Ensures the AI doesn't hallucinate non-existent tools or parameters.
+- **Reliability**: Ensures the AI doesn't hallucinate non-existent tools or parameters.
 - **Efficiency**: Reduces the number of turns needed to get a working simulation.
 
-> **Pro Tip**: You can also create your own custom skills to share with your team! See the [Gemini CLI documentation](https://github.com/google/gemini-cli) for more details.
+> **Pro Tip**: You can also create your own custom skills to share with your team! See the documentation for your specific AI agent for more details on creating and sharing skills.

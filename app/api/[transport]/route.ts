@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { createMcpHandler } from 'mcp-handler';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -16,9 +16,17 @@ import type {
 	Condition,
 	CreateMockRequest,
 	HttpMethod,
+	MatchType,
+	MockVariant,
 	Scenario,
 	Transition,
 } from '@/lib/types';
+import {
+	extractCaptureKey,
+	findBestMatch,
+	selectVariant,
+} from '@/lib/utils/mock-matcher';
+import type { MockCandidate } from '@/lib/utils/mock-matcher';
 
 const ListFoldersArgs = z.object({
 	page: z.number().int().min(1).optional(),
@@ -42,19 +50,69 @@ const UpdateFolderArgs = z.object({
 
 const DeleteFolderArgs = z.object({ id: z.string() });
 
-const CreateMockArgs = z.object({
-	name: z.string(),
-	path: z.string(),
-	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+const MockVariantSchema = z.object({
+	key: z.string(),
+	body: z.string(),
 	statusCode: z.number().int(),
-	folderId: z.string(),
-	response: z.string(),
-	matchType: z.enum(['exact', 'substring']).optional(),
-	bodyType: z.enum(['json', 'text']).optional(),
-	enabled: z.boolean().optional(),
-	jsonSchema: z.string().nullable().optional(),
-	useDynamicResponse: z.boolean().nullable().optional(),
-	echoRequestBody: z.boolean().nullable().optional(),
+	bodyType: z.enum(['json', 'text']),
+});
+
+const CreateMockArgs = z.object({
+	name: z.string().describe('The name of the mock'),
+	path: z.string().describe('The endpoint path (e.g. /api/users)'),
+	method: z
+		.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+		.describe('HTTP method'),
+	statusCode: z.number().int().describe('HTTP status code to return'),
+	folderId: z
+		.string()
+		.optional()
+		.describe('The ID of the parent folder (required if folderSlug not provided)'),
+	folderSlug: z
+		.string()
+		.optional()
+		.describe(
+			'The slug of the parent folder (alternative to folderId, e.g. "my-folder")',
+		),
+	response: z.string().describe('The response body (JSON string or text)'),
+	matchType: z
+		.enum(['exact', 'substring', 'wildcard'])
+		.optional()
+		.describe('Matching strategy for the path'),
+	bodyType: z
+		.enum(['json', 'text'])
+		.optional()
+		.describe('Content type of the response'),
+	enabled: z.boolean().optional().describe('Whether the mock is active'),
+	queryParams: z
+		.record(z.string())
+		.nullable()
+		.optional()
+		.describe('Query parameters to match'),
+	variants: z
+		.array(MockVariantSchema)
+		.nullable()
+		.optional()
+		.describe('Wildcard capture variants'),
+	wildcardRequireMatch: z
+		.boolean()
+		.optional()
+		.describe('If true, 404 if no variant matches'),
+	jsonSchema: z
+		.string()
+		.nullable()
+		.optional()
+		.describe('JSON Schema for dynamic generation'),
+	useDynamicResponse: z
+		.boolean()
+		.nullable()
+		.optional()
+		.describe('Enable faker-based dynamic data'),
+	echoRequestBody: z
+		.boolean()
+		.nullable()
+		.optional()
+		.describe('Echo the request body back to the client'),
 });
 
 const PreviewMockArgs = z.object({
@@ -62,31 +120,71 @@ const PreviewMockArgs = z.object({
 	path: z.string(),
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
 	contentType: z.string().nullable().optional(),
+	queryParams: z.record(z.string()).nullable().optional(),
+	headers: z.record(z.string()).nullable().optional(),
 	bodyText: z.string().nullable().optional(),
 	bodyJson: z.record(z.unknown()).nullable().optional(),
 });
 
 const ListMocksArgs = z.object({
-	folderId: z.string().optional(),
+	folderId: z.string().optional().describe('Filter by folder ID'),
+	folderSlug: z
+		.string()
+		.optional()
+		.describe('Filter by folder slug (e.g. "my-folder")'),
 	page: z.number().int().min(1).optional(),
 	limit: z.number().int().min(1).max(100).optional(),
 });
 
-const GetMockArgs = z.object({ id: z.string() });
+const GetMockArgs = z.object({ id: z.string().describe('The mock ID') });
 
 const UpdateMockArgs = z.object({
-	id: z.string(),
-	name: z.string(),
-	path: z.string(),
-	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
-	statusCode: z.number().int(),
-	response: z.string(),
-	matchType: z.enum(['exact', 'substring']).optional(),
-	bodyType: z.enum(['json', 'text']).optional(),
-	enabled: z.boolean().optional(),
-	jsonSchema: z.string().nullable().optional(),
-	useDynamicResponse: z.boolean().nullable().optional(),
-	echoRequestBody: z.boolean().nullable().optional(),
+	id: z.string().describe('The ID of the mock to update'),
+	name: z.string().describe('The name of the mock'),
+	path: z.string().describe('The endpoint path (e.g. /api/users)'),
+	method: z
+		.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+		.describe('HTTP method'),
+	statusCode: z.number().int().describe('HTTP status code to return'),
+	response: z.string().describe('The response body (JSON string or text)'),
+	matchType: z
+		.enum(['exact', 'substring', 'wildcard'])
+		.optional()
+		.describe('Matching strategy for the path'),
+	bodyType: z
+		.enum(['json', 'text'])
+		.optional()
+		.describe('Content type of the response'),
+	enabled: z.boolean().optional().describe('Whether the mock is active'),
+	queryParams: z
+		.record(z.string())
+		.nullable()
+		.optional()
+		.describe('Query parameters to match'),
+	variants: z
+		.array(MockVariantSchema)
+		.nullable()
+		.optional()
+		.describe('Wildcard capture variants'),
+	wildcardRequireMatch: z
+		.boolean()
+		.optional()
+		.describe('If true, 404 if no variant matches'),
+	jsonSchema: z
+		.string()
+		.nullable()
+		.optional()
+		.describe('JSON Schema for dynamic generation'),
+	useDynamicResponse: z
+		.boolean()
+		.nullable()
+		.optional()
+		.describe('Enable faker-based dynamic data'),
+	echoRequestBody: z
+		.boolean()
+		.nullable()
+		.optional()
+		.describe('Echo the request body back to the client'),
 });
 
 const DeleteMockArgs = z.object({ id: z.string() });
@@ -118,35 +216,42 @@ const parseJsonOrPassthrough = (val: unknown) => {
 };
 
 const CreateWorkflowTransitionArgs = z.object({
-	scenarioId: z.string(),
-	name: z.string(),
+	scenarioId: z.string().describe('ID or slug of the scenario'),
+	name: z.string().describe('Name of the transition'),
 	description: z.string().optional(),
 	path: z
 		.string()
 		.describe(
 			'The URL path (e.g. "/users" or "/users/:id"). Supports :param syntax.',
 		),
-	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+	method: z
+		.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+		.describe('HTTP method'),
 	conditions: z
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
 		)
 		.describe(
-			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).\n\nEXAMPLE:\n[\n  { "type": "eq", "field": "input.body.type", "value": "admin" },\n  { "type": "exists", "field": "input.headers.authorization" }\n]\n\nSupported Types:\n- eq: Equals\n- neq: Not Equals\n- exists: Field exists\n- gt: Greater Than\n- lt: Less Than\n- contains: String/Array contains value\n\nAllowed Fields:\n- input.body.*\n- input.query.*\n- input.params.*\n- input.headers.*\n- state.*\n- db.*\n\nWARNING: Pure JavaScript is NOT supported. Use the structured JSON format.',
+			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).',
 		),
 	effects: z
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 		)
-		.describe(
-			'Side effects to execute.\nFormat: Array of effect objects.\n\nEXAMPLE:\n[\n  { "type": "state.set", "raw": { "isLoggedIn": true } },\n  { "type": "db.push", "table": "users", "value": "{{input.body}}" }\n]\n\nSupported Actions:\n- state.set: Set state variables ({ type: "state.set", raw: { key: value } })\n- db.push: Add row to table ({ type: "db.push", table: "name", value: obj })\n- db.update: Update rows ({ type: "db.update", table: "name", match: { id: "{{input.params.id}}" }, set: { status: "active" } })\n- db.remove: Remove rows ({ type: "db.remove", table: "name", match: { id: 123 } })\n\nNOTE: NO Random/Faker. Use {{input.*}}, {{state.*}} for values.\n\nCRITICAL: State updates must be side-effects of business logic (Action-Driven), NOT direct CRUD endpoints. Do not create "utility" transitions just to set state.',
-		),
+		.describe('Side effects to execute (state.set, db.push, etc).'),
 	response: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()))
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.object({
+				status: z.number().int().default(200),
+				body: z.unknown().optional(),
+				headers: z.record(z.string()).optional(),
+			}),
+		)
 		.describe(
-			'Response configuration.\n\nEXAMPLE:\n{\n  "status": 201,\n  "body": { "id": "{{input.body.id}}", "status": "created" }\n}\n\nInterpolation supported for body values: {{input.*}}, {{state.*}}, {{db.*}}',
+			'Response configuration.\n\nEXAMPLE:\n{\n  "status": 201,\n  "body": { "id": "{{input.body.id}}", "status": "created" }\n}',
 		),
 	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
@@ -160,7 +265,7 @@ const InspectWorkflowStateArgs = z.object({
 });
 
 const UpdateWorkflowTransitionArgs = z.object({
-	id: z.number().int(),
+	id: z.number().int().describe('ID of the transition to update'),
 	name: z.string().optional(),
 	description: z.string().optional(),
 	path: z.string().optional(),
@@ -172,22 +277,25 @@ const UpdateWorkflowTransitionArgs = z.object({
 			parseJsonOrPassthrough,
 			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
 		)
-		.describe(
-			'Update conditions. See CreateWorkflowTransitionArgs for allowed formats and rules.',
-		),
+		.describe('Update conditions.'),
 	effects: z
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 		)
-		.describe(
-			'Update effects. See CreateWorkflowTransitionArgs for allowed formats and rules.',
-		),
+		.describe('Update effects.'),
 	response: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional())
-		.describe(
-			'Update response configuration. See CreateWorkflowTransitionArgs for rules.',
-		),
+		.preprocess(
+			parseJsonOrPassthrough,
+			z
+				.object({
+					status: z.number().int().default(200),
+					body: z.unknown().optional(),
+					headers: z.record(z.string()).optional(),
+				})
+				.optional(),
+		)
+		.describe('Update response configuration.'),
 	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
 
@@ -197,7 +305,7 @@ const CreateWorkflowScenarioArgs = z.object({
 		.describe(
 			'Name of the scenario (e.g. "auth-flow"). Slug will be generated automatically if ID not provided.',
 		),
-	description: z.string().optional(),
+	description: z.string().optional().describe('Scenario description'),
 });
 
 const ListWorkflowScenariosArgs = z.object({
@@ -210,16 +318,16 @@ const DeleteWorkflowScenarioArgs = z.object({
 });
 
 const DeleteWorkflowTransitionArgs = z.object({
-	id: z.number().int(),
+	id: z.number().int().describe('The transition database ID'),
 });
 
 const ListWorkflowTransitionsArgs = z.object({
-	scenarioId: z.string(),
+	scenarioId: z.string().describe('Scenario ID or slug'),
 });
 
 const TestWorkflowArgs = z.object({
-	scenarioId: z.string(),
-	path: z.string(),
+	scenarioId: z.string().describe('Scenario ID or slug'),
+	path: z.string().describe('Request path (e.g. /login)'),
 	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
 	body: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 	query: z.record(z.string()).optional(),
@@ -249,6 +357,7 @@ async function callListFolders(args: z.infer<typeof ListFoldersArgs>) {
 		name: folder.name,
 		slug: folder.slug,
 		description: folder.description || null,
+		meta: folder.meta || {},
 		createdAt: folder.createdAt.toISOString(),
 		updatedAt: folder.updatedAt?.toISOString() || null,
 	}));
@@ -278,6 +387,7 @@ async function callCreateFolder(args: z.infer<typeof CreateFolderArgs>) {
 		name: row.name,
 		slug: row.slug,
 		description: row.description ?? null,
+		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() ?? null,
 	};
@@ -296,6 +406,7 @@ async function callGetFolder(args: z.infer<typeof GetFolderArgs>) {
 		name: row.name,
 		slug: row.slug,
 		description: row.description || null,
+		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -319,6 +430,7 @@ async function callUpdateFolder(args: z.infer<typeof UpdateFolderArgs>) {
 		name: row.name,
 		slug: row.slug,
 		description: row.description || null,
+		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -330,16 +442,37 @@ async function callDeleteFolder(args: z.infer<typeof DeleteFolderArgs>) {
 }
 
 async function callCreateMock(args: z.infer<typeof CreateMockArgs>) {
+	const folderSlug = args.folderSlug ?? null;
+	const folderIdArg = args.folderId ?? null;
+	let targetFolderId: string | null = folderIdArg;
+	if (!targetFolderId && folderSlug) {
+		const [folder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.slug, folderSlug))
+			.limit(1);
+		if (!folder) {
+			throw new Error('Folder not found for provided slug');
+		}
+		targetFolderId = folder.id;
+	}
+	if (!targetFolderId) {
+		throw new Error('folderSlug or folderId is required');
+	}
+
 	const body: CreateMockRequest = {
 		name: args.name,
 		path: args.path,
 		method: args.method as HttpMethod,
 		statusCode: args.statusCode,
-		folderId: args.folderId,
+		folderId: targetFolderId,
 		response: args.response,
 		matchType: args.matchType,
 		bodyType: args.bodyType,
 		enabled: args.enabled,
+		queryParams: args.queryParams,
+		variants: args.variants as MockVariant[] | null,
+		wildcardRequireMatch: args.wildcardRequireMatch,
 		jsonSchema: args.jsonSchema ?? undefined,
 		useDynamicResponse: args.useDynamicResponse ?? undefined,
 		echoRequestBody: args.echoRequestBody ?? undefined,
@@ -356,6 +489,9 @@ async function callCreateMock(args: z.infer<typeof CreateMockArgs>) {
 			matchType: body.matchType || 'exact',
 			bodyType: body.bodyType || 'json',
 			enabled: body.enabled ?? true,
+			queryParams: body.queryParams || null,
+			variants: body.variants || null,
+			wildcardRequireMatch: body.wildcardRequireMatch ?? false,
 			jsonSchema: body.jsonSchema,
 			useDynamicResponse: body.useDynamicResponse ?? false,
 			echoRequestBody: body.echoRequestBody ?? false,
@@ -370,9 +506,12 @@ async function callCreateMock(args: z.infer<typeof CreateMockArgs>) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
-		matchType: row.matchType || 'exact',
+		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
+		queryParams: row.queryParams as Record<string, string> | null,
+		variants: row.variants as MockVariant[] | null,
+		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
@@ -385,18 +524,33 @@ async function callListMocks(args: z.infer<typeof ListMocksArgs>) {
 	const page = args.page ?? 1;
 	const limit = args.limit ?? 10;
 	const offset = (page - 1) * limit;
+
+	const folderSlug = args.folderSlug ?? null;
+	const folderIdArg = args.folderId ?? null;
+	let targetFolderId: string | null = folderIdArg;
+	if (!targetFolderId && folderSlug) {
+		const [folder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.slug, folderSlug))
+			.limit(1);
+		if (folder) {
+			targetFolderId = folder.id;
+		}
+	}
+
 	let total = 0;
 	let rows: (typeof mockResponses.$inferSelect)[] = [];
-	if (args.folderId) {
+	if (targetFolderId) {
 		const [countRow] = await db
 			.select({ count: sql<number>`count(*)` })
 			.from(mockResponses)
-			.where(eq(mockResponses.folderId, args.folderId));
+			.where(eq(mockResponses.folderId, targetFolderId));
 		total = Number(countRow.count);
 		rows = await db
 			.select()
 			.from(mockResponses)
-			.where(eq(mockResponses.folderId, args.folderId))
+			.where(eq(mockResponses.folderId, targetFolderId))
 			.orderBy(mockResponses.createdAt)
 			.limit(limit)
 			.offset(offset);
@@ -421,9 +575,12 @@ async function callListMocks(args: z.infer<typeof ListMocksArgs>) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
-		matchType: row.matchType || 'exact',
+		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
+		queryParams: row.queryParams as Record<string, string> | null,
+		variants: row.variants as MockVariant[] | null,
+		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
@@ -447,9 +604,12 @@ async function callGetMock(args: z.infer<typeof GetMockArgs>) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
-		matchType: row.matchType || 'exact',
+		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
+		queryParams: row.queryParams as Record<string, string> | null,
+		variants: row.variants as MockVariant[] | null,
+		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
@@ -470,6 +630,9 @@ async function callUpdateMock(args: z.infer<typeof UpdateMockArgs>) {
 			matchType: args.matchType || 'exact',
 			bodyType: args.bodyType || 'json',
 			enabled: args.enabled ?? true,
+			queryParams: args.queryParams || null,
+			variants: args.variants || null,
+			wildcardRequireMatch: args.wildcardRequireMatch ?? false,
 			jsonSchema: args.jsonSchema ?? null,
 			useDynamicResponse: args.useDynamicResponse ?? false,
 			echoRequestBody: args.echoRequestBody ?? false,
@@ -486,9 +649,12 @@ async function callUpdateMock(args: z.infer<typeof UpdateMockArgs>) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
-		matchType: row.matchType || 'exact',
+		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
+		queryParams: row.queryParams as Record<string, string> | null,
+		variants: row.variants as MockVariant[] | null,
+		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
@@ -511,7 +677,10 @@ async function callCreateSchemaMock(args: {
 	folderId?: string | null;
 	jsonSchema: string;
 	enabled?: boolean;
-	matchType?: 'exact' | 'substring';
+	matchType?: MatchType;
+	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	echoRequestBody?: boolean | null;
 }) {
 	const folderSlug = args.folderSlug ?? null;
@@ -553,6 +722,9 @@ async function callCreateSchemaMock(args: {
 			matchType: args.matchType || 'exact',
 			bodyType: 'json',
 			enabled: args.enabled ?? true,
+			queryParams: args.queryParams || null,
+			variants: args.variants || null,
+			wildcardRequireMatch: args.wildcardRequireMatch ?? false,
 			jsonSchema: args.jsonSchema,
 			useDynamicResponse: true,
 			echoRequestBody: (args.echoRequestBody ?? false) as boolean,
@@ -567,9 +739,12 @@ async function callCreateSchemaMock(args: {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
-		matchType: row.matchType || 'exact',
+		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
+		queryParams: row.queryParams as Record<string, string> | null,
+		variants: row.variants as MockVariant[] | null,
+		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
@@ -580,8 +755,10 @@ async function callCreateSchemaMock(args: {
 
 async function callPreviewMock(args: z.infer<typeof PreviewMockArgs>) {
 	const folderSlug = args.folderSlug;
-	const mockPath = args.path;
+	const mockPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
 	const method = args.method;
+	const urlQueryParams = args.queryParams || {};
+
 	const [folder] = await db
 		.select()
 		.from(folders)
@@ -594,18 +771,29 @@ async function callPreviewMock(args: z.infer<typeof PreviewMockArgs>) {
 			isJson: true,
 			body: { error: 'Folder not found' },
 		};
-	const [mock] = await db
+
+	// Fetch all mocks for folder+method to find best match (same as live server)
+	const allMocks = await db
 		.select()
 		.from(mockResponses)
 		.where(
 			and(
 				eq(mockResponses.folderId, folder.id),
-				eq(mockResponses.endpoint, mockPath),
 				eq(mockResponses.method, method),
+				eq(mockResponses.enabled, true),
 			),
-		)
-		.limit(1);
-	if (!mock)
+		);
+
+	const candidates: MockCandidate[] = allMocks.map((m) => ({
+		endpoint: m.endpoint,
+		matchType: (m.matchType as MatchType) || 'exact',
+		queryParams: (m.queryParams as Record<string, string> | null) ?? null,
+		_score: 0,
+	}));
+
+	const best = findBestMatch(mockPath, urlQueryParams, candidates);
+
+	if (!best) {
 		return {
 			statusCode: 404,
 			headers: {},
@@ -615,83 +803,133 @@ async function callPreviewMock(args: z.infer<typeof PreviewMockArgs>) {
 				folder: folderSlug,
 				path: mockPath,
 				method,
+				queryParams: urlQueryParams,
 			},
 		};
-	if (mock.echoRequestBody) {
-		const contentType = args.contentType || 'text/plain';
-		if (contentType.includes('application/json')) {
-			const body = args.bodyJson ?? null;
-			return {
-				statusCode: mock.statusCode,
-				headers: { 'Content-Type': 'application/json' },
-				isJson: true,
-				body: body ?? {},
-			};
-		} else {
-			const body = args.bodyText ?? '';
-			return {
-				statusCode: mock.statusCode,
-				headers: { 'Content-Type': contentType },
-				isJson: false,
-				body,
-			};
-		}
 	}
-	if (mock.useDynamicResponse && mock.jsonSchema) {
-		try {
-			const { generateFromSchema } = await import('@/lib/schema-generator');
-			const generated = generateFromSchema(JSON.parse(mock.jsonSchema));
-			const json = JSON.parse(generated);
-			return {
-				statusCode: mock.statusCode,
-				headers: { 'Content-Type': 'application/json' },
-				isJson: true,
-				body: json,
-			};
-		} catch {
-			try {
-				const json = JSON.parse(mock.response);
+
+	const bestMock = allMocks.find(
+		(m) =>
+			m.endpoint === best.endpoint &&
+			((m.matchType as MatchType) || 'exact') === best.matchType &&
+			JSON.stringify(m.queryParams) === JSON.stringify(best.queryParams),
+	);
+
+	if (!bestMock) {
+		return {
+			statusCode: 404,
+			headers: {},
+			isJson: true,
+			body: { error: 'Mock record not found after matching' },
+		};
+	}
+
+	let finalResponse = bestMock.response;
+	let finalStatusCode = bestMock.statusCode;
+	let finalBodyType = bestMock.bodyType || 'json';
+	let paramsMap: Record<string, string> = {};
+
+	// Handle Wildcard Variants
+	if (bestMock.matchType === 'wildcard') {
+		const variants = bestMock.variants as MockVariant[] | null;
+		if (variants && variants.length > 0) {
+			const variant = selectVariant(variants, mockPath, bestMock.endpoint);
+			if (variant) {
+				finalResponse = variant.body;
+				finalStatusCode = variant.statusCode;
+				finalBodyType = variant.bodyType as 'json' | 'text';
+
+				const captures =
+					extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
+				for (let i = 0; i < captures.length; i++) {
+					paramsMap[String(i)] = captures[i];
+				}
+			} else if (bestMock.wildcardRequireMatch) {
 				return {
-					statusCode: mock.statusCode,
-					headers: { 'Content-Type': 'application/json' },
+					statusCode: 404,
+					headers: {},
 					isJson: true,
-					body: json,
-				};
-			} catch {
-				return {
-					statusCode: mock.statusCode,
-					headers: { 'Content-Type': 'application/json' },
-					isJson: false,
-					body: mock.response,
+					body: { error: 'No matching variant found for wildcard' },
 				};
 			}
 		}
+
+		if (Object.keys(paramsMap).length === 0) {
+			const captures =
+				extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
+			for (let i = 0; i < captures.length; i++) {
+				paramsMap[String(i)] = captures[i];
+			}
+		}
 	}
-	const contentType =
-		mock.bodyType === 'json' ? 'application/json' : 'text/plain';
-	if (mock.bodyType === 'json') {
+
+	if (bestMock.echoRequestBody) {
+		return {
+			statusCode: finalStatusCode,
+			headers: { 'Content-Type': 'application/json' },
+			isJson: true,
+			body: args.bodyJson || { message: 'Echo: body would be here' },
+		};
+	}
+
+	const context = {
+		input: {
+			query: urlQueryParams,
+			params: paramsMap,
+			headers: args.headers || {},
+		},
+	};
+
+	if (bestMock.useDynamicResponse && bestMock.jsonSchema) {
 		try {
-			const json = JSON.parse(mock.response);
+			const { generateFromSchema } = await import('@/lib/schema-generator');
+			const generated = generateFromSchema(
+				JSON.parse(bestMock.jsonSchema),
+				context,
+			);
 			return {
-				statusCode: mock.statusCode,
+				statusCode: finalStatusCode,
 				headers: { 'Content-Type': 'application/json' },
 				isJson: true,
-				body: json,
+				body: JSON.parse(generated),
 			};
-		} catch {
+		} catch (e) {
 			return {
-				statusCode: mock.statusCode,
-				headers: { 'Content-Type': contentType },
-				isJson: false,
-				body: mock.response,
+				statusCode: 500,
+				headers: {},
+				isJson: true,
+				body: { error: 'Dynamic generation failed', details: String(e) },
 			};
 		}
 	}
+
+	// Template interpolation for static response
+	const { replaceTemplates } = await import('@/lib/schema-generator');
+	const interpolated = replaceTemplates(finalResponse, context) as string;
+
+	if (finalBodyType === 'json') {
+		try {
+			return {
+				statusCode: finalStatusCode,
+				headers: { 'Content-Type': 'application/json' },
+				isJson: true,
+				body: JSON.parse(interpolated),
+			};
+		} catch {
+			return {
+				statusCode: finalStatusCode,
+				headers: { 'Content-Type': 'text/plain' },
+				isJson: false,
+				body: interpolated,
+			};
+		}
+	}
+
 	return {
-		statusCode: mock.statusCode,
-		headers: { 'Content-Type': contentType },
+		statusCode: finalStatusCode,
+		headers: { 'Content-Type': 'text/plain' },
 		isJson: false,
-		body: mock.response,
+		body: interpolated,
 	};
 }
 
@@ -1006,7 +1244,14 @@ const WorkflowTransitionSchema = z.object({
 			'Side effects to execute. Array of effect objects. Supported types: "state.set" (sets state variables), "db.push" (adds to table), "db.update" (updates rows), "db.remove" (removes rows). Examples: { "type": "state.set", "raw": { "isLoggedIn": true } }, { "type": "db.push", "table": "users", "value": "{{input.body}}" }',
 		),
 	response: z
-		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()))
+		.preprocess(
+			parseJsonOrPassthrough,
+			z.object({
+				status: z.number().int().default(200),
+				body: z.unknown().optional(),
+				headers: z.record(z.string()).optional(),
+			}),
+		)
 		.describe(
 			'Response configuration to return to the client. Can use interpolation like {{input.body.id}} or {{state.token}}.',
 		),
@@ -1176,460 +1421,473 @@ async function callImportWorkflow(args: z.infer<typeof ImportWorkflowArgs>) {
 	};
 }
 
-const server = new McpServer(
-	{ name: 'Mockzilla', version: '1.0.1' },
-	{ capabilities: { tools: {} } },
-);
+function registerAllTools(server: McpServer) {
+	server.registerTool(
+		'list_folders',
+		{
+			title: 'List Folders',
+			description: 'List folders with pagination',
+			inputSchema: z.object({
+				page: z.number().int().min(1).optional(),
+				limit: z.number().int().min(1).max(100).optional(),
+			}),
+		},
+		async ({ page, limit }, _extra) => {
+			const result = await callListFolders({ page, limit });
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
 
-server.registerTool(
-	'list_folders',
+	server.registerTool(
+		'create_folder',
+		{
+			title: 'Create Folder',
+			description: 'Create a folder to group mocks',
+			inputSchema: CreateFolderArgs,
+		},
+		async (args: z.infer<typeof CreateFolderArgs>, _extra) => {
+			const result = await callCreateFolder(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'get_folder',
+		{
+			title: 'Get Folder',
+			description: 'Get a folder by id or slug',
+			inputSchema: GetFolderArgs,
+		},
+		async (args: z.infer<typeof GetFolderArgs>, _extra) => {
+			const result = await callGetFolder(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'update_folder',
+		{
+			title: 'Update Folder',
+			description: 'Update a folder by id',
+			inputSchema: UpdateFolderArgs,
+		},
+		async (args: z.infer<typeof UpdateFolderArgs>, _extra) => {
+			const result = await callUpdateFolder(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'delete_folder',
+		{
+			title: 'Delete Folder',
+			description: 'Delete a folder by id',
+			inputSchema: DeleteFolderArgs,
+		},
+		async (args: z.infer<typeof DeleteFolderArgs>, _extra) => {
+			const result = await callDeleteFolder(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'create_mock',
+		{
+			title: 'Create Mock',
+			description: 'Create a mock response',
+			inputSchema: CreateMockArgs,
+		},
+		async (args: z.infer<typeof CreateMockArgs>, _extra) => {
+			const result = await callCreateMock(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'list_mocks',
+		{
+			title: 'List Mocks',
+			description: 'List mocks with pagination and optional folder filter',
+			inputSchema: ListMocksArgs,
+		},
+		async (args: z.infer<typeof ListMocksArgs>, _extra) => {
+			const result = await callListMocks(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'get_mock',
+		{
+			title: 'Get Mock',
+			description: 'Get a mock by id',
+			inputSchema: GetMockArgs,
+		},
+		async (args: z.infer<typeof GetMockArgs>, _extra) => {
+			const result = await callGetMock(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'update_mock',
+		{
+			title: 'Update Mock',
+			description: 'Update a mock by id',
+			inputSchema: UpdateMockArgs,
+		},
+		async (args: z.infer<typeof UpdateMockArgs>, _extra) => {
+			const result = await callUpdateMock(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'delete_mock',
+		{
+			title: 'Delete Mock',
+			description: 'Delete a mock by id',
+			inputSchema: DeleteMockArgs,
+		},
+		async (args: z.infer<typeof DeleteMockArgs>, _extra) => {
+			const result = await callDeleteMock(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'create_schema_mock',
+		{
+			title: 'Create Schema Mock',
+			description:
+				'Create a mock using a JSON Schema with Faker directives and field interpolation',
+			inputSchema: z.object({
+				name: z.string(),
+				path: z.string(),
+				method: z.enum([
+					'GET',
+					'POST',
+					'PUT',
+					'PATCH',
+					'DELETE',
+					'HEAD',
+					'OPTIONS',
+				]),
+				statusCode: z.number().int(),
+				folderSlug: z.string().nullable().optional(),
+				folderId: z.string().nullable().optional(),
+				jsonSchema: z.string(),
+				enabled: z.boolean().optional(),
+				matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),
+				queryParams: z.record(z.string()).nullable().optional(),
+				variants: z.array(MockVariantSchema).nullable().optional(),
+				wildcardRequireMatch: z.boolean().optional(),
+				echoRequestBody: z.boolean().nullable().optional(),
+			}),
+		},
+		async (args: Parameters<typeof callCreateSchemaMock>[0], _extra) => {
+			const result = await callCreateSchemaMock(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'preview_mock',
+		{
+			title: 'Preview Mock',
+			description: 'Preview the response for a mock path',
+			inputSchema: PreviewMockArgs,
+		},
+		async (args: z.infer<typeof PreviewMockArgs>, _extra) => {
+			const result = await callPreviewMock(args);
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `${JSON.stringify(result)}`,
+					},
+				],
+			};
+		},
+	);
+
+	server.registerTool(
+		'create_workflow_transition',
+		{
+			title: 'Create Workflow Transition',
+			description: 'Create a stateful transition for a workflow scenario',
+			inputSchema: CreateWorkflowTransitionArgs,
+		},
+		async (args: z.infer<typeof CreateWorkflowTransitionArgs>, _extra) => {
+			const result = await callCreateWorkflowTransition(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'reset_workflow_state',
+		{
+			title: 'Reset Workflow State',
+			description: 'Reset the state and DB of a scenario',
+			inputSchema: ResetWorkflowStateArgs,
+		},
+		async (args: z.infer<typeof ResetWorkflowStateArgs>, _extra) => {
+			const result = await callResetWorkflowState(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'inspect_workflow_state',
+		{
+			title: 'Inspect Workflow State',
+			description: 'View the current state and DB of a scenario',
+			inputSchema: InspectWorkflowStateArgs,
+		},
+		async (args: z.infer<typeof InspectWorkflowStateArgs>, _extra) => {
+			const result = await callInspectWorkflowState(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'update_workflow_transition',
+		{
+			title: 'Update Workflow Transition',
+			description: 'Update an existing workflow transition by ID',
+			inputSchema: UpdateWorkflowTransitionArgs,
+		},
+		async (args: z.infer<typeof UpdateWorkflowTransitionArgs>, _extra) => {
+			const result = await callUpdateWorkflowTransition(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'delete_workflow_transition',
+		{
+			title: 'Delete Workflow Transition',
+			description: 'Delete a workflow transition by ID',
+			inputSchema: DeleteWorkflowTransitionArgs,
+		},
+		async (args: z.infer<typeof DeleteWorkflowTransitionArgs>, _extra) => {
+			const result = await callDeleteWorkflowTransition(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'list_workflow_transitions',
+		{
+			title: 'List Workflow Transitions',
+			description: 'List all transitions for a scenario',
+			inputSchema: ListWorkflowTransitionsArgs,
+		},
+		async (args: z.infer<typeof ListWorkflowTransitionsArgs>, _extra) => {
+			const result = await callListWorkflowTransitions(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'create_workflow_scenario',
+		{
+			title: 'Create Workflow Scenario',
+			description:
+				'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
+			inputSchema: CreateWorkflowScenarioArgs,
+		},
+		async (args: z.infer<typeof CreateWorkflowScenarioArgs>, _extra) => {
+			const result = await callCreateWorkflowScenario(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'list_workflow_scenarios',
+		{
+			title: 'List Workflow Scenarios',
+			description: 'List existing workflow scenarios.',
+			inputSchema: ListWorkflowScenariosArgs,
+		},
+		async (args: z.infer<typeof ListWorkflowScenariosArgs>, _extra) => {
+			const result = await callListWorkflowScenarios(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'delete_workflow_scenario',
+		{
+			title: 'Delete Workflow Scenario',
+			description: 'Delete a workflow scenario by ID.',
+			inputSchema: DeleteWorkflowScenarioArgs,
+		},
+		async (args: z.infer<typeof DeleteWorkflowScenarioArgs>, _extra) => {
+			const result = await callDeleteWorkflowScenario(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'test_workflow',
+		{
+			title: 'Test Workflow',
+			description:
+				'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
+			inputSchema: TestWorkflowArgs,
+		},
+		async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
+			const result = await callTestWorkflow(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'export_workflow',
+		{
+			title: 'Export Workflow',
+			description: 'Export one or all workflow scenarios to JSON',
+			inputSchema: ExportWorkflowArgs,
+		},
+		async (args: z.infer<typeof ExportWorkflowArgs>, _extra) => {
+			const result = await callExportWorkflow(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		'import_workflow',
+		{
+			title: 'Import Workflow',
+			description: 'Import workflow scenarios from JSON',
+			inputSchema: ImportWorkflowArgs,
+		},
+		async (args: z.infer<typeof ImportWorkflowArgs>, _extra) => {
+			const result = await callImportWorkflow(args);
+			return {
+				content: [{ type: 'text', text: JSON.stringify(result) }],
+			};
+		},
+	);
+}
+
+// Use mcp-handler to create the Next.js route handlers
+const handler = createMcpHandler(
+	(server) => {
+		registerAllTools(server);
+	},
 	{
-		title: 'List Folders',
-		description: 'List folders with pagination',
-		inputSchema: z.object({
-			page: z.number().int().min(1).optional(),
-			limit: z.number().int().min(1).max(100).optional(),
-		}),
+		serverInfo: {
+			name: 'Mockzilla',
+			version: '1.0.1',
+		},
 	},
-	async ({ page, limit }, _extra) => {
-		const result = await callListFolders({ page, limit });
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'create_folder',
 	{
-		title: 'Create Folder',
-		description: 'Create a folder to group mocks',
-		inputSchema: CreateFolderArgs,
-	},
-	async (args: z.infer<typeof CreateFolderArgs>, _extra) => {
-		const result = await callCreateFolder(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
+		basePath: '/api',
 	},
 );
 
-server.registerTool(
-	'get_folder',
-	{
-		title: 'Get Folder',
-		description: 'Get a folder by id or slug',
-		inputSchema: GetFolderArgs,
-	},
-	async (args: z.infer<typeof GetFolderArgs>, _extra) => {
-		const result = await callGetFolder(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'update_folder',
-	{
-		title: 'Update Folder',
-		description: 'Update a folder by id',
-		inputSchema: UpdateFolderArgs,
-	},
-	async (args: z.infer<typeof UpdateFolderArgs>, _extra) => {
-		const result = await callUpdateFolder(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'delete_folder',
-	{
-		title: 'Delete Folder',
-		description: 'Delete a folder by id',
-		inputSchema: DeleteFolderArgs,
-	},
-	async (args: z.infer<typeof DeleteFolderArgs>, _extra) => {
-		const result = await callDeleteFolder(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'create_mock',
-	{
-		title: 'Create Mock',
-		description: 'Create a mock response',
-		inputSchema: CreateMockArgs,
-	},
-	async (args: z.infer<typeof CreateMockArgs>, _extra) => {
-		const result = await callCreateMock(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'list_mocks',
-	{
-		title: 'List Mocks',
-		description: 'List mocks with pagination and optional folder filter',
-		inputSchema: ListMocksArgs,
-	},
-	async (args: z.infer<typeof ListMocksArgs>, _extra) => {
-		const result = await callListMocks(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'get_mock',
-	{
-		title: 'Get Mock',
-		description: 'Get a mock by id',
-		inputSchema: GetMockArgs,
-	},
-	async (args: z.infer<typeof GetMockArgs>, _extra) => {
-		const result = await callGetMock(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'update_mock',
-	{
-		title: 'Update Mock',
-		description: 'Update a mock by id',
-		inputSchema: UpdateMockArgs,
-	},
-	async (args: z.infer<typeof UpdateMockArgs>, _extra) => {
-		const result = await callUpdateMock(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'delete_mock',
-	{
-		title: 'Delete Mock',
-		description: 'Delete a mock by id',
-		inputSchema: DeleteMockArgs,
-	},
-	async (args: z.infer<typeof DeleteMockArgs>, _extra) => {
-		const result = await callDeleteMock(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'create_schema_mock',
-	{
-		title: 'Create Schema Mock',
-		description:
-			'Create a mock using a JSON Schema with Faker directives and field interpolation',
-		inputSchema: z.object({
-			name: z.string(),
-			path: z.string(),
-			method: z.enum([
-				'GET',
-				'POST',
-				'PUT',
-				'PATCH',
-				'DELETE',
-				'HEAD',
-				'OPTIONS',
-			]),
-			statusCode: z.number().int(),
-			folderSlug: z.string().nullable().optional(),
-			folderId: z.string().nullable().optional(),
-			jsonSchema: z.string(),
-			enabled: z.boolean().optional(),
-			matchType: z.enum(['exact', 'substring']).optional(),
-			echoRequestBody: z.boolean().nullable().optional(),
-		}),
-	},
-	async (args: Parameters<typeof callCreateSchemaMock>[0], _extra) => {
-		const result = await callCreateSchemaMock(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'preview_mock',
-	{
-		title: 'Preview Mock',
-		description: 'Preview the response for a mock path',
-		inputSchema: PreviewMockArgs,
-	},
-	async (args: z.infer<typeof PreviewMockArgs>, _extra) => {
-		const result = await callPreviewMock(args);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `${JSON.stringify(result)}`,
-				},
-			],
-		};
-	},
-);
-
-server.registerTool(
-	'create_workflow_transition',
-	{
-		title: 'Create Workflow Transition',
-		description: 'Create a stateful transition for a workflow scenario',
-		inputSchema: CreateWorkflowTransitionArgs,
-	},
-	async (args: z.infer<typeof CreateWorkflowTransitionArgs>, _extra) => {
-		const result = await callCreateWorkflowTransition(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'reset_workflow_state',
-	{
-		title: 'Reset Workflow State',
-		description: 'Reset the state and DB of a scenario',
-		inputSchema: ResetWorkflowStateArgs,
-	},
-	async (args: z.infer<typeof ResetWorkflowStateArgs>, _extra) => {
-		const result = await callResetWorkflowState(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'inspect_workflow_state',
-	{
-		title: 'Inspect Workflow State',
-		description: 'View the current state and DB of a scenario',
-		inputSchema: InspectWorkflowStateArgs,
-	},
-	async (args: z.infer<typeof InspectWorkflowStateArgs>, _extra) => {
-		const result = await callInspectWorkflowState(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'update_workflow_transition',
-	{
-		title: 'Update Workflow Transition',
-		description: 'Update an existing workflow transition by ID',
-		inputSchema: UpdateWorkflowTransitionArgs,
-	},
-	async (args: z.infer<typeof UpdateWorkflowTransitionArgs>, _extra) => {
-		const result = await callUpdateWorkflowTransition(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'delete_workflow_transition',
-	{
-		title: 'Delete Workflow Transition',
-		description: 'Delete a workflow transition by ID',
-		inputSchema: DeleteWorkflowTransitionArgs,
-	},
-	async (args: z.infer<typeof DeleteWorkflowTransitionArgs>, _extra) => {
-		const result = await callDeleteWorkflowTransition(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'list_workflow_transitions',
-	{
-		title: 'List Workflow Transitions',
-		description: 'List all transitions for a scenario',
-		inputSchema: ListWorkflowTransitionsArgs,
-	},
-	async (args: z.infer<typeof ListWorkflowTransitionsArgs>, _extra) => {
-		const result = await callListWorkflowTransitions(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'create_workflow_scenario',
-	{
-		title: 'Create Workflow Scenario',
-		description:
-			'Create a new container for a stateful workflow. Use this for Scenarios, NOT for simple Mock Folders. Generates a slug-based ID from the name.',
-		inputSchema: CreateWorkflowScenarioArgs,
-	},
-	async (args: z.infer<typeof CreateWorkflowScenarioArgs>, _extra) => {
-		const result = await callCreateWorkflowScenario(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'list_workflow_scenarios',
-	{
-		title: 'List Workflow Scenarios',
-		description: 'List existing workflow scenarios.',
-		inputSchema: ListWorkflowScenariosArgs,
-	},
-	async (args: z.infer<typeof ListWorkflowScenariosArgs>, _extra) => {
-		const result = await callListWorkflowScenarios(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'delete_workflow_scenario',
-	{
-		title: 'Delete Workflow Scenario',
-		description: 'Delete a workflow scenario by ID.',
-		inputSchema: DeleteWorkflowScenarioArgs,
-	},
-	async (args: z.infer<typeof DeleteWorkflowScenarioArgs>, _extra) => {
-		const result = await callDeleteWorkflowScenario(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'test_workflow',
-	{
-		title: 'Test Workflow',
-		description:
-			'Test a workflow transition by simulating a request to a path. This executes the full workflow logic, including checking conditions and applying side effects (updating state, modifying the mini-database).',
-		inputSchema: TestWorkflowArgs,
-	},
-	async (args: z.infer<typeof TestWorkflowArgs>, _extra) => {
-		const result = await callTestWorkflow(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'export_workflow',
-	{
-		title: 'Export Workflow',
-		description: 'Export one or all workflow scenarios to JSON',
-		inputSchema: ExportWorkflowArgs,
-	},
-	async (args: z.infer<typeof ExportWorkflowArgs>, _extra) => {
-		const result = await callExportWorkflow(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-server.registerTool(
-	'import_workflow',
-	{
-		title: 'Import Workflow',
-		description: 'Import workflow scenarios from JSON',
-		inputSchema: ImportWorkflowArgs,
-	},
-	async (args: z.infer<typeof ImportWorkflowArgs>, _extra) => {
-		const result = await callImportWorkflow(args);
-		return {
-			content: [{ type: 'text', text: JSON.stringify(result) }],
-		};
-	},
-);
-
-const mcpHandler = async (req: NextRequest) => {
-	const transport = new WebStandardStreamableHTTPServerTransport();
-	await server.connect(transport);
-	return transport.handleRequest(req);
-};
-
-export { mcpHandler as GET, mcpHandler as POST, mcpHandler as DELETE };
+export const GET = async (req: NextRequest) => handler(req);
+export const POST = async (req: NextRequest) => handler(req);
+export const DELETE = async (req: NextRequest) => handler(req);
+export const OPTIONS = async (req: NextRequest) => handler(req);
