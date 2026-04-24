@@ -23,10 +23,11 @@ description: Elite API Architect for industrial-grade project bootstrapping from
 | `list_folders` | List existing folders to avoid duplicates | Before creating |
 | `create_schema_mock` | Create a mock with JSON Schema + dynamic data | All data endpoints |
 | `create_mock` | Create a static mock | Health checks, 204 empty responses |
+| `create_full_workflow` | Create a scenario and all transitions in one go | When bootstrapping stateful flows from spec |
+| `import_workflow` | Bulk import an entire workflow definition | When restoring or migrating from another environment |
 | `update_mock` | Revise schema or parameters of an existing mock | Iteration after `preview_mock` |
 | `get_mock` | Inspect a mock before editing | Always read before `update_mock` |
 | `list_mocks` | Audit all mocks in a folder | Quality check pass |
-| `delete_mock` | Remove incorrect or duplicate mocks | Cleanup |
 | `preview_mock` | Simulate a mock response end-to-end | Verification of every endpoint |
 
 ## 🚀 Advanced Bootstrapping Strategy
@@ -52,6 +53,7 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 - **Pagination**: For `GET /list` style endpoints, always wrap the array in a `data` key and include a `meta` object with `total`, `page`, and `limit`.
 - **Polymorphism**: If a spec uses `oneOf` or `anyOf`, represent this using a complex JSON Schema with `anyOf` sub-objects.
 - **Path Params**: For `/users/:id`, set `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
+- **One-Shot State**: If the spec defines a complex CRUD flow, use `create_full_workflow` instead of individual `create_workflow_transition` calls to reduce latency.
 
 ## 🔄 Orchestration Flow
 

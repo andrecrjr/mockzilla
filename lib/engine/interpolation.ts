@@ -50,7 +50,6 @@ export function interpolate(
 	// Supports both {{...}} and {$. ...} / {$ ...}
 	const exactMatch =
 		trimmed.match(/^\{\{\s*(.+?)\s*\}\}$/) ||
-		trimmed.match(/^\{(?!\$)\s*(.+?)\s*\}$/) ||
 		trimmed.match(/^\{\s*\$\.(.+?)\s*\}$/);
 
 	if (exactMatch) {
@@ -61,9 +60,9 @@ export function interpolate(
 
 	// Handle embedded templates: "Hello {{user.name}}, your ID is {$.query.id}"
 	return value.replace(
-		/\{\{\s*(.+?)\s*\}\}|\{\s*\$\.(.+?)\s*\}|\{(?!\$)\s*(.+?)\s*\}/g,
-		(match, p1, p2, p3) => {
-			const path = (p1 || p2 || p3).trim();
+		/\{\{\s*(.+?)\s*\}\}|\{\s*\$\.(.+?)\s*\}/g,
+		(match, p1, p2) => {
+			const path = (p1 || p2).trim();
 			const resolved = resolveTemplatePath(path, context);
 			return resolved !== undefined ? String(resolved) : match;
 		},

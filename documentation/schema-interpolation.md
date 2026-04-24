@@ -52,6 +52,16 @@ Most mock engines treat everything as strings. Mockzilla preserves the original 
 - `{{state.config}}` → Returns a literal **JSON Object**.
 - `The count is {{state.count}}` → Returns a **String**.
 
+### 3. Relational DB Lookups (Advanced)
+Mockzilla supports advanced predicates for array lookups using the `[key=value]` syntax. This is primarily used for finding records in the **Mini-DB** in Workflow Mode.
+
+| Syntax | Description |
+|--------|-------------|
+| `{{db.users[id=1]}}` | Find a user in the mini-DB where `id` is `1`. |
+| `{{db.items[id=input.params.id]}}` | **Dynamic**: Match a table row against a URL path parameter. |
+
+- **Recursive Resolution**: If the lookup value is a path (e.g. `input.params.id`), Mockzilla resolves that path first before searching the array.
+
 ---
 
 ## Referencing Request Data
@@ -81,6 +91,7 @@ Access query parameters using the `$.query` prefix:
 | **Arithmetic** | `{{var + 1}}` | `{{state.usage + 1}}` |
 | **Nested Path** | `{$.parent.child}` | `{$.user.address.city}` |
 | **Array Index** | `{$.array[0]}` | `{$.items[0].id}` |
+| **Relational Lookup** | `{{db.table[key=val]}}` | `{{db.users[id=input.params.id]}}` |
 | **Request Data** | `{$.query.key}` | `{$.query.search_term}` |
 
 ---

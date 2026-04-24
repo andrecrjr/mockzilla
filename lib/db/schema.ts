@@ -1,4 +1,3 @@
-import { relations } from 'drizzle-orm';
 import {
 	boolean,
 	integer,
@@ -58,17 +57,7 @@ export const mockResponses = pgTable('mock_responses', {
 	updatedAt: timestamp('updated_at'),
 });
 
-// Relations
-export const foldersRelations = relations(folders, ({ many }) => ({
-	mocks: many(mockResponses),
-}));
-
-export const mockResponsesRelations = relations(mockResponses, ({ one }) => ({
-	folder: one(folders, {
-		fields: [mockResponses.folderId],
-		references: [folders.id],
-	}),
-}));
+// Relations removed to fix TS compilation hang.
 // Workflow Tables
 export const transitions = pgTable('transitions', {
 	id: serial('id').primaryKey(),
@@ -77,17 +66,17 @@ export const transitions = pgTable('transitions', {
 	description: text('description'),
 	path: text('path').notNull(),
 	method: text('method').notNull(),
-	conditions: jsonb('conditions').default('{}'),
-	effects: jsonb('effects').default('[]'),
+	conditions: jsonb('conditions').default({}),
+	effects: jsonb('effects').default([]),
 	response: jsonb('response').notNull(),
-	meta: jsonb('meta').default('{}'),
+	meta: jsonb('meta').default({}),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at'),
 });
 
 export const scenarioState = pgTable('scenario_state', {
 	scenarioId: text('scenario_id').primaryKey(),
-	data: jsonb('data').default('{"tables": {}, "state": {}}').notNull(),
+	data: jsonb('data').default({ tables: {}, state: {} }).notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 

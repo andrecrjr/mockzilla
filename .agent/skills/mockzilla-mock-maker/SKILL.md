@@ -22,6 +22,7 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 | `create_folder` | Create a folder to group mocks | `name`, `description` |
 | `get_folder` | Fetch folder by ID or slug | `id` or `slug` |
 | `list_folders` | List all folders (paginated) | `page`, `limit` |
+| `update_folder` | Update folder name or description | `id`, `name`, `description` |
 | `create_schema_mock` | Create a mock with JSON Schema + dynamic data | `name`, `path`, `method`, `statusCode`, `folderSlug`, `jsonSchema` |
 | `create_mock` | Create a static mock | `name`, `path`, `method`, `statusCode`, `folderSlug`, `response` |
 | `update_mock` | Update an existing mock | `id` + any fields to change |
@@ -29,6 +30,7 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 | `list_mocks` | List mocks (paginated, filterable by folder) | `folderSlug`, `page`, `limit` |
 | `delete_mock` | Delete a mock | `id` |
 | `preview_mock` | Preview a mock response without calling the live URL | `folderSlug`, `path`, `method`, `queryParams`, `headers`, `bodyJson` |
+| `evaluate_template` | Test `{$.path}` interpolation logic statelessly | `template`, `context` |
 
 ## 🛡️ Constraints & Boundaries
 
@@ -38,14 +40,16 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 - **Strict Schemas**: Always set `additionalProperties: false` on objects to prevent unwanted random data.
 - **Never** use hardcoded data for more than 3 fields; use Faker instead.
 - **Always** call `preview_mock` after creating a mock to verify the response looks correct before finishing.
+- **Syntax Check**: Use `{$.path}` for JSON Schema/Mock interpolation (this skill). Use `{{path}}` ONLY for workflows (Workflow Architect skill).
 
 ## Core Principles
 
 1.  **Schema First**: Use `create_schema_mock` for the majority of UI development. It provides realistic, varied data without manual maintenance.
 2.  **Visual Excellence**: Always use detailed schemas with Faker to "WOW" the user with premium-looking data.
 3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
-4.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
-5.  **Verify Always**: Call `preview_mock` to validate every mock immediately after creation.
+4.  **Evaluate before Build**: Use `evaluate_template` to verify complex `{$.path}` mappings if you are unsure of the path structure.
+5.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
+6.  **Verify Always**: Call `preview_mock` to validate every mock immediately after creation.
 
 ---
 

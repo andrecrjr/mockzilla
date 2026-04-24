@@ -47,7 +47,23 @@ Calling `?val=banana` will return:
 `{"message": "Your value is banana"}`
 
 ---
-## 3. Supercharged Faker
+## 3. Relational Lookups (Advanced)
+Mockzilla supports **advanced predicates** for array lookups. This is especially powerful when working with the **Mini-DB** in Workflow Mode.
+
+| Syntax | Description |
+|--------|-------------|
+| `db.users[id=123]` | Find the first item in the `users` table where `id` is `123`. |
+| `db.items[slug=my-product].price` | Find an item by slug and return its `price`. |
+| `db.sessions[id=input.params.id]` | **Dynamic Lookup**: Find a session where the `id` matches a request path parameter. |
+
+### How it works:
+- **Literal match**: `[key=value]` or `[key==value]` matches the value as a string.
+- **Dynamic match**: If the value contains a dot (`.`) or starts with `input`, `state`, or `db`, Mockzilla will resolve that path **recursively** first.
+- **Nesting**: You can chain these! `db.orders[id=1].items[sku=ABC].quantity`.
+
+---
+
+## 4. Supercharged Faker
 
 Mockzilla doesn't just support standard Faker—it gives you two ways to generate incredibly realistic data.
 

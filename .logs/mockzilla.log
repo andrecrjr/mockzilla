@@ -1,0 +1,98 @@
+{"level":30,"time":"2026-04-24T20:53:15.150Z","pid":1048488,"reqId":"f18ed467-418a-48ea-9722-6c0193df6218","path":"/users","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.170Z","pid":1048488,"reqId":"f18ed467-418a-48ea-9722-6c0193df6218","path":"/users","method":"GET","type":"intercept","mockId":"mock-1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.502Z","pid":1048488,"reqId":"f18ed467-418a-48ea-9722-6c0193df6218","path":"/users","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.509Z","pid":1048488,"reqId":"58e8c38e-94c0-42f2-b559-9ca1f77259a9","path":"/users","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":40,"time":"2026-04-24T20:53:15.510Z","pid":1048488,"reqId":"58e8c38e-94c0-42f2-b559-9ca1f77259a9","path":"/users","method":"GET","type":"intercept","folderSlug":"unknown","msg":"Folder not found"}
+{"level":30,"time":"2026-04-24T20:53:15.510Z","pid":1048488,"reqId":"386a0ed6-364b-4b78-adfe-d5362ada7107","path":"/unknown","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":40,"time":"2026-04-24T20:53:15.511Z","pid":1048488,"reqId":"386a0ed6-364b-4b78-adfe-d5362ada7107","path":"/unknown","method":"GET","type":"intercept","msg":"No matching mock found"}
+{"level":30,"time":"2026-04-24T20:53:15.512Z","pid":1048488,"reqId":"43d4d341-a034-4795-a64a-016215b7d3c6","path":"/users","method":"POST","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.512Z","pid":1048488,"reqId":"43d4d341-a034-4795-a64a-016215b7d3c6","path":"/users","method":"POST","type":"intercept","mockId":"mock-1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.513Z","pid":1048488,"reqId":"43d4d341-a034-4795-a64a-016215b7d3c6","path":"/users","method":"POST","type":"intercept","statusCode":201,"msg":"Returning echoed JSON response"}
+{"level":30,"time":"2026-04-24T20:53:15.514Z","pid":1048488,"reqId":"4f5d359b-e5e1-4a7e-bbba-60bb8cf1969b","path":"/text","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.515Z","pid":1048488,"reqId":"4f5d359b-e5e1-4a7e-bbba-60bb8cf1969b","path":"/text","method":"GET","type":"intercept","mockId":"mock-1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.515Z","pid":1048488,"reqId":"4f5d359b-e5e1-4a7e-bbba-60bb8cf1969b","path":"/text","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.516Z","pid":1048488,"reqId":"a3b8ab4a-d92d-4286-9e32-86f4f116f36a","path":"/","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.516Z","pid":1048488,"reqId":"a3b8ab4a-d92d-4286-9e32-86f4f116f36a","path":"/","method":"GET","type":"intercept","mockId":"mock-1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.517Z","pid":1048488,"reqId":"a3b8ab4a-d92d-4286-9e32-86f4f116f36a","path":"/","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.517Z","pid":1048488,"reqId":"6c5feabd-c2d7-4def-8df8-b7c88211c5ff","path":"/","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.518Z","pid":1048488,"reqId":"6c5feabd-c2d7-4def-8df8-b7c88211c5ff","path":"/","method":"GET","type":"intercept","mockId":"mock-1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.518Z","pid":1048488,"reqId":"6c5feabd-c2d7-4def-8df8-b7c88211c5ff","path":"/","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.519Z","pid":1048488,"reqId":"354974e3-a088-4354-bc81-2fd32309a6e5","path":"/dynamic","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.519Z","pid":1048488,"reqId":"354974e3-a088-4354-bc81-2fd32309a6e5","path":"/dynamic","method":"GET","type":"intercept","mockId":"mock-1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.528Z","pid":1048488,"reqId":"354974e3-a088-4354-bc81-2fd32309a6e5","path":"/dynamic","method":"GET","type":"intercept","statusCode":200,"msg":"Returning dynamic response"}
+{"level":30,"time":"2026-04-24T20:53:15.562Z","pid":1048488,"reqId":"00a01f99-96ad-491b-9bf8-77a60af6f8cb","path":"/users/123","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.564Z","pid":1048488,"reqId":"00a01f99-96ad-491b-9bf8-77a60af6f8cb","path":"/users/123","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.564Z","pid":1048488,"reqId":"00a01f99-96ad-491b-9bf8-77a60af6f8cb","path":"/users/123","method":"GET","type":"intercept","variantKey":"123","msg":"Wildcard variant matched"}
+{"level":30,"time":"2026-04-24T20:53:15.565Z","pid":1048488,"reqId":"00a01f99-96ad-491b-9bf8-77a60af6f8cb","path":"/users/123","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.566Z","pid":1048488,"reqId":"cbff8036-9969-43ca-a73b-45d2957cf88b","path":"/users/999","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.566Z","pid":1048488,"reqId":"cbff8036-9969-43ca-a73b-45d2957cf88b","path":"/users/999","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.566Z","pid":1048488,"reqId":"cbff8036-9969-43ca-a73b-45d2957cf88b","path":"/users/999","method":"GET","type":"intercept","statusCode":200,"msg":"Returning dynamic response"}
+{"level":30,"time":"2026-04-24T20:53:15.584Z","pid":1048488,"reqId":"ae36b8f6-5c61-4fe3-bcf9-c18800fee17b","path":"/users","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.585Z","pid":1048488,"reqId":"ae36b8f6-5c61-4fe3-bcf9-c18800fee17b","path":"/users","method":"GET","type":"intercept","mockId":"m1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.585Z","pid":1048488,"reqId":"ae36b8f6-5c61-4fe3-bcf9-c18800fee17b","path":"/users","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.587Z","pid":1048488,"reqId":"fe1a7c2e-5a63-4c23-8a7d-61216d585b80","path":"/users","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.587Z","pid":1048488,"reqId":"fe1a7c2e-5a63-4c23-8a7d-61216d585b80","path":"/users","method":"GET","type":"intercept","mockId":"m1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.588Z","pid":1048488,"reqId":"fe1a7c2e-5a63-4c23-8a7d-61216d585b80","path":"/users","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.589Z","pid":1048488,"reqId":"d2332892-25e9-464e-ada9-4a9608ed3675","path":"/users","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.590Z","pid":1048488,"reqId":"d2332892-25e9-464e-ada9-4a9608ed3675","path":"/users","method":"GET","type":"intercept","mockId":"m1","msg":"Phase 1: Exact match found"}
+{"level":30,"time":"2026-04-24T20:53:15.590Z","pid":1048488,"reqId":"d2332892-25e9-464e-ada9-4a9608ed3675","path":"/users","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.591Z","pid":1048488,"reqId":"b415ad4b-464e-4881-999a-fa0c5d391abb","path":"/users/123","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.591Z","pid":1048488,"reqId":"b415ad4b-464e-4881-999a-fa0c5d391abb","path":"/users/123","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.592Z","pid":1048488,"reqId":"b415ad4b-464e-4881-999a-fa0c5d391abb","path":"/users/123","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.592Z","pid":1048488,"reqId":"322e67ba-c778-4073-ae94-2121a723d9a5","path":"/users/456","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.593Z","pid":1048488,"reqId":"322e67ba-c778-4073-ae94-2121a723d9a5","path":"/users/456","method":"GET","type":"intercept","mockId":"m2","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.593Z","pid":1048488,"reqId":"322e67ba-c778-4073-ae94-2121a723d9a5","path":"/users/456","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.594Z","pid":1048488,"reqId":"883f40dc-3ebe-490e-b415-274b5ee355b5","path":"/users/list","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.594Z","pid":1048488,"reqId":"883f40dc-3ebe-490e-b415-274b5ee355b5","path":"/users/list","method":"GET","type":"intercept","mockId":"m1","matchType":"substring","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.595Z","pid":1048488,"reqId":"883f40dc-3ebe-490e-b415-274b5ee355b5","path":"/users/list","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.596Z","pid":1048488,"reqId":"2cfa8695-0225-4cc0-b2a5-c71acde4bc68","path":"/users/123","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.596Z","pid":1048488,"reqId":"2cfa8695-0225-4cc0-b2a5-c71acde4bc68","path":"/users/123","method":"GET","type":"intercept","mockId":"m1","matchType":"exact","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.596Z","pid":1048488,"reqId":"2cfa8695-0225-4cc0-b2a5-c71acde4bc68","path":"/users/123","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.597Z","pid":1048488,"reqId":"72152ce2-50fe-4b14-a7a3-9353c17fc400","path":"/nonexistent","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":40,"time":"2026-04-24T20:53:15.598Z","pid":1048488,"reqId":"72152ce2-50fe-4b14-a7a3-9353c17fc400","path":"/nonexistent","method":"GET","type":"intercept","msg":"No matching mock found"}
+{"level":30,"time":"2026-04-24T20:53:15.729Z","pid":1048488,"reqId":"46044001-0f29-404f-a649-d0702bde0d3a","path":"/users/123","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.730Z","pid":1048488,"reqId":"46044001-0f29-404f-a649-d0702bde0d3a","path":"/users/123","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.730Z","pid":1048488,"reqId":"46044001-0f29-404f-a649-d0702bde0d3a","path":"/users/123","method":"GET","type":"intercept","variantKey":"123","msg":"Wildcard variant matched"}
+{"level":30,"time":"2026-04-24T20:53:15.731Z","pid":1048488,"reqId":"46044001-0f29-404f-a649-d0702bde0d3a","path":"/users/123","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.732Z","pid":1048488,"reqId":"8d466056-47c0-42b0-a5aa-2809e056ab92","path":"/users/456","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.733Z","pid":1048488,"reqId":"8d466056-47c0-42b0-a5aa-2809e056ab92","path":"/users/456","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.733Z","pid":1048488,"reqId":"8d466056-47c0-42b0-a5aa-2809e056ab92","path":"/users/456","method":"GET","type":"intercept","variantKey":"456","msg":"Wildcard variant matched"}
+{"level":30,"time":"2026-04-24T20:53:15.733Z","pid":1048488,"reqId":"8d466056-47c0-42b0-a5aa-2809e056ab92","path":"/users/456","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.735Z","pid":1048488,"reqId":"36bbb9c1-ba4d-482b-8e70-948c4c0a8f10","path":"/users/999","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.735Z","pid":1048488,"reqId":"36bbb9c1-ba4d-482b-8e70-948c4c0a8f10","path":"/users/999","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.750Z","pid":1048488,"reqId":"36bbb9c1-ba4d-482b-8e70-948c4c0a8f10","path":"/users/999","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.751Z","pid":1048488,"reqId":"d6bec24a-dfbe-445e-910f-4f4529dcb8ab","path":"/users/999","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.752Z","pid":1048488,"reqId":"d6bec24a-dfbe-445e-910f-4f4529dcb8ab","path":"/users/999","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":40,"time":"2026-04-24T20:53:15.752Z","pid":1048488,"reqId":"d6bec24a-dfbe-445e-910f-4f4529dcb8ab","path":"/users/999","method":"GET","type":"intercept","msg":"Wildcard requires match but no variant found"}
+{"level":30,"time":"2026-04-24T20:53:15.753Z","pid":1048488,"reqId":"c2c19b3e-3cae-4936-b69a-6cc2758604b4","path":"/users/404user","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.753Z","pid":1048488,"reqId":"c2c19b3e-3cae-4936-b69a-6cc2758604b4","path":"/users/404user","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.753Z","pid":1048488,"reqId":"c2c19b3e-3cae-4936-b69a-6cc2758604b4","path":"/users/404user","method":"GET","type":"intercept","variantKey":"404user","msg":"Wildcard variant matched"}
+{"level":30,"time":"2026-04-24T20:53:15.753Z","pid":1048488,"reqId":"c2c19b3e-3cae-4936-b69a-6cc2758604b4","path":"/users/404user","method":"GET","type":"intercept","statusCode":404,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.754Z","pid":1048488,"reqId":"b574aeae-183d-4374-aa93-cd9978b50a69","path":"/users/bob/status/inactive","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.755Z","pid":1048488,"reqId":"b574aeae-183d-4374-aa93-cd9978b50a69","path":"/users/bob/status/inactive","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.755Z","pid":1048488,"reqId":"b574aeae-183d-4374-aa93-cd9978b50a69","path":"/users/bob/status/inactive","method":"GET","type":"intercept","variantKey":"bob|inactive","msg":"Wildcard variant matched"}
+{"level":30,"time":"2026-04-24T20:53:15.755Z","pid":1048488,"reqId":"b574aeae-183d-4374-aa93-cd9978b50a69","path":"/users/bob/status/inactive","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:53:15.756Z","pid":1048488,"reqId":"8b5794ea-cd4d-4842-8743-95ea9c247674","path":"/users/123","method":"GET","type":"intercept","msg":"Incoming request"}
+{"level":30,"time":"2026-04-24T20:53:15.757Z","pid":1048488,"reqId":"8b5794ea-cd4d-4842-8743-95ea9c247674","path":"/users/123","method":"GET","type":"intercept","mockId":"m1","matchType":"wildcard","msg":"Phase 2: Fallback match found"}
+{"level":30,"time":"2026-04-24T20:53:15.757Z","pid":1048488,"reqId":"8b5794ea-cd4d-4842-8743-95ea9c247674","path":"/users/123","method":"GET","type":"intercept","statusCode":200,"msg":"Returning static response"}
+{"level":30,"time":"2026-04-24T20:56:02.272Z","pid":1053179,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T20:56:02.282Z","pid":1053179,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T20:56:19.064Z","pid":1053695,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T20:56:19.074Z","pid":1053695,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T20:59:11.968Z","pid":1058445,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T20:59:11.978Z","pid":1058445,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T21:00:06.513Z","pid":1059850,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T21:00:06.524Z","pid":1059850,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T21:00:06.525Z","pid":1059850,"status":200,"msg":"Workflow response generated"}
+{"level":30,"time":"2026-04-24T21:00:21.193Z","pid":1060260,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T21:00:21.203Z","pid":1060260,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T21:00:21.204Z","pid":1060260,"status":200,"msg":"Workflow response generated"}
+{"level":30,"time":"2026-04-24T21:00:44.034Z","pid":1060949,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T21:00:44.044Z","pid":1060949,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T21:00:44.045Z","pid":1060949,"status":200,"msg":"Workflow response generated"}
+{"level":30,"time":"2026-04-24T21:01:04.929Z","pid":1061521,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T21:01:04.938Z","pid":1061521,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T21:01:04.939Z","pid":1061521,"status":200,"msg":"Workflow response generated"}
+{"level":30,"time":"2026-04-24T21:01:24.692Z","pid":1062085,"status":201,"msg":"Workflow response generated"}
+{"level":40,"time":"2026-04-24T21:01:24.702Z","pid":1062085,"msg":"Transition conditions not met"}
+{"level":30,"time":"2026-04-24T21:01:24.703Z","pid":1062085,"status":200,"msg":"Workflow response generated"}

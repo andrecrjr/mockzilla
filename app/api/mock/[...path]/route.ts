@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
+import { type Logger, logger } from '@/lib/logger';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/lib/utils/mock-matcher';
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
+	const reqId = crypto.randomUUID();
 	const pathSegments = params.path;
 	const method = (request.method as HttpMethod) || 'GET';
 
@@ -37,6 +39,10 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const url = request.nextUrl;
 	const urlQueryParams = Object.fromEntries(url.searchParams.entries());
 
+	// Create a scoped logger for this request
+	const log = logger.child({ reqId, path: mockPath, method, type: 'intercept' });
+	log.info('Incoming request');
+
 	try {
 		// Find the folder by slug
 		const [folder] = await db
@@ -46,6 +52,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			.limit(1);
 
 		if (!folder) {
+			log.warn({ folderSlug }, 'Folder not found');
 			return NextResponse.json(
 				{ error: 'Folder not found', folderSlug },
 				{ status: 404 },
@@ -70,11 +77,13 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			// Check query params if the mock has requirements
 			const qpRequired = exactMock.queryParams as Record<string, string> | null;
 			if (!queryParamsMatch(qpRequired, urlQueryParams)) {
-				// Query params don't match — fall through to Phase 2
+				log.debug('Phase 1: Query params mismatch, falling through to Phase 2');
 			} else {
-				return await buildResponse(exactMock, request);
+				log.info({ mockId: exactMock.id }, 'Phase 1: Exact match found');
+				return await buildResponse(exactMock, request, {}, log);
 			}
-		} else if (exactMock) {
+		}
+ else if (exactMock) {
 			// Found by exact path but matchType is not 'exact' — this means
 			// the endpoint happens to equal the path but is configured as wildcard/substring.
 			// We still need to evaluate it properly in Phase 2.
@@ -104,6 +113,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		const best = findBestMatch(mockPath, urlQueryParams, candidates);
 
 		if (!best) {
+			log.warn('No matching mock found');
 			return NextResponse.json(
 				{
 					error: 'Mock endpoint not found',
@@ -124,6 +134,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		);
 
 		if (!bestMock) {
+			log.error('Match found in Phase 2 but database record lookup failed');
 			return NextResponse.json(
 				{
 					error: 'Mock endpoint not found',
@@ -134,6 +145,8 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				{ status: 404 },
 			);
 		}
+
+		log.info({ mockId: bestMock.id, matchType: bestMock.matchType }, 'Phase 2: Fallback match found');
 
 		// For wildcard mocks with variants, try to select a matching variant
 		if (bestMock.matchType === 'wildcard') {
@@ -147,6 +160,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					bestMock.endpoint,
 				);
 				if (variant) {
+					log.info({ variantKey: variant.key }, 'Wildcard variant matched');
 					// Use variant's body, statusCode, bodyType
 					const variantMock = {
 						...bestMock,
@@ -161,11 +175,12 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
 					}
-					return await buildResponse(variantMock, request, paramsMap);
+					return await buildResponse(variantMock, request, paramsMap, log);
 				}
 
 				// No variant matched
 				if (wildcardRequireMatch) {
+					log.warn('Wildcard requires match but no variant found');
 					return NextResponse.json(
 						{
 							error: 'No matching variant found',
@@ -189,15 +204,11 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			paramsMap[String(i)] = captures[i];
 		}
 
-		return await buildResponse(bestMock, request, paramsMap);
+		return await buildResponse(bestMock, request, paramsMap, log);
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error('[API] Error serving mock:', error.message);
-		} else {
-			console.error('[API] Unknown error serving mock:', error);
-		}
+		log.error({ err: error }, 'Internal Server Error during mock processing');
 		return NextResponse.json(
-			{ error: 'Failed to serve mock response' },
+			{ error: 'Internal Server Error', details: String(error) },
 			{ status: 500 },
 		);
 	}
@@ -207,10 +218,12 @@ async function buildResponse(
 	mock: typeof mockResponses.$inferSelect,
 	request: NextRequest,
 	paramsMap: Record<string, string> = {},
+	log: Logger,
 ): Promise<NextResponse> {
+	log.debug({ mockId: mock.id }, 'Building response');
 	// Check if we should echo the request body
 	if (mock.echoRequestBody) {
-		return handleEchoRequestBody(mock, request);
+		return handleEchoRequestBody(mock, request, log);
 	}
 
 	// Extract query params and headers from request
@@ -228,7 +241,7 @@ async function buildResponse(
 
 	// Check if this mock uses dynamic schema-based responses
 	if (mock.useDynamicResponse && mock.jsonSchema) {
-		return handleDynamicResponse(mock, context);
+		return handleDynamicResponse(mock, context, log);
 	}
 
 	// Apply template replacement to static responses
@@ -238,6 +251,8 @@ async function buildResponse(
 	// Return the mock response with the configured status code
 	const contentType =
 		mock.bodyType === 'json' ? 'application/json' : 'text/plain';
+
+	log.info({ statusCode: mock.statusCode }, 'Returning static response');
 
 	if (mock.bodyType === 'json') {
 		try {
@@ -262,15 +277,19 @@ async function buildResponse(
 async function handleEchoRequestBody(
 	mock: typeof mockResponses.$inferSelect,
 	request: NextRequest,
+	log: Logger,
 ): Promise<NextResponse> {
+	log.debug('Handling echo request body');
 	const contentType = request.headers.get('content-type') || 'text/plain';
 
 	if (contentType.includes('application/json')) {
 		try {
 			const body = await request.json();
+			log.info({ statusCode: mock.statusCode }, 'Returning echoed JSON response');
 			return NextResponse.json(body, { status: mock.statusCode });
 		} catch {
 			// If JSON parsing fails, fall back to text
+			log.warn('Failed to parse JSON for echo, falling back to text');
 			const body = await request.text();
 			return new NextResponse(body, {
 				status: mock.statusCode,
@@ -279,6 +298,7 @@ async function handleEchoRequestBody(
 		}
 	} else {
 		const body = await request.text();
+		log.info({ statusCode: mock.statusCode }, 'Returning echoed text response');
 		return new NextResponse(body, {
 			status: mock.statusCode,
 			headers: { 'Content-Type': contentType },
@@ -289,7 +309,9 @@ async function handleEchoRequestBody(
 async function handleDynamicResponse(
 	mock: typeof mockResponses.$inferSelect,
 	context: Record<string, unknown> = {},
+	log: Logger,
 ): Promise<NextResponse> {
+	log.debug('Generating dynamic response');
 	try {
 		// Import the schema generator utility
 		const { generateFromSchema } = await import('@/lib/schema-generator');
@@ -303,11 +325,12 @@ async function handleDynamicResponse(
 			context,
 		);
 
+		log.info({ statusCode: mock.statusCode }, 'Returning dynamic response');
 		return NextResponse.json(JSON.parse(generatedJson), {
 			status: mock.statusCode,
 		});
 	} catch (error) {
-		console.error('[API] Error generating from schema:', error);
+		log.error({ err: error }, 'Error generating from schema, falling back to static');
 		// Fallback to static response if generation fails
 		try {
 			return NextResponse.json(JSON.parse(mock.response), {

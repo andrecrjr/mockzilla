@@ -10,6 +10,7 @@ The Model Context Protocol (MCP) is an open-standard connector that enables LLMs
 - Create and manage mocks dynamically.
 - Setup complex, stateful workflow scenarios.
 - Inspect and reset in-memory database states.
+- Observe live traffic and perform forensic debugging on API logic.
 - Simulate and test API paths without leaving the chat interface.
 
 ---
@@ -62,7 +63,7 @@ npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-a
 
 ## Tool Reference
 
-Mockzilla exposes 24 specialized tools. They are grouped into four main categories:
+Mockzilla exposes 30 specialized tools. They are grouped into five main categories:
 
 ### 1. Folders Management
 Tools for grouping and organizing mocks.
@@ -89,6 +90,7 @@ Manage stateful, multi-step scenarios.
 - `delete_workflow_scenario`: Delete a scenario and all its data.
 - `export_workflow`: Export a scenario to JSON for analysis or backup.
 - `import_workflow`: Import scenarios and transitions from JSON.
+- `create_full_workflow`: **(Atomic)** Create a scenario and all its transitions in a single Turn.
 
 ### 4. Workflow Transitions & State
 Deep interaction with the workflow engine.
@@ -98,7 +100,15 @@ Deep interaction with the workflow engine.
 - `delete_workflow_transition`: Remove a rule.
 - `inspect_workflow_state`: **(Powerful)** View the current `state` and `tables` (mini-DB) for a scenario.
 - `reset_workflow_state`: Wipe the scenario state to start fresh.
-- `test_workflow`: Simulate a request to verify complex logic/effects.
+- `test_workflow`: Simulate a request to verify complex logic/effects. Returns an `executionTrace` showing exactly why transitions did or didn't match.
+- `seed_workflow_state`: Inject specific data into `state` or `tables` to bypass manual flow steps.
+
+### 5. Logs & Observability (AI-First)
+Tools designed to let the AI see reality.
+- `get_logs`: Query structured NDJSON application logs (filter by level, type, or text search).
+- `get_request_trace`: Reconstruct the entire chronological lifecycle of an HTTP request using its `reqId`.
+- `clear_logs`: Maintenance tool to wipe the log file.
+- `evaluate_template`: Statelessly evaluate `{{path}}` or `{$.path}` strings against a dummy context to verify interpolation logic.
 
 ---
 
@@ -128,5 +138,6 @@ Effects handle data transformations.
 
 - **Use Schema Mocks**: For data-heavy mocks, provide the AI with a JSON Schema. It's much more reliable than asking it to generate large JSON blobs.
 - **Inspect Often**: When debugging workflows, use `inspect_workflow_state` to see exactly how your mini-DB tables are evolving.
+- **Trace the Failure**: If `test_workflow` fails, check the `executionTrace`. If you need more detail, find the `reqId` in `get_logs` and call `get_request_trace`.
 - **Transactional Imports**: Use `export_workflow` and `import_workflow` to move complex setups between environments or to "snapshot" a known good state.
 - **Leverage Skills**: Don't just rely on raw tools. Use **Agent Skills** ([skills.md](/documentation/skills.md)) to provide the AI with proven patterns for complex Mockzilla tasks.

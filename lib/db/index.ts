@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import * as fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
@@ -7,7 +7,9 @@ import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { Pool } from 'pg';
 import * as schema from './schema';
 
-let db: NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+let db: any;
+
 
 if (process.env.DATABASE_URL) {
 	// Create PostgreSQL connection pool

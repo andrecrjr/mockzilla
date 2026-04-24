@@ -41,6 +41,7 @@ describe('lib/schema-generator', () => {
 				properties: {
 					exact_field: { type: 'string', const: 'value' },
 				},
+				required: ['exact_field'],
 			};
 			const json = generateFromSchema(schema);
 			const data = JSON.parse(json);
@@ -56,6 +57,7 @@ describe('lib/schema-generator', () => {
 				properties: {
 					email: { type: 'string', 'x-faker': 'internet.email' },
 				},
+				required: ['email'],
 			};
 			const json = generateFromSchema(schema);
 			const data = JSON.parse(json);
@@ -65,14 +67,14 @@ describe('lib/schema-generator', () => {
 			expect(Object.keys(data).length).toBe(1);
 		});
 
-		it('handles post-processing templates {$.field}', () => {
+		it('handles post-processing templates {{field}}', () => {
 			const schema = {
 				type: 'object',
 				properties: {
 					firstName: { type: 'string' },
 					fullName: {
 						type: 'string',
-						const: 'full name: {$.firstName}',
+						const: 'full name: {{firstName}}',
 					},
 				},
 				required: ['firstName', 'fullName'],
@@ -83,6 +85,24 @@ describe('lib/schema-generator', () => {
 
 			expect(data.fullName).toContain('full name:');
 			expect(data.fullName).toContain(data.firstName);
+		});
+
+		it('does not treat JSON strings as templates', () => {
+			const schema = {
+				type: 'object',
+				properties: {
+					jsonStr: {
+						type: 'string',
+						const: '{"foo": "bar"}',
+					},
+				},
+				required: ['jsonStr'],
+			};
+
+			const json = generateFromSchema(schema);
+			const data = JSON.parse(json);
+
+			expect(data.jsonStr).toBe('{"foo": "bar"}');
 		});
 
 		describe('formats', () => {

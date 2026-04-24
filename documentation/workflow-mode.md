@@ -45,6 +45,8 @@ Use `{{ path.to.value }}` to inject dynamic values. Mockzilla supports **Basic A
 |---------|---------|--------|
 | **Path Access** | `{{input.body.id}}` | Value from body |
 | **Relational** | `{{db.users[0].name}}` | Data from Mini-DB |
+| **Relational Lookup** | `{{db.users[id=1].name}}` | Data from Mini-DB by property |
+| **Dynamic Lookup** | `{{db.sessions[id=input.params.id]}}` | Match against request data |
 | **Addition** | `{{state.count + 1}}` | Incremented value |
 | **Subtraction** | `{{10 - db.items.length}}` | Remaining capacity |
 

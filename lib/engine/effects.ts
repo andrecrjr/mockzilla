@@ -51,16 +51,18 @@ export function applyEffects(
 				context.state[effect.key] = interpolate(effect.value, context);
 			}
 		} else if (effect.type === 'db.push') {
-			const table = context.tables[effect.table] || [];
+			if (!context.tables[effect.table]) {
+				context.tables[effect.table] = [];
+			}
+			const table = context.tables[effect.table];
 			const resolvedValue = interpolate(effect.value, context);
 			table.push(resolvedValue);
-			context.tables[effect.table] = table;
 		} else if (effect.type === 'db.update') {
 			const table = context.tables[effect.table] || [];
 			for (let i = 0; i < table.length; i++) {
+				const row = table[i] as Record<string, unknown>;
 				let matches = true;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					const row = table[i] as Record<string, unknown>;
 					if (row[mk] != interpolate(mv, context)) {
 						matches = false;
 						break;
@@ -68,7 +70,6 @@ export function applyEffects(
 				}
 				if (matches) {
 					for (const [sk, sv] of Object.entries(effect.set)) {
-						const row = table[i] as Record<string, unknown>;
 						row[sk] = interpolate(sv, context);
 					}
 				}

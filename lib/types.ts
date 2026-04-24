@@ -1,3 +1,5 @@
+import type { Condition, Effect } from './workflow-types';
+
 export type HttpMethod =
 	| 'GET'
 	| 'POST'
@@ -121,8 +123,6 @@ export interface LegacyImportFormat {
 	}>;
 }
 
-export type { Condition, Effect, MatchContext } from './engine/match';
-
 export interface Scenario {
 	id: string;
 	name: string;
@@ -130,8 +130,6 @@ export interface Scenario {
 	createdAt: string;
 	updatedAt?: string;
 }
-
-import type { Condition, Effect } from './engine/match';
 
 export interface Transition {
 	id: number;
@@ -154,3 +152,5 @@ export interface WorkflowExportData {
 	scenarios: Scenario[];
 	transitions: Transition[];
 }
+
+export type { Condition, Effect, MatchContext } from './workflow-types';

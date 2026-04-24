@@ -1,38 +1,64 @@
-/**
- * Resolves a JSONPath-like reference to a value in an object
- * Supports: $.field, $.nested.field, $.array[0], $.array[0].field, array[0], field
- *
- * @param path - JSONPath string (e.g., "$.user.name", "users[0].id", "db.users[0]")
- * @param data - The object to resolve the path in
- * @returns The resolved value or undefined
- */
 export function resolvePath(path: string, data: unknown): unknown {
-	// Remove leading $. if present (for JSONPath compatibility)
 	const cleanPath = path.startsWith('$.')
 		? path.slice(2)
 		: path.startsWith('$')
 			? path.slice(1)
 			: path;
 
-	if (!cleanPath) {
-		return data;
-	}
+	if (!cleanPath) return data;
 
-	// Split by dots and brackets, handling array indices
-	// Matches: dot or open bracket or close bracket
-	const parts = cleanPath.split(/\.|\[|\]/).filter(Boolean);
+	// Improved splitting: split by dots, but ignore dots inside brackets
+	// Also split by brackets
+	const parts: string[] = [];
+	let currentPart = '';
+	let inBrackets = 0;
+
+	for (let i = 0; i < cleanPath.length; i++) {
+		const char = cleanPath[i];
+		if (char === '[' ) {
+			if (inBrackets === 0 && currentPart) {
+				parts.push(currentPart);
+				currentPart = '';
+			}
+			inBrackets++;
+		} else if (char === ']') {
+			inBrackets--;
+			if (inBrackets === 0) {
+				parts.push(currentPart);
+				currentPart = '';
+			}
+		} else if (char === '.' && inBrackets === 0) {
+			if (currentPart) {
+				parts.push(currentPart);
+				currentPart = '';
+			}
+		} else {
+			currentPart += char;
+		}
+	}
+	if (currentPart) parts.push(currentPart);
 
 	let current = data;
 	for (const part of parts) {
-		if (current === null || current === undefined) {
-			return undefined;
-		}
+		if (current === null || current === undefined) return undefined;
 
-		// Check if part is a pure array index (only digits)
 		if (/^\d+$/.test(part)) {
 			const arrayIndex = parseInt(part, 10);
-			// Check if current supports number indexing (Array or generic object)
 			current = (current as Record<string, unknown>)[arrayIndex];
+		} else if (part.includes('=') && Array.isArray(current)) {
+			const [key, value] = part.split(/==?/).map((s) => s.trim());
+			let finalValue = value;
+			if (value.includes('.') || value.startsWith('state') || value.startsWith('input') || value.startsWith('db')) {
+				const resolved = resolvePath(value, data);
+				if (resolved !== undefined) {
+					finalValue = String(resolved);
+				}
+			}
+			current = current.find((item) => {
+				if (!item || typeof item !== 'object') return false;
+				const itemVal = (item as Record<string, unknown>)[key];
+				return String(itemVal) === finalValue;
+			});
 		} else {
 			current = (current as Record<string, unknown>)[part];
 		}

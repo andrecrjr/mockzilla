@@ -35,6 +35,24 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Local Storage Agent
 - Agent Skills Reference
 - UI Component Architecture
+- Observability & Forensic Agent
+
+---
+
+## Observability & Forensic Agent
+Tags: #logging #tracing #forensics #pino #ndjson
+
+- Purpose: Inspect live traffic, debug matching logic, and perform forensic audits on stateful workflows.
+- Implementation: `lib/logger.ts` (Core), `app/api/mock/[...path]/route.ts` (Tracing entry).
+- Capabilities:
+  - Query application logs via `get_logs` (search, level, type filters).
+  - Perform end-to-end request reconstruction using `get_request_trace(reqId)`.
+  - Analyze workflow matching failures via `test_workflow`'s `executionTrace`.
+- Entry Points:
+  - MCP: `get_logs`, `get_request_trace`, `clear_logs`.
+  - Workflow: `test_workflow` (enhanced output).
+- Related Docs:
+  - `documentation/mcp.md` (Logs section).
 
 ---
 
@@ -262,6 +280,9 @@ Tags: #skills #automation #creator #architect
   - "Use Mocks CRUD Agent to POST a JSON mock in folder `{folderId}` with path `/users/{id}` and `statusCode` 200".
 - Generate dynamic sample
   - "Use Schema Generator Agent with `generateFromSchemaString` and interpolate `{ $.user.id }` into summary field".
+- Perform Forensics
+  - "Use Observability & Forensic Agent to find why the last request to `/api/v1/orders` failed."
+  - "Invoke `get_request_trace` for `reqId` 'abc-123' to audit state mutations."
 
 ## Additional References
 - Reference Guide: `documentation/index.md`.

@@ -11,7 +11,7 @@ import { transitions } from '../db/schema';
  */
 
 // Simple route matcher: /cart/items/:id -> /cart/items/123
-function matchRoute(
+export function matchRoute(
 	pattern: string,
 	actual: string,
 ): Record<string, string> | null {

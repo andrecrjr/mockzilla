@@ -13,6 +13,12 @@ High-performance mocking server for JSON and stateful API workflows.
 - [AGENTS.md](/AGENTS.md) - Capability catalog.
 - [Technical Setup](/documentation/technical-index.md) - Docker, Makefiles, and config.
 
+## 🛠️ Observability
+
+- **Structured Logging**: Production-grade logs via Pino in `.logs/mockzilla.log`.
+- **Request Tracing**: Every mock request is tracked via a unique `reqId`.
+- **Workflow Tracing**: Inspect why transitions did or didn't match with `executionTrace`.
+
 ## 🧠 Patterns
 
 - **Mini-Database (`db.*`)**: Persistent in-memory state. Use `inspect_workflow_state` to verify.

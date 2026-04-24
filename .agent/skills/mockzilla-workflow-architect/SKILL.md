@@ -24,23 +24,27 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 | `list_workflow_scenarios` | List existing scenarios | `page`, `limit` |
 | `delete_workflow_scenario` | Delete a scenario and all its transitions | `id` (slug) |
 | `create_workflow_transition` | Add a transition (route + conditions + effects + response) | `scenarioId`, `name`, `path`, `method`, `conditions`, `effects`, `response` |
+| `create_full_workflow` | "One-Shot" creation of scenario + all transitions | `name`, `description`, `transitions` |
 | `update_workflow_transition` | Modify an existing transition | `id` (numeric DB id) + fields to change |
 | `delete_workflow_transition` | Remove a transition | `id` (numeric DB id) |
 | `list_workflow_transitions` | List all transitions in a scenario | `scenarioId` |
-| `test_workflow` | Simulate a request against a scenario without a live server | `scenarioId`, `path`, `method`, `body`, `query`, `headers` |
-| `inspect_workflow_state` | Read the current scenario state (state vars + db tables) | `scenarioId` |
+| `test_workflow` | Simulate a request against a scenario | `scenarioId`, `path`, `method`, `body`, `query`, `headers` |
+| `evaluate_template` | Test `{{path}}` interpolation logic | `template`, `context` |
+| `inspect_workflow_state` | Read current scenario state + db tables | `scenarioId` |
+| `seed_workflow_state` | Directly inject state and table data | `scenarioId`, `state`, `tables` |
 | `reset_workflow_state` | Wipe all state and db tables for a scenario | `scenarioId` |
-| `export_workflow` | Export scenario(s) to a portable JSON structure | `scenarioId` (optional) |
-| `import_workflow` | Import previously exported scenarios + transitions | `data` (`{ scenarios, transitions }`) |
+| `export_workflow` | Export scenario(s) to JSON | `scenarioId` |
+| `import_workflow` | Bulk import scenarios + transitions | `data` |
 
 ## 🛡️ Constraints & Boundaries
 
 - **Always** verify state changes using `inspect_workflow_state` after each `test_workflow` call.
 - **Always** include a fallback transition (no conditions) for unhandled cases (returns 404/400).
 - **Always** list transitions with `list_workflow_transitions` before adding new ones to avoid duplicates.
+- **Syntax Check**: Use `{{path}}` (double braces) for all workflow interpolation (state, db, input). **Never** use `{$.path}` here—that is for the Mock Maker (stateless) skill only.
 - **Never** implement complex business logic (e.g., tax calculation) — echo inputs or return static varied results instead.
-- **Never** modify `db` without a matching `exists` or `eq` guard condition where appropriate.
 - **Use `export_workflow`** before making major structural changes as a snapshot/backup.
+- **Prefer `create_full_workflow`** for large scenarios to ensure atomic creation and reduce tool-turn overhead.
 
 ## 🧠 Core Architecture
 
@@ -54,6 +58,9 @@ In Mockzilla workflows, **endpoints are actions**. State changes are **side effe
     - `state.isLoggedIn`, `state.retryCount`, `state.currentUserId`
 - **Mini-Database (`db.*`)**: Best for collections/entities (arrays of objects).
     - `db.users`, `db.orders`, `db.notifications`
+
+### 3. Prototyping State
+Use `seed_workflow_state` to jump to advanced states (e.g., a full cart, a locked account) without calling every preceding transition manually. Use `evaluate_template` to verify your interpolation paths against that seeded state.
 
 ---
 
