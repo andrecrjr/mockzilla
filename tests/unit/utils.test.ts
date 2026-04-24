@@ -86,5 +86,34 @@ describe('lib/utils', () => {
 				});
 			}
 		});
+
+		it('returns false when everything fails', async () => {
+			// Disable navigator.clipboard
+			const originalClipboard = navigator.clipboard;
+			Object.defineProperty(navigator, 'clipboard', {
+				value: undefined,
+				writable: true,
+				configurable: true,
+			});
+
+			// Disable document.execCommand by making it throw
+			const originalExec = document.execCommand;
+			document.execCommand = () => {
+				throw new Error('fail');
+			};
+
+			const result = await copyToClipboard('test');
+			expect(result).toBe(false);
+
+			// Restore
+			document.execCommand = originalExec;
+			if (originalClipboard) {
+				Object.defineProperty(navigator, 'clipboard', {
+					value: originalClipboard,
+					writable: true,
+					configurable: true,
+				});
+			}
+		});
 	});
 });

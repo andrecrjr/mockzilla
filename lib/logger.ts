@@ -98,7 +98,7 @@ export function clearLogs() {
     try {
         const logFile = path.join(LOG_DIR, 'mockzilla.log');
         if (fs.existsSync(logFile)) {
-            fs.unlinkSync(logFile);
+            fs.writeFileSync(logFile, '');
         }
     } catch (error) {
         console.error('Failed to clear logs:', error);

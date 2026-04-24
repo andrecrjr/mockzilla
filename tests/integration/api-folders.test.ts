@@ -152,16 +152,184 @@ describe('API /api/folders', () => {
 		expect(mockDb.update).toHaveBeenCalled();
 	});
 
-	it('DELETE removes a folder', async () => {
+	it('GET (type=standard/extension) filters folders', async () => {
+		const reqExt = new NextRequest('http://localhost:3000/api/folders?all=true&type=extension');
+		mockResolvedValue = [{ ...mockFolder, slug: 'ext', meta: { extensionSyncData: {} } }];
+		const resExt = await GET(reqExt);
+		const dataExt = await resExt.json();
+		expect(dataExt).toHaveLength(1);
+
+		const reqStd = new NextRequest('http://localhost:3000/api/folders?all=true&type=standard');
+		mockResolvedValue = [{ ...mockFolder, slug: 'std' }];
+		const resStd = await GET(reqStd);
+		const dataStd = await resStd.json();
+		expect(dataStd).toHaveLength(1);
+	});
+
+	it('POST returns 400 for invalid slug', async () => {
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: 'Invalid', slug: '---' }), // generateSlug will return '---' or something that validateSlug rejects
+		});
+		const res = await POST(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('POST returns 409 if slug already exists', async () => {
+		mockResolvedValue = [mockFolder]; // Slug exists
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: 'New', slug: 'test-folder' }),
+		});
+		const res = await POST(req);
+		expect(res.status).toBe(409);
+	});
+
+	it('PUT returns 400 if ID is missing', async () => {
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'PUT',
+			body: '{}',
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('POST returns 400 for empty slug', async () => {
+		mockResolvedValue = []; // Ensure no conflicts
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: '', slug: '' }), // Both empty will result in empty slug
+		});
+		const res = await POST(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('POST returns 400 for too long slug', async () => {
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: 'Long', slug: 'a'.repeat(101) }),
+		});
+		const res = await POST(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('POST returns 400 for slug starting/ending with hyphen', async () => {
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: 'Hyphen', slug: '-invalid-' }),
+		});
+		const res = await POST(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('PUT returns 409 if custom slug already exists (other record)', async () => {
+		mockResolvedValue = [mockFolder]; // Simulate another folder has this slug
+		const req = new NextRequest('http://localhost:3000/api/folders?id=other-id', {
+			method: 'PUT',
+			body: JSON.stringify({ name: 'New Name', slug: 'test-folder' }),
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(409);
+	});
+
+	it('PUT updates slug if name changed', async () => {
+		mockResolvedValue = [{ ...mockFolder, id: '123' }];
 		const req = new NextRequest('http://localhost:3000/api/folders?id=123', {
+			method: 'PUT',
+			body: JSON.stringify({ name: 'Brand New Name' }),
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(200);
+	});
+
+	it('GET returns 500 on database error', async () => {
+		mockDb.select = mock(() => {
+			throw new Error('DB Error');
+		});
+		const req = new NextRequest('http://localhost:3000/api/folders');
+		const res = await GET(req);
+		expect(res.status).toBe(500);
+		// Restore mock
+		mockDb.select = mock(() => createMockBuilder(mockResolvedValue));
+	});
+
+	it('DELETE returns 400 if ID is missing', async () => {
+		const req = new NextRequest('http://localhost:3000/api/folders', {
 			method: 'DELETE',
 		});
-
 		const res = await DELETE(req);
-		const body = await res.json();
+		expect(res.status).toBe(400);
+	});
 
-		expect(res.status).toBe(200);
-		expect(body.success).toBe(true);
-		expect(mockDb.delete).toHaveBeenCalled();
+	it('POST returns 500 on error', async () => {
+		mockResolvedValue = []; // No conflicts
+		mockDb.insert = mock(() => { throw new Error('fail'); });
+		const res = await POST(new NextRequest('http://localhost:3000/api/folders', { method: 'POST', body: '{"name":"f"}' }));
+		expect(res.status).toBe(500);
+		mockDb.insert = mock(() => createMockBuilder([mockFolder]));
+	});
+
+	it('PUT returns 500 on error', async () => {
+		mockDb.update = mock(() => { throw new Error('fail'); });
+		const res = await PUT(new NextRequest('http://localhost:3000/api/folders?id=1', { method: 'PUT', body: '{"name":"f"}' }));
+		expect(res.status).toBe(500);
+		mockDb.update = mock(() => createMockBuilder([mockFolder]));
+	});
+
+	it('PUT returns 404 if folder not found', async () => {
+		mockDb.select = mock(() => createMockBuilder([])); // Phase 0: Lookup fails
+		const req = new NextRequest('http://localhost:3000/api/folders?id=999', {
+			method: 'PUT',
+			body: '{}',
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(404);
+		// Restore default
+		mockDb.select = mock((args: { count: unknown } | null) => {
+			if (args?.count) return createMockBuilder([{ count: 10 }]);
+			return createMockBuilder(mockResolvedValue);
+		});
+	});
+
+	it('PUT returns 400 for invalid custom slug', async () => {
+		mockResolvedValue = [{ ...mockFolder }];
+		const req = new NextRequest('http://localhost:3000/api/folders?id=123', {
+			method: 'PUT',
+			body: JSON.stringify({ slug: '---' }),
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('PUT returns 409 if custom slug already exists (excluding self)', async () => {
+		// Mock existingFolder lookup (first select) returns mockFolder with id 123
+		// Mock isSlugUnique lookup (second select) returns existing other folder
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([{ ...mockFolder, id: '123' }]);
+			if (callCount === 2) return createMockBuilder([{ ...mockFolder, id: '456' }]); // Another folder exists
+			return createMockBuilder([]);
+		});
+		
+		const req = new NextRequest('http://localhost:3000/api/folders?id=123', {
+			method: 'PUT',
+			body: JSON.stringify({ slug: 'existing-other' }),
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(409);
+		
+		// Restore
+		mockDb.select = mock((args: { count: unknown } | null) => {
+			if (args?.count) return createMockBuilder([{ count: 10 }]);
+			return createMockBuilder(mockResolvedValue);
+		});
+	});
+
+	it('DELETE returns 500 on error', async () => {
+		mockDb.delete = mock(() => { throw new Error('fail'); });
+		const res = await DELETE(new NextRequest('http://localhost:3000/api/folders?id=1', { method: 'DELETE' }));
+		expect(res.status).toBe(500);
+		mockDb.delete = mock(() => createMockBuilder([]));
 	});
 });

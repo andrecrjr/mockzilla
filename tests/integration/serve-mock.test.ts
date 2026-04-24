@@ -65,7 +65,7 @@ mock.module('@/lib/db', () => ({ db: mockDb }));
 // But the logic is in handleRequest which is not exported...
 // We have to call GET/POST etc.
 
-import { GET, POST } from '../../app/api/mock/[...path]/route';
+import { GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS } from '../../app/api/mock/[...path]/route';
 
 describe('Mock Serving /mock/[folder]/[path]', () => {
 	beforeEach(() => {
@@ -259,5 +259,279 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(typeof body.name).toBe('string');
 		// Verify 'fillProperties: false' - no other keys
 		expect(Object.keys(body).length).toBe(2);
+	});
+
+	it('returns 400 for invalid mock URL format (no path segments)', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mock');
+		const params = Promise.resolve({ path: [] });
+		const res = await GET(req, { params });
+		expect(res.status).toBe(400);
+	});
+
+	it('normalizes trailing slashes for non-root paths', async () => {
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([mockResponse]); // Matches /users
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users/');
+		const params = Promise.resolve({ path: ['api', 'users', ''] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		// If normalized correctly, it should have matched mockResponse which is /users
+	});
+
+	it('serves a mock via Phase 2 fallback (substring match)', async () => {
+		const substringMock = {
+			...mockResponse,
+			id: 'substring-1',
+			endpoint: '/users',
+			matchType: 'substring',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([]); // Phase 1: No exact match
+			if (callCount === 3) return createMockBuilder([substringMock]); // Phase 2: Get all mocks
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users/list');
+		const params = Promise.resolve({ path: ['api', 'users', 'list'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body).toEqual({ users: [] });
+	});
+
+	it('responds to OPTIONS with 204', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mock/api', { method: 'OPTIONS' });
+		const res = await OPTIONS();
+		expect(res.status).toBe(204);
+	});
+
+	it('falls through to Phase 2 when query params mismatch in Phase 1', async () => {
+		const qpMock = {
+			...mockResponse,
+			matchType: 'exact',
+			queryParams: { q: 'exact' },
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([qpMock]); // Phase 1 match
+			if (callCount === 3) return createMockBuilder([mockResponse]); // Phase 2 matches
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users?q=wrong');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		// Should have matched mockResponse instead of qpMock
+	});
+
+	it('handles invalid JSON for echo request body', async () => {
+		const echoMock = { ...mockResponse, echoRequestBody: true, method: 'POST' };
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([echoMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: 'invalid json',
+		});
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await POST(req, { params });
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe('invalid json');
+	});
+
+	it('handles failure in dynamic response generation', async () => {
+		const failMock = {
+			...mockResponse,
+			useDynamicResponse: true,
+			jsonSchema: 'invalid', // Will throw
+			response: '{"fallback":true}',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([failMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.fallback).toBe(true);
+	});
+
+	it('handles dynamic response with missing schema', async () => {
+		const badDynamicMock = {
+			...mockResponse,
+			useDynamicResponse: true,
+			jsonSchema: null as any,
+			response: '{"fallback":true}',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([badDynamicMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.fallback).toBe(true);
+	});
+
+	it('returns text response if static JSON mock has invalid JSON body', async () => {
+		const invalidJsonMock = {
+			...mockResponse,
+			bodyType: 'json',
+			response: 'invalid json content { }',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([invalidJsonMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe('invalid json content { }');
+	});
+
+	it('echoes text body when content-type is not JSON', async () => {
+		const echoMock = { ...mockResponse, echoRequestBody: true, method: 'POST' };
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([echoMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users', {
+			method: 'POST',
+			headers: { 'content-type': 'text/plain' },
+			body: 'plain text',
+		});
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await POST(req, { params });
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe('plain text');
+	});
+
+	it('responds to HEAD with 200', async () => {
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([mockResponse]);
+			return createMockBuilder([]);
+		});
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users', { method: 'HEAD' });
+		const params = Promise.resolve({ path: ['api', 'users'] });
+		const res = await HEAD(req, { params });
+		expect(res.status).toBe(200);
+	});
+
+	it('responds to PUT, PATCH, DELETE', async () => {
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([mockResponse]);
+			return createMockBuilder([]);
+		});
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const resPut = await PUT(new NextRequest('http://localhost:3000/api/mock/api/users', { method: 'PUT' }), { params });
+		expect(resPut.status).toBe(200);
+
+		callCount = 0;
+		const resPatch = await PATCH(new NextRequest('http://localhost:3000/api/mock/api/users', { method: 'PATCH' }), { params });
+		expect(resPatch.status).toBe(200);
+
+		callCount = 0;
+		const resDelete = await DELETE(new NextRequest('http://localhost:3000/api/mock/api/users', { method: 'DELETE' }), { params });
+		expect(resDelete.status).toBe(200);
+	});
+
+	it('handles Phase 2 match found but database record lookup failed', async () => {
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([]); // Phase 1: No match
+			if (callCount === 3) {
+				// Phase 2: findBestMatch will be called on this array.
+				// We return an array that will produce a match, but then bestMock lookup will fail 
+				// if we are tricky, OR we just trust the logic.
+				// Actually, we can just mock the array's find method if we want to be surgical.
+				const results = [{ ...mockResponse, matchType: 'substring' }];
+				// @ts-ignore
+				results.find = () => null; 
+				return createMockBuilder(results);
+			}
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+		const res = await GET(req, { params });
+		expect(res.status).toBe(404);
+		const body = await res.json();
+		expect(body.error).toBe('Mock endpoint not found');
+	});
+
+	it('returns 500 on internal server error', async () => {
+		mockDb.select = mock(() => {
+			throw new Error('Database connection failed');
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.error).toBe('Internal Server Error');
 	});
 });

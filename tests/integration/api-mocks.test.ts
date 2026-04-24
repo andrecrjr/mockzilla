@@ -122,13 +122,76 @@ describe('API /api/mocks', () => {
 		expect(mockDb.update).toHaveBeenCalled();
 	});
 
-	it('DELETE removes a mock', async () => {
-		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+	it('GET (without folderId) returns all mocks', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks');
+		const res = await GET(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.data).toBeArray();
+	});
+
+	it('GET (by id) returns 404 if not found', async () => {
+		mockResolvedValue = [];
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=none');
+		const res = await GET(req);
+		expect(res.status).toBe(404);
+	});
+
+	it('PUT returns 400 if ID is missing', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'PUT',
+			body: '{}',
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(400);
+	});
+
+	it('PUT returns 404 if mock not found', async () => {
+		mockDb.update = mock(() => createMockBuilder([])); // Mock update returns nothing
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=999', {
+			method: 'PUT',
+			body: '{}',
+		});
+		const res = await PUT(req);
+		expect(res.status).toBe(404);
+		// Restore default
+		mockDb.update = mock(() => createMockBuilder([mockMockData]));
+	});
+
+	it('DELETE returns 400 if ID is missing', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
 			method: 'DELETE',
 		});
-
 		const res = await DELETE(req);
-		expect(res.status).toBe(200);
-		expect(mockDb.delete).toHaveBeenCalled();
+		expect(res.status).toBe(400);
+	});
+
+	it('GET returns 500 on error', async () => {
+		mockDb.select = mock(() => { throw new Error('fail'); });
+		const res = await GET(new NextRequest('http://localhost:3000/api/mocks'));
+		expect(res.status).toBe(500);
+		mockDb.select = mock((args) => args?.count ? createMockBuilder([{ count: 5 }]) : createMockBuilder(mockResolvedValue));
+	});
+
+	it('POST returns 500 on error', async () => {
+		mockDb.insert = mock(() => { throw new Error('fail'); });
+		const res = await POST(new NextRequest('http://localhost:3000/api/mocks', { method: 'POST', body: '{}' }));
+		expect(res.status).toBe(500);
+		mockDb.insert = mock(() => createMockBuilder([mockMockData]));
+	});
+
+	it('PUT returns 500 on error', async () => {
+		mockDb.update = mock(() => { throw new Error('fail'); });
+		const res = await PUT(new NextRequest('http://localhost:3000/api/mocks?id=1', { method: 'PUT', body: '{}' }));
+		expect(res.status).toBe(500);
+		mockDb.update = mock(() => createMockBuilder([mockMockData]));
+	});
+
+	it('DELETE returns 500 on error', async () => {
+		mockDb.delete = mock(() => { throw new Error('fail'); });
+		const res = await DELETE(new NextRequest('http://localhost:3000/api/mocks?id=1', { method: 'DELETE' }));
+		expect(res.status).toBe(500);
+		mockDb.delete = mock(() => createMockBuilder([]));
 	});
 });

@@ -284,7 +284,7 @@ async function handleEchoRequestBody(
 
 	if (contentType.includes('application/json')) {
 		try {
-			const body = await request.json();
+			const body = await request.clone().json();
 			log.info({ statusCode: mock.statusCode }, 'Returning echoed JSON response');
 			return NextResponse.json(body, { status: mock.statusCode });
 		} catch {
@@ -296,7 +296,8 @@ async function handleEchoRequestBody(
 				headers: { 'Content-Type': contentType },
 			});
 		}
-	} else {
+	}
+ else {
 		const body = await request.text();
 		log.info({ statusCode: mock.statusCode }, 'Returning echoed text response');
 		return new NextResponse(body, {

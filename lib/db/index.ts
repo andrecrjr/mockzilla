@@ -10,19 +10,20 @@ import * as schema from './schema';
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 let db: any;
 
+export function initDb(url?: string) {
+	if (url) {
+		// Create PostgreSQL connection pool
+		const pool = new Pool({
+			connectionString: url,
+			max: 20,
+			idleTimeoutMillis: 30000,
+			connectionTimeoutMillis: 2000,
+		});
 
-if (process.env.DATABASE_URL) {
-	// Create PostgreSQL connection pool
-	const pool = new Pool({
-		connectionString: process.env.DATABASE_URL,
-		max: 20,
-		idleTimeoutMillis: 30000,
-		connectionTimeoutMillis: 2000,
-	});
+		// Create Drizzle instance with schema
+		return drizzlePg(pool, { schema });
+	}
 
-	// Create Drizzle instance with schema
-	db = drizzlePg(pool, { schema });
-} else {
 	console.log('DATABASE_URL not set, falling back to PGlite');
 	// Create PGlite instance with persistent storage
 	// In Docker, mount a volume to /app/data for persistence
@@ -31,8 +32,10 @@ if (process.env.DATABASE_URL) {
 		fs.mkdirSync(dataDir, { recursive: true });
 	}
 	const client = new PGlite(dataDir);
-	db = drizzlePglite(client, { schema });
+	return drizzlePglite(client, { schema });
 }
+
+db = initDb(process.env.DATABASE_URL);
 
 // Export schema for use in queries
 export { db, schema };

@@ -1,63 +1,72 @@
 ---
 title: Workflow Syntax Reference
-description: Complete reference for transitions, conditions, and effects in Mockzilla.
+description: Complete reference for transitions, conditions, and effects in Mockzilla, including best practices and edge cases.
 ---
 
 # Workflow Syntax Reference
 
-A **Transition** is a rule that defines how Mockzilla should react to a request in **Workflow Mode**.
+A **Transition** is a rule that defines how Mockzilla should react to a request when operating in **Workflow Mode**. By combining Conditions and Effects, you can build incredibly complex, stateful API prototypes without writing a single line of backend code.
+
+## When to Use Workflows vs. Static Mocks
+
+**Static Mocks** are perfect for simple, stateless requests (e.g., getting a fixed product list). 
+
+**Workflows** are the best choice when:
+- **State Matters**: Your API needs to "remember" actions (e.g., a user logged in, an item was added to a cart).
+- **Branching Logic**: Different inputs should trigger different responses (e.g., success vs. validation errors).
+- **Persistent Data**: You need to maintain a list of items across multiple requests (e.g., a message feed).
 
 ---
 
 ## 1. Conditions
-Conditions determine whether a transition is triggered for a given request.
+Conditions determine whether a transition is triggered. Mockzilla's condition engine is highly resilient and gracefully handles messy real-world data.
 
 | Property | Description |
 |----------|-------------|
 | **Selector** | A JSON path to the value you want to check (e.g., `input.body.id`, `state.token`). |
-| **Operator** | `eq` (==), `neq` (!=), `gt`, `lt`, `exists`, `contains`. |
-| **Value** | The value to compare against (supports interpolation with `{{ }}`). |
+| **Operator** | `eq` (==), `neq` (!=), `gt` (>), `lt` (<), `exists`, `contains`. |
+| **Value** | The value to compare against. Supports full interpolation with `{{ }}`. |
+
+### Advanced Condition Edge Cases
+- **Robust `contains`**: Works seamlessly across arrays and strings. If `state.tags` is `["admin", "beta"]`, a condition checking if it `contains` `"beta"` will pass. It safely returns `false` if the target is `null` or `undefined`.
+- **Safe Type Coercion (`gt`/`lt`)**: Mockzilla safely coerces string-numbers (like `"42"`) into actual numbers. If the value isn't a number (like `"apple"`), it safely evaluates to `false` without crashing.
+- **Graceful Missing Paths**: If you use the `exists` operator on a deeply nested path that doesn't exist (e.g., `state.missing.user.id`), Mockzilla safely returns `false` rather than throwing an error.
 
 ---
 
 ## 2. Effects
-Effects are actions that modify the **State** or **Mini-DB** when a transition fires.
+Effects are actions that modify the **Scenario State** or the **Mini-DB** when a transition fires. You can stack multiple effects in a single transition.
 
 | Effect | Description |
 |--------|-------------|
-| `state.set` | Sets a key in the session state to a value. |
-| `db.push` | Appends a value to an array in the mini-DB. |
-| `db.update` | Modifies existing objects in a mini-DB array. |
-| `db.remove` | Removes objects from a mini-DB array. |
+| `state.set` | Sets a key in the session state to a specific value. |
+| `db.push` | Appends a new record to an array (table) in the Mini-DB. |
+| `db.update` | Modifies existing records in a Mini-DB table that match your criteria. |
+| `db.remove` | Deletes records from a Mini-DB table that match your criteria. |
+
+### Complex Effect Scenarios: Best Ways to Use
+- **Multi-Step State Updates**: Effects run in order. If your first effect sets `state.count` to `10`, your second effect can immediately use `{{state.count + 5}}` to set another variable to `15`.
+- **Bulk Database Updates**: The `db.update` effect is powerful. If you specify a match criteria (e.g., `role == "admin"`), Mockzilla will update **all** matching rows in the table simultaneously, not just the first one.
+- **Auto-Initialization**: If you use `db.push` on a table that doesn't exist, Mockzilla automatically creates it for you on the fly.
 
 ---
 
 ## 3. The Mini-DB (`db`)
-The **Mini-DB** is a simple JSON store. Each Scenario has its own isolated database.
+The **Mini-DB** is a persistent JSON store. Each Scenario has its own isolated database.
 
-### Accessing Database Values:
-- **Entire Table**: `{{db.tableName}}`
-- **Table Length**: `{{db.tableName.length}}`
-- **First Item**: `{{db.tableName[0]}}`
-- **Relational Lookup**: `{{db.tableName[id=input.params.id]}}` (Find record by matching ID to URL parameter)
+### Accessing Database Values
+You can access your data using standard dot notation or advanced array predicates:
 
----
-
-## 4. Interpolation Reference
-Inject dynamic values into your **Effects** or **Responses**.
-
-| Source | Syntax | Description |
-|--------|--------|-------------|
-| **Input Body** | `{{input.body.id}}` | Value from the request JSON body. |
-| **URL Params** | `{{input.params.id}}` | Value from a path segment (e.g., `:id`). |
-| **URL Query** | `{{input.query.q}}` | Value from a query string parameter. |
-| **Headers** | `{{input.headers.auth}}`| Value from an HTTP header. |
-| **State** | `{{state.token}}` | Value stored in the session state. |
-| **Database** | `{{db.users}}` | Values from the mini-DB. |
+- **Relational Lookup (Literal)**: `{{db.users[role=admin].name}}` (Finds the first user where role is "admin")
+- **Relational Lookup (Dynamic)**: `{{db.users[id=input.params.id].email}}` (Finds the user whose ID matches the current URL parameter)
 
 ---
 
-## 5. Decision Rules
-1.  **Isolated Scenarios**: Each scenario is its own sandbox. State in `auth-test` is not accessible in `my-store`.
-2.  **Order Matters**: If multiple transitions match a request, the **first one** in the list (ordered in the UI) will fire.
-3.  **Default Match**: If no transitions match, Mockzilla returns a 404.
+## 4. Execution Rules & Best Practices
+
+To master Workflow Mode, follow these core patterns:
+
+1. **Top-to-Bottom Evaluation**: Mockzilla checks your transitions from top to bottom. The **first** transition whose path, method, and conditions match is the **only** one that fires.
+2. **Order by Specificity**: Always put transitions with specific conditions (e.g., `password == "wrong"`) at the top. Put a duplicate transition with the same path but **no conditions** at the bottom to act as a default success or error fallback.
+3. **The "Catch-All" Fallback**: Use a transition with no conditions as the final entry for a specific path to return a `401 Unauthorized` or `404` if none of your specific logic was triggered.
+4. **Input Body Fallback**: If you reference `{{id}}` without a prefix in a condition, Mockzilla will intelligently search `input.body.id` as a convenience fallback.
