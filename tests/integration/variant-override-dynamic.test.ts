@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { NextRequest } from 'next/server';
 
 // -------------------------------------------------------
@@ -18,37 +18,19 @@ const createMockBuilder = (resolvedValue: unknown) => {
 		orderBy: mock(() => builder),
 		limit: mock(() => builder),
 		then: (resolve: (val: unknown) => void) => resolve(resolvedValue),
-	} as unknown as {
-		from: (val: unknown) => unknown;
-		where: (val: unknown) => unknown;
-		orderBy: (val: unknown) => unknown;
-		limit: (val: unknown) => unknown;
-		then: (resolve: (val: unknown) => void) => void;
-	};
+	} as any;
 	return builder;
 };
 
-let folderResult: unknown[] = [mockFolder];
-let mocksResult: unknown[] = [];
-
 const mockDb = {
 	select: mock(() => {
-		if (mockDb.select.mock.calls.length === 1) {
-			return createMockBuilder(folderResult);
-		}
-		return createMockBuilder(mocksResult);
+        return createMockBuilder([]);
 	}),
 };
 
 mock.module('@/lib/db', () => ({ db: mockDb }));
 
-// Mock the schema generator to see if it's called
-const mockGenerateFromSchema = mock(() => JSON.stringify({ dynamic: true }));
-mock.module('@/lib/schema-generator', () => ({
-	generateFromSchema: mockGenerateFromSchema,
-	replaceTemplates: (body: string) => body,
-}));
-
+// NO MOCK for schema-generator to avoid global pollution
 import { GET } from '../../app/api/mock/[...path]/route';
 
 // -------------------------------------------------------
@@ -58,7 +40,10 @@ import { GET } from '../../app/api/mock/[...path]/route';
 describe('Mock Serving — variant override dynamic', () => {
 	beforeEach(() => {
 		mockDb.select.mockClear();
-		mockGenerateFromSchema.mockClear();
+	});
+
+	afterAll(() => {
+		mock.restore();
 	});
 
 	it('returns static variant body even if main mock is dynamic', async () => {
@@ -73,8 +58,12 @@ describe('Mock Serving — variant override dynamic', () => {
 			matchType: 'wildcard',
 			enabled: true,
 			queryParams: null,
-			jsonSchema: JSON.stringify({ type: 'object' }),
-			useDynamicResponse: true, // Main mock is dynamic
+			jsonSchema: JSON.stringify({ 
+                type: 'object', 
+                properties: { dynamic: { type: 'boolean', const: true } },
+                required: ['dynamic']
+            }),
+			useDynamicResponse: true,
 			variants: [
 				{
 					key: '123',
@@ -100,11 +89,7 @@ describe('Mock Serving — variant override dynamic', () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 
-		// Should return the variant's body
 		expect(body).toEqual({ variant: 123 });
-
-		// Should NOT have called generateFromSchema because useDynamicResponse was overridden to false
-		expect(mockGenerateFromSchema).not.toHaveBeenCalled();
 	});
 
 	it('returns dynamic response if no variant matches', async () => {
@@ -119,8 +104,12 @@ describe('Mock Serving — variant override dynamic', () => {
 			matchType: 'wildcard',
 			enabled: true,
 			queryParams: null,
-			jsonSchema: JSON.stringify({ type: 'object' }),
-			useDynamicResponse: true, // Main mock is dynamic
+			jsonSchema: JSON.stringify({ 
+                type: 'object', 
+                properties: { dynamic: { type: 'boolean', const: true } },
+                required: ['dynamic']
+            }),
+			useDynamicResponse: true,
 			variants: [
 				{
 					key: '123',
@@ -148,6 +137,5 @@ describe('Mock Serving — variant override dynamic', () => {
 
 		// Should return dynamic response from schema
 		expect(body).toEqual({ dynamic: true });
-		expect(mockGenerateFromSchema).toHaveBeenCalled();
 	});
 });

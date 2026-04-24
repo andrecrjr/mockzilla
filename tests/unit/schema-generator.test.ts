@@ -83,6 +83,7 @@ describe('lib/schema-generator', () => {
 			const json = generateFromSchema(schema);
 			const data = JSON.parse(json);
 
+			expect(data).toHaveProperty('fullName');
 			expect(data.fullName).toContain('full name:');
 			expect(data.fullName).toContain(data.firstName);
 		});
@@ -102,6 +103,7 @@ describe('lib/schema-generator', () => {
 			const json = generateFromSchema(schema);
 			const data = JSON.parse(json);
 
+			expect(data).toHaveProperty('jsonStr');
 			expect(data.jsonStr).toBe('{"foo": "bar"}');
 		});
 
@@ -116,6 +118,7 @@ describe('lib/schema-generator', () => {
 				};
 				const json = generateFromSchema(schema);
 				const data = JSON.parse(json);
+				expect(data).toHaveProperty('password');
 				expect(data.password).toBeDefined();
 				expect(typeof data.password).toBe('string');
 			});
@@ -131,6 +134,8 @@ describe('lib/schema-generator', () => {
 				};
 				const json = generateFromSchema(schema);
 				const data = JSON.parse(json);
+				expect(data).toHaveProperty('b');
+				expect(data).toHaveProperty('bin');
 				expect(data.b).toBeDefined();
 				expect(data.bin).toBeDefined();
 			});
@@ -146,6 +151,8 @@ describe('lib/schema-generator', () => {
 				};
 				const json = generateFromSchema(schema);
 				const data = JSON.parse(json);
+				expect(data).toHaveProperty('u');
+				expect(data).toHaveProperty('h');
 				expect(data.u).toMatch(/^http/);
 				expect(data.h).toBeDefined();
 			});
@@ -161,6 +168,8 @@ describe('lib/schema-generator', () => {
 				};
 				const json = generateFromSchema(schema);
 				const data = JSON.parse(json);
+				expect(data).toHaveProperty('ipv4');
+				expect(data).toHaveProperty('ipv6');
 				expect(data.ipv4).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
 				expect(data.ipv6).toBeDefined();
 			});
@@ -177,6 +186,9 @@ describe('lib/schema-generator', () => {
 				};
 				const json = generateFromSchema(schema);
 				const data = JSON.parse(json);
+				expect(data).toHaveProperty('phone');
+				expect(data).toHaveProperty('country');
+				expect(data).toHaveProperty('currency');
 				expect(data.phone).toBeDefined();
 				expect(data.country).toBeDefined();
 				expect(data.currency).toBeDefined();
@@ -193,6 +205,7 @@ describe('lib/schema-generator', () => {
 			};
 			const json = generateFromSchema(schema);
 			const data = JSON.parse(json);
+			expect(data).toHaveProperty('email');
 			expect(data.email).toContain('@');
 		});
 	});

@@ -1,46 +1,41 @@
 import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
-
-jsf.extend('faker', () => faker);
-jsf.extend('x-faker', () => faker);
-
-// Add support for common OpenAPI/JSON Schema formats
-jsf.format('password', () => faker.internet.password());
-jsf.format('byte', () => faker.string.alphanumeric(10)); // Base64 encoded placeholder
-jsf.format('binary', () => faker.string.alphanumeric(10));
-jsf.format('uri', () => faker.internet.url());
-jsf.format('hostname', () => faker.internet.domainName());
-jsf.format('ipv4', () => faker.internet.ipv4());
-jsf.format('ipv6', () => faker.internet.ipv6());
-
-// Even more faker formats
-jsf.format('phone', () => faker.phone.number());
-jsf.format('country', () => faker.location.country());
-jsf.format('country-code', () => faker.location.countryCode());
-jsf.format('currency', () => faker.finance.currencyCode());
-jsf.format('currency-symbol', () => faker.finance.currencySymbol());
-jsf.format('credit-card', () => faker.finance.creditCardNumber());
-jsf.format('user-agent', () => faker.internet.userAgent());
-jsf.format('mac', () => faker.internet.mac());
-jsf.format('color', () => faker.color.human());
-
-const DEFAULT_MAX_ITEMS = 1000;
-const envMaxItems = process.env.MOCKZILLA_MAX_ITEMS
-	? parseInt(process.env.MOCKZILLA_MAX_ITEMS, 10)
-	: DEFAULT_MAX_ITEMS;
-const MAX_ITEMS = Number.isNaN(envMaxItems) ? DEFAULT_MAX_ITEMS : envMaxItems;
-
-jsf.option({
-	alwaysFakeOptionals: true,
-	useDefaultValue: true,
-	useExamplesValue: true,
-	fixedProbabilities: true,
-	minItems: 1,
-	maxItems: MAX_ITEMS,
-	fillProperties: false,
-});
-
 import { interpolate } from './engine/interpolation';
+
+let jsfConfigured = false;
+
+/**
+ * Configure JSON Schema Faker with extensions and options.
+ * This is done lazily to ensure it only happens once and can be re-triggered if needed.
+ */
+function configureJsf() {
+	if (jsfConfigured) return;
+
+	jsf.extend('faker', () => faker);
+	jsf.extend('x-faker', () => faker);
+
+	// Add support for common OpenAPI/JSON Schema formats
+	jsf.format('password', () => faker.internet.password());
+	jsf.format('byte', () => faker.string.alphanumeric(10)); // Base64 encoded placeholder
+	jsf.format('binary', () => faker.string.alphanumeric(10));
+	jsf.format('uri', () => faker.internet.url());
+	jsf.format('hostname', () => faker.internet.domainName());
+	jsf.format('ipv4', () => faker.internet.ipv4());
+	jsf.format('ipv6', () => faker.internet.ipv6());
+
+	// Even more faker formats
+	jsf.format('phone', () => faker.phone.number());
+	jsf.format('country', () => faker.location.country());
+	jsf.format('country-code', () => faker.location.countryCode());
+	jsf.format('currency', () => faker.finance.currencyCode());
+	jsf.format('currency-symbol', () => faker.finance.currencySymbol());
+	jsf.format('credit-card', () => faker.finance.creditCardNumber());
+	jsf.format('user-agent', () => faker.internet.userAgent());
+	jsf.format('mac', () => faker.internet.mac());
+	jsf.format('color', () => faker.color.human());
+
+	jsfConfigured = true;
+}
 
 /**
  * Applies template replacement to a string or object using provided context
@@ -63,8 +58,27 @@ export function generateFromSchema(
 	schema: object,
 	context: Record<string, unknown> = {},
 ): string {
+	configureJsf();
+
+	const DEFAULT_MAX_ITEMS = 1000;
+	const envMaxItems = process.env.MOCKZILLA_MAX_ITEMS
+		? parseInt(process.env.MOCKZILLA_MAX_ITEMS, 10)
+		: DEFAULT_MAX_ITEMS;
+	const MAX_ITEMS = Number.isNaN(envMaxItems) ? DEFAULT_MAX_ITEMS : envMaxItems;
+
+	// Force options on every call to prevent leaks from other tests
+	jsf.option({
+		alwaysFakeOptionals: true,
+		useDefaultValue: true,
+		useExamplesValue: true,
+		fixedProbabilities: true,
+		minItems: 1,
+		maxItems: MAX_ITEMS,
+		fillProperties: false,
+	});
+
 	try {
-		const generated = jsf.generate(schema);
+		const generated = jsf.generate(schema) as Record<string, unknown>;
 
 		// Merge generated data with context for template resolution
 		// The context (e.g. request query params) takes precedence if there are naming collisions
