@@ -113,13 +113,14 @@ MockEditor (orchestrator)
 ---
 
 ## Mock Serving Agent
-Tags: #routing #mock #schema #echo #nextjs #drizzle
+Tags: #routing #mock #schema #echo #nextjs #drizzle #handlebars
 
 - Purpose: Serve configured mock responses by folder slug and path; supports static JSON/text, request-body echo, and JSON Schema–driven dynamic responses.
 - Entry Point: `app/api/mock/[...path]/route.ts`
   - Path format: `/api/mock/{folderSlug}/{mockPath...}` (app/api/mock/[...path]/route.ts:10)
   - Root path support: `/api/mock/{folderSlug}/` or `/api/mock/{folderSlug}` treats mockPath as "/"
 - Capabilities
+  - **Hybrid Template Execution**: Correctly handles both object-based type preservation and string-based Handlebars logic (app/api/mock/[...path]/route.ts).
   - Resolve folder by slug, then match mock by `endpoint` and `method` (app/api/mock/[...path]/route.ts:19–37).
   - Echo request body back when `echoRequestBody` is enabled (app/api/mock/[...path]/route.ts:45–68).
   - Generate dynamic JSON from `jsonSchema` when `useDynamicResponse` is true (app/api/mock/[...path]/route.ts:70–91), fallback to static response if generation fails (app/api/mock/[...path]/route.ts:82–90).
@@ -211,16 +212,19 @@ Tags: #export #snapshot #drizzle
 ---
 
 ## Schema Generator Agent
-Tags: #jsonschema #faker #templates #llm-context
+Tags: #jsonschema #faker #templates #llm-context #handlebars
 
-- Purpose: Generate sample JSON from JSON Schema with custom formats and template interpolation.
+- Purpose: Generate sample JSON from JSON Schema and handle complex response templating using a Smart Hybrid Engine.
 - Module: `lib/schema-generator.ts`
 - Capabilities
-  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts:106–201, 232–259).
-  - Validation helper `validateSchema` (lib/schema-generator.ts:204–229).
-  - Entry point: `generateFromSchema` (lib/schema-generator.ts:240–259).
+  - **Smart Hybrid Engine**: Automatically switches between **Type-Preserving Interpolation** (for valid JSON) and **Handlebars** (for logic/loops).
+  - Handlebars support: Loops (`{{#each}}`), conditionals (`{{#if}}`), and custom helpers.
+  - Custom Helpers: `math` (arithmetic), `faker` (dynamic data), `eq/neq/gt/lt/gte/lte` (comparisons).
+  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts).
+  - Validation helper `validateSchema`.
+  - Entry point: `generateFromSchema`, `replaceTemplates`.
 - Dependencies
-  - `@faker-js/faker`, `json-schema-faker` integration (lib/schema-generator.ts:1–3, 17–28).
+  - `handlebars`, `@faker-js/faker`, `json-schema-faker` integration.
 - Related Docs
   - `documentation/schema-interpolation.md`
   - `documentation/test-schemas.md`

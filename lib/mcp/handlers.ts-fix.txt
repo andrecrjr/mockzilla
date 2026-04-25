@@ -1,0 +1,54 @@
+	});
+
+	return {
+		success: true,
+		scenarioId,
+		transitionCount: args.transitions.length,
+	};
+}
+
+export async function callEvaluateTemplate(args: z.infer<typeof schemas.EvaluateTemplateArgs>) {
+	logger.info({ args }, 'MCP Tool: evaluate_template');
+	const { replaceTemplates } = await import('@/lib/schema-generator');
+
+	const context = {
+		state: args.context?.state || {},
+		tables: args.context?.tables || {},
+		input: args.context?.input || {
+			body: {},
+			query: {},
+			params: {},
+			headers: {},
+		},
+	};
+
+	const result = replaceTemplates(args.template, context);
+
+	return {
+		template: args.template,
+		result,
+		context_used: context,
+	};
+}
+
+export async function callSeedWorkflowState(args: z.infer<typeof schemas.SeedWorkflowStateArgs>) {
+	logger.info({ args }, 'MCP Tool: seed_workflow_state');
+	await db
+		.insert(scenarioState as any)
+		.values({
+			scenarioId: args.scenarioId,
+			data: { state: args.state || {}, tables: args.tables || {} },
+		})
+		.onConflictDoUpdate({
+			target: [scenarioState.scenarioId],
+			set: {
+				data: { state: args.state || {}, tables: args.tables || {} },
+				updatedAt: new Date(),
+			},
+		});
+
+	return {
+		success: true,
+		scenarioId: args.scenarioId,
+	};
+}

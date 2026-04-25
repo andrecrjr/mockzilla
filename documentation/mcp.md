@@ -108,7 +108,7 @@ Tools designed to let the AI see reality.
 - `get_logs`: Query structured NDJSON application logs (filter by level, type, or text search).
 - `get_request_trace`: Reconstruct the entire chronological lifecycle of an HTTP request using its `reqId`.
 - `clear_logs`: Maintenance tool to wipe the log file.
-- `evaluate_template`: Statelessly evaluate `{{path}}` or `{$.path}` strings against a dummy context to verify interpolation logic.
+- `evaluate_template`: Statelessly evaluate Handlebars templates, logic blocks (`#if`, `#each`), and helpers against a dummy context to verify complex response logic.
 
 ---
 

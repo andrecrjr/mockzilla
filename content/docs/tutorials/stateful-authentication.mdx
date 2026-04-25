@@ -7,169 +7,197 @@ description: Learn how to simulate login, persistent sessions, and protected rou
 
 In this tutorial, you will build a realistic authentication simulation. Unlike static mocks, Mockzilla Workflows can **remember** if a user has logged in, allowing you to test protected routes and session expiration logic in your frontend.
 
-## What You'll Learn
-- How to store data in the **Scenario State**.
-- How to use **Conditions** to protect routes.
-- How to use **Faker.js** to generate dynamic tokens.
-- How to personalize responses based on state.
-
----
-
-## Step 1: Initialize the Scenario
-1.  Navigate to the **Workflows** tab in the Mockzilla Dashboard.
-2.  Click **Create Scenario** and name it `auth-demo`.
-3.  Note your Execution URL: `http://localhost:36666/api/workflow/exec/auth-demo/`
-
----
-
-## Step 2: Create the Login Endpoint
-We need an endpoint that accepts credentials and "sets" a session token in our state.
-
-1.  Click **Add Transition**.
-2.  **Name**: `User Login`
-3.  **Path**: `/login`
-4.  **Method**: `POST`
-5.  **Effects**: Add a `state.set` effect.
-    - **Key**: `token`
-    - **Value**: `{{faker.string.alphanumeric(32)}}`
-    - *Also add another `state.set` for the username:*
-    - **Key**: `currentUser`
-    - **Value**: `{{input.body.username}}`
-6.  **Response**:
-    ```json
-    {
-      "success": true,
-      "token": "{{state.token}}",
-      "user": {
-        "name": "{{state.currentUser}}",
-        "lastLogin": "{{faker.date.recent()}}"
-      }
-    }
-    ```
-
----
-
-## Step 3: Protect the Profile Route
-Now, let's create a `/profile` endpoint that **only** responds if the correct token is provided in the `Authorization` header.
-
-1.  Click **Add Transition**.
-2.  **Name**: `Get User Profile`
-3.  **Path**: `/profile`
-4.  **Method**: `GET`
-5.  **Condition**: This is the secret sauce.
-    - **Selector**: `input.headers.authorization`
-    - **Operator**: `==`
-    - **Value**: `Bearer {{state.token}}`
-6.  **Response**:
-    ```json
-    {
-      "id": "{{faker.string.uuid()}}",
-      "username": "{{state.currentUser}}",
-      "email": "{{faker.internet.email()}}",
-      "roles": ["user", "beta-tester"]
-    }
-    ```
-
----
-
-## Step 4: Handle "Unauthorized" Errors
-If the token doesn't match, we want a helpful error instead of a generic 404.
-
-1.  Click **Add Transition**.
-2.  **Name**: `Unauthorized Access`
-3.  **Path**: `/profile`
-4.  **Method**: `GET`
-5.  **Condition**: (Leave empty - it will catch anything the previous transition missed).
-6.  **Response**:
-    - **Status Code**: `401`
-    - **Body**:
-      ```json
-      { "error": "Unauthorized", "message": "Valid session token required" }
-      ```
-
----
-
-## Step 5: Failed Login Lockout (Advanced)
-Let's add logic to "lock" an account after 3 failed attempts. This uses **Arithmetic** to increment a counter and **Conditions** to branch logic.
-
-1.  Click **Add Transition**.
-2.  **Name**: `Login Failed`
-3.  **Path**: `/login`
-4.  **Method**: `POST`
-5.  **Condition**: `input.body.password != "password123"`
-6.  **Effects**: `state.set`
-    - **Key**: `login_attempts`
-    - **Value**: `{{state.login_attempts + 1}}`
-7.  **Response**:
-    ```json
-    { "error": "Invalid credentials", "attempts": "{{state.login_attempts}}" }
-    ```
-
-8.  Click **Add Transition** (and move it to the top of the list).
-9.  **Name**: `Account Locked`
-10. **Path**: `/login`
-11. **Method**: `POST`
-12. **Condition**: `state.login_attempts >= 3`
-13. **Response**:
-    - **Status Code**: `423` (Locked)
-    - **Body**: `{ "error": "Account locked due to 3+ failed attempts." }`
-
----
-
-## Step 6: Test the Flow
-
-### 1. Attempt unauthorized access
-```bash
-curl -i http://localhost:36666/api/workflow/exec/auth-demo/profile
-```
-**Result**: `401 Unauthorized`.
-
-### 2. Login to generate a session
-```bash
-curl -X POST http://localhost:36666/api/workflow/exec/auth-demo/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "Alice", "password": "password123"}'
-```
-**Result**: You'll get a JSON response with a random token. **Copy that token.**
-
-### 3. Access profile with your token
-Replace `YOUR_TOKEN` with the one from the previous step:
-```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:36666/api/workflow/exec/auth-demo/profile
-```
-**Result**: `200 OK` with Alice's profile data!
-
----
-
-## 🤖 AI-First: Agent Instructions
-Building stateful workflows is a **spec-driven** process. Instead of manually creating each transition, let an AI agent design the full state machine via MCP based on your existing API spec or logic requirements.
-
-<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
-  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-      <Shield className="w-6 h-6 text-blue-500" />
-    </div>
-    <div>
-      <CardTitle className="text-lg">AI Agent Command</CardTitle>
-      <CardDescription>Instruct your AI agent to build a robust auth flow using Mockzilla's workflow engine.</CardDescription>
+<Card className="my-8 border-primary/20 bg-primary/5">
+  <CardHeader>
+    <div className="flex items-center gap-2">
+      <Shield className="w-5 h-5 text-primary" />
+      <CardTitle className="text-lg">Real-World Goal</CardTitle>
     </div>
   </CardHeader>
-  <CardContent className="space-y-4">
-    <p className="text-sm">
-      "Use **mockzilla-workflow-architect** to build a secure auth flow for my `auth-demo` scenario. It should have a `/login` POST that generates a token, a protected `/profile` GET using header validation, and an account lockout mechanism after 3 failed attempts."
-    </p>
-    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
-      // Tip: You can even paste your production auth service code and ask the AI to "mirror it with Mockzilla."
-    </div>
+  <CardContent className="text-sm">
+    Simulate a login system where a user provides credentials, receives a random token, and uses that token to access their profile. We'll even add an "Account Lockout" feature for too many failed attempts!
   </CardContent>
 </Card>
 
 ---
 
-## Summary
-You've built a secure-feeling API simulation! This allows your frontend to handle login forms, local storage of tokens, and "access denied" states with zero backend code.
+## Step 1: Initialize the Scenario
 
-### Next Steps
-- Try adding a `POST /logout` transition that uses `state.set` to clear the `token`.
-- Add a "Lockout" state that increments a counter on failed login attempts.
+First, we need a sandbox for our authentication logic.
+
+<Tabs defaultValue="dashboard">
+  <TabsList>
+    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+    <TabsTrigger value="ai">AI (MCP)</TabsTrigger>
+  </TabsList>
+  <TabsContent value="dashboard" className="pt-4">
+    1. Navigate to the **Workflows** tab.
+    2. Click **Create Scenario** and name it `auth-demo`.
+    3. Open the **State Inspector** and initialize `login_attempts` to `0`.
+  </TabsContent>
+  <TabsContent value="ai" className="pt-4">
+    <div className="p-4 bg-muted rounded-lg font-mono text-sm border border-dashed">
+      "Create a workflow scenario named `auth-demo` and initialize a state variable `login_attempts` to 0."
+    </div>
+  </TabsContent>
+</Tabs>
+
+---
+
+## Step 2: The Login Endpoint
+
+We need an endpoint that validates credentials and "sets" a session token in our state.
+
+<Card className="mt-4 overflow-hidden border-blue-500/20">
+  <div className="bg-blue-500/10 px-4 py-2 border-b border-blue-500/20 flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <Badge variant="outline" className="bg-blue-500 text-white border-none">POST</Badge>
+      <code className="text-sm font-bold">/login</code>
+    </div>
+    <Badge variant="secondary">Success Case</Badge>
+  </div>
+  <CardContent className="pt-4 space-y-4">
+    <div>
+      <h4 className="text-sm font-bold mb-1">Condition</h4>
+      <code className="text-xs text-muted-foreground">input.body.password == "password123"</code>
+    </div>
+    <div>
+      <h4 className="text-sm font-bold mb-1">Effects (state.set)</h4>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="p-2 bg-muted rounded text-xs">`token` → `&#123;&#123;faker.string.alphanumeric 32&#125;&#125;`</div>
+        <div className="p-2 bg-muted rounded text-xs">`currentUser` → `&#123;&#123;input.body.username&#125;&#125;`</div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+
+<Alert className="mt-4 border-dashed">
+  <Zap className="h-4 w-4" />
+  <AlertTitle>Pro-Tip: Faker in Effects</AlertTitle>
+  <AlertDescription>
+    Using `&#123;&#123;faker&#125;&#125;` inside a `state.set` effect ensures that the token is generated once during login and remains persistent until the next login.
+  </AlertDescription>
+</Alert>
+
+---
+
+## Step 3: Protecting Routes
+
+Now, let's create a `/profile` endpoint that **only** responds if the correct token is provided in the `Authorization` header.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+  <Card className="border-green-500/20">
+    <CardHeader className="pb-2">
+      <div className="flex items-center gap-2">
+        <Badge className="bg-green-600 border-none">GET</Badge>
+        <CardTitle className="text-sm">Authorized</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-2">
+      <div className="text-[10px] uppercase text-muted-foreground font-bold">Condition</div>
+      <div className="p-2 bg-muted rounded text-xs truncate">
+        `Auth == Bearer &#123;&#123;state.token&#125;&#125;`
+      </div>
+      <div className="text-[10px] uppercase text-muted-foreground font-bold">Response</div>
+      <Badge variant="outline" className="text-green-600 border-green-600">200 OK</Badge>
+    </CardContent>
+  </Card>
+
+  <Card className="border-destructive/20">
+    <CardHeader className="pb-2">
+      <div className="flex items-center gap-2">
+        <Badge className="bg-destructive border-none">GET</Badge>
+        <CardTitle className="text-sm">Unauthorized</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-2">
+      <div className="text-[10px] uppercase text-muted-foreground font-bold">Condition</div>
+      <div className="p-2 bg-muted rounded text-xs">
+        <em className="text-muted-foreground italic">None (Catch-all)</em>
+      </div>
+      <div className="text-[10px] uppercase text-muted-foreground font-bold">Response</div>
+      <Badge variant="outline" className="text-destructive border-destructive">401 Unauthorized</Badge>
+    </CardContent>
+  </Card>
+</div>
+
+---
+
+## Step 4: Account Lockout (Advanced Logic)
+
+Let's use **Arithmetic** to increment a counter and **Conditions** to branch logic when a user fails to login.
+
+<div className="space-y-4 mt-6">
+  <div className="flex gap-4">
+    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">1</div>
+    <div className="flex-1">
+      <h4 className="font-bold">Add "Login Failed" Transition</h4>
+      <p className="text-sm text-muted-foreground">Match `password != "password123"`. Use effect `state.set` to set `login_attempts` to `&#123;&#123;math state.login_attempts "+" 1&#125;&#125;`.</p>
+    </div>
+  </div>
+
+  <div className="flex gap-4">
+    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">2</div>
+    <div className="flex-1">
+      <h4 className="font-bold">Add "Account Locked" Transition</h4>
+      <p className="text-sm text-muted-foreground text-destructive font-semibold italic">Move this to the VERY TOP of your transition list.</p>
+      <p className="text-sm text-muted-foreground">Match `state.login_attempts >= 3` and return a <Badge variant="outline" className="text-xs py-0 h-4 border-destructive text-destructive">423 Locked</Badge> status code.</p>
+    </div>
+  </div>
+</div>
+
+---
+
+## Step 5: Verify the Journey
+
+Open your terminal and simulate the full user journey:
+
+<div className="space-y-6 mt-8">
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 1. Attempt Unauthorized Access
+    </div>
+    ```bash
+    curl -i http://localhost:36666/api/workflow/exec/auth-demo/profile
+    ```
+  </div>
+
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 2. Login to generate a session
+    </div>
+    ```bash
+    curl -X POST http://localhost:36666/api/workflow/exec/auth-demo/login \
+      -d '{"username": "Alice", "password": "password123"}'
+    ```
+  </div>
+
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 3. Access profile with your token
+    </div>
+    ```bash
+    curl -H "Authorization: Bearer YOUR_TOKEN" \
+      http://localhost:36666/api/workflow/exec/auth-demo/profile
+    ```
+  </div>
+</div>
+
+---
+
+<div className="mt-12 p-8 bg-gradient-to-br from-primary/10 to-accent/10 rounded-3xl border border-primary/20">
+  <div className="flex flex-col md:flex-row gap-6 items-center">
+    <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+      <Rocket className="w-8 h-8 text-white" />
+    </div>
+    <div className="flex-1 text-center md:text-left">
+      <h3 className="text-xl font-bold mb-1">Auth Flow Mastered!</h3>
+      <p className="text-muted-foreground text-sm">
+        You've built a robust, stateful authentication system. Your frontend can now handle login forms, token persistence, and account lockouts with ease.
+      </p>
+    </div>
+    <Link href="/docs/tutorials/shopping-cart-simulation">
+      <Button className="shrink-0">Next: Shopping Cart <ChevronRight className="w-4 h-4" /></Button>
+    </Link>
+  </div>
+</div>

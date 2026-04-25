@@ -1,4 +1,5 @@
 import { resolvePath } from '../utils/path-resolver';
+import { compileHandlebars } from './handlebars';
 
 export type InterpolationContext = {
 	input?: {
@@ -12,6 +13,63 @@ export type InterpolationContext = {
 	// For schema-generator compatibility
 	[key: string]: unknown;
 };
+
+/**
+ * Applies template replacement to a string or object using provided context.
+ * Uses a hybrid approach:
+ * 1. If string is valid JSON, parses and interpolates using the type-preserving engine.
+ * 2. If parsing fails or is plain text, uses Handlebars for logic and blocks.
+ */
+export function replaceTemplates(
+	data: unknown,
+	context: Record<string, unknown> = {},
+): unknown {
+	if (data === null || data === undefined) return data;
+
+	let stringified: string;
+	let isObject = false;
+
+	if (typeof data === 'string') {
+		stringified = data;
+	} else if (typeof data === 'object') {
+		stringified = JSON.stringify(data);
+		isObject = true;
+	} else {
+		return data;
+	}
+
+	// If it contains Handlebars blocks (e.g. {{#if}}, {{/if}}, {{#each}}) or helpers (with spaces/quotes or known helper names), 
+	// we should use Handlebars directly on the whole string.
+	const knownHelpers = /\{\{\s*(now|math|faker|and|or|not|default|dateAdd|dateSub|dateFormat|filter|sort|slice|join|slugify|truncate|currency|toFixed|json)\b/;
+	if (stringified.includes('{{#') || stringified.includes('{{/') || /\{\{\s*[^}]*[\s'"][^}]*\}\}/.test(stringified) || knownHelpers.test(stringified)) {
+		const result = compileHandlebars(stringified, context);
+		try {
+			return JSON.parse(result);
+		} catch {
+			return result;
+		}
+	}
+
+	// If it was an object but had no Handlebars blocks, use the recursive interpolate engine
+	if (isObject) {
+		return interpolate(data, context);
+	}
+
+	// It's a string without Handlebars blocks
+	try {
+		// Attempt to parse as JSON first for type preservation (for strings that are actually JSON)
+		const parsed = JSON.parse(stringified);
+		
+		if (parsed === null || typeof parsed !== 'object') {
+			return interpolate(stringified, context);
+		}
+
+		return interpolate(parsed, context);
+	} catch {
+		// Not JSON or parsing failed, just interpolate as string
+		return interpolate(stringified, context);
+	}
+}
 
 /**
  * Robust interpolation supporting:

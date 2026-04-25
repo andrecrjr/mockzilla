@@ -1,65 +1,139 @@
 ---
 title: Dynamic Data Syntax
-description: Master interpolation, strict typing, and Faker for rich, resilient API responses.
+description: Master Handlebars logic, temporal manipulation, collection filtering, and faker integration.
 ---
 
 # Dynamic Data Syntax
 
-Mockzilla lets you build cohesive data where one field references another using a powerful interpolation system.
+Mockzilla uses **Handlebars** as its primary engine for generating high-fidelity, dynamic responses. This allows you to build complex state machines and business logic directly inside your mocks.
 
-## 1. Type Preservation vs. String Interpolation
+## 1. The Handlebars-First Philosophy
 
-Mockzilla's engine is intelligent about data types. Knowing *how* to write your templates is the best way to ensure your frontend receives exactly what it expects.
-
-### Strict Type Preservation (Best for Booleans & Numbers)
-If a template occupies the **entire string**, Mockzilla preserves its original type.
-- `"isActive": "{{state.is_active}}"` → Returns a real `boolean`.
-- `"count": "{{db.items.length}}"` → Returns a real `number`.
-- `"data": "{{state.user_object}}"` → Returns a real `object`.
-
-### String Interpolation (Best for Messages)
-If you add any text around the template, it is forcibly converted to a string.
-- `"msg": "User status is {{state.status}}"` → Returns `"User status is active"`.
+Handlebars is the "Brain" of your mocks. You should use it whenever your response needs to be more than a static file. Mockzilla uses a **Smart Hybrid Engine** that preserves JSON types (numbers, booleans) even when using complex Handlebars logic.
 
 ---
 
-## 2. Request Context Interpolation (`{$.path}`)
-You can reuse anything sent by the frontend in your response. This works in Static Responses, Wildcard Variants, and Dynamic Schemas.
+## 2. Advanced Logic Helpers
+Control the flow of your data with standard and boolean logic.
 
-| Syntax | Description | Example |
+| Helper | Description | Example |
 |--------|-------------|---------|
-| `{{input.query.page}}` | Injects a URL query parameter. | `?page=2` → `{"page": 2}` |
-| `{{input.body.id}}` | Injects a value from the request JSON. | `{"id": "abc"}` → `{"ref": "abc"}` |
-| `{{input.params.id}}` | Injects a URL path segment. | `/users/123` → `{"userId": 123}` |
+| `and` | Returns true if all arguments are truthy. | `{{#if (and $.query.active $.query.admin)}}` |
+| `or` | Returns true if any argument is truthy. | `{{#if (or $.query.id $.query.slug)}}` |
+| `not` | Inverts a boolean value. | `{{#if (not $.query.locked)}}` |
+| `default` | Returns a fallback value if the first is empty. | `{{default $.query.theme "dark"}}` |
+| `eq` / `neq` | Strict equality check. | `{{#if (eq $.query.role "admin")}}` |
+| `gt` / `lt` | Numeric comparisons. | `{{#if (gt state.count 5)}}` |
 
 ---
 
-## 3. Resilient Arithmetic (The "Safe Math" Way)
-You can perform math directly in templates. Mockzilla is built to be resilient—it will never crash your workflow if data is missing.
+## 3. Temporal (Time) Helpers
+Mocking dates and expirations is easy with built-in time manipulation.
 
-- **Success**: `{{state.count + 1}}` → `11`.
-- **Graceful Fallback**: If `state.score` is missing, `{{state.score + 10}}` simply returns the raw string `{{state.score + 10}}` rather than erroring, allowing you to debug your state easily.
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `now` | Current ISO timestamp. | `{{now}}` |
+| `dateFormat` | Formats a date string. | `{{dateFormat "now" "yyyy-MM-dd"}}` |
+| `dateAdd` | Adds time to a date. | `{{dateAdd "now" 30 "days"}}` |
+| `dateSub` | Subtracts time from a date. | `{{dateSub "now" 1 "hours"}}` |
 
----
-
-## 4. Supercharged Faker
-Want to generate incredibly realistic data? Use the `{{faker.path}}` syntax anywhere.
-
-### Best Ways to Use Faker
-- **Simple Calls**: `{{faker.internet.email}}`
-- **With Arguments**: Use JSON to constrain results.
-  `{{faker.number.int({"min": 10, "max": 100})}}`
-- **Dynamic Arguments**: You can even interpolate *into* a Faker call!
-  `{{faker.string.alphanumeric(input.query.len)}}`
+> **Units supported**: `years`, `months`, `weeks`, `days`, `hours`, `minutes`, `seconds`.
 
 ---
 
-## 5. Power Moves: Advanced Relational Lookups
-Mockzilla supports **advanced predicates** for array lookups, which is the best way to simulate database queries.
+## 4. Collection Wizards (Array Manipulation)
+Sculpt your Mini-DB data or request arrays before returning them.
 
-| Syntax | Description |
-|--------|-------------|
-| `db.users[id=123].name` | Finds the user where `id` is `123`. |
-| `db.sessions[token=input.headers.auth]` | **Dynamic Lookup**: Matches a session by an incoming header. |
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `filter` | Filters an array by a key/value pair. | `{{filter db.users "status" "active"}}` |
+| `sort` | Sorts an array by a specific key. | `{{sort db.products "price" "desc"}}` |
+| `slice` | Returns a portion of an array. | `{{slice db.items 0 10}}` |
+| `join` | Joins array elements into a string. | `{{join $.query.tags ", "}}` |
+| `json` | Stringifies an object/array. | `{{{json db.users}}}` |
 
-> **Pro Tip**: You can chain these lookups! `db.orders[id=1].items[0].price` finds the first item of order #1 and returns its price.
+---
+
+## 5. String & Number Stylists
+Format your data to look production-ready.
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `slugify` | URL-friendly strings. | `{{slugify "Hello World!"}}` → `hello-world` |
+| `truncate` | Limits string length with `...`. | `{{truncate long_text 50}}` |
+| `currency` | Formats numbers as money. | `{{currency 123.4 "USD" "en-US"}}` → `$123.40` |
+| `toFixed` | Controls decimal precision. | `{{toFixed 10.555 2}}` → `10.56` |
+| `math` | Basic arithmetic (`+ - * / %`). | `{{math state.val "+" 1}}` |
+
+---
+
+## 6. Power Patterns (Masterclass)
+
+### The "Search & Paginate" Pattern
+Filter a database, sort it, and return a specific page with metadata.
+
+```handlebars
+{
+  "metadata": {
+    "total": {{db.products.length}},
+    "returned": {{$.query.limit}},
+    "next_page": "{{dateAdd (now) 1 'days'}}"
+  },
+  "results": [
+    {{#each (slice (sort (filter db.products "category" $.query.cat) "price" "asc") 0 5)}}
+    {
+      "id": "{{this.id}}",
+      "slug": "{{slugify this.name}}",
+      "price_pretty": "{{currency this.price 'USD'}}",
+      "is_cheap": {{#if (lt this.price 20)}}true{{else}}false{{/if}}
+    }{{#unless @last}},{{/unless}}
+    {{/each}}
+  ]
+}
+```
+
+### The "Dynamic User Role" Pattern
+Return different nested structures based on complex permission logic.
+
+```handlebars
+{
+  "user": "{{faker.person.fullName}}",
+  "permissions": {{#if (or (eq $.headers.[x-role] "admin") (eq state.user_id 1))}}
+    ["read", "write", "delete", "sudo"]
+  {{else}}
+    ["read"]
+  {{/if}},
+  "debug_info": {
+    "requested_at": "{{now}}",
+    "trace_id": "{{faker.string.uuid}}"
+  }
+}
+```
+
+---
+
+## 7. Smart Context Reference
+
+| Goal | Handlebars Syntax |
+|------|-------------------|
+| Query Param | `{{$.query.id}}` |
+| JSON Body | `{{$.body.user.email}}` |
+| Path Segment | `{{$.params.[0]}}` |
+| Headers | `{{$.headers.[user-agent]}}` |
+| State | `{{state.variable_name}}` |
+| Mini-DB | `{{db.table_name}}` |
+
+---
+
+## 8. Type Preservation Mastery
+
+Mockzilla is unique because it preserves JSON types even through Handlebars. If your logic evaluates to a valid JSON primitive (number, boolean, or null) **without surrounding quotes**, Mockzilla will return that actual type.
+
+```json
+{
+  "isAdmin": {{#if $.query.admin}}true{{else}}false{{/if}},
+  "price": {{math $.query.base "*" 1.1}},
+  "raw_data": {{{json db.items}}}
+}
+```
+*(Notice: Use triple braces `{{{json ...}}}` to prevent Handlebars from HTML-escaping JSON characters!)*

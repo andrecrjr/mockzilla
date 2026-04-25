@@ -7,160 +7,111 @@ description: Master the Mockzilla Mini-DB to build stateful list-based simulatio
 
 In this tutorial, we move beyond simple variables and use the **Mini-DB**. This is a persistent internal data store that allows your mocks to "remember" items in a list—perfect for shopping carts, to-do lists, or message feeds.
 
-## What You'll Learn
-- How to create a **Mini-DB Table**.
-- How to "push" items into a table with `db.push`.
-- How to list table contents in your response.
-- How to clear state with `db.remove`.
-
----
-
-## Step 1: Scenario Setup
-1.  Navigate to **Workflows** in the dashboard.
-2.  Click **Create Scenario** and name it `my-store`.
-3.  Your base URL: `http://localhost:36666/api/workflow/exec/my-store/`
-
----
-
-## Step 2: Add an Item (POST /cart)
-We want to "capture" the body of a POST request and save it into a table called `cart_items`.
-
-1.  Click **Add Transition**.
-2.  **Name**: `Add to Cart`
-3.  **Path**: `/cart`
-4.  **Method**: `POST`
-5.  **Effects**: Add a `db.push` effect.
-    - **Table**: `cart_items`
-    - **Value**: `{{input.body}}`
-6.  **Response**:
-    ```json
-    {
-      "message": "Item added!",
-      "items_count": "{{db.cart_items.length}}",
-      "session_id": "{{state.id}}"
-    }
-    ```
-
----
-
-## Step 3: List the Cart (GET /cart)
-Now we need to retrieve everything stored in the `cart_items` table.
-
-1.  Click **Add Transition**.
-2.  **Name**: `List Items`
-3.  **Path**: `/cart`
-4.  **Method**: `GET`
-5.  **Response**:
-    ```json
-    {
-      "cart": {
-        "items": {{db.cart_items}},
-        "total_items": "{{db.cart_items.length}}"
-      }
-    }
-    ```
-
----
-
-## Step 4: Conditional Discounts (Advanced)
-Let's add logic that returns a discount code only if the user has more than 2 items in their cart. This demonstrates **Condition Interpolation** and **Arithmetic**.
-
-1.  Click **Add Transition**.
-2.  **Name**: `Get Discount`
-3.  **Path**: `/cart/discount`
-4.  **Method**: `GET`
-5.  **Condition**:
-    - **Selector**: `db.cart_items.length`
-    - **Operator**: `gt`
-    - **Value**: `2`
-6.  **Response**:
-    ```json
-    {
-      "eligible": true,
-      "code": "LOYALTY_10",
-      "items_needed_for_next_tier": "{{5 - db.cart_items.length}}"
-    }
-    ```
-
----
-
-## Step 5: Empty the Cart (DELETE /cart)
-Finally, let's add a way to clear the table.
-
-1.  Click **Add Transition**.
-2.  **Name**: `Clear Cart`
-3.  **Path**: `/cart`
-4.  **Method**: `DELETE`
-5.  **Effects**: Add a `db.remove` effect.
-    - **Table**: `cart_items`
-    - **Condition**: (Leave empty to clear all items).
-6.  **Response**:
-    - **Status Code**: `204` (No Content)
-
----
-
-## Step 5: Test the Flow
-
-### 1. Add some coffee beans
-```bash
-curl -X POST http://localhost:36666/api/workflow/exec/my-store/cart \
-  -H "Content-Type: application/json" \
-  -d '{"id": "p1", "name": "Dark Roast Coffee", "price": 14.99}'
-```
-
-### 2. Add an espresso machine
-```bash
-curl -X POST http://localhost:36666/api/workflow/exec/my-store/cart \
-  -H "Content-Type: application/json" \
-  -d '{"id": "p2", "name": "Precision Espresso Machine", "price": 499.00}'
-```
-
-### 3. See your cart content
-```bash
-curl http://localhost:36666/api/workflow/exec/my-store/cart
-```
-**Result**: You'll see both items stored correctly in the array!
-
-### 4. Clear the cart
-```bash
-curl -X DELETE http://localhost:36666/api/workflow/exec/my-store/cart
-```
-
----
-
-## 🤖 AI-First: Agent Instructions
-Building stateful simulations with the Mini-DB is much faster with an AI agent. By using a **spec-driven** approach, the AI can automatically design the table structures and transitions for you based on your desired logic.
-
-<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
-  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-      <Shield className="w-6 h-6 text-blue-500" />
-    </div>
-    <div>
-      <CardTitle className="text-lg">AI Agent Command</CardTitle>
-      <CardDescription>Ask your AI agent to create a persistent store for your API workflow.</CardDescription>
+<Card className="my-8 border-purple-500/20 bg-purple-500/5">
+  <CardHeader>
+    <div className="flex items-center gap-2">
+      <Database className="w-5 h-5 text-purple-500" />
+      <CardTitle className="text-lg">The Persistence Engine</CardTitle>
     </div>
   </CardHeader>
-  <CardContent className="space-y-4">
-    <p className="text-sm">
-      "Use **mockzilla-workflow-architect** to build a shopping cart simulation in my `my-store` scenario. It should use the Mini-DB to persist items, support GET/POST/DELETE on `/cart`, and return a discount code once the cart exceeds 3 items."
-    </p>
-    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
-      // Tip: The AI will automatically manage table creation and transition logic for you.
-    </div>
+  <CardContent className="text-sm">
+    The Mini-DB turns your mock into a real backend prototype. Instead of hardcoding responses for 0, 1, or 5 items, you'll build logic that dynamically adds items to a collection and retrieves them exactly like a production database.
   </CardContent>
 </Card>
 
 ---
 
-## Why this is better than static mocks
-Traditional mocking requires a separate file for an empty cart, a cart with one item, a cart with two items, etc. This is fragile and tedious to maintain.
+## Step 1: Scenario Setup
 
-With **Workflows**, your mock becomes a **true prototype**. Your frontend can add, remove, and list items dynamically, allowing you to test:
-- "Empty State" UI components.
-- Cart badges and counters.
-- List rendering and layout shifts.
+1. Navigate to the **Workflows** tab.
+2. Click **Create Scenario** and name it `my-store`.
+3. Note your base URL: `http://localhost:36666/api/workflow/exec/my-store/`
 
-### Next Steps
-- Try adding a `db.remove` with a condition like `item.id == input.body.id` to delete specific items.
-- Use `{{faker.commerce.productName}}` in your response to simulate a "related products" section.
+---
+
+## Step 2: Add an Item (POST /cart)
+
+We want to "capture" the body of a POST request and save it into a table called `cart_items`.
+
+- **Method**: `POST`
+- **Path**: `/cart`
+- **Effect**: `db.push`
+- **Table**: `cart_items`
+- **Value**: `&#123;&#123;input.body&#125;&#125;`
+
+**Response Body**:
+```json
+{ "items_count": "&#123;&#123;db.cart_items.length&#125;&#125;" }
+```
+
+---
+
+## Step 3: List the Cart (GET /cart)
+
+Retrieve everything stored in the `cart_items` table. Because Mockzilla supports **Type Preservation**, returning `&#123;&#123;db.cart_items&#125;&#125;` will automatically become a JSON array.
+
+- **Method**: `GET`
+- **Path**: `/cart`
+
+**Response Body**:
+```json
+{
+  "cart": &#123;&#123;json db.cart_items&#125;&#125;,
+  "total": &#123;&#123;db.cart_items.length&#125;&#125;
+}
+```
+
+---
+
+## Step 4: Logic-Based Discounts
+
+Let's return a discount code **only** if the user has more than 2 items in their cart.
+
+- **Method**: `GET`
+- **Path**: `/cart/discount`
+- **Condition**: `db.cart_items.length` **gt** `2`
+- **Response**: `{"eligible": true, "code": "LOYALTY_10"}`
+
+---
+
+## Step 5: Verify the Journey
+
+<div className="space-y-6 mt-8">
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 1. Add some coffee beans
+    </div>
+    ```bash
+    curl -X POST http://localhost:36666/api/workflow/exec/my-store/cart \
+      -d '{"id": "p1", "name": "Dark Roast Coffee", "price": 14.99}'
+    ```
+  </div>
+
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 2. See your cart content
+    </div>
+    ```bash
+    curl http://localhost:36666/api/workflow/exec/my-store/cart
+    ```
+  </div>
+</div>
+
+---
+
+<div className="mt-12 p-8 bg-gradient-to-br from-purple-500/10 to-primary/10 rounded-3xl border border-purple-500/20">
+  <div className="flex flex-col md:flex-row gap-6 items-center text-center md:text-left">
+    <div className="w-16 h-16 rounded-2xl bg-purple-500 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/20 text-white">
+      <Database className="w-8 h-8" />
+    </div>
+    <div className="flex-1">
+      <h3 className="text-xl font-bold mb-1">Mini-DB Mastered!</h3>
+      <p className="text-muted-foreground text-sm">
+        You've built a persistent, list-based simulation. Ready to tackle even more complex system logic?
+      </p>
+    </div>
+    <Link href="/docs/tutorials/advanced-systems-simulation">
+      <Button variant="outline" className="shrink-0 border-purple-500 text-purple-500 hover:bg-purple-500/10">Advanced Simulation <ChevronRight className="w-4 h-4" /></Button>
+    </Link>
+  </div>
+</div>

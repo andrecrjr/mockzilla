@@ -249,7 +249,7 @@ export default async function DocPage({
 
 	try {
 		const fileContent = readFileSync(filePath, 'utf-8');
-		const { content } = matter(fileContent);
+		const { content, data: frontmatter } = matter(fileContent);
 
 		const sidebar = buildSidebar();
 		const navItems = sidebar.filter((item) => !item.isSection);
@@ -312,7 +312,8 @@ export default async function DocPage({
 				</nav>
 			</div>
 		);
-	} catch {
+	} catch (error) {
+		console.error('[Docs] Error rendering MDX page:', error);
 		notFound();
 	}
 }

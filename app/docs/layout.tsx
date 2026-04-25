@@ -1,7 +1,6 @@
 import Link from 'next/link';
+import { DocsHeader } from '@/components/docs/docs-header';
 import { buildSidebar } from './[[...mdxPath]]/page';
-
-const sidebar = buildSidebar();
 
 export const metadata = {
 	title: { template: '%s | Mockzilla Docs', default: 'Mockzilla Docs' },
@@ -13,34 +12,16 @@ export default function DocsLayout({
 }: {
 	children: React.ReactNode;
 }) {
+	const sidebar = buildSidebar();
+
 	return (
 		<div className="min-h-screen bg-background mockzilla-gradient-light mockzilla-gradient-dark">
-			<div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 m-2 mockzilla-border">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-					<div className="flex h-16 items-center justify-between">
-						<Link
-							href="/"
-							className="flex items-center gap-4 font-bold text-xl"
-						>
-							<span className="text-foreground">Mockzilla</span>
-							<span className="text-muted-foreground font-normal text-sm">
-								Docs
-							</span>
-						</Link>
-						<Link
-							href="/"
-							className="text-sm text-foreground/80 hover:text-foreground px-3 py-2 rounded-md transition-colors"
-						>
-							← Back to Mockzilla
-						</Link>
-					</div>
-				</div>
-			</div>
+			<DocsHeader sidebar={sidebar} />
 
 			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
 				<div className="flex flex-col md:flex-row gap-8">
-					{/* Sidebar */}
-					<aside className="w-full md:w-64 flex-shrink-0">
+					{/* Sidebar - Hidden on mobile, shown on md and up */}
+					<aside className="hidden md:block w-full md:w-64 flex-shrink-0">
 						<nav className="sticky top-24 space-y-1">
 							{sidebar.map((item) =>
 								item.isSection ? (

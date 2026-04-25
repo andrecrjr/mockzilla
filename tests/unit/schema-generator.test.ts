@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { generateFromSchema, validateSchema, replaceTemplates, generateFromSchemaString } from '../../lib/schema-generator';
+import { generateFromSchema, validateSchema, generateFromSchemaString } from '../../lib/schema-generator';
+import { replaceTemplates } from '../../lib/engine/interpolation';
 
 describe('lib/schema-generator', () => {
 	describe('validateSchema', () => {

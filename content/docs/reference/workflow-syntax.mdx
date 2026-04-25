@@ -7,16 +7,38 @@ description: Complete reference for transitions, conditions, and effects in Mock
 
 A **Transition** is a rule that defines how Mockzilla should react to a request when operating in **Workflow Mode**. By combining Conditions and Effects, you can build incredibly complex, stateful API prototypes without writing a single line of backend code.
 
-## When to Use Workflows vs. Static Mocks
-
-**Static Mocks** are perfect for simple, stateless requests (e.g., getting a fixed product list). 
-
-**Workflows** are the best choice when:
-- **State Matters**: Your API needs to "remember" actions (e.g., a user logged in, an item was added to a cart).
-- **Branching Logic**: Different inputs should trigger different responses (e.g., success vs. validation errors).
-- **Persistent Data**: You need to maintain a list of items across multiple requests (e.g., a message feed).
-
----
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-8">
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <Shield className="w-4 h-4 text-blue-500" /> State
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="text-xs text-muted-foreground">
+      Simple key-value store for session data like tokens or flags.
+    </CardContent>
+  </Card>
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <Database className="w-4 h-4 text-purple-500" /> Mini-DB
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="text-xs text-muted-foreground">
+      Collection-based storage for tables of users, orders, or logs.
+    </CardContent>
+  </Card>
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <Zap className="w-4 h-4 text-yellow-500" /> Input
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="text-xs text-muted-foreground">
+      Direct access to request body, headers, query, and path params.
+    </CardContent>
+  </Card>
+</div>
 
 ## 1. Conditions
 Conditions determine whether a transition is triggered. Mockzilla's condition engine is highly resilient and gracefully handles messy real-world data.
@@ -24,8 +46,16 @@ Conditions determine whether a transition is triggered. Mockzilla's condition en
 | Property | Description |
 |----------|-------------|
 | **Selector** | A JSON path to the value you want to check (e.g., `input.body.id`, `state.token`). |
-| **Operator** | `eq` (==), `neq` (!=), `gt` (>), `lt` (<), `exists`, `contains`. |
-| **Value** | The value to compare against. Supports full interpolation with `{{ }}`. |
+| **Operator** | `eq` (`==`), `neq` (`!=`), `gt` (`>`), `lt` (`<`), `exists`, `contains`. |
+| **Value** | The value to compare against. Supports full interpolation with `{"{{ }}"}`. |
+
+<Alert variant="info" className="mt-4">
+  <AlertCircle className="h-4 w-4" />
+  <AlertTitle>Smart Path Resolution</AlertTitle>
+  <AlertDescription>
+    If you use a selector like `id` without a prefix, Mockzilla will automatically try to find it in `input.body.id` or `input.params.id`.
+  </AlertDescription>
+</Alert>
 
 ### Advanced Condition Edge Cases
 - **Robust `contains`**: Works seamlessly across arrays and strings. If `state.tags` is `["admin", "beta"]`, a condition checking if it `contains` `"beta"` will pass. It safely returns `false` if the target is `null` or `undefined`.
@@ -45,7 +75,7 @@ Effects are actions that modify the **Scenario State** or the **Mini-DB** when a
 | `db.remove` | Deletes records from a Mini-DB table that match your criteria. |
 
 ### Complex Effect Scenarios: Best Ways to Use
-- **Multi-Step State Updates**: Effects run in order. If your first effect sets `state.count` to `10`, your second effect can immediately use `{{state.count + 5}}` to set another variable to `15`.
+- **Multi-Step State Updates**: Effects run in order. If your first effect sets `state.count` to `10`, your second effect can immediately use `{"{{state.count + 5}}"}` to set another variable to `15`.
 - **Bulk Database Updates**: The `db.update` effect is powerful. If you specify a match criteria (e.g., `role == "admin"`), Mockzilla will update **all** matching rows in the table simultaneously, not just the first one.
 - **Auto-Initialization**: If you use `db.push` on a table that doesn't exist, Mockzilla automatically creates it for you on the fly.
 
@@ -57,8 +87,8 @@ The **Mini-DB** is a persistent JSON store. Each Scenario has its own isolated d
 ### Accessing Database Values
 You can access your data using standard dot notation or advanced array predicates:
 
-- **Relational Lookup (Literal)**: `{{db.users[role=admin].name}}` (Finds the first user where role is "admin")
-- **Relational Lookup (Dynamic)**: `{{db.users[id=input.params.id].email}}` (Finds the user whose ID matches the current URL parameter)
+- **Relational Lookup (Literal)**: `{"{{db.users[role=admin].name}}"}` (Finds the first user where role is "admin")
+- **Relational Lookup (Dynamic)**: `{"{{db.users[id=input.params.id].email}}"}` (Finds the user whose ID matches the current URL parameter)
 
 ---
 
@@ -66,7 +96,28 @@ You can access your data using standard dot notation or advanced array predicate
 
 To master Workflow Mode, follow these core patterns:
 
-1. **Top-to-Bottom Evaluation**: Mockzilla checks your transitions from top to bottom. The **first** transition whose path, method, and conditions match is the **only** one that fires.
-2. **Order by Specificity**: Always put transitions with specific conditions (e.g., `password == "wrong"`) at the top. Put a duplicate transition with the same path but **no conditions** at the bottom to act as a default success or error fallback.
-3. **The "Catch-All" Fallback**: Use a transition with no conditions as the final entry for a specific path to return a `401 Unauthorized` or `404` if none of your specific logic was triggered.
-4. **Input Body Fallback**: If you reference `{{id}}` without a prefix in a condition, Mockzilla will intelligently search `input.body.id` as a convenience fallback.
+<div className="space-y-4">
+  <Alert>
+    <CheckCircle2 className="h-4 w-4" />
+    <AlertTitle>1. Top-to-Bottom Evaluation</AlertTitle>
+    <AlertDescription>
+      Mockzilla checks your transitions from top to bottom. The **first** transition whose path, method, and conditions match is the **only** one that fires.
+    </AlertDescription>
+  </Alert>
+
+  <Alert>
+    <CheckCircle2 className="h-4 w-4" />
+    <AlertTitle>2. Order by Specificity</AlertTitle>
+    <AlertDescription>
+      Always put transitions with specific conditions (e.g., `password == "wrong"`) at the top. Put a duplicate transition with the same path but **no conditions** at the bottom to act as a default success or error fallback.
+    </AlertDescription>
+  </Alert>
+
+  <Alert>
+    <CheckCircle2 className="h-4 w-4" />
+    <AlertTitle>3. The "Catch-All" Fallback</AlertTitle>
+    <AlertDescription>
+      Use a transition with no conditions as the final entry for a specific path to return a `401 Unauthorized` or `404` if none of your specific logic was triggered.
+    </AlertDescription>
+  </Alert>
+</div>

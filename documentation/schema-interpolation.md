@@ -1,103 +1,99 @@
-# String Interpolation & Field Referencing
+# String Interpolation & Templating Engine
 
-Mockzilla supports powerful **string interpolation** and **field referencing** across all response types (Static JSON, Dynamic JSON Schema, and Workflows). This allows you to reuse generated values, perform arithmetic, and create dynamic templates that react to request data.
+Mockzilla uses a **Smart Hybrid Engine** that combines powerful field referencing with standard **Handlebars** templating. This allows you to maintain JSON type integrity while also building complex logic like loops and conditionals.
 
-> [!TIP]
-> This guide focuses on Mockzilla's custom interpolation extensions. For standard JSON Schema data generation, see the [JSON Schema Faker guide](json-schema-faker.md).
+## The Smart Hybrid Approach
 
-## Quick Start: Simple Field Reference
+Mockzilla automatically chooses the best engine for your template:
 
-Reference any field in your schema or request using `{$.fieldName}` or `{{fieldName}}` syntax.
+1.  **Type-Preserving Engine**: If your response is a valid JSON object or array, Mockzilla traverses it and preserves original types. Numbers stay `number`, and Booleans stay `boolean`.
+2.  **Handlebars Engine**: If your response contains logic blocks (like `{{#each}}`) that break standard JSON parsing, Mockzilla evaluates it as a raw string using Handlebars.
 
-```json
+---
+
+## 🚀 Key Features
+
+### 1. Type Preservation
+Unlike standard template engines that return everything as strings, Mockzilla preserves the original JSON type if the template is the **entire value** of the field.
+
+- `{"count": "{{state.count}}"}` → Returns a literal **Number** (e.g., `10`).
+- `{"items": "{{db.users}}"}` → Returns a literal **JSON Array**.
+- `{"msg": "Count is {{state.count}}"}` → Returns a **String** because of the surrounding text.
+
+### 2. Logic & Loops (Handlebars)
+Use standard Handlebars syntax for loops and conditional branching. This is perfect for generating lists from your Mini-DB.
+
+**Example: Dynamic List**
+```handlebars
 {
-  "type": "object",
-  "properties": {
-    "id": { "type": "string", "format": "uuid" },
-    "message": { "const": "Your ticket ID is {$.id}" }
-  }
+  "total": "{{db.products.length}}",
+  "items": [
+    {{#each db.products}}
+    {
+      "id": {{this.id}},
+      "name": "{{this.name}}"
+    }{{#unless @last}},{{/unless}}
+    {{/each}}
+  ]
 }
 ```
 
 ---
 
-## 🚀 Advanced Interpolation Features
+## 🛠️ Custom Helpers
 
-### 1. Basic Arithmetic
-Mockzilla supports addition and subtraction directly inside templates. This is perfect for simulating counters or capacity.
+Mockzilla provides specialized helpers to make your templates more powerful.
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `math` | Perform arithmetic with operators `+ - * / %`. | `{{math state.count "*" 2}}` |
+| `faker` | Generate fake data using any Faker.js path. | `{{faker "internet.email"}}` |
+| `eq` / `neq` | Check equality. | `{{#if (eq state.role "admin")}}` |
+| `gt` / `lt` | Compare numeric values. | `{{#if (gt state.count 5)}}` |
+
+---
+
+## 🚀 Advanced Interpolation (Type-Preserving)
+
+### Basic Arithmetic
+Mockzilla supports simple addition and subtraction directly inside standard JSON templates.
 
 | Syntax | Description |
 |--------|-------------|
 | `{{state.count + 1}}` | Increments a state variable |
-| `{$.query.limit - 1}` | Decrements a query parameter |
 | `{{10 - db.items.length}}` | Calculates remaining items in a table |
 
-**Example (Static Response):**
-- **Mock Path**: `/users`
-- **Response Body**:
-  ```json
-  {
-    "status": "success",
-    "meta": {
-      "limit": "{$.query.limit}",
-      "next_page": "{{$.query.page + 1}}"
-    }
-  }
-  ```
-
-### 2. Type-Preserving References
-Most mock engines treat everything as strings. Mockzilla preserves the original JSON type (Array, Object, Number) if the template is the **entire value** of the field.
-
-- `{{db.users}}` → Returns a literal **JSON Array**.
-- `{{state.config}}` → Returns a literal **JSON Object**.
-- `The count is {{state.count}}` → Returns a **String**.
-
-### 3. Relational DB Lookups (Advanced)
-Mockzilla supports advanced predicates for array lookups using the `[key=value]` syntax. This is primarily used for finding records in the **Mini-DB** in Workflow Mode.
+### Relational DB Lookups
+Mockzilla supports advanced predicates for array lookups using the `[key=value]` syntax. This is primarily used for finding records in the **Mini-DB**.
 
 | Syntax | Description |
 |--------|-------------|
 | `{{db.users[id=1]}}` | Find a user in the mini-DB where `id` is `1`. |
 | `{{db.items[id=input.params.id]}}` | **Dynamic**: Match a table row against a URL path parameter. |
 
-- **Recursive Resolution**: If the lookup value is a path (e.g. `input.params.id`), Mockzilla resolves that path first before searching the array.
-
 ---
 
 ## Referencing Request Data
 
-You can reference incoming request data directly in your templates using the `$.` or `input.` prefixes.
+You can reference incoming request data directly using the `input.` or `$.` prefixes. Both syntaxes are equivalent.
 
-### Query Parameters
-Access query parameters using the `$.query` prefix:
+| Syntax | Alias | Description |
+|--------|-------|-------------|
+| `{{input.query.id}}` | `{{$.query.id}}` | Injects the `?id=...` query parameter |
+| `{{input.params.0}}` | `{{$.params.[0]}}` | Injects a URL path segment (wildcards) |
+| `{{input.headers.user-agent}}` | `{{$.headers.[user-agent]}}` | Injects a request header |
+| `{{input.body.name}}` | `{{$.body.name}}` | Injects a value from the request JSON body |
 
-| Syntax | Description |
-|--------|-------------|
-| `{$.query.id}` | Injects the `?id=...` query parameter |
-| `{{query.limit}}` | Injects the `?limit=...` query parameter |
-
-**Example Result for `?role=admin&limit=10`**:
-- Template: `Filtered results for {$.query.role}`
-- Output: `Filtered results for admin`
+> **Tip**: When using Handlebars logic with `$.` syntax and numeric keys (like params) or headers with hyphens, use square brackets: `{{$.params.[0]}}` or `{{$.headers.[x-api-key]}}`.
 
 ---
 
-## Template Syntax Reference
+## Smart Context
 
-| Feature | Syntax | Example |
-|---------|--------|---------|
-| **Simple Reference** | `{$.field}` | `{$.id}` |
-| **Double Braces** | `{{field}}` | `{{user.name}}` |
-| **Arithmetic** | `{{var + 1}}` | `{{state.usage + 1}}` |
-| **Nested Path** | `{$.parent.child}` | `{$.user.address.city}` |
-| **Array Index** | `{$.array[0]}` | `{$.items[0].id}` |
-| **Relational Lookup** | `{{db.table[key=val]}}` | `{{db.users[id=input.params.id]}}` |
-| **Request Data** | `{$.query.key}` | `{$.query.search_term}` |
-
----
-
-## Troubleshooting & Best Practices
-
-- **Order of Resolution**: Request context (`$.query`) is merged with generated data. In Dynamic Schemas, generated fields take precedence.
-- **Fail-safe**: If a path is invalid or missing, the template string (e.g., `{$.missing}`) is returned literally.
-- **Spaces**: Whitespace inside braces is ignored: `{{ state.count + 1 }}` is valid.
+The interpolation context includes:
+- `input`: Standard request data (query, params, headers, body)
+- `state`: Current workflow state
+- `db`: Mini-database tables
+- `$`: Alias for `input`
+- `query`, `params`, `headers`: Shortcuts for `input.query`, etc.
+- `faker`: The full Faker.js instance for complex data generation (e.g. `{{faker.string.uuid}}`)

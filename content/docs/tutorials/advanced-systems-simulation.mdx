@@ -31,7 +31,7 @@ Triggered when a user is under the limit. It adds to a log and processes the req
   {
     "status": "success", 
     "data": "Processed!",
-    "requests_remaining": "{{3 - db.usage_log.length}}"
+    "requests_remaining": "&#123;&#123;math 3 "-" db.usage_log.length&#125;&#125;"
   }
   ```
 
@@ -57,13 +57,13 @@ Ensure that a destructive action (like a payment charge) only happens once per c
 If the exact same `x-idempotency-key` is sent again, return a cached success response instead of charging again. We place this condition first so it catches repeats.
 - **Path**: `/charge`
 - **Method**: `POST`
-- **Conditions**: `[{"type": "contains", "field": "db.processed_payments", "value": "{{input.headers.x-idempotency-key}}"}]`
+- **Conditions**: `[{"type": "contains", "field": "db.processed_payments", "value": "&#123;&#123;input.headers.[x-idempotency-key]&#125;&#125;"}]`
 - **Response**: 
   ```json
   {
     "status": 200, 
     "body": {
-      "transaction_id": "TXN_{{input.headers.x-idempotency-key}}", 
+      "transaction_id": "TXN_&#123;&#123;input.headers.[x-idempotency-key]&#125;&#125;", 
       "status": "success",
       "cached": true
     }
@@ -74,14 +74,14 @@ If the exact same `x-idempotency-key` is sent again, return a cached success res
 Processes the payment and records the idempotency key in the database.
 - **Path**: `/charge`
 - **Method**: `POST`
-- **Conditions**: `[{"type": "exists", "field": "input.headers.x-idempotency-key"}]`
-- **Effects**: `[{"type": "db.push", "table": "processed_payments", "value": "{{input.headers.x-idempotency-key}}"}]`
+- **Conditions**: `[{"type": "exists", "field": "input.headers.[x-idempotency-key]"}]`
+- **Effects**: `[{"type": "db.push", "table": "processed_payments", "value": "&#123;&#123;input.headers.[x-idempotency-key]&#125;&#125;"}]`
 - **Response**: 
   ```json
   {
     "status": 201, 
     "body": {
-      "transaction_id": "TXN_{{input.headers.x-idempotency-key}}", 
+      "transaction_id": "TXN_&#123;&#123;input.headers.[x-idempotency-key]&#125;&#125;", 
       "status": "success",
       "cached": false
     }
@@ -111,7 +111,7 @@ Simulate an endpoint that returns "Processing" for the first few hits, then "Com
 - **Path**: `/jobs/job-123`
 - **Method**: `GET`
 - **Conditions**: `[{"type": "lt", "field": "state.job_stage", "value": 2}]`
-- **Effects**: `[{"type": "state.set", "raw": {"job_stage": "{{state.job_stage + 1}}"}}]`
+- **Effects**: `[{"type": "state.set", "raw": {"job_stage": "&#123;&#123;math state.job_stage "+" 1&#125;&#125;"}}]`
 - **Response**: 
   ```json
   {
@@ -162,9 +162,9 @@ Simulating complex SaaS systems is where Mockzilla's **AI-First** architecture t
     </div>
   </CardHeader>
   <CardContent className="space-y-4">
-    <p className="text-sm">
+    <div className="text-sm">
       "Use **mockzilla-workflow-architect** to build an advanced SaaS simulation in my `saas-demo` scenario. It should handle trial usage limits (3 free requests), payment idempotency using the `x-idempotency-key` header, and an asynchronous job polling flow that transitions from 'processing' to 'completed' after 3 GET requests."
-    </p>
+    </div>
     <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
       // Tip: You can even ask the AI to "Refactor this logic into a cleaner state machine" if it gets too complex.
     </div>

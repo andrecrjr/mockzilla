@@ -231,12 +231,26 @@ async function buildResponse(
 	const urlQueryParams = Object.fromEntries(url.searchParams.entries());
 	const requestHeaders = Object.fromEntries(request.headers.entries());
 
+	const { faker } = await import('@faker-js/faker');
+
 	const context = {
 		input: {
 			query: urlQueryParams,
 			params: paramsMap,
 			headers: requestHeaders,
 		},
+		// Support $. aliases
+		query: urlQueryParams,
+		params: paramsMap,
+		headers: requestHeaders,
+		// Explicit $ alias for Handlebars
+		$: {
+			query: urlQueryParams,
+			params: paramsMap,
+			headers: requestHeaders,
+		},
+		// Add faker to context
+		faker,
 	};
 
 	// Check if this mock uses dynamic schema-based responses
@@ -245,8 +259,8 @@ async function buildResponse(
 	}
 
 	// Apply template replacement to static responses
-	const { replaceTemplates } = await import('@/lib/schema-generator');
-	const responseBody = replaceTemplates(mock.response, context) as string;
+	const { replaceTemplates } = await import('@/lib/engine/interpolation');
+	const templatedResult = replaceTemplates(mock.response, context);
 
 	// Return the mock response with the configured status code
 	const contentType =
@@ -255,20 +269,27 @@ async function buildResponse(
 	log.info({ statusCode: mock.statusCode }, 'Returning static response');
 
 	if (mock.bodyType === 'json') {
+		if (typeof templatedResult === 'object' && templatedResult !== null) {
+			return NextResponse.json(templatedResult, {
+				status: mock.statusCode,
+			});
+		}
+
 		try {
-			return NextResponse.json(JSON.parse(responseBody), {
+			// If it's a string, try parsing it as JSON (Handlebars might have produced a JSON string)
+			return NextResponse.json(JSON.parse(String(templatedResult)), {
 				status: mock.statusCode,
 			});
 		} catch {
 			// If parsing fails, return as text
-			return new NextResponse(responseBody, {
+			return new NextResponse(String(templatedResult), {
 				status: mock.statusCode,
 				headers: { 'Content-Type': contentType },
 			});
 		}
 	}
 
-	return new NextResponse(responseBody, {
+	return new NextResponse(String(templatedResult), {
 		status: mock.statusCode,
 		headers: { 'Content-Type': contentType },
 	});

@@ -38,20 +38,35 @@ Isolated containers for state and transitions. Access via `/api/workflow/exec/{s
 ### Transitions
 Rules that define request processing. Mockzilla supports **multi-transition matching**: if multiple transitions match a path, the engine iterates through them until it finds one where the **Conditions** match.
 
-### Advanced Interpolation
-Use `{{ path.to.value }}` to inject dynamic values. Mockzilla supports **Basic Arithmetic** inside templates:
+### Hybrid Interpolation & Handlebars
 
-| Feature | Example | Result |
-|---------|---------|--------|
-| **Path Access** | `{{input.body.id}}` | Value from body |
-| **Relational** | `{{db.users[0].name}}` | Data from Mini-DB |
-| **Relational Lookup** | `{{db.users[id=1].name}}` | Data from Mini-DB by property |
-| **Dynamic Lookup** | `{{db.sessions[id=input.params.id]}}` | Match against request data |
-| **Addition** | `{{state.count + 1}}` | Incremented value |
-| **Subtraction** | `{{10 - db.items.length}}` | Remaining capacity |
+Mockzilla workflows use a **Handlebars-First Hybrid Engine**. While simple field references are handled by a high-performance engine for type preservation, **Handlebars is the primary way** to handle logic, loops, and conditional responses.
 
-> [!IMPORTANT]
-> **Type Preservation**: If a template contains *only* the reference (e.g. `{{db.items}}`), Mockzilla returns the raw JSON type (Array/Object/Number). If it is embedded in text (e.g. `Count: {{db.items.length}}`), it returns a String.
+### Smart Hybrid Engine
+- **Type Preservation**: If a field contains only a reference (e.g. `{{db.items}}`), it returns the raw JSON type.
+- **Handlebars Logic**: If the template contains logic blocks (`{{#if}}`, `{{#each}}`) or helpers, it evaluates via Handlebars and attempts to re-parse as JSON.
+
+### Workflow Context
+Workflows provide a rich context for interpolation:
+- `state`: Scenario state variables
+- `db` or `tables`: Mini-database tables
+- `input`: Request data (`query`, `params`, `headers`, `body`)
+- `$`: Alias for `input`
+- `faker`: Full Faker.js instance (supported in **Responses** only)
+
+### Logic Patterns
+
+| Feature | Example |
+|---------|---------|
+| **Path Access** | `{{$.body.id}}` |
+| **Logic** | `{{#if state.is_active}}Active{{else}}Disabled{{/if}}` |
+| **Loops** | `{{#each db.users}}...{{/each}}` |
+| **Faker** | `{{faker "string.uuid"}}` (Responses only) |
+| **Arithmetic** | `{{math state.count "+" 1}}` |
+| **JSON Stringify** | `{{{json db.users}}}` (Triple braces recommended) |
+
+> [!WARNING]
+> **Determinism**: Handlebars logic and Faker are supported in **Responses**. However, **Effects** should remain deterministic and currently do not support the `faker` helper to ensure scenario state remains predictable.
 
 ---
 
@@ -187,9 +202,9 @@ When using `create_workflow_transition` or `update_workflow_transition`, you MUS
   ```json
   {
     "status": 201,
-    "body": { "id": "{{input.body.id}}", "status": "created" }
+    "body": { "id": "{{$.body.id}}", "status": "created" }
   }
   ```
-- **Interpolation**: Supported for `{{state}}`, `{{db}}`, `{{input}}`.
-- ❌ **NO Faker/Random**: Responses must be deterministic based on state/inputs.
+- **Interpolation**: Fully supported via Handlebars. Use `{{state}}`, `{{db}}`, `{{$ or input}}`, and `{{faker}}`.
+- ✅ **Dynamic Logic**: You can use `{{#if}}` and `{{#each}}` inside response bodies to create complex data structures.
 

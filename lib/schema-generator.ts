@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
-import { interpolate } from './engine/interpolation';
+import { interpolate, replaceTemplates } from './engine/interpolation';
 
 let jsfConfigured = false;
 
@@ -35,16 +35,6 @@ function configureJsf() {
 	jsf.format('color', () => faker.color.human());
 
 	jsfConfigured = true;
-}
-
-/**
- * Applies template replacement to a string or object using provided context
- */
-export function replaceTemplates(
-	data: unknown,
-	context: Record<string, unknown> = {},
-): unknown {
-	return interpolate(data, context);
 }
 
 /**
@@ -88,7 +78,7 @@ export function generateFromSchema(
 			...context,
 		};
 
-		const processed = interpolate(generated, rootData);
+		const processed = replaceTemplates(generated, rootData);
 
 		return JSON.stringify(processed, null, 2);
 	} catch (error) {

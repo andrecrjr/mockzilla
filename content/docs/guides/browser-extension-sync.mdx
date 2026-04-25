@@ -23,9 +23,9 @@ Mockzilla uses a smart merge strategy to ensure **zero data loss**. Extension-sp
       </CardTitle>
     </CardHeader>
     <CardContent className="p-0">
-      <p className="text-sm text-muted-foreground mb-4">
+      <div className="text-sm text-muted-foreground mb-4">
         Push your local extension rules to the server. Useful for sharing mocks with teammates or backing up your work.
-      </p>
+      </div>
       <ul className="space-y-2 text-sm text-muted-foreground">
         <li className="flex gap-2">✅ Creates generic "Extension" folders.</li>
         <li className="flex gap-2">✅ Preserves all extension metadata.</li>
@@ -40,9 +40,9 @@ Mockzilla uses a smart merge strategy to ensure **zero data loss**. Extension-sp
       </CardTitle>
     </CardHeader>
     <CardContent className="p-0">
-      <p className="text-sm text-muted-foreground mb-4">
+      <div className="text-sm text-muted-foreground mb-4">
         Pull mocks from the server into your browser. Perfect for onboarding or switching environments.
-      </p>
+      </div>
       <ul className="space-y-2 text-sm text-muted-foreground">
         <li className="flex gap-2">✅ Imports folders as groups.</li>
         <li className="flex gap-2">✅ Smart merges server edits + extension data.</li>
@@ -67,9 +67,9 @@ The browser extension is your AI's "eyes" into real-world traffic. Use an AI age
     </div>
   </CardHeader>
   <CardContent className="space-y-4">
-    <p className="text-sm">
+    <div className="text-sm">
       "Use **mockzilla-mock-maker** to import the latest mocks from my browser extension. Find any endpoints related to `user-profile`, convert them into high-fidelity JSON Schema mocks using Faker, and save them into a new folder called `users-prod`."
-    </p>
+    </div>
     <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
       // Tip: The AI can even identify "missing" fields in your captured traffic by comparing it to your OpenAPI spec.
     </div>
@@ -96,9 +96,9 @@ The browser extension is your AI's "eyes" into real-world traffic. Use an AI age
     <AccordionTrigger>Sync Flow (Extension → Server)</AccordionTrigger>
     <AccordionContent>
       <div className="space-y-4 pt-2">
-        <p className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           When you click **Sync** in the extension:
-        </p>
+        </div>
         <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-2">
           <li>The extension sends a snapshot of your selected rules.</li>
           <li>The server checks for existing "Extension" folders.</li>
@@ -116,16 +116,16 @@ The browser extension is your AI's "eyes" into real-world traffic. Use an AI age
     <AccordionTrigger>Import Flow (Server → Extension)</AccordionTrigger>
     <AccordionContent>
       <div className="space-y-4 pt-2">
-        <p className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           When you click **Import** in the extension header:
-        </p>
+        </div>
         <div className="border rounded-lg p-4 bg-muted/20">
           <CardTitle className="text-sm mb-3 flex items-center gap-2">
             The Merge Strategy
           </CardTitle>
-          <p className="text-xs text-muted-foreground mb-3">
+          <div className="text-xs text-muted-foreground mb-3">
             The server combines two sources of truth to give you the best result:
-          </p>
+          </div>
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div className="p-3 bg-background rounded border">
               <span className="block font-medium mb-1 text-primary">Source 1: Stored Metadata</span>

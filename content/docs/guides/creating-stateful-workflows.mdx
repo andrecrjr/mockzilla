@@ -1,0 +1,181 @@
+---
+title: Creating Stateful Workflows
+description: Master the art of building "living" API simulations that react to user actions.
+---
+
+# Creating Stateful Workflows
+
+Stateful workflows are the crown jewel of Mockzilla. They allow you to move beyond static JSON files and build **simulations** that maintain state, use in-memory databases, and execute complex business logic—all without writing a single line of backend code.
+
+---
+
+## The Workflow Hierarchy
+
+To build a workflow, you need to understand two primary concepts: **Scenarios** and **Transitions**.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+  <Card className="border-primary/20 bg-primary/5">
+    <CardHeader>
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+        <Layout className="w-6 h-6 text-primary" />
+      </div>
+      <CardTitle>Scenario</CardTitle>
+      <CardDescription>The "Container".</CardDescription>
+    </CardHeader>
+    <CardContent className="text-sm">
+      A Scenario is an isolated sandbox. It has its own **State** (variables) and **Mini-DB** (tables). Changes in one scenario never affect another.
+    </CardContent>
+  </Card>
+
+  <Card className="border-blue-500/20 bg-blue-500/5">
+    <CardHeader>
+      <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
+        <BrainCircuit className="w-6 h-6 text-blue-500" />
+      </div>
+      <CardTitle>Transition</CardTitle>
+      <CardDescription>The "Logic".</CardDescription>
+    </CardHeader>
+    <CardContent className="text-sm">
+      A Transition is a rule: "If the request matches this **Path**, **Method**, and **Condition**, then apply these **Effects** and return this **Response**."
+    </CardContent>
+  </Card>
+</div>
+
+---
+
+## Anatomy of a Transition
+
+A Transition is composed of four main parts. Think of it as a specialized "If/Then" statement for your API.
+
+### 1. Matching (Path & Method)
+The first step is identifying which request this transition applies to.
+- **Path**: e.g., `/login` or `/cart/add`.
+- **Method**: `GET`, `POST`, `PUT`, `DELETE`, etc.
+
+### 2. Conditions (The "If")
+Conditions are optional rules that must be met for the transition to fire.
+- **Example**: `input.body.password == "secret123"`
+- **Operators**: `eq`, `neq`, `exists`, `gt`, `lt`, `contains`.
+
+### 3. Effects (The "Side-Effect")
+Effects are changes made to the Scenario's internal state or database.
+- **`state.set`**: Update a variable (e.g., `isLoggedIn = true`).
+- **`db.push`**: Add a row to a table (e.g., add item to `cart` table).
+
+### 4. Response (The "Result")
+The JSON body and Status Code returned to the frontend.
+- **Example**: `200 OK` with `{"message": "Welcome back!"}`.
+
+---
+
+## Step-by-Step: Your First Workflow
+
+Let's build a simple **Counter** API that increments a value every time it's called.
+
+<Tabs defaultValue="ui" className="mt-8">
+  <TabsList>
+    <TabsTrigger value="ui">Using the UI</TabsTrigger>
+    <TabsTrigger value="ai">Using AI (Recommended)</TabsTrigger>
+  </TabsList>
+  
+  <TabsContent value="ui" className="space-y-4 pt-4">
+    <div className="space-y-6">
+      <div className="flex gap-4">
+        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">1</div>
+        <div>
+          <h4 className="font-bold">Create a Scenario</h4>
+          <p className="text-muted-foreground">Go to **Workflows** and create a new scenario named `Counter Demo`.</p>
+        </div>
+      </div>
+
+      <div className="flex gap-4">
+        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">2</div>
+        <div>
+          <h4 className="font-bold">Initialize State</h4>
+          <p className="text-muted-foreground">Open the **State Inspector** and set a variable `count` to `0`.</p>
+        </div>
+      </div>
+
+      <div className="flex gap-4">
+        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">3</div>
+        <div>
+          <h4 className="font-bold">Add the Increment Transition</h4>
+          <p className="text-muted-foreground">Create a new transition:</p>
+          <ul className="list-disc ml-6 mt-2 text-sm space-y-1">
+            <li>**Path**: `/increment`</li>
+            <li>**Method**: `POST`</li>
+            <li>**Effect**: `state.set` → `{"count": "{{math state.count "+" 1}}"}`</li>
+            <li>**Response**: `{"new_count": "{{state.count}}"}`</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </TabsContent>
+
+  <TabsContent value="ai" className="pt-4">
+    <Alert>
+      <Sparkles className="h-4 w-4" />
+      <AlertTitle>Let the AI build it</AlertTitle>
+      <AlertDescription>
+        If you have Mockzilla connected to your AI assistant (via MCP), you can simply say:
+      </AlertDescription>
+    </Alert>
+    
+    <div className="mt-4 p-4 bg-muted rounded-lg font-mono text-sm border border-dashed">
+      "Create a counter workflow scenario with a POST /increment endpoint that increments a state variable called count and returns the new value."
+    </div>
+    <p className="mt-4 text-sm text-muted-foreground">
+      The AI will autonomously create the scenario, initialize the state, and configure the transition for you.
+    </p>
+  </TabsContent>
+</Tabs>
+
+---
+
+## Advanced Power: The Mini-DB
+
+While `state` is great for simple variables, `db` allows you to manage collections of data.
+
+```json
+// Example: Adding an item to a cart
+{
+  "type": "db.push",
+  "table": "cart",
+  "value": {
+    "id": "{{input.body.product_id}}",
+    "name": "{{input.body.name}}",
+    "added_at": "{{now}}"
+  }
+}
+```
+
+### Relational Lookups
+You can query your database directly in your responses or effects using predicates:
+- `{{db.users[id=1].name}}` -> Finds user with ID 1.
+- `{{db.cart.[0].id}}` -> Gets the ID of the first item in the cart.
+
+---
+
+## Testing Your Workflow
+
+Once your transition is created, you can test it immediately:
+
+1.  **Direct Execution**: Call the endpoint via your frontend or `curl`:
+    `POST /api/workflow/exec/counter-demo/increment`
+2.  **State Inspection**: Keep the **State Inspector** open in Mockzilla. You will see the `count` variable update in real-time as you make calls.
+3.  **Simulation Mode**: Use the **Test Transition** button in the UI to simulate a request and see exactly which conditions matched and what effects were applied.
+
+<div className="mt-12 p-8 bg-primary/5 rounded-3xl border border-primary/20 text-center">
+  <h3 className="text-2xl font-bold mb-4">Ready for more?</h3>
+  <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+    Now that you know the basics, dive into one of our full-scale tutorials to see how these concepts build real-world systems.
+  </p>
+  <div className="flex flex-wrap justify-center gap-4">
+    <Link href="/docs/tutorials/stateful-authentication">
+      <Button variant="default">Auth Tutorial</Button>
+    </Link>
+    <Link href="/docs/tutorials/shopping-cart-simulation">
+      <Button variant="outline">Shopping Cart Tutorial</Button>
+    </Link>
+  </div>
+</div>

@@ -583,15 +583,28 @@ export async function callPreviewMock(args: z.infer<typeof schemas.PreviewMockAr
 			query: urlQueryParams,
 			params: paramsMap,
 			headers: args.headers || {},
+			body: args.bodyJson || {},
 		},
 	};
 
 	if (bestMock.useDynamicResponse && bestMock.jsonSchema) {
 		try {
 			const { generateFromSchema } = await import('@/lib/schema-generator');
+			const { faker } = await import('@faker-js/faker');
+
+			const enrichedContext = {
+				...context,
+				query: urlQueryParams,
+				params: paramsMap,
+				headers: args.headers || {},
+				body: args.bodyJson || {},
+				$: context.input,
+				faker,
+			};
+
 			const generated = generateFromSchema(
 				JSON.parse(bestMock.jsonSchema),
-				context,
+				enrichedContext,
 			);
 			return {
 				statusCode: finalStatusCode,
@@ -611,23 +624,45 @@ export async function callPreviewMock(args: z.infer<typeof schemas.PreviewMockAr
 	}
 
 	// Template interpolation for static response
-	const { replaceTemplates } = await import('@/lib/schema-generator');
-	const interpolated = replaceTemplates(finalResponse, context) as string;
+	const { replaceTemplates } = await import('@/lib/engine/interpolation');
+	const { faker } = await import('@faker-js/faker');
+
+	const enrichedContext = {
+		...context,
+		// Shortcuts
+		query: urlQueryParams,
+		params: paramsMap,
+		headers: args.headers || {},
+		body: args.bodyJson || {},
+		// $. alias
+		$: context.input,
+		faker,
+	};
+
+	const interpolated = replaceTemplates(finalResponse, enrichedContext);
 
 	if (finalBodyType === 'json') {
+		if (typeof interpolated === 'object' && interpolated !== null) {
+			return {
+				statusCode: finalStatusCode,
+				headers: { 'Content-Type': 'application/json' },
+				isJson: true,
+				body: interpolated,
+			};
+		}
 		try {
 			return {
 				statusCode: finalStatusCode,
 				headers: { 'Content-Type': 'application/json' },
 				isJson: true,
-				body: JSON.parse(interpolated),
+				body: JSON.parse(String(interpolated)),
 			};
 		} catch {
 			return {
 				statusCode: finalStatusCode,
 				headers: { 'Content-Type': 'text/plain' },
 				isJson: false,
-				body: interpolated,
+				body: String(interpolated),
 			};
 		}
 	}
@@ -636,7 +671,7 @@ export async function callPreviewMock(args: z.infer<typeof schemas.PreviewMockAr
 		statusCode: finalStatusCode,
 		headers: { 'Content-Type': 'text/plain' },
 		isJson: false,
-		body: interpolated,
+		body: String(interpolated),
 	};
 }
 
@@ -1150,9 +1185,10 @@ export async function callCreateFullWorkflow(args: z.infer<typeof schemas.Create
 
 export async function callEvaluateTemplate(args: z.infer<typeof schemas.EvaluateTemplateArgs>) {
 	logger.info({ args }, 'MCP Tool: evaluate_template');
-	const { interpolate } = await import('@/lib/engine/interpolation');
-	
-	const context = {
+	const { replaceTemplates } = await import('@/lib/engine/interpolation');
+	const { faker } = await import('@faker-js/faker');
+
+	const baseContext = {
 		state: args.context?.state || {},
 		tables: args.context?.tables || {},
 		input: args.context?.input || {
@@ -1163,12 +1199,33 @@ export async function callEvaluateTemplate(args: z.infer<typeof schemas.Evaluate
 		},
 	};
 
-	const result = interpolate(args.template, context);
+	const context = {
+		...baseContext,
+		// Shortcuts
+		query: baseContext.input.query,
+		params: baseContext.input.params,
+		headers: baseContext.input.headers,
+		body: baseContext.input.body,
+		db: baseContext.tables,
+		// $. alias
+		$: baseContext.input,
+		faker,
+	};
+
+	const result = replaceTemplates(args.template, context);
 
 	return {
 		template: args.template,
 		result,
-		context_used: context,
+		context_used: {
+			...baseContext,
+			shortcuts: {
+				query: baseContext.input.query,
+				params: baseContext.input.params,
+				headers: baseContext.input.headers,
+				body: baseContext.input.body,
+			}
+		},
 	};
 }
 
