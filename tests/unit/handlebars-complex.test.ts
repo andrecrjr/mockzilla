@@ -127,6 +127,50 @@ describe('Handlebars Complex Interpolation', () => {
 			const result = replaceTemplates(data, context) as string;
 			expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 		});
+
+		it('should return error message when path is not found', () => {
+			const data = '{{{faker "nonexistent.path"}}}';
+			const result = replaceTemplates(data, context);
+			expect(result).toBe('{{faker path "nonexistent.path" not found}}');
+		});
+
+		it('should return value when it is not a function', () => {
+			const data = '{{#if (faker "internet")}}FOUND{{/if}}';
+			const result = replaceTemplates(data, context);
+			expect(result).toBe('FOUND');
+		});
+	});
+
+	describe('Math Helpers', () => {
+		it('should perform arithmetic', () => {
+			expect(replaceTemplates('{{math 1 "+" 2}}', context)).toBe(3);
+			expect(replaceTemplates('{{math 5 "-" 2}}', context)).toBe(3);
+			expect(replaceTemplates('{{math 3 "*" 4}}', context)).toBe(12);
+			expect(replaceTemplates('{{math 10 "/" 2}}', context)).toBe(5);
+			expect(replaceTemplates('{{math 10 "%" 3}}', context)).toBe(1);
+		});
+	});
+
+	describe('Comparison Helpers', () => {
+		it('should handle eq and neq', () => {
+			expect(replaceTemplates('{{#if (eq 1 1)}}YES{{/if}}', context)).toBe('YES');
+			expect(replaceTemplates('{{#if (neq 1 2)}}YES{{/if}}', context)).toBe('YES');
+		});
+
+		it('should handle comparisons', () => {
+			expect(replaceTemplates('{{#if (gt 2 1)}}YES{{/if}}', context)).toBe('YES');
+			expect(replaceTemplates('{{#if (lt 1 2)}}YES{{/if}}', context)).toBe('YES');
+			expect(replaceTemplates('{{#if (gte 2 2)}}YES{{/if}}', context)).toBe('YES');
+			expect(replaceTemplates('{{#if (lte 2 2)}}YES{{/if}}', context)).toBe('YES');
+		});
+	});
+
+	describe('JSON Helper', () => {
+		it('should stringify an object', () => {
+			const ctx = { ...context, obj: { a: 1 } };
+			const result = replaceTemplates('{{{json obj}}}', ctx);
+			expect(result).toEqual({ a: 1 });
+		});
 	});
 
 	describe('Advanced Logic Helpers', () => {
@@ -170,6 +214,12 @@ describe('Handlebars Complex Interpolation', () => {
 			const result = replaceTemplates('{{dateFormat (dateSub "2024-01-10T12:00:00Z" 5 "days") "yyyy-MM-dd"}}', context);
 			expect(result).toBe('2024-01-05');
 		});
+
+		it('should handle invalid dates gracefully', () => {
+			expect(replaceTemplates('{{dateAdd "invalid" 1 "day"}}', context)).toBe('invalid');
+			expect(replaceTemplates('{{dateSub "invalid" 1 "day"}}', context)).toBe('invalid');
+			expect(replaceTemplates('{{dateFormat "invalid" "yyyy-MM-dd"}}', context)).toBe('invalid');
+		});
 	});
 
 	describe('Collection Wizards', () => {
@@ -192,6 +242,13 @@ describe('Handlebars Complex Interpolation', () => {
 		it('should sort arrays', () => {
 			const data = '{{#each (sort db.users "id" "asc")}}{{this.id}},{{/each}}';
 			expect(replaceTemplates(data, ctx)).toBe('1,2,3,');
+		});
+
+		it('should handle equal values during sort', () => {
+			const data = '{{#each (sort db.users "role")}}{{this.id}},{{/each}}';
+			// roles are admin, user, admin. Sort by role will have admin, admin, user.
+			// id 2 and 3 both have admin.
+			expect(replaceTemplates(data, ctx)).toBe('2,3,1,');
 		});
 
 		it('should slice arrays', () => {
@@ -220,10 +277,22 @@ describe('Handlebars Complex Interpolation', () => {
 			expect(replaceTemplates('{{currency 1234.56 "EUR" "de-DE"}}', context)).toBe('1.234,56 €');
 		});
 
+		it('should handle currency errors gracefully', () => {
+			expect(replaceTemplates('{{currency 1234.56 "INVALID"}}', context)).toBe(1234.56);
+		});
+
 		it('should format toFixed', () => {
 			expect(replaceTemplates('{{toFixed 12.3456 2}}', context)).toBe(12.35);
 			// String context
 			expect(replaceTemplates('Result: {{toFixed 12.3456 2}}', context)).toBe('Result: 12.35');
+		});
+	});
+
+	describe('compileHandlebars', () => {
+		const { compileHandlebars } = require('../../lib/engine/handlebars');
+		it('should handle template execution errors', () => {
+			const result = compileHandlebars(null as any, context);
+			expect(result).toBe(null as any);
 		});
 	});
 });

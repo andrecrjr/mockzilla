@@ -48,8 +48,18 @@ Mockzilla provides specialized helpers to make your templates more powerful.
 |--------|-------------|---------|
 | `math` | Perform arithmetic with operators `+ - * / %`. | `{{math state.count "*" 2}}` |
 | `faker` | Generate fake data using any Faker.js path. | `{{faker "internet.email"}}` |
-| `eq` / `neq` | Check equality. | `{{#if (eq state.role "admin")}}` |
-| `gt` / `lt` | Compare numeric values. | `{{#if (gt state.count 5)}}` |
+| `eq` / `neq` / `gt` / `lt` | Compare values. | `{{#if (eq state.role "admin")}}` |
+| `and` / `or` / `not` | Logic gates for complex conditionals. | `{{#if (and $.active (not $.locked))}}` |
+| `default` | Provide a fallback value if a variable is missing or empty. | `{{default $.name "Guest"}}` |
+| `json` | Stringify an object to JSON. | `{{json state.user}}` |
+| `now` | Get current ISO date string. | `{{now}}` |
+| `dateFormat` | Format a date using date-fns patterns. | `{{dateFormat now "yyyy-MM-dd"}}` |
+| `dateAdd` / `dateSub` | Add or subtract time from a date. | `{{dateAdd "now" 5 "days"}}` |
+| `filter` / `sort` | Manipulate arrays from the Mini-DB. | `{{#each (sort db.users "id")}}` |
+| `slice` / `join` | Slice or join array elements. | `{{join $.query.items ", "}}` |
+| `slugify` / `truncate` | Format strings. | `{{slugify $.body.title}}` |
+| `currency` | Format numbers as currency. | `{{currency 1234.56 "USD"}}` |
+| `toFixed` | Format numbers to fixed decimals. | `{{toFixed 12.345 2}}` |
 
 ---
 

@@ -53,9 +53,8 @@ export function replaceTemplates(
 		const parsed = typeof data === 'string' ? JSON.parse(stringified) : data;
 		
 		if (parsed === null || typeof parsed !== 'object') {
-			return interpolate(stringified, context);
+		        return interpolate(parsed, context);
 		}
-
 		return interpolate(parsed, context);
 	} catch {
 		// Not JSON or parsing failed, just interpolate as string
@@ -166,10 +165,13 @@ function resolveSinglePath(
 			} catch {
 				// Fallback for simple values
 				if (/^-?\d+\.?\d*$/.test(argsString)) {
-					args = Number(argsString);
+				        args = Number(argsString);
+				} else if (/^(true|false)$/.test(argsString)) {
+				        args = argsString === 'true';
 				} else {
-					args = argsString.replace(/^["']|["']$/g, '');
+				        args = argsString.replace(/^["']|["']$/g, '');
 				}
+
 			}
 		}
 	}

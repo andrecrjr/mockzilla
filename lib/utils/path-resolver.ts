@@ -1,4 +1,4 @@
-export function resolvePath(path: string, data: unknown): unknown {
+export function resolvePath(path: string, data: unknown, root: unknown = data): unknown {
 	const cleanPath = path.startsWith('$.')
 		? path.slice(2)
 		: path.startsWith('$')
@@ -15,7 +15,7 @@ export function resolvePath(path: string, data: unknown): unknown {
 
 	for (let i = 0; i < cleanPath.length; i++) {
 		const char = cleanPath[i];
-		if (char === '[' ) {
+		if (char === '[') {
 			if (inBrackets === 0 && currentPart) {
 				parts.push(currentPart);
 				currentPart = '';
@@ -48,8 +48,15 @@ export function resolvePath(path: string, data: unknown): unknown {
 		} else if (part.includes('=') && Array.isArray(current)) {
 			const [key, value] = part.split(/==?/).map((s) => s.trim());
 			let finalValue = value;
-			if (value.includes('.') || value.startsWith('state') || value.startsWith('input') || value.startsWith('db')) {
-				const resolved = resolvePath(value, data);
+			const isDynamic =
+				value.includes('.') ||
+				value.startsWith('state') ||
+				value.startsWith('input') ||
+				value.startsWith('db') ||
+				(root !== null && typeof root === 'object' && value in root);
+
+			if (isDynamic) {
+				const resolved = resolvePath(value, root, root);
 				if (resolved !== undefined) {
 					finalValue = String(resolved);
 				}
