@@ -38,10 +38,8 @@ export function replaceTemplates(
 		return data;
 	}
 
-	// If it contains Handlebars blocks (e.g. {{#if}}, {{/if}}, {{#each}}) or helpers (with spaces/quotes or known helper names), 
-	// we should use Handlebars directly on the whole string.
-	const knownHelpers = /\{\{\s*(now|math|faker|and|or|not|default|dateAdd|dateSub|dateFormat|filter|sort|slice|join|slugify|truncate|currency|toFixed|json)\b/;
-	if (stringified.includes('{{#') || stringified.includes('{{/') || /\{\{\s*[^}]*[\s'"][^}]*\}\}/.test(stringified) || knownHelpers.test(stringified)) {
+	// If it contains any double curly braces, we should use Handlebars directly on the whole string.
+	if (stringified.includes('{{')) {
 		const result = compileHandlebars(stringified, context);
 		try {
 			return JSON.parse(result);
@@ -50,15 +48,10 @@ export function replaceTemplates(
 		}
 	}
 
-	// If it was an object but had no Handlebars blocks, use the recursive interpolate engine
-	if (isObject) {
-		return interpolate(data, context);
-	}
-
-	// It's a string without Handlebars blocks
+	// It's a string or object without Handlebars blocks
 	try {
 		// Attempt to parse as JSON first for type preservation (for strings that are actually JSON)
-		const parsed = JSON.parse(stringified);
+		const parsed = typeof data === 'string' ? JSON.parse(stringified) : data;
 		
 		if (parsed === null || typeof parsed !== 'object') {
 			return interpolate(stringified, context);

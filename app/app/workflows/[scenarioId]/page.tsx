@@ -218,6 +218,7 @@ export default function ScenarioDetailPage() {
 					setIsAdding(false);
 					setEditingTransition(null);
 				}}
+				stateData={stateData}
 			/>
 		</div>
 	);

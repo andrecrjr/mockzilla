@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
 				jsonSchema: mock.jsonSchema,
 				useDynamicResponse: mock.useDynamicResponse,
 				echoRequestBody: mock.echoRequestBody,
+				delay: mock.delay,
 				queryParams: mock.queryParams,
 				variants: mock.variants,
 				wildcardRequireMatch: mock.wildcardRequireMatch,
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
 			jsonSchema: mock.jsonSchema,
 			useDynamicResponse: mock.useDynamicResponse,
 			echoRequestBody: mock.echoRequestBody,
+			delay: mock.delay,
 			updatedAt: mock.updatedAt?.toISOString(),
 		}));
 
@@ -146,6 +148,7 @@ export async function POST(request: NextRequest) {
 				jsonSchema: body.jsonSchema,
 				useDynamicResponse: body.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody,
+				delay: body.delay ?? 0,
 			})
 			.returning();
 
@@ -163,6 +166,7 @@ export async function POST(request: NextRequest) {
 				jsonSchema: newMock.jsonSchema,
 				useDynamicResponse: newMock.useDynamicResponse,
 				echoRequestBody: newMock.echoRequestBody,
+				delay: newMock.delay,
 				queryParams: newMock.queryParams,
 				variants: newMock.variants,
 				wildcardRequireMatch: newMock.wildcardRequireMatch,
@@ -213,6 +217,7 @@ export async function PUT(request: NextRequest) {
 				jsonSchema: body.jsonSchema,
 				useDynamicResponse: body.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody,
+				delay: body.delay ?? 0,
 				bodyType: body.bodyType || 'json',
 				enabled: body.enabled ?? true,
 				updatedAt: new Date(),
@@ -236,6 +241,7 @@ export async function PUT(request: NextRequest) {
 			jsonSchema: updatedMock.jsonSchema,
 			useDynamicResponse: updatedMock.useDynamicResponse,
 			echoRequestBody: updatedMock.echoRequestBody,
+			delay: updatedMock.delay,
 			queryParams: updatedMock.queryParams,
 			variants: updatedMock.variants,
 			wildcardRequireMatch: updatedMock.wildcardRequireMatch,

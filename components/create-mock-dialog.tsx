@@ -46,6 +46,8 @@ export function CreateMockDialog({
 		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
+		echoRequestBody?: boolean;
+		delay?: string;
 		variants?: Array<{
 			key: string;
 			body: string;
@@ -67,6 +69,8 @@ export function CreateMockDialog({
 				queryParams: values.queryParams,
 				jsonSchema: values.jsonSchema,
 				useDynamicResponse: values.useDynamicResponse,
+				echoRequestBody: values.echoRequestBody,
+				delay: values.delay ? Number.parseInt(values.delay, 10) : 0,
 				variants: values.variants,
 				wildcardRequireMatch: values.wildcardRequireMatch,
 			};

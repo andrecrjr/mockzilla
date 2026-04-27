@@ -80,6 +80,11 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				log.debug('Phase 1: Query params mismatch, falling through to Phase 2');
 			} else {
 				log.info({ mockId: exactMock.id }, 'Phase 1: Exact match found');
+				// Handle response delay if configured
+				if (exactMock.delay && exactMock.delay > 0) {
+					log.info({ delay: exactMock.delay }, 'Applying response delay');
+					await new Promise((resolve) => setTimeout(resolve, exactMock.delay));
+				}
 				return await buildResponse(exactMock, request, {}, log);
 			}
 		}
@@ -147,6 +152,12 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		}
 
 		log.info({ mockId: bestMock.id, matchType: bestMock.matchType }, 'Phase 2: Fallback match found');
+
+		// Handle response delay if configured
+		if (bestMock.delay && bestMock.delay > 0) {
+			log.info({ delay: bestMock.delay }, 'Applying response delay');
+			await new Promise((resolve) => setTimeout(resolve, bestMock.delay));
+		}
 
 		// For wildcard mocks with variants, try to select a matching variant
 		if (bestMock.matchType === 'wildcard') {

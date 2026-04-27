@@ -43,6 +43,8 @@ export default function EditMockPage() {
 		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
+		echoRequestBody?: boolean;
+		delay?: string;
 		variants?: Array<{
 			key: string;
 			body: string;
@@ -87,6 +89,8 @@ export default function EditMockPage() {
 					queryParams: values.queryParams,
 					jsonSchema: values.jsonSchema,
 					useDynamicResponse: values.useDynamicResponse,
+					echoRequestBody: values.echoRequestBody,
+					delay: values.delay ? Number.parseInt(values.delay, 10) : 0,
 					variants: values.variants,
 					wildcardRequireMatch: values.wildcardRequireMatch,
 				}),
@@ -158,6 +162,7 @@ export default function EditMockPage() {
 											jsonSchema: mock.jsonSchema || '',
 											useDynamicResponse: Boolean(mock.useDynamicResponse),
 											echoRequestBody: Boolean(mock.echoRequestBody),
+											delay: mock.delay ? String(mock.delay) : '0',
 											variants: mock.variants,
 											wildcardRequireMatch: Boolean(mock.wildcardRequireMatch),
 										}

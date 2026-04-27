@@ -85,6 +85,11 @@ export const CreateMockArgs = z.object({
 		.nullable()
 		.optional()
 		.describe('Echo the request body back to the client'),
+	delay: z
+		.number()
+		.int()
+		.optional()
+		.describe('Response delay in milliseconds'),
 });
 
 export const PreviewMockArgs = z.object({
@@ -157,6 +162,11 @@ export const UpdateMockArgs = z.object({
 		.nullable()
 		.optional()
 		.describe('Echo the request body back to the client'),
+	delay: z
+		.number()
+		.int()
+		.optional()
+		.describe('Response delay in milliseconds'),
 });
 
 export const DeleteMockArgs = z.object({ id: z.string() });

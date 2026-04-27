@@ -265,19 +265,17 @@ export default async function DocPage({
 			currentIndex < navItems.length - 1 ? navItems[currentIndex + 1] : null;
 
 		return (
-			<div className="max-w-4xl mx-auto px-6 py-8">
-				<article className="prose dark:prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none">
-					<MDXRemote
-						source={content}
-						components={mdxComponents}
-						options={{
-							mdxOptions: {
-								remarkPlugins: [remarkGfm],
-								rehypePlugins: [rehypeSlug],
-							},
-						}}
-					/>
-				</article>
+			<article className="prose dark:prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none">
+				<MDXRemote
+					source={content}
+					components={mdxComponents}
+					options={{
+						mdxOptions: {
+							remarkPlugins: [remarkGfm],
+							rehypePlugins: [rehypeSlug],
+						},
+					}}
+				/>
 
 				<nav className="mt-16 pt-8 border-t flex flex-col sm:flex-row gap-4 justify-between items-center">
 					{prev ? (
@@ -310,7 +308,7 @@ export default async function DocPage({
 						<div />
 					)}
 				</nav>
-			</div>
+			</article>
 		);
 	} catch (error) {
 		console.error('[Docs] Error rendering MDX page:', error);

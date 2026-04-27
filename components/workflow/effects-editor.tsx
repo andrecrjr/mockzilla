@@ -1,7 +1,7 @@
 'use client';
 
-import { Braces, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Plus, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
 import { FieldTooltip } from '@/components/folder-tooltips';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import type {
 	DbPushEffect,
 	DbRemoveEffect,
@@ -24,6 +23,7 @@ import type {
 	StateSetEffect,
 } from '@/lib/engine/match';
 import { cn } from '@/lib/utils';
+import { SmartHandlebarsEditor } from './smart-handlebars-editor';
 
 export type EffectType = Effect['type'];
 
@@ -32,9 +32,13 @@ export type EffectItem = Effect;
 interface EffectsEditorProps {
 	effects: EffectItem[];
 	onChange: (effects: EffectItem[]) => void;
+	stateData?: {
+		state: Record<string, unknown>;
+		tables: Record<string, unknown[]>;
+	};
 }
 
-export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
+export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorProps) {
 	const [activeTab, setActiveTab] = useState<'all' | 'state' | 'db'>('all');
 
 	const addEffect = (type: EffectType) => {
@@ -110,6 +114,7 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							onChange={(val) =>
 								updateEffect(index, { raw: val } as Partial<StateSetEffect>)
 							}
+							stateData={stateData}
 						/>
 					)}
 					{effect.type === 'db.push' && (
@@ -122,6 +127,7 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							onValueChange={(v) =>
 								updateEffect(index, { value: v } as Partial<DbPushEffect>)
 							}
+							stateData={stateData}
 						/>
 					)}
 					{effect.type === 'db.update' && (
@@ -138,6 +144,7 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							onSetChange={(s) =>
 								updateEffect(index, { set: s } as Partial<DbUpdateEffect>)
 							}
+							stateData={stateData}
 						/>
 					)}
 					{effect.type === 'db.remove' && (
@@ -150,6 +157,7 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							onMatchChange={(m) =>
 								updateEffect(index, { match: m } as Partial<DbRemoveEffect>)
 							}
+							stateData={stateData}
 						/>
 					)}
 				</div>
@@ -166,8 +174,8 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							type="button"
 							onClick={() => setActiveTab('all')}
 							className={cn(
-								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
-								activeTab === 'all' && 'bg-background shadow-sm',
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
+								activeTab === 'all' && 'bg-background shadow-sm text-foreground',
 							)}
 						>
 							All
@@ -176,8 +184,8 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							type="button"
 							onClick={() => setActiveTab('state')}
 							className={cn(
-								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
-								activeTab === 'state' && 'bg-background shadow-sm',
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
+								activeTab === 'state' && 'bg-background shadow-sm text-foreground',
 							)}
 						>
 							State
@@ -186,8 +194,8 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 							type="button"
 							onClick={() => setActiveTab('db')}
 							className={cn(
-								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
-								activeTab === 'db' && 'bg-background shadow-sm',
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
+								activeTab === 'db' && 'bg-background shadow-sm text-foreground',
 							)}
 						>
 							DB
@@ -266,14 +274,16 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
 function StateSetEditor({
 	value,
 	onChange,
+	stateData,
 }: {
 	value: Record<string, unknown>;
 	onChange: (val: Record<string, unknown>) => void;
+	stateData?: EffectsEditorProps['stateData'];
 }) {
 	return (
 		<div className="grid gap-2">
 			<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-				Variables (JSON Object)
+				Variables
 				<FieldTooltip
 					label="Variables"
 					description="Set or update state variables for this scenario. State is a persistent key-value store."
@@ -281,15 +291,13 @@ function StateSetEditor({
 					docsLink="/docs/workflows#state-set"
 				/>
 			</Label>
-			<JsonOrStringInput
-				value={value}
-				onChange={(val) => {
-					if (typeof val === 'object' && val !== null) {
-						onChange(val as Record<string, unknown>);
-					}
-				}}
-				placeholder='{ "isLoggedIn": true, "userId": "{{ input.body.id }}" }'
-				minLines={2}
+			<KeyValueEditor
+				data={value}
+				onChange={onChange}
+				keyPlaceholder="Variable Name"
+				valuePlaceholder="Value (supports interpolation)"
+				suggestions={Object.keys(stateData?.state || {})}
+				addButtonLabel="Add Variable"
 			/>
 		</div>
 	);
@@ -300,11 +308,13 @@ function DbPushEditor({
 	value,
 	onTableChange,
 	onValueChange,
+	stateData,
 }: {
 	table: string;
 	value: unknown;
 	onTableChange: (t: string) => void;
 	onValueChange: (v: unknown) => void;
+	stateData?: EffectsEditorProps['stateData'];
 }) {
 	return (
 		<div className="grid gap-3">
@@ -313,16 +323,15 @@ function DbPushEditor({
 					Table Name
 					<FieldTooltip
 						label="Table Name"
-						description="The name of the mini-database table to operate on. Tables are JSON arrays."
+						description="The name of the mini-database table to operate on."
 						example="users"
-						docsLink="/docs/workflows#database-tables"
 					/>
 				</Label>
-				<Input
+				<AutocompleteInput
 					value={table}
-					onChange={(e) => onTableChange(e.target.value)}
+					onChange={onTableChange}
+					suggestions={Object.keys(stateData?.tables || {})}
 					placeholder="e.g. users, cart, orders"
-					className="h-8 font-mono text-xs"
 				/>
 			</div>
 			<div className="grid gap-1.5">
@@ -330,9 +339,8 @@ function DbPushEditor({
 					Value to Push (Row)
 					<FieldTooltip
 						label="Value to Push"
-						description="The data to append to the table. Can be a static value or interpolated from input/state."
+						description="The data to append to the table."
 						example="{{ input.body }}"
-						docsLink="/docs/workflows#db-push"
 					/>
 				</Label>
 				<JsonOrStringInput
@@ -340,6 +348,7 @@ function DbPushEditor({
 					onChange={onValueChange}
 					placeholder='{ "id": "{{ input.body.id }}", "name": "New Item" }'
 					minLines={3}
+					stateData={stateData}
 				/>
 			</div>
 		</div>
@@ -353,6 +362,7 @@ function DbUpdateEditor({
 	onTableChange,
 	onMatchChange,
 	onSetChange,
+	stateData,
 }: {
 	table: string;
 	match: Record<string, unknown>;
@@ -360,6 +370,7 @@ function DbUpdateEditor({
 	onTableChange: (t: string) => void;
 	onMatchChange: (m: Record<string, unknown>) => void;
 	onSetChange: (s: Record<string, unknown>) => void;
+	stateData?: EffectsEditorProps['stateData'];
 }) {
 	return (
 		<div className="grid gap-3">
@@ -368,38 +379,33 @@ function DbUpdateEditor({
 					Table Name
 					<FieldTooltip
 						label="Table Name"
-						description="The name of the mini-database table to operate on. Tables are JSON arrays."
+						description="The name of the mini-database table to operate on."
 						example="users"
-						docsLink="/docs/workflows#database-tables"
 					/>
 				</Label>
-				<Input
+				<AutocompleteInput
 					value={table}
-					onChange={(e) => onTableChange(e.target.value)}
+					onChange={onTableChange}
+					suggestions={Object.keys(stateData?.tables || {})}
 					placeholder="e.g. users"
-					className="h-8 font-mono text-xs"
 				/>
 			</div>
-			<div className="grid grid-cols-2 gap-3">
+			<div className="grid grid-cols-2 gap-4">
 				<div className="grid gap-1.5">
 					<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
 						Match Criteria (Where)
 						<FieldTooltip
 							label="Match Criteria"
-							description="Filter which rows to update. Supports exact matches and interpolation."
+							description="Filter which rows to update."
 							example='{ "id": "{{ input.params.id }}" }'
-							docsLink="/docs/workflows#db-update"
 						/>
 					</Label>
-					<JsonOrStringInput
-						value={match}
-						onChange={(val) => {
-							if (typeof val === 'object' && val !== null) {
-								onMatchChange(val as Record<string, unknown>);
-							}
-						}}
-						placeholder='{ "id": "{{ input.params.id }}" }'
-						minLines={3}
+					<KeyValueEditor
+						data={match}
+						onChange={onMatchChange}
+						keyPlaceholder="Field"
+						valuePlaceholder="Value"
+						addButtonLabel="Add Match"
 					/>
 				</div>
 				<div className="grid gap-1.5">
@@ -409,18 +415,14 @@ function DbUpdateEditor({
 							label="Set Fields"
 							description="Fields to update in the matching rows."
 							example='{ "status": "active" }'
-							docsLink="/docs/workflows#db-update"
 						/>
 					</Label>
-					<JsonOrStringInput
-						value={set}
-						onChange={(val) => {
-							if (typeof val === 'object' && val !== null) {
-								onSetChange(val as Record<string, unknown>);
-							}
-						}}
-						placeholder='{ "status": "active", "updatedAt": "now" }'
-						minLines={3}
+					<KeyValueEditor
+						data={set}
+						onChange={onSetChange}
+						keyPlaceholder="Field"
+						valuePlaceholder="New Value"
+						addButtonLabel="Add Field"
 					/>
 				</div>
 			</div>
@@ -433,11 +435,13 @@ function DbRemoveEditor({
 	match,
 	onTableChange,
 	onMatchChange,
+	stateData,
 }: {
 	table: string;
 	match: Record<string, unknown>;
 	onTableChange: (t: string) => void;
 	onMatchChange: (m: Record<string, unknown>) => void;
+	stateData?: EffectsEditorProps['stateData'];
 }) {
 	return (
 		<div className="grid gap-3">
@@ -446,16 +450,15 @@ function DbRemoveEditor({
 					Table Name
 					<FieldTooltip
 						label="Table Name"
-						description="The name of the mini-database table to operate on. Tables are JSON arrays."
+						description="The name of the mini-database table to operate on."
 						example="cart"
-						docsLink="/docs/workflows#database-tables"
 					/>
 				</Label>
-				<Input
+				<AutocompleteInput
 					value={table}
-					onChange={(e) => onTableChange(e.target.value)}
+					onChange={onTableChange}
+					suggestions={Object.keys(stateData?.tables || {})}
 					placeholder="e.g. cart"
-					className="h-8 font-mono text-xs"
 				/>
 			</div>
 			<div className="grid gap-1.5">
@@ -463,20 +466,16 @@ function DbRemoveEditor({
 					Match Criteria (Where)
 					<FieldTooltip
 						label="Match Criteria"
-						description="Filter which rows to remove. Supports exact matches and interpolation."
+						description="Filter which rows to remove."
 						example='{ "sku": "{{ input.params.sku }}" }'
-						docsLink="/docs/reference/workflow-syntax#2-effects"
 					/>
 				</Label>
-				<JsonOrStringInput
-					value={match}
-					onChange={(val) => {
-						if (typeof val === 'object' && val !== null) {
-							onMatchChange(val as Record<string, unknown>);
-						}
-					}}
-					placeholder='{ "sku": "{{ input.params.sku }}" }'
-					minLines={2}
+				<KeyValueEditor
+					data={match}
+					onChange={onMatchChange}
+					keyPlaceholder="Field"
+					valuePlaceholder="Value"
+					addButtonLabel="Add Match"
 				/>
 			</div>
 		</div>
@@ -485,138 +484,149 @@ function DbRemoveEditor({
 
 // --- Helper Components ---
 
+function KeyValueEditor({
+	data,
+	onChange,
+	keyPlaceholder = 'Key',
+	valuePlaceholder = 'Value',
+	suggestions = [],
+	addButtonLabel = 'Add Pair',
+}: {
+	data: Record<string, unknown>;
+	onChange: (val: Record<string, unknown>) => void;
+	keyPlaceholder?: string;
+	valuePlaceholder?: string;
+	suggestions?: string[];
+	addButtonLabel?: string;
+}) {
+	const items = Object.entries(data).map(([key, value]) => ({ key, value: String(value) }));
+
+	const handleAdd = () => {
+		onChange({ ...data, '': '' });
+	};
+
+	const handleRemove = (keyToRemove: string) => {
+		const newData = { ...data };
+		delete newData[keyToRemove];
+		onChange(newData);
+	};
+
+	const handleUpdate = (oldKey: string, newKey: string, newValue: string) => {
+		const newData: Record<string, unknown> = {};
+		
+		for (const [k, v] of Object.entries(data)) {
+			if (k === oldKey) {
+				newData[newKey] = newValue;
+			} else {
+				newData[k] = v;
+			}
+		}
+
+		if (oldKey === '' && !Object.prototype.hasOwnProperty.call(data, '')) {
+			newData[newKey] = newValue;
+		}
+
+		onChange(newData);
+	};
+
+	return (
+		<div className="space-y-2">
+			{items.length === 0 ? (
+				<p className="text-[10px] text-muted-foreground italic py-1">No items defined.</p>
+			) : (
+				items.map((item, idx) => (
+					<div key={idx} className="flex items-center gap-2">
+						<AutocompleteInput
+							value={item.key}
+							onChange={(val) => handleUpdate(item.key, val, item.value)}
+							suggestions={suggestions}
+							placeholder={keyPlaceholder}
+							className="flex-1 h-8 text-xs font-mono"
+						/>
+						<Input
+							value={item.value}
+							onChange={(e) => handleUpdate(item.key, item.key, e.target.value)}
+							placeholder={valuePlaceholder}
+							className="flex-1 h-8 text-xs"
+						/>
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon"
+							className="h-8 w-8 text-muted-foreground hover:text-destructive"
+							onClick={() => handleRemove(item.key)}
+						>
+							<X className="h-3 w-3" />
+						</Button>
+					</div>
+				))
+			)}
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				className="w-full h-7 text-[10px] border-dashed"
+				onClick={handleAdd}
+			>
+				<Plus className="h-3 w-3 mr-1" /> {addButtonLabel}
+			</Button>
+		</div>
+	);
+}
+
+function AutocompleteInput({
+	value,
+	onChange,
+	suggestions,
+	placeholder,
+	className,
+}: {
+	value: string;
+	onChange: (val: string) => void;
+	suggestions: string[];
+	placeholder?: string;
+	className?: string;
+}) {
+	const listId = `list-${Math.random().toString(36).substr(2, 9)}`;
+
+	return (
+		<div className="relative w-full">
+			<Input
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				placeholder={placeholder}
+				className={className}
+				list={listId}
+			/>
+			<datalist id={listId}>
+				{suggestions.map((s) => (
+					<option key={s} value={s} />
+				))}
+			</datalist>
+		</div>
+	);
+}
+
 function JsonOrStringInput({
 	value,
 	onChange,
 	placeholder,
 	minLines = 2,
+	stateData,
 }: {
 	value: unknown;
 	onChange: (val: unknown) => void;
 	placeholder?: string;
 	minLines?: number;
+	stateData?: EffectsEditorProps['stateData'];
 }) {
-	const stringValue =
-		typeof value === 'object' && value !== null
-			? JSON.stringify(value, null, 2)
-			: String(value || '');
-
-	const [internalValue, setInternalValue] = useState(stringValue);
-	const [isValidJson, setIsValidJson] = useState(true);
-
-	useEffect(() => {
-		const val =
-			typeof value === 'object' && value !== null
-				? JSON.stringify(value, null, 2)
-				: String(value || '');
-		setInternalValue(val);
-	}, [value]);
-
-	const handleChange = (
-		e: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } },
-	) => {
-		const newVal = e.target.value;
-		setInternalValue(newVal);
-
-		try {
-			if (newVal.trim().startsWith('{') || newVal.trim().startsWith('[')) {
-				const parsed = JSON.parse(newVal);
-				onChange(parsed);
-				setIsValidJson(true);
-			} else {
-				onChange(newVal);
-				setIsValidJson(true);
-			}
-		} catch {
-			onChange(newVal);
-			setIsValidJson(false);
-		}
-	};
-
-	const handleInsert = (v: string) => {
-		const toInsert = `{{ ${v} }}`;
-		const newVal = internalValue + toInsert;
-		setInternalValue(newVal);
-		handleChange({ target: { value: newVal } });
-	};
-
 	return (
-		<div className="relative">
-			<Textarea
-				value={internalValue}
-				onChange={handleChange}
-				placeholder={placeholder}
-				className={cn(
-					'font-mono text-xs resize-y min-h-[60px]',
-					!isValidJson &&
-						internalValue.trim().startsWith('{') &&
-						'border-orange-300 focus-visible:ring-orange-300',
-				)}
-				rows={minLines}
-			/>
-			<div className="absolute right-2 top-2 flex gap-1">
-				<InsertVariableMenu onInsert={handleInsert} />
-			</div>
-		</div>
-	);
-}
-
-function InsertVariableMenu({ onInsert }: { onInsert: (v: string) => void }) {
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="ghost"
-					size="icon"
-					className="h-5 w-5 opacity-50 hover:opacity-100"
-					title="Insert Variable"
-				>
-					<Braces className="h-3 w-3" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-56">
-				<DropdownMenuLabel className="text-xs">
-					Insert Variable
-				</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem
-					className="text-xs"
-					onClick={() => onInsert('input.body')}
-				>
-					Body (Full)
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					className="text-xs"
-					onClick={() => onInsert('input.body.id')}
-				>
-					Body ID
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					className="text-xs"
-					onClick={() => onInsert('input.params.id')}
-				>
-					Param ID
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					className="text-xs"
-					onClick={() => onInsert('input.query.q')}
-				>
-					Query Param
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem
-					className="text-xs"
-					onClick={() => onInsert('state.userId')}
-				>
-					State Var
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					className="text-xs"
-					onClick={() => onInsert('db.users')}
-				>
-					DB Table (Full)
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<SmartHandlebarsEditor
+			value={value}
+			onChange={onChange}
+			placeholder={placeholder}
+			minLines={minLines}
+			stateData={stateData}
+		/>
 	);
 }

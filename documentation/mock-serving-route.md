@@ -109,6 +109,14 @@ If `echoRequestBody` is enabled, the response is exactly the request body receiv
 ### Dynamic Response
 If `useDynamicResponse` is enabled, generates fresh JSON from the configured `jsonSchema` on each request using the schema generator utility.
 
+### Response Delay
+If a `delay` (in milliseconds) is configured for a mock, Mockzilla will pause execution for that duration before returning the response. This is useful for simulating:
+- **Network Latency**: Test how your application behaves under slow network conditions.
+- **AI "Thinking" Time**: Simulate the inference time of expensive LLM models.
+- **Loading States**: Verify that loading spinners and skeleton screens are correctly displayed in your UI.
+
+The delay is applied to all response types (Static, Echo, and Dynamic) and occurs after a successful match is identified but before the response body is built.
+
 ## HTTP Methods
 
 The route supports all standard HTTP methods:

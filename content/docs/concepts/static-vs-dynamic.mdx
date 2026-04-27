@@ -34,9 +34,12 @@ A **Dynamic Response** uses a **JSON Schema** and **Faker.js** to generate fresh
 | Feature | Static Response | Dynamic Response |
 |---------|-----------------|------------------|
 | **Setup Time** | Instant (Copy/Paste) | Minutes (Write Schema) |
-| **Realistic Data** | No (Same every time) | Yes (Randomized) |
+| **Realistic Data** | No (Same every time) | Yes (Randomized via Faker.js) |
 | **Maintenance** | Manual (Edit every time)| Automatic (Update schema) |
-| **Testing Scope** | Specific cases | Broad, unpredictable cases |
+| **Performance** | Maximum (Zero processing) | High (Small generation overhead) |
+| **Edge Case Coverage**| Specific, hard-coded | Broad, automatic "dirty" data |
+| **Skill Required** | Basic JSON knowledge | JSON Schema + Faker awareness |
+| **Stateful Support** | limited (Fixed data) | High (Interpolate state into schema) |
 
 ---
 

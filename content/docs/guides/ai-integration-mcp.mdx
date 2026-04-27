@@ -52,6 +52,34 @@ While raw MCP tools are powerful, you can supercharge your AI agent with special
   </CardContent>
 </Card>
 
+## Orchestrating with "Claw" Agents
+
+Mockzilla provides the critical "Ground Truth" infrastructure for modern AI orchestrators like **OpenClaw** and **PicoClaw**.
+
+### 🏗️ OpenClaw (The Orchestrator)
+**OpenClaw** is a TypeScript-based AI assistant that manages complex development lifecycles. It uses Mockzilla to:
+- **Spec-to-Mock**: Convert project requirements into functional API simulations.
+- **Traffic Audit**: Compare real-world traffic captured by the Mockzilla Extension with existing specifications.
+- **Team Sync**: Push and pull mocks between local environments and shared servers.
+
+### 🦎 PicoClaw (The Edge Agent)
+**PicoClaw** is a minimalist, Go-based agent designed for edge devices ($10 hardware). It leverages Mockzilla for:
+- **API Heartbeats**: Constantly monitor mock consistency during development.
+- **Remote Relay**: Act as a lightweight proxy for Mockzilla tools in resource-constrained environments.
+
+---
+
+## 💸 Developing without "Token Waste"
+
+Frontend development often involves hundreds of UI refreshes per day. If your UI depends on expensive LLM calls (e.g., GPT-4o or Claude 3.7), you are "burning" money just to check if a button is centered.
+
+### The Mockzilla Strategy:
+1.  **Capture once**: Call your real expensive model one time and capture the response using the **Mockzilla Chrome Extension**.
+2.  **Generate infinitely**: Convert that capture into a **Dynamic Schema Mock**.
+3.  **Iterate for free**: For the rest of the week, your UI will call Mockzilla. It will receive high-fidelity, varied JSON data that looks exactly like the real model's output—but it costs **zero tokens**.
+
+> **Example**: Instead of calling a $15.00/1M token model to summarize a document 50 times during UI testing, call Mockzilla's `/api/summarize` mock. It will generate a new, realistic summary using Faker for every refresh, allowing you to focus on the user experience without watching your API billing dashboard.
+
 ---
 
 ## Why use Mockzilla with AI?

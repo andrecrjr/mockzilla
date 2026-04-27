@@ -7,6 +7,50 @@ description: Master API mocking with Mockzilla.
 
 Mockzilla is a high-fidelity API mocking platform designed to bridge the gap between frontend development and backend reality. From simple static responses to complex stateful simulations, we've got you covered.
 
+## Why Mockzilla?
+
+Mockzilla is designed for the modern development ecosystem, where speed and fidelity are paramount.
+
+### Core Strengths (The Pros)
+- **🤖 AI-Native Architecture**: Built-in MCP support allows AI agents (like **OpenClaw**) to autonomously build, debug, and maintain your mock infrastructure.
+- **📜 Spec-Mock First Philosophy**: Establish Mockzilla as the **Ground Truth** using SMDD—design your API contract and mock it before writing a single line of backend code.
+- **🎭 Stateful "Living" Mocks**: Unlike static JSON servers, Mockzilla supports complex stateful scenarios with an in-memory Mini-DB and session state.
+- **🎲 High-Fidelity Dynamic Data**: Use JSON Schema + Faker.js to generate fresh, realistic data that adheres strictly to your API contracts.
+- **🔌 Browser-to-Dashboard Sync**: Capture real-world production traffic via our Chrome Extension and convert it into high-fidelity mocks with one click.
+- **🧠 Smart Hybrid Engine**: Automatically switches between type-preserving JSON interpolation and powerful Handlebars logic for maximum flexibility.
+- **🐳 DevOps Friendly**: Standalone Docker support and a robust Makefile-driven CLI for seamless integration into local and CI/CD environments.
+- **💸 Token Burn Mitigation**: Drastically reduce AI SaaS costs by mocking expensive LLM responses during UI/UX development—stop wasting your token budget on layout refreshes.
+- **🔍 Forensic Debugging**: Built-in observability tools allow you to trace exactly why a specific mock matched (or didn't) and how state mutated during a request.
+
+### Points of Consideration (The Cons)
+- **📈 Learning Curve**: Mastering advanced Handlebars interpolation and stateful transition logic requires some initial time investment.
+- **🔄 Mock Drift**: Like any mocking tool, you must maintain discipline to keep mocks in sync with evolving production backend contracts.
+- **🧩 Logic Complexity**: While powerful, building highly complex stateful simulations can become difficult to manage without proper modularization.
+
+---
+
+## Role-Based Benefits
+
+### For AI Engineers
+Native MCP support allows AI assistants to autonomously create and manage mocks within your workspace.
+- **Pros:** Zero-latency testing for agent tool-calling; AI can build complex stateful scenarios in seconds.
+- **Cons:** Requires initial MCP server configuration.
+
+### For QA & Automation
+Reproduce edge cases that are hard to trigger in real staging environments.
+- **Pros:** Instantly simulate 500 errors, timeouts, or specific "dirty" data; test stateful flows without backend seeding.
+- **Cons:** Not a replacement for full, end-to-end integration testing.
+
+### For Frontend Developers
+Parallelize development by working against high-fidelity mocks before the backend exists.
+- **Pros:** Chrome extension allows capturing production traffic for local debugging; dynamic data via JSON Schema + Faker.js.
+- **Cons:** Requires discipline to maintain mock accuracy as UI requirements evolve.
+
+### For Backend Developers
+Prototype and iterate on API contracts without writing a single line of production code.
+- **Pros:** Get instant feedback on contract design; offload development pressure from shared staging environments.
+- **Cons:** Risk of "contract laziness" if design changes aren't properly communicated to the team.
+
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
   <Link href="/docs/getting-started/quick-start" className="no-underline">
     <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-primary/20">
@@ -32,6 +76,20 @@ Mockzilla is a high-fidelity API mocking platform designed to bridge the gap bet
 ## Explore the Journey
 
 <div className="space-y-4 mt-8">
+  <Link href="/docs/concepts/spec-mock-driven-development" className="no-underline block group">
+    <Card className="hover:bg-muted/50 transition-colors border-primary/10">
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <span className="font-bold text-primary">0</span>
+        </div>
+        <div>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">Spec-Mock First</CardTitle>
+          <CardDescription>Design your API contract and host it as live "Ground Truth" before any code exists.</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  </Link>
+
   <Link href="/docs/guides/browser-extension-sync" className="no-underline block group">
     <Card className="hover:bg-muted/50 transition-colors border-primary/10">
       <CardHeader className="flex flex-row items-center gap-4 space-y-0">

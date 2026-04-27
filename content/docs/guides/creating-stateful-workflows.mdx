@@ -165,6 +165,21 @@ Once your transition is created, you can test it immediately:
 2.  **State Inspection**: Keep the **State Inspector** open in Mockzilla. You will see the `count` variable update in real-time as you make calls.
 3.  **Simulation Mode**: Use the **Test Transition** button in the UI to simulate a request and see exactly which conditions matched and what effects were applied.
 
+---
+
+## Pros & Cons of Stateful Workflows
+
+### Pros
+- **End-to-End Simulation**: Build and test entire frontend flows (like checkout or multi-step onboarding) without a functioning backend.
+- **Isolated Sandboxes**: Scenarios ensure that state changes in one test never leak into another.
+- **Real-Time Forensic Audit**: Use the State Inspector to watch your variables and database tables update in real-time as your app interacts with the API.
+- **Mini-DB Persistence**: Store and retrieve relational data using simple predicates, making your mocks feel "alive."
+
+### Cons
+- **Configuration Overhead**: Complex transitions require more setup time compared to simple static mocks.
+- **In-Memory Volatility**: Scenario state is stored in memory; restarting the server resets all databases to their initial seed state.
+- **Debugging Complexity**: Extremely deep logic chains in JSON can become harder to trace than standard application code.
+
 <div className="mt-12 p-8 bg-primary/5 rounded-3xl border border-primary/20 text-center">
   <h3 className="text-2xl font-bold mb-4">Ready for more?</h3>
   <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">

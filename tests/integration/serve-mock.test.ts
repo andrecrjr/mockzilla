@@ -534,4 +534,29 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		const body = await res.json();
 		expect(body.error).toBe('Internal Server Error');
 	});
+
+	it('applies response delay if configured', async () => {
+		const delayedMock = {
+			...mockResponse,
+			delay: 500, // 500ms delay
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([delayedMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const start = Date.now();
+		const res = await GET(req, { params });
+		const end = Date.now();
+
+		expect(res.status).toBe(200);
+		expect(end - start).toBeGreaterThanOrEqual(450); // Allow some tolerance
+	});
 });

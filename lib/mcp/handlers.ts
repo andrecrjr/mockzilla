@@ -176,6 +176,7 @@ export async function callCreateMock(args: z.infer<typeof schemas.CreateMockArgs
 		jsonSchema: args.jsonSchema ?? undefined,
 		useDynamicResponse: args.useDynamicResponse ?? undefined,
 		echoRequestBody: args.echoRequestBody ?? undefined,
+		delay: args.delay ?? undefined,
 	};
 	const [row] = await db
 		.insert(mockResponses)
@@ -195,6 +196,7 @@ export async function callCreateMock(args: z.infer<typeof schemas.CreateMockArgs
 			jsonSchema: body.jsonSchema,
 			useDynamicResponse: body.useDynamicResponse ?? false,
 			echoRequestBody: body.echoRequestBody ?? false,
+			delay: body.delay ?? 0,
 		})
 		.returning();
 
@@ -215,6 +217,7 @@ export async function callCreateMock(args: z.infer<typeof schemas.CreateMockArgs
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
+		delay: row.delay,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -285,6 +288,7 @@ export async function callListMocks(args: z.infer<typeof schemas.ListMocksArgs>)
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
+		delay: row.delay,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	}));
@@ -315,6 +319,7 @@ export async function callGetMock(args: z.infer<typeof schemas.GetMockArgs>) {
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
+		delay: row.delay,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -339,6 +344,7 @@ export async function callUpdateMock(args: z.infer<typeof schemas.UpdateMockArgs
 			jsonSchema: args.jsonSchema ?? null,
 			useDynamicResponse: args.useDynamicResponse ?? false,
 			echoRequestBody: args.echoRequestBody ?? false,
+			delay: args.delay ?? 0,
 			updatedAt: new Date(),
 		})
 		.where(eq(mockResponses.id, args.id))
@@ -361,6 +367,7 @@ export async function callUpdateMock(args: z.infer<typeof schemas.UpdateMockArgs
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
+		delay: row.delay,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -433,6 +440,7 @@ export async function callCreateSchemaMock(args: {
 			jsonSchema: args.jsonSchema,
 			useDynamicResponse: true,
 			echoRequestBody: (args.echoRequestBody ?? false) as boolean,
+			delay: args.delay ?? 0,
 		})
 		.returning();
 
@@ -453,6 +461,7 @@ export async function callCreateSchemaMock(args: {
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
+		delay: row.delay,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};

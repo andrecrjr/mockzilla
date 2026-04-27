@@ -2,8 +2,10 @@
 
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { cn } from '@/lib/utils';
 
 interface MetaEntry {
 	slug: string;
@@ -17,6 +19,12 @@ interface DocsHeaderProps {
 
 export function DocsHeader({ sidebar }: DocsHeaderProps) {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const pathname = usePathname();
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	return (
 		<header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 m-2 mockzilla-border rounded-xl">
@@ -58,25 +66,37 @@ export function DocsHeader({ sidebar }: DocsHeaderProps) {
 			{mobileMenuOpen && (
 				<div className="md:hidden border-t border-border bg-card/95 backdrop-blur-md rounded-b-xl max-h-[calc(100vh-5rem)] overflow-y-auto">
 					<nav className="px-4 py-6 space-y-1">
-						{sidebar.map((item) =>
-							item.isSection ? (
-								<div
-									key={item.slug}
-									className="px-2 py-2 mt-4 first:mt-0 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1"
-								>
-									{item.title}
-								</div>
-							) : (
+						{sidebar.map((item) => {
+							if (item.isSection) {
+								return (
+									<div
+										key={item.slug}
+										className="px-2 py-2 mt-4 first:mt-0 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1"
+									>
+										{item.title}
+									</div>
+								);
+							}
+
+							const href = `/docs/${item.slug === 'index' ? '' : item.slug}`;
+							const isActive = mounted && (pathname === href || (item.slug === 'index' && pathname === '/docs'));
+
+							return (
 								<Link
 									key={item.slug}
-									href={`/docs/${item.slug === 'index' ? '' : item.slug}`}
-									className="block px-3 py-2 text-base font-medium rounded-md transition-colors hover:bg-muted text-foreground/70 hover:text-foreground"
+									href={href}
+									className={cn(
+										"block px-3 py-2 text-base font-medium rounded-md transition-colors",
+										isActive
+											? "bg-primary/10 text-primary"
+											: "text-foreground/70 hover:text-foreground hover:bg-muted"
+									)}
 									onClick={() => setMobileMenuOpen(false)}
 								>
 									{item.title}
 								</Link>
-							),
-						)}
+							);
+						})}
 					</nav>
 				</div>
 			)}

@@ -30,6 +30,7 @@ type MockFormValues = {
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
+	delay?: string;
 	variants?: MockVariant[] | null;
 	wildcardRequireMatch?: boolean;
 };
@@ -95,6 +96,7 @@ export function MockEditor({
 	const [folderId, setFolderId] = useState<string>(
 		initial?.folderId ?? defaultFolderId ?? '',
 	);
+	const [delay, setDelay] = useState<string>(initial?.delay ? String(initial.delay) : '0');
 
 	const [activeTab, setActiveTab] = useState<'manual' | 'schema' | 'advanced'>(
 		initial?.jsonSchema ? 'schema' : 'manual',
@@ -140,6 +142,7 @@ export function MockEditor({
 			setJsonSchema(initial?.jsonSchema ?? '');
 			setUseDynamicResponse(Boolean(initial?.useDynamicResponse));
 			setEchoRequestBody(Boolean(initial?.echoRequestBody));
+			setDelay(initial?.delay ? String(initial.delay) : '0');
 			setMatchType((initial?.matchType as MatchType) ?? 'exact');
 			const qp = initial?.queryParams as
 				| Record<string, string>
@@ -226,10 +229,11 @@ export function MockEditor({
 			jsonSchema,
 			useDynamicResponse,
 			echoRequestBody,
+			delay,
 			variants: variants.length > 0 ? variants : null,
 			wildcardRequireMatch,
 		};
-		await onSubmit(values);
+		await onSubmit({ ...values, statusCode: values.statusCode, delay: String(Number.parseInt(delay || '0', 10)) });
 	};
 
 	return (
@@ -302,6 +306,22 @@ export function MockEditor({
 									</SelectContent>
 								</Select>
 							</div>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="create-delay">Response Delay (ms)</Label>
+							<Input
+								id="create-delay"
+								type="number"
+								min="0"
+								step="100"
+								value={delay}
+								onChange={(e) => setDelay(e.target.value)}
+								placeholder="e.g., 500"
+							/>
+							<p className="text-[10px] text-muted-foreground">
+								Simulate network latency or model "thinking" time.
+							</p>
 						</div>
 
 						<div className="space-y-2">

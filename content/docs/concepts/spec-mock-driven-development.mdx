@@ -1,0 +1,102 @@
+---
+title: Spec-Mock Driven Development (SMDD)
+description: The "Ground Truth" philosophy for building high-fidelity systems with AI.
+---
+
+# Spec-Mock Driven Development (SMDD)
+
+**Spec-Mock Driven Development (SMDD)** is an evolved form of Test-Driven Development (TDD) designed specifically for the era of AI and "Vibe Coding." In this philosophy, the **Specification** is the brain, and **Mockzilla** is the **Ground Truth**.
+
+---
+
+## The Philosophy: "Mock First, Code Later"
+
+In traditional development, mocks are an afterthought—something created to fix a failing test. In SMDD, the mock is the **Primary Deliverable**.
+
+1.  **Spec as Architecture**: An AI agent (like **OpenClaw**) designs a technical specification.
+2.  **Mock as Ground Truth**: Mockzilla instantly hosts that spec as a live, functional API.
+3.  **Implementation as an Detail**: Frontend developers and other AI agents build against the Mockzilla "Ground Truth," treating it as the definitive contract before a single line of production backend code exists.
+
+---
+
+## Orchestrating SMDD with "Claw" Agents
+
+Mockzilla serves as the infrastructure for modern AI orchestrators to build complex systems.
+
+### 1. OpenClaw: The Orchestrator
+**OpenClaw** (TypeScript-based agent) acts as the project manager. It uses Mockzilla's MCP tools to:
+- **Design**: Convert high-level requirements into Mockzilla transitions.
+- **Audit**: Use Mockzilla's **Logic Doctor** skill to verify that the spec handles edge cases like race conditions or invalid state transitions.
+- **Bootstrap**: Sync captured browser traffic from the extension into a refined, spec-compliant mock folder.
+
+### 2. PicoClaw: The Edge Agent
+**PicoClaw** (Go-based, lightweight agent) is used for "Keep-Alive" and monitoring. In an SMDD workflow, PicoClaw can:
+- **Monitor**: Constantly ping Mockzilla endpoints to verify contract consistency.
+- **Relay**: Act as a lightweight proxy between local development environments and remote Mockzilla instances on $10 hardware.
+
+---
+
+## The SMDD Loop
+
+<div className="space-y-6 mt-8">
+  <div className="flex gap-4">
+    <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 font-bold">1</div>
+    <div>
+      <h4 className="font-bold text-lg text-primary">Drafting the Spec</h4>
+      <p className="text-muted-foreground">The orchestrator (OpenClaw) uses a high-reasoning model (Claude 3.7 / Gemini 2.0) to draft an OpenAPI or Markdown spec.</p>
+    </div>
+  </div>
+
+  <div className="flex gap-4">
+    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 font-bold">2</div>
+    <div>
+      <h4 className="font-bold text-lg text-blue-500">Adversarial Review</h4>
+      <p className="text-muted-foreground">A secondary agent (Gemini Flash) performs a "Stress Test" on the spec, finding holes in logic or missing error states.</p>
+    </div>
+  </div>
+
+  <div className="flex gap-4">
+    <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 font-bold">3</div>
+    <div>
+      <h4 className="font-bold text-lg text-green-500">The Live Mock</h4>
+      <p className="text-muted-foreground">Mockzilla's `spec-translator` skill turns the refined spec into a live, stateful simulation. This becomes the **Ground Truth**.</p>
+    </div>
+  </div>
+
+  <div className="flex gap-4">
+    <div className="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 font-bold">4</div>
+    <div>
+      <h4 className="font-bold text-lg text-purple-500">Agentic Implementation</h4>
+      <p className="text-muted-foreground">Coding agents (Claude Code) implement the frontend and backend features simultaneously, using the Mockzilla endpoints to validate their work.</p>
+    </div>
+  </div>
+</div>
+
+## Economic Advantage: Stop the "Token Burn"
+
+The most immediate benefit of SMDD with Mockzilla is the drastic reduction in API costs (Tokens) during the development and testing phases.
+
+### 💸 The Cost of "Vibe Coding"
+When building AI-powered SaaS applications, developers often call expensive models (Claude 3.5, Gemini 1.5 Pro) hundreds of times per day just to adjust a UI layout or test a data-loading state. 
+- **The Problem**: 1,000 UI refreshes = Thousands of wasted tokens.
+- **The Solution**: Mockzilla.
+
+### How Mockzilla Saves You Money
+1.  **Mock Expensive Responses**: Capture one real high-quality response from an expensive model, then use Mockzilla to serve that exact structure (with randomized Faker data) for the next 500 development cycles.
+2.  **Test Hallucinations for Free**: Simulating rare "Edge Cases" like model hallucinations, safety filters, or malformed JSON is free in Mockzilla but expensive and difficult to trigger with real LLMs.
+3.  **Simulation vs. Execution**: Use **PicoClaw** to verify that your system architecture works against Mockzilla's "Ground Truth" before "burning" your monthly token budget on the actual implementation.
+
+---
+
+## Pros & Cons of SMDD
+
+### Pros
+- **Contract-First Safety**: Eliminates "Contract Drift" before it starts by establishing a source of truth early.
+- **Zero-Latency Parallelization**: Frontend teams never wait for "Backend Ready" status.
+- **AI-Optimized**: AI agents reason much better when given a "Live Mock" to test their code against.
+
+### Cons
+- **Initial "Design Tax"**: Requires more upfront thinking and specification drafting.
+- **Maintenance of Truth**: The Mockzilla spec must be updated if the architecture shifts during implementation.
+
+> **Next Step**: See how to automate this loop in the [AI Integration Guide](/docs/guides/ai-integration-mcp).

@@ -12,6 +12,7 @@ const mockMockData = {
 	matchType: 'exact',
 	bodyType: 'json',
 	enabled: true,
+	delay: 0,
 	createdAt: new Date('2024-01-01'),
 	updatedAt: new Date('2024-01-01'),
 };
@@ -97,6 +98,7 @@ describe('API /api/mocks', () => {
 			statusCode: 201,
 			response: '{}',
 			folderId: 'folder-123',
+			delay: 1000,
 		};
 		const req = new NextRequest('http://localhost:3000/api/mocks', {
 			method: 'POST',
@@ -104,22 +106,25 @@ describe('API /api/mocks', () => {
 		});
 
 		const res = await POST(req);
-		const _body = await res.json();
+		const body = await res.json();
 
 		expect(res.status).toBe(201);
 		expect(mockDb.insert).toHaveBeenCalled();
+		expect(body.delay).toBeDefined();
 	});
 
 	it('PUT updates a mock', async () => {
-		const payload = { name: 'Updated Mock' };
+		const payload = { name: 'Updated Mock', delay: 2000 };
 		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
 			method: 'PUT',
 			body: JSON.stringify(payload),
 		});
 
 		const res = await PUT(req);
+		const body = await res.json();
 		expect(res.status).toBe(200);
 		expect(mockDb.update).toHaveBeenCalled();
+		expect(body.delay).toBeDefined();
 	});
 
 	it('GET (without folderId) returns all mocks', async () => {
