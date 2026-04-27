@@ -11,7 +11,7 @@ describe('replaceTemplates Nested Quotes', () => {
       permissions: "{{#if (eq $.headers.[x-role] 'admin')}}admin{{else}}user{{/if}}"
     };
 
-    const result = replaceTemplates(data, context as any) as any;
+    const result = replaceTemplates(data, context as Record<string, unknown>) as { permissions: string };
     expect(result.permissions).toBe('admin');
   });
 });

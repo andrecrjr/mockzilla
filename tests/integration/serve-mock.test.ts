@@ -312,7 +312,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 	});
 
 	it('responds to OPTIONS with 204', async () => {
-		const req = new NextRequest('http://localhost:3000/api/mock/api', { method: 'OPTIONS' });
+		const _req = new NextRequest('http://localhost:3000/api/mock/api', { method: 'OPTIONS' });
 		const res = await OPTIONS();
 		expect(res.status).toBe(204);
 	});
@@ -392,7 +392,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		const badDynamicMock = {
 			...mockResponse,
 			useDynamicResponse: true,
-			jsonSchema: null as any,
+			jsonSchema: null as unknown as string,
 			response: '{"fallback":true}',
 		};
 
@@ -506,7 +506,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 				// if we are tricky, OR we just trust the logic.
 				// Actually, we can just mock the array's find method if we want to be surgical.
 				const results = [{ ...mockResponse, matchType: 'substring' }];
-				// @ts-ignore
+				// @ts-expect-error
 				results.find = () => null; 
 				return createMockBuilder(results);
 			}

@@ -67,7 +67,7 @@ describe('Handlebars Complex Interpolation', () => {
 				"message": "Hello {{#if $.query.name}}{{$.query.name}}{{else}}Stranger{{/if}}!",
 				"count": {{$.query.count}}
 			}`;
-			const result = replaceTemplates(data, context) as any;
+			const result = replaceTemplates(data, context) as { message: string; count: number };
 			
 			expect(typeof result).toBe('object');
 			expect(result.message).toBe('Hello Gemini!');
@@ -79,7 +79,7 @@ describe('Handlebars Complex Interpolation', () => {
 				"isActive": {{#if $.query.active}}true{{else}}false{{/if}},
 				"val": {{#if $.query.name}}100{{else}}0{{/if}}
 			}`;
-			const result = replaceTemplates(data, context) as any;
+			const result = replaceTemplates(data, context) as { isActive: boolean; val: number };
 
 			expect(typeof result).toBe('object');
 			expect(result.isActive).toBe(true);
@@ -99,7 +99,10 @@ describe('Handlebars Complex Interpolation', () => {
 					{{/each}}
 				]
 			}`;
-			const result = replaceTemplates(data, context) as any;
+			const result = replaceTemplates(data, context) as { 
+				user: string; 
+				items: Array<{ id: number; name: string; isFirst: boolean }> 
+			};
 
 			expect(result.user).toBe('Gemini');
 			expect(result.items).toHaveLength(2);

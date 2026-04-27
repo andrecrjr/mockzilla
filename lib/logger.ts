@@ -29,7 +29,7 @@ export const logger = pino(
 export type Logger = typeof logger;
 
 // Compatibility wrapper for intercepted requests
-export function logInterceptedRequest(entry: any) {
+export function logInterceptedRequest(entry: Record<string, unknown>) {
 	logger.info({
 		type: 'intercept',
 		...entry,
@@ -40,7 +40,7 @@ export function logInterceptedRequest(entry: any) {
  * Returns logs by reading from the log file.
  * Since it's NDJSON, we parse each line.
  */
-export function getLogs(limit = 100, type?: string): any[] {
+export function getLogs(limit = 100, type?: string): Record<string, unknown>[] {
 	try {
 		const logFile = path.join(LOG_DIR, 'mockzilla.log');
 		if (!fs.existsSync(logFile)) return [];
@@ -50,11 +50,11 @@ export function getLogs(limit = 100, type?: string): any[] {
 		
 		let entries = lines.map(line => {
 			try {
-				return JSON.parse(line);
-			} catch (e) {
+				return JSON.parse(line) as Record<string, unknown>;
+			} catch (_e) {
 				return null;
 			}
-		}).filter(Boolean);
+		}).filter((e): e is Record<string, unknown> => e !== null);
 
 		if (type) {
 			entries = entries.filter(e => e.type === type);
@@ -71,7 +71,7 @@ export function getLogs(limit = 100, type?: string): any[] {
 /**
  * Specifically returns all logs for a single Request ID
  */
-export function getRequestTrace(reqId: string): any[] {
+export function getRequestTrace(reqId: string): Record<string, unknown>[] {
     try {
         const logFile = path.join(LOG_DIR, 'mockzilla.log');
 		if (!fs.existsSync(logFile)) return [];
@@ -82,12 +82,12 @@ export function getRequestTrace(reqId: string): any[] {
 		return lines
             .map(line => {
                 try {
-                    return JSON.parse(line);
-                } catch (e) {
+                    return JSON.parse(line) as Record<string, unknown>;
+                } catch (_e) {
                     return null;
                 }
             })
-            .filter(e => e && e.reqId === reqId);
+            .filter((e): e is Record<string, unknown> => e !== null && e.reqId === reqId);
     } catch (error) {
         console.error('Failed to trace request:', error);
         return [];

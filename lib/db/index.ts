@@ -7,8 +7,9 @@ import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { Pool } from 'pg';
 import * as schema from './schema';
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-let db: any;
+type DbInstance = NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;
+
+let db: DbInstance;
 
 export function initDb(url?: string) {
 	if (url) {

@@ -10,7 +10,7 @@ describe('Engine Match', () => {
 	} as unknown as MatchContext;
 
 	test('matches: should return true for null/undefined conditions', () => {
-		expect(matches(null as any, context)).toBe(true);
+		expect(matches(null as unknown as Record<string, unknown>, context)).toBe(true);
 	});
 
 	test('matches: should return true for empty array', () => {
@@ -19,7 +19,7 @@ describe('Engine Match', () => {
 
 	test('matches: should support tracing in object format', () => {
 		const trace: ConditionTrace[] = [];
-		const result = matches({ 'state.age': 25 }, context, trace);
+		const result = matches({ 'state.age': 25 } as Record<string, unknown>, context, trace);
 		expect(result).toBe(true);
 		expect(trace).toHaveLength(1);
 		expect(trace[0].field).toBe('state.age');
@@ -27,7 +27,7 @@ describe('Engine Match', () => {
 	});
 
 	test('matches: should set allPassed to false on failure (object format)', () => {
-		expect(matches({ 'state.age': 30 }, context)).toBe(false);
+		expect(matches({ 'state.age': 30 } as Record<string, unknown>, context)).toBe(false);
 	});
 
 	test('evaluateCondition: should support tracing', () => {
@@ -44,7 +44,7 @@ describe('Engine Match', () => {
 	});
 	
 	test('evaluateCondition: default case', () => {
-		const condition = { type: 'invalid' as any, field: 'state.age', value: 25 };
+		const condition = { type: 'invalid' as unknown as 'eq', field: 'state.age', value: 25 };
 		expect(evaluateCondition(condition, context)).toBe(false);
 	});
 });

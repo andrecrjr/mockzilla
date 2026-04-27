@@ -8,7 +8,6 @@ import {
 	scenarios,
 	transitions,
 } from '@/lib/db/schema';
-import { matches } from '@/lib/engine/match';
 import type {
 	Condition,
 	CreateMockRequest,
@@ -875,7 +874,7 @@ export async function callTestWorkflow(args: z.infer<typeof schemas.TestWorkflow
 		)
 		.orderBy(transitions.createdAt);
 
-	const executionTrace: any[] = [];
+	const executionTrace: unknown[] = [];
 
 	for (const t of exactCandidates) {
 		const ctx = {
@@ -883,7 +882,7 @@ export async function callTestWorkflow(args: z.infer<typeof schemas.TestWorkflow
 			tables: baseState.tables || {},
 			input: { body, query, params: {}, headers },
 		};
-		const currentTrace: any[] = [];
+		const currentTrace: unknown[] = [];
 		const isMatch = matches(
 			(t.conditions as Record<string, unknown> | Condition[]) || {},
 			ctx,
@@ -959,7 +958,7 @@ export async function callTestWorkflow(args: z.infer<typeof schemas.TestWorkflow
 			tables: baseState.tables || {},
 			input: { body, query, params, headers },
 		};
-		const currentTrace: any[] = [];
+		const currentTrace: unknown[] = [];
 		const isMatch = matches(
 			(t.conditions as Record<string, unknown> | Condition[]) || {},
 			ctx,
@@ -1241,7 +1240,7 @@ export async function callEvaluateTemplate(args: z.infer<typeof schemas.Evaluate
 export async function callSeedWorkflowState(args: z.infer<typeof schemas.SeedWorkflowStateArgs>) {
 	logger.info({ args }, 'MCP Tool: seed_workflow_state');
 	await db
-		.insert(scenarioState as any)
+		.insert(scenarioState)
 		.values({
 			scenarioId: args.scenarioId,
 			data: { state: args.state || {}, tables: args.tables || {} },
@@ -1267,11 +1266,12 @@ export async function callGetLogs(args: z.infer<typeof schemas.GetLogsArgs>) {
 	let logs = getLogs(args.limit ?? 100, args.type);
 
 	if (args.level) {
+		const levels: Record<string, number> = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60 };
 		const levelVal = typeof args.level === 'string' ? 
-			({ trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60 } as any)[args.level.toLowerCase()] 
+			levels[args.level.toLowerCase()] 
 			: args.level;
 		if (levelVal) {
-			logs = logs.filter(l => l.level >= levelVal);
+			logs = logs.filter(l => (l.level as number) >= levelVal);
 		}
 	}
 

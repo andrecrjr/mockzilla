@@ -24,7 +24,7 @@ mock.module('../../lib/db', () => ({
 }));
 
 describe('Workflow Handlebars Interpolation', () => {
-	const transition: Transition = {
+	const transition = {
 		id: 't1',
 		scenarioId: 's1',
 		name: 'Test Transition',
@@ -39,7 +39,7 @@ describe('Workflow Handlebars Interpolation', () => {
 			}
 		},
 		conditions: []
-	} as any;
+	} as unknown as Transition;
 
 	it('should interpolate using Handlebars in workflow responses', async () => {
 		const result = await processWorkflowRequest(
@@ -51,7 +51,7 @@ describe('Workflow Handlebars Interpolation', () => {
 		);
 
 		expect(result.status).toBe(200);
-		const resultBody = result.body as any;
+		const resultBody = result.body as Record<string, unknown>;
 		expect(resultBody.greet).toBe('Hello Gemini!');
 	});
 
@@ -64,7 +64,7 @@ describe('Workflow Handlebars Interpolation', () => {
 			{} // headers
 		);
 
-		const resultBody = result.body as any;
+		const resultBody = result.body as Record<string, unknown>;
 		expect(resultBody.greet).toBe('Hello World!');
 	});
 });

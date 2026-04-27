@@ -9,7 +9,7 @@ mock.module('../../lib/db', () => ({
 	db: {
 		select: () => ({
 			from: () => ({
-				where: (filter: unknown) => ({
+				where: (_filter: unknown) => ({
 					then: (resolve: (val: unknown) => void) => {
 						callCount++;
 						if (callCount % 2 !== 0) {
@@ -33,7 +33,7 @@ describe('Engine Router', () => {
 		patternMatches = [];
 		const result = await findTransition('/users', 'GET', 's1');
 		expect(result).toHaveLength(1);
-		expect(result![0].transition.id).toBe(1);
+		expect(result?.[0].transition.id).toBe(1);
 	});
 
 	test('should match parameterized route via fallback', async () => {
@@ -46,8 +46,8 @@ describe('Engine Router', () => {
 		
 		const result = await findTransition('/users/123', 'GET', 's1');
 		expect(result).toHaveLength(1);
-		expect(result![0].transition.path).toBe('/users/:id');
-		expect(result![0].params).toEqual({ id: '123' });
+		expect(result?.[0].transition.path).toBe('/users/:id');
+		expect(result?.[0].params).toEqual({ id: '123' });
 	});
 
 	test('should return null for no match', async () => {

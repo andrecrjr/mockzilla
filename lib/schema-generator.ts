@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
-import { interpolate, replaceTemplates } from './engine/interpolation';
+import { replaceTemplates } from './engine/interpolation';
 
 let jsfConfigured = false;
 

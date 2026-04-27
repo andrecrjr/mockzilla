@@ -187,7 +187,7 @@ export function registerAllTools(server: McpServer) {
 			}),
 		},
 		async (args, _extra) => {
-			const result = await handlers.callCreateSchemaMock(args as any);
+			const result = await handlers.callCreateSchemaMock(args);
 			return {
 				content: [{ type: 'text', text: JSON.stringify(result) }],
 			};

@@ -1,6 +1,4 @@
-import { describe, expect, it, mock } from 'bun:test';
-import fs from 'node:fs';
-import path from 'node:path';
+import { describe, expect, it, } from 'bun:test';
 
 describe('lib/db/index (PGlite path)', () => {
     it('should initialize PGlite when initDb is called without URL', async () => {

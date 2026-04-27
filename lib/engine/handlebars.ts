@@ -4,19 +4,18 @@ import { format, add, sub, parseISO } from 'date-fns';
 
 // Register Helpers
 Handlebars.registerHelper('faker', (path: string, ...args: unknown[]) => {
-// ... existing faker helper code
-	const options = args.pop();
+	args.pop(); // options
 	const callArgs = args.length > 0 ? args : [];
 
 	// Handle dot-notated paths like internet.email
 	const parts = path.split('.');
-	let current: any = faker;
+	let current: unknown = faker;
 
 	for (const part of parts) {
-		if (current[part] === undefined) {
+		if (current === null || typeof current !== 'object' || !(part in current)) {
 			return `{{faker path "${path}" not found}}`;
 		}
-		current = current[part];
+		current = (current as Record<string, unknown>)[part];
 	}
 
 	if (typeof current === 'function') {
@@ -76,7 +75,7 @@ Handlebars.registerHelper('dateAdd', (dateStr, amount, unit) => {
 		const date = dateStr === 'now' ? new Date() : parseISO(dateStr);
 		const duration = { [unit]: Number(amount) };
 		return add(date, duration).toISOString();
-	} catch (e) {
+	} catch (_e) {
 		return dateStr;
 	}
 });
@@ -86,7 +85,7 @@ Handlebars.registerHelper('dateSub', (dateStr, amount, unit) => {
 		const date = dateStr === 'now' ? new Date() : parseISO(dateStr);
 		const duration = { [unit]: Number(amount) };
 		return sub(date, duration).toISOString();
-	} catch (e) {
+	} catch (_e) {
 		return dateStr;
 	}
 });
@@ -95,7 +94,7 @@ Handlebars.registerHelper('dateFormat', (dateStr, pattern) => {
 	try {
 		const date = dateStr === 'now' ? new Date() : parseISO(dateStr);
 		return format(date, pattern);
-	} catch (e) {
+	} catch (_e) {
 		return dateStr;
 	}
 });
@@ -143,7 +142,7 @@ Handlebars.registerHelper('slugify', (str) => {
 Handlebars.registerHelper('truncate', (str, len) => {
 	if (typeof str !== 'string') return '';
 	if (str.length > len) {
-		return str.substring(0, len) + '...';
+		return `${str.substring(0, len)}...`;
 	}
 	return str;
 });
@@ -156,7 +155,7 @@ Handlebars.registerHelper('currency', (num, curr = 'USD', locale = 'en-US') => {
 		return new Intl.NumberFormat(l, { style: 'currency', currency: c }).format(
 			Number(num),
 		);
-	} catch (e) {
+	} catch (_e) {
 		return String(num);
 	}
 });

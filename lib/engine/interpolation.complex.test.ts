@@ -18,7 +18,11 @@ describe('replaceTemplates Complex Objects', () => {
       }
     };
 
-    const result = replaceTemplates(data, context as any) as any;
+    const result = replaceTemplates(data, context as Record<string, unknown>) as {
+      user: string;
+      permissions: string;
+      debug: { time: string };
+    };
     
     expect(result.user).toBe('John Doe');
     expect(result.permissions).toBe('admin');

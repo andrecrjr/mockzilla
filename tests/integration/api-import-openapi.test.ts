@@ -11,8 +11,24 @@ const mockFolder = {
 	updatedAt: new Date('2024-01-01'),
 };
 
+interface MockResponseRecord {
+	endpoint: string;
+	method: string;
+	response: string;
+	statusCode: number;
+	folderId: string;
+	matchType: string;
+	bodyType: string;
+	enabled: boolean;
+	jsonSchema?: string;
+	useDynamicResponse?: boolean;
+	echoRequestBody?: boolean;
+	queryParams?: Record<string, unknown>;
+	variants?: unknown[];
+}
+
 // Track inserted values
-let insertedValues: any[] = [];
+let insertedValues: MockResponseRecord[] = [];
 
 // 2. Define the chainable mock builder
 const createMockBuilder = (resolvedValue: unknown) => {
@@ -22,7 +38,7 @@ const createMockBuilder = (resolvedValue: unknown) => {
 		orderBy: mock(() => builder),
 		limit: mock(() => builder),
 		offset: mock(() => builder),
-		values: mock((val: unknown) => {
+		values: mock((val: MockResponseRecord) => {
 			insertedValues.push(val);
 			return builder;
 		}),
@@ -30,7 +46,7 @@ const createMockBuilder = (resolvedValue: unknown) => {
 		returning: mock(() => builder),
 		onConflictDoUpdate: mock(() => builder),
 		then: (resolve: (val: unknown) => void) => resolve(resolvedValue),
-	} as any;
+	};
 	return builder;
 };
 
@@ -188,11 +204,11 @@ paths:
 		const res = await POST(req);
 		expect(res.status).toBe(200);
 
-		const echoMock = insertedValues[1] as any;
+		const echoMock = insertedValues[1];
 		expect(echoMock.method).toBe('POST');
 		expect(echoMock.echoRequestBody).toBe(true);
 
-		const generateMock = insertedValues[2] as any;
+		const generateMock = insertedValues[2];
 		expect(generateMock.method).toBe('PUT');
 		expect(JSON.parse(generateMock.response)).toHaveProperty('success');
 	});

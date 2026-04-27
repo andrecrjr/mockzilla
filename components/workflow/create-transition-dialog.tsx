@@ -13,7 +13,6 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
@@ -39,9 +38,8 @@ import {
 	TabsList,
 	TabsTrigger,
 } from '@/components/ui/tabs';
-import type { Condition, Effect } from '@/lib/engine/match';
+import type { Condition, } from '@/lib/engine/match';
 import type { Transition } from '@/lib/types';
-import { Textarea } from '../ui/textarea';
 import { TooltipProvider } from '../ui/tooltip';
 import { type EffectItem, EffectsEditor } from './effects-editor';
 import { SmartHandlebarsEditor } from './smart-handlebars-editor';
@@ -502,7 +500,7 @@ export function TransitionDialog({
 										<h4 className="text-sm font-medium">1. Trigger Configuration</h4>
 										<p className="text-xs text-muted-foreground">
 											Define <strong>when</strong> this rule should run. Mockzilla matches incoming requests based on the HTTP method, path, and optional logic-based conditions.
-											<a href="/docs/reference/workflow-syntax#1-conditions" target="_blank" className="ml-1 text-primary hover:underline">Learn more about triggers &rarr;</a>
+											<a href="/docs/reference/workflow-syntax#1-conditions" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about triggers &rarr;</a>
 										</p>
 									</div>
 									{/* Basics */}
@@ -674,7 +672,7 @@ export function TransitionDialog({
 												) : (
 													conditionsList.map((cond, idx) => (
 														<div
-															key={`cond-${idx}`}
+															key={`${cond.field}-${cond.type}-${idx}`}
 															className="flex items-center gap-3"
 														>
 															<Input
@@ -771,7 +769,7 @@ export function TransitionDialog({
 										<h4 className="text-sm font-medium">2. Logic & Effects</h4>
 										<p className="text-xs text-muted-foreground">
 											Define <strong>what happens</strong> when the trigger fires. Use effects to update persistent state variables or perform CRUD operations on the mini-database tables.
-											<a href="/docs/reference/workflow-syntax#2-effects" target="_blank" className="ml-1 text-primary hover:underline">Learn more about effects &rarr;</a>
+											<a href="/docs/reference/workflow-syntax#2-effects" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about effects &rarr;</a>
 										</p>
 									</div>
 									<div className="space-y-4">
@@ -860,7 +858,7 @@ export function TransitionDialog({
 										<h4 className="text-sm font-medium">3. Client Response</h4>
 										<p className="text-xs text-muted-foreground">
 											Define <strong>what is returned</strong> to the client. You can use Handlebars logic and <code>{"{{ interpolation }}"}</code> to inject data from the scenario state, database, or original request.
-											<a href="/docs/reference/dynamic-interpolation" target="_blank" className="ml-1 text-primary hover:underline">Learn more about dynamic responses &rarr;</a>
+											<a href="/docs/reference/dynamic-interpolation" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about dynamic responses &rarr;</a>
 										</p>
 									</div>
 									<div className="grid md:grid-cols-4 gap-6">

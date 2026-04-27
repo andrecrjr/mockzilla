@@ -1,5 +1,4 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
-import { NextRequest } from 'next/server';
 
 // Mock DB and Logger
 const mockDb = {

@@ -249,10 +249,9 @@ export default async function DocPage({
 
 	try {
 		const fileContent = readFileSync(filePath, 'utf-8');
-		const { content, data: frontmatter } = matter(fileContent);
+		const { content } = matter(fileContent);
 
-		const sidebar = buildSidebar();
-		const navItems = sidebar.filter((item) => !item.isSection);
+		const sidebar = buildSidebar();		const navItems = sidebar.filter((item) => !item.isSection);
 
 		// Normalize slug for sidebar matching: if it's 'index', we might need to match it correctly
 		const currentIndex = navItems.findIndex((item) => {

@@ -34,7 +34,7 @@ describe('lib/schema-generator', () => {
 		it('should replace templates in objects', () => {
 			const data = { msg: 'Hello {{name}}' };
 			const context = { name: 'World' };
-			const result = replaceTemplates(data, context) as any;
+			const result = replaceTemplates(data, context) as { msg: string };
 			expect(result.msg).toBe('Hello World');
 		});
 	});
@@ -62,7 +62,7 @@ describe('lib/schema-generator', () => {
 			const schema = {
 				type: 'invalid-type',
 			};
-			expect(() => generateFromSchema(schema as any)).toThrow(/Failed to generate from schema/);
+			expect(() => generateFromSchema(schema as unknown as Record<string, unknown>)).toThrow(/Failed to generate from schema/);
 		});
 
 		it('does not generate unwanted additional properties (fillProperties: false)', () => {
@@ -278,8 +278,8 @@ describe('lib/schema-generator', () => {
 		});
 
 		it('preprocesses circular references (minimal test)', () => {
-			const schema: any = { type: 'object', properties: {} };
-			schema.properties.self = schema;
+			const schema: Record<string, unknown> = { type: 'object', properties: {} };
+			(schema.properties as Record<string, unknown>).self = schema;
 			
 			// We can't stringify it directly, but generateFromSchemaString takes a string.
 			// The preprocessSchema is also used internally.

@@ -150,8 +150,8 @@ describe('Engine Edge Cases', () => {
             const ctx = createCtx();
             expect(matches({}, ctx)).toBe(true);
             expect(matches([], ctx)).toBe(true);
-            // @ts-ignore
-            expect(matches(null, ctx)).toBe(true);
+            // @ts-expect-error - Testing invalid input
+            expect(matches(null as unknown as Record<string, unknown>, ctx)).toBe(true);
         });
 
         test('resolveOp fallback to input.body', () => {
@@ -164,12 +164,12 @@ describe('Engine Edge Cases', () => {
             const ctx = createCtx({
                 faker: {
                     number: {
-                        int: (args: any) => (args && args.min === 10 ? 10 : 0)
+                        int: (args: Record<string, unknown>) => (args && args.min === 10 ? 10 : 0)
                     },
                     string: {
-                        alpha: (args: any) => (args && args.count === 5 ? 'aaaaa' : 'x')
+                        alpha: (args: Record<string, unknown>) => (args && args.count === 5 ? 'aaaaa' : 'x')
                     },
-                    echo: (val: any) => val
+                    echo: (val: unknown) => val
                 }
             });
             expect(interpolate('{{faker.number.int({"min": 10})}}', ctx)).toBe(10);

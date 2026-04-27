@@ -1,6 +1,6 @@
 'use client';
 
-import { Braces, Code, Database, Globe, Info, Play, Plus, Sparkles, Wand2, Zap } from 'lucide-react';
+import { Code, Database, Info, Sparkles, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {

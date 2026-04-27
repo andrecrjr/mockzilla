@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
+import path from 'node:path';
 import { getDocsHierarchy, findSectionByPath, type DocSection } from '@/lib/llms-utils';
 
 function generateScopedIndex(section: DocSection, baseUrl: string): string {

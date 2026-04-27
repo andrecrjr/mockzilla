@@ -522,7 +522,7 @@ function KeyValueEditor({
 			}
 		}
 
-		if (oldKey === '' && !Object.prototype.hasOwnProperty.call(data, '')) {
+		if (oldKey === '' && !Object.hasOwn(data, '')) {
 			newData[newKey] = newValue;
 		}
 
@@ -534,8 +534,8 @@ function KeyValueEditor({
 			{items.length === 0 ? (
 				<p className="text-[10px] text-muted-foreground italic py-1">No items defined.</p>
 			) : (
-				items.map((item, idx) => (
-					<div key={idx} className="flex items-center gap-2">
+				items.map((item) => (
+					<div key={item.key} className="flex items-center gap-2">
 						<AutocompleteInput
 							value={item.key}
 							onChange={(val) => handleUpdate(item.key, val, item.value)}

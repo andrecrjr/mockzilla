@@ -119,7 +119,7 @@ describe('Engine Interpolation', () => {
 			...context,
 			faker: {
 				number: {
-					int: (args: any) => (args && args.max) || 42
+					int: (args: Record<string, unknown>) => (args?.max as number) || 42
 				}
 			}
 		};
@@ -131,7 +131,7 @@ describe('Engine Interpolation', () => {
 		const fakerContext = {
 			...context,
 			faker: {
-				echo: (arg: any) => arg
+				echo: (arg: unknown) => arg
 			}
 		};
 		// JSON valid number

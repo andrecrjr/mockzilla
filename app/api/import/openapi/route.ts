@@ -132,7 +132,7 @@ function generateFallbackResponse(
 async function processOpenApiPaths(
 	spec: OpenApiSpec,
 	folderId: string,
-	tx: any,
+	tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
 ): Promise<number> {
 	let mocksCount = 0;
 

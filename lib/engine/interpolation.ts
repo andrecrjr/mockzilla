@@ -27,13 +27,12 @@ export function replaceTemplates(
 	if (data === null || data === undefined) return data;
 
 	let stringified: string;
-	let isObject = false;
+	let _isObject = false;
 
 	if (typeof data === 'string') {
 		stringified = data;
 	} else if (typeof data === 'object') {
 		stringified = JSON.stringify(data);
-		isObject = true;
 	} else {
 		return data;
 	}

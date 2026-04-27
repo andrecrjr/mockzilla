@@ -11,7 +11,6 @@ import {
 	Layout,
 	MousePointer2,
 	RefreshCw,
-	Repeat,
 	Rocket,
 	Shield,
 	ShoppingCart,

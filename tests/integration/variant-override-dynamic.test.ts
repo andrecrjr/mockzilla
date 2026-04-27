@@ -11,14 +11,22 @@ const mockFolder = {
 	slug: 'api',
 };
 
+interface MockBuilder {
+	from: (arg: unknown) => MockBuilder;
+	where: (arg: unknown) => MockBuilder;
+	orderBy: (arg: unknown) => MockBuilder;
+	limit: (arg: unknown) => MockBuilder;
+	then: (resolve: (val: unknown) => void) => void;
+}
+
 const createMockBuilder = (resolvedValue: unknown) => {
-	const builder = {
+	const builder: MockBuilder = {
 		from: mock(() => builder),
 		where: mock(() => builder),
 		orderBy: mock(() => builder),
 		limit: mock(() => builder),
 		then: (resolve: (val: unknown) => void) => resolve(resolvedValue),
-	} as any;
+	};
 	return builder;
 };
 
