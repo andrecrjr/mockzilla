@@ -1,6 +1,6 @@
 # Model Context Protocol (MCP) Integration
 
-Mockzilla exposes a first-class **Model Context Protocol (MCP)** server, allowing AI agents (like Gemini CLI, Claude, Cursor, or specialized sub-agents) to fully control and automate your mocking environment.
+Mockzilla exposes a first-class Model Context Protocol (MCP) server, allowing AI agents (like Gemini CLI, Claude, Cursor, or specialized sub-agents) to fully control and automate your mocking environment.
 
 ---
 
@@ -49,15 +49,13 @@ If your client only supports local `stdio` servers, use `mcp-remote` as a bridge
 While the raw MCP tools are powerful, you can provide your agent with **expert capabilities** by installing Mockzilla Skills. Skills are specialized instruction sets that teach your AI how to build high-fidelity mocks and complex workflows following our best practices.
 
 ### Universal Installation
-You can use the universal `npx skills` tool to install these into any compatible agent (like Gemini CLI):
+You can use the universal `npx skills` tool to install these into any compatible agent (like Gemini CLI) by pointing to our repository:
 
 ```bash
-# Install the Mock Maker skill
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
-
-# Install the Workflow Architect skill
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
+npx skills add github.com/andrecrjr/mockzilla
 ```
+
+When you run this command, you will be prompted to select which specialized skills you'd like to install (Mock Maker, Workflow Architect, Spec Translator, or Logic Doctor).
 
 ---
 

@@ -31,15 +31,18 @@ Forensic specialist for debugging complex workflow matching and state issues.
 
 ## 🚀 Installation
 
-You can install these skills into any compatible agent (like Gemini CLI) using the universal `npx skills` command:
+Install these skills into any compatible agent (like Gemini CLI) using the universal `npx skills` command pointing to this repository:
 
 ```bash
-# Install the Mock Maker skill
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
-
-# Install the Workflow Architect skill
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
+npx skills add github.com/andrecrjr/mockzilla
 ```
+
+When you run this command, you will be able to select one or more of the following specialized experts:
+
+- **Mockzilla Mock Maker**: Expert for high-fidelity, data-heavy mocks using JSON Schema + Faker.
+- **Mockzilla Workflow Architect**: Expert for stateful, interactive API scenarios and business logic.
+- **Mockzilla Spec Translator**: High-velocity architect for project bootstrapping from OpenAPI or technical specs.
+- **Mockzilla Logic Doctor**: Forensic specialist for debugging complex workflow matching and state issues.
 
 ---
 

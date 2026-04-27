@@ -45,11 +45,17 @@ Your mock server will be available at http://localhost:36666
 ## 🤖 AI Agent Skills
 
 Mockzilla includes specialized AI agent skills to help you build and manage mocks.
-You can add easier with add-skill:
+Install them into any compatible agent (like Gemini CLI) using the universal `npx skills` command:
 
-`npx add-skill https://github.com/andrecrjr/mockzilla` 
+```bash
+npx skills add github.com/andrecrjr/mockzilla
+```
 
-or copy the `.agent/skills` folder to your project's root.
+When you run this command, you will be able to select from our specialized experts:
+- **Mock Maker**: High-fidelity mocks with JSON Schema + Faker.
+- **Workflow Architect**: Stateful scenarios and business logic.
+- **Spec Translator**: Bootstrapping from OpenAPI/Specs.
+- **Logic Doctor**: Forensic debugging and state repair.
 
 ## 📦 Available Scripts
 

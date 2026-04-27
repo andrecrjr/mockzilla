@@ -18,33 +18,23 @@ While raw MCP tools are powerful, you can supercharge your AI agent with special
     </div>
     <div>
       <CardTitle className="text-lg">Universal Installation</CardTitle>
-      <CardDescription>You can install our expert skills into any compatible agent using the universal npx skills tool.</CardDescription>
+      <CardDescription>Install our expert skills into any compatible agent using the universal npx skills tool.</CardDescription>
     </div>
   </CardHeader>
   <CardContent className="space-y-4">
     <div className="space-y-2">
-      <div className="text-sm font-medium">Mock Maker Skill:</div>
       <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-        npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
+        npx skills add github.com/andrecrjr/mockzilla
       </div>
     </div>
-    <div className="space-y-2">
-      <div className="text-sm font-medium">Workflow Architect Skill:</div>
-      <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-        npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
-      </div>
-    </div>
-    <div className="space-y-2">
-      <div className="text-sm font-medium">Spec Translator Skill:</div>
-      <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-        npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-spec-translator
-      </div>
-    </div>
-    <div className="space-y-2">
-      <div className="text-sm font-medium">Logic Doctor Skill:</div>
-      <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-        npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-logic-doctor
-      </div>
+    <div className="text-sm space-y-1">
+      <p><strong>Available Experts:</strong></p>
+      <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+        <li><strong>Mock Maker:</strong> High-fidelity mocks with JSON Schema + Faker.</li>
+        <li><strong>Workflow Architect:</strong> Stateful scenarios and business logic.</li>
+        <li><strong>Spec Translator:</strong> Bootstrapping from OpenAPI/Specs.</li>
+        <li><strong>Logic Doctor:</strong> Forensic debugging and state repair.</li>
+      </ul>
     </div>
     <Link href="/docs/getting-started/installing-skills">
       <Button variant="link" className="p-0 h-auto text-sm text-blue-500">View Installation Guide →</Button>
@@ -66,19 +56,6 @@ Mockzilla provides the critical "Ground Truth" infrastructure for modern AI orch
 **PicoClaw** is a minimalist, Go-based agent designed for edge devices ($10 hardware). It leverages Mockzilla for:
 - **API Heartbeats**: Constantly monitor mock consistency during development.
 - **Remote Relay**: Act as a lightweight proxy for Mockzilla tools in resource-constrained environments.
-
----
-
-## 💸 Developing without "Token Waste"
-
-Frontend development often involves hundreds of UI refreshes per day. If your UI depends on expensive LLM calls (e.g., GPT-4o or Claude 3.7), you are "burning" money just to check if a button is centered.
-
-### The Mockzilla Strategy:
-1.  **Capture once**: Call your real expensive model one time and capture the response using the **Mockzilla Chrome Extension**.
-2.  **Generate infinitely**: Convert that capture into a **Dynamic Schema Mock**.
-3.  **Iterate for free**: For the rest of the week, your UI will call Mockzilla. It will receive high-fidelity, varied JSON data that looks exactly like the real model's output—but it costs **zero tokens**.
-
-> **Example**: Instead of calling a $15.00/1M token model to summarize a document 50 times during UI testing, call Mockzilla's `/api/summarize` mock. It will generate a new, realistic summary using Faker for every refresh, allowing you to focus on the user experience without watching your API billing dashboard.
 
 ---
 

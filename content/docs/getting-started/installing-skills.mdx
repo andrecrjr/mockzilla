@@ -12,31 +12,25 @@ Skills are specialized instruction sets that teach your AI how to build high-fid
 ---
 
 ## 1. Universal Installation
-You can use the universal `npx skills` tool to install Mockzilla's expert skills into any compatible agent.
+You can use the universal `npx skills` tool to install Mockzilla's expert skills into any compatible agent by pointing to our repository:
+
+```bash
+npx skills add github.com/andrecrjr/mockzilla
+```
+
+When you run this command, you will be able to select one or more of the following specialized experts:
 
 ### Official Mock Maker Skill
-Teaches the AI how to use JSON Schema + Faker for high-fidelity data.
-```bash
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-mock-maker
-```
+Expert for creating high-quality, stateless mocks and dynamic schemas using JSON Schema + Faker.
 
 ### Official Workflow Architect Skill
-Teaches the AI how to design stateful transitions and manage the mini-DB.
-```bash
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-workflow-architect
-```
+Specialized skill for designing complex, stateful workflows, logic, and transitions.
 
 ### Elite Spec Translator Skill
-Bootstraps entire projects from OpenAPI, Markdown, or Jira specs.
-```bash
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-spec-translator
-```
+Industrial-grade project bootstrapping from OpenAPI, technical specs, or Jira requirements.
 
 ### Forensic Logic Doctor Skill
-Debugs complex workflow matching and repairs state corruption.
-```bash
-npx skills add github.com/andrecrjr/mockzilla/.agent/skills/mockzilla-logic-doctor
-```
+Elite specialist for diagnosing and surgically repairing complex stateful workflows and state issues.
 
 ---
 
