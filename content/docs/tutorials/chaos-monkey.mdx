@@ -1,0 +1,61 @@
+---
+title: "Chaos Monkey: Forcing Edge Cases"
+description: Test how your frontend handles 503s, empty lists, and timeouts by using Mockzilla to simulate chaos.
+---
+
+# Chaos Monkey: Testing Resilience
+
+**The Problem:** How do you test if your UI handles a `503 Service Unavailable`, a 10-second timeout, or a weird API error gracefully? Waiting for the real backend to fail is inconsistent. Asking a backend dev to "break the API for a minute" is a waste of time and productivity.
+
+**The Mock-First Solution:** Use Mockzilla's **Variants** and **Conditional Matching** to force errors whenever you need them.
+
+---
+
+## 1. Setting up the Happy Path
+Let's say you have a checkout endpoint: `POST /api/checkout`.
+Normally, it returns a 200 OK:
+```json
+{ "status": "success", "order_id": "ord_123" }
+```
+
+## 2. Creating Chaos Variants
+
+In the Mockzilla dashboard, edit your `POST /api/checkout` mock. Set the **Match Type** to `Wildcard`.
+
+### Variant A: The 503 Outage (Condition: `force_error=true`)
+- **Status Code:** `503`
+- **Response Body:**
+```json
+{ "error": "service_unavailable", "message": "The payment gateway is currently down." }
+```
+
+### Variant B: The "Card Declined" (Condition: `status=declined`)
+- **Status Code:** `402` (Payment Required)
+- **Response Body:**
+```json
+{ "error": "card_declined", "code": "insufficient_funds" }
+```
+
+### Variant C: The Timeout (Condition: `latency=high`)
+- **Status Code:** `200`
+- **Response Delay:** `15000` (15 seconds)
+
+## 3. Testing the UI Resilience
+
+Now, you can test your frontend resilience instantly without touching any backend code.
+
+1. **Test Success:** Call `POST /api/checkout` -> *Confirm success UI.*
+2. **Test Error State:** Append `?force_error=true` to the request URL. -> *Verify UI shows the correct error message and retry button.*
+3. **Test Declined Card:** Append `?status=declined`. -> *Verify UI triggers the 'Payment Failed' animation.*
+4. **Test UX under Latency:** Append `?latency=high`. -> *Verify loading spinners appear and don't flicker.*
+
+## 4. The Result: Robust Products
+
+You are validating the "unhappy paths" of your product on day one. You don't have to wait for production to discover that your app crashes when the payment gateway goes down. You mocked the chaos, built the error handling, and shipped a robust product.
+
+<div className="mt-8 p-6 bg-primary/10 rounded-xl border border-primary/20">
+  <h3 className="text-xl font-bold mb-2">🤖 Do it with AI</h3>
+  <blockquote className="border-l-4 border-primary pl-4 italic">
+    "Update my checkout mock. Add variants for: 1. 503 Service Unavailable when 'error=true' query is present. 2. 402 Card Declined when 'status=declined'. 3. A 10-second delay when 'slow=true'."
+  </blockquote>
+</div>

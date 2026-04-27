@@ -1,0 +1,93 @@
+---
+title: "The 10-Minute AI Prototype"
+description: Combine Vibe Coding with Mockzilla to build complete frontend features (UI + Data) in minutes without touching a database.
+---
+
+# The 10-Minute AI Prototype
+
+**The Problem:** "Vibe Coding" with AI is fast until your UI components need real data. When you ask an AI to build a paginated table or a complex chart, it either hardcodes static arrays in the component—which fails to test loading states—or assumes a backend exists that doesn't.
+
+**The Mock-First Solution:** Ask the AI to build the UI component *and* the Mockzilla endpoint simultaneously.
+
+---
+
+## 1. The Prompt: "Build the UI and the Mock"
+
+Instead of just asking for a React component, use an AI agent (like Claude Opus, GPT, or Gemini with MCP enabled) to orchestrate both the frontend and the mock server.
+
+**Your Prompt:**
+> "I need a paginated Product List in React. 
+> 
+> 1. Use Mockzilla to create `GET /api/products`. Return 10 random products (id, name, price, status) and `total_pages: 5`. Add a 1-second delay.
+> 2. Then, build `ProductList.tsx` using Tailwind. It must fetch from the mock, handle loading/error states, and support page navigation."
+
+## 2. What Happens Next
+
+The AI orchestrator will perform two distinct actions in parallel:
+
+### Action A: The Mockzilla Configuration (via MCP)
+The agent calls Mockzilla's tools to create the `products` mock. It configures the schema so that every time the React app hits `/api/products?page=2`, Mockzilla generates 10 *new* random products instantly.
+
+### Action B: The Frontend Code
+The agent writes a production-ready `ProductList.tsx`:
+
+```tsx
+import { useEffect, useState } from 'react';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  status: 'In Stock' | 'Out of Stock';
+}
+
+export default function ProductList() {
+  const [data, setData] = useState<{ items: Product[], total: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`http://localhost:36666/api/mock/my-project/api/products?page=${page}`)
+      .then(res => res.json())
+      .then(setData)
+      .finally(() => setLoading(false));
+  }, [page]);
+
+  if (loading) return <div className="animate-pulse p-4">Loading Products...</div>;
+
+  return (
+    <div className="p-4 bg-white rounded-xl shadow">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b text-left">
+            <th className="py-2">Name</th>
+            <th>Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data?.items.map(p => (
+            <tr key={p.id} className="border-b last:border-0">
+              <td className="py-2">{p.name}</td>
+              <td>${p.price.toFixed(2)}</td>
+              <td>{p.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-4 flex gap-2">
+        <button onClick={() => setPage(p => Math.max(1, p - 1))}>Previous</button>
+        <span className="py-1 px-3 bg-gray-100 rounded">Page {page} of {data?.total}</span>
+        <button onClick={() => setPage(p => p + 1)}>Next</button>
+      </div>
+    </div>
+  );
+}
+```
+
+## 3. The Result: A Living Prototype
+
+In less than 10 minutes, you have a fully functional UI that feels connected to a production database. You didn't write any SQL, you didn't configure an ORM, and you didn't waste tokens asking the AI to rewrite a backend. 
+
+You validated the product. Now you can show it to stakeholders, get approval, and *then* build the real backend to match the Mockzilla contract.

@@ -9,12 +9,12 @@ Mockzilla is a high-fidelity API mocking platform designed to bridge the gap bet
 
 ## Why Mockzilla?
 
-Mockzilla is designed for the modern development ecosystem, where speed and fidelity are paramount.
+Mockzilla is designed for the modern development ecosystem, where speed, product validation, and cost-efficiency are paramount.
 
 ### Core Strengths (The Pros)
-- **🤖 AI-Native Architecture**: Built-in MCP support allows AI agents (like **OpenClaw**) to autonomously build, debug, and maintain your mock infrastructure.
-- **📜 Spec-Mock First Philosophy**: Establish Mockzilla as the **Ground Truth** using SMDD—design your API contract and mock it before writing a single line of backend code.
-- **🎭 Stateful "Living" Mocks**: Unlike static JSON servers, Mockzilla supports complex stateful scenarios with an in-memory Mini-DB and session state.
+- **🚀 Product-First approach**: Deliver as fast as possible by mocking first. Establish Mockzilla as the **Ground Truth**—design your API contract and validate your UI before writing a single line of backend code.
+- **🤖 AI-Native Power-Ups**: Built-in MCP support allows AI agents (like **Claude Opus**, **GPT**, or **Gemini**) to autonomously build, debug, and maintain your mock infrastructure while minimizing token burn.
+- **🎭 Stateful "Living" Mocks**: Unlike static JSON servers, Mockzilla supports complex stateful scenarios with an in-memory Mini-DB and session state—perfect for BFFs and Microservice prototypes.
 - **🎲 High-Fidelity Dynamic Data**: Use JSON Schema + Faker.js to generate fresh, realistic data that adheres strictly to your API contracts.
 - **🔌 Browser-to-Dashboard Sync**: Capture real-world production traffic via our Chrome Extension and convert it into high-fidelity mocks with one click.
 - **🧠 Smart Hybrid Engine**: Automatically switches between type-preserving JSON interpolation and powerful Handlebars logic for maximum flexibility.
@@ -31,6 +31,16 @@ Mockzilla is designed for the modern development ecosystem, where speed and fide
 
 ## Role-Based Benefits
 
+### For Product Teams
+Deliver a functional, interactive prototype in days, not months.
+- **Pros:** Validate product-market fit against a "Living Mock" without waiting for a full MVP backend; perfect for rapid iteration.
+- **Cons:** Requires clear specification of the product's API contract.
+
+### For Frontend Developers
+Parallelize development by working against high-fidelity mocks before the backend exists.
+- **Pros:** Mock complex aggregations (BFFs) and downstream microservices; use the Chrome extension to capture production traffic.
+- **Cons:** Requires discipline to maintain mock accuracy as UI requirements evolve.
+
 ### For AI Engineers
 Native MCP support allows AI assistants to autonomously create and manage mocks within your workspace.
 - **Pros:** Zero-latency testing for agent tool-calling; AI can build complex stateful scenarios in seconds.
@@ -40,16 +50,6 @@ Native MCP support allows AI assistants to autonomously create and manage mocks 
 Reproduce edge cases that are hard to trigger in real staging environments.
 - **Pros:** Instantly simulate 500 errors, timeouts, or specific "dirty" data; test stateful flows without backend seeding.
 - **Cons:** Not a replacement for full, end-to-end integration testing.
-
-### For Frontend Developers
-Parallelize development by working against high-fidelity mocks before the backend exists.
-- **Pros:** Chrome extension allows capturing production traffic for local debugging; dynamic data via JSON Schema + Faker.js.
-- **Cons:** Requires discipline to maintain mock accuracy as UI requirements evolve.
-
-### For Backend Developers
-Prototype and iterate on API contracts without writing a single line of production code.
-- **Pros:** Get instant feedback on contract design; offload development pressure from shared staging environments.
-- **Cons:** Risk of "contract laziness" if design changes aren't properly communicated to the team.
 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
   <Link href="/docs/getting-started/quick-start" className="no-underline">
@@ -83,8 +83,8 @@ Prototype and iterate on API contracts without writing a single line of producti
           <span className="font-bold text-primary">0</span>
         </div>
         <div>
-          <CardTitle className="text-lg group-hover:text-primary transition-colors">Spec-Mock First</CardTitle>
-          <CardDescription>Design your API contract and host it as live "Ground Truth" before any code exists.</CardDescription>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">Mock-First Strategy</CardTitle>
+          <CardDescription>Mock First, ~~Vibe~~ Code Later. Design your API contract and host it as live "Ground Truth" for rapid validation.</CardDescription>
         </div>
       </CardHeader>
     </Card>
