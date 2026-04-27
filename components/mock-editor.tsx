@@ -320,7 +320,7 @@ export function MockEditor({
 								placeholder="e.g., 500"
 							/>
 							<p className="text-[10px] text-muted-foreground">
-								Simulate network latency or model "thinking" time.
+								Simulate network latency/throttling in milliseconds.
 							</p>
 						</div>
 
