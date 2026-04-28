@@ -1,9 +1,9 @@
 'use client';
 
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { CreateMockDialog } from '@/components/create-mock-dialog';
@@ -12,6 +12,7 @@ import { PaginationControls } from '@/components/pagination-controls';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import type { Folder, HttpMethod, Mock } from '@/lib/types';
 import { copyToClipboard } from '@/lib/utils';
 
@@ -22,6 +23,16 @@ export default function FolderPage() {
 	const slug = params.slug as string;
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
+	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearch(search);
+			setPage(1); // Reset to first page on search
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [search]);
 
 	const { data: folders = [] } = useSWR<Folder[]>(
 		'/api/folders?all=true',
@@ -34,7 +45,7 @@ export default function FolderPage() {
 		meta: { total: number; page: number; limit: number; totalPages: number };
 	}>(
 		folder
-			? `/api/mocks?folderId=${folder.id}&page=${page}&limit=${limit}`
+			? `/api/mocks?folderId=${folder.id}&page=${page}&limit=${limit}&q=${debouncedSearch}`
 			: null,
 		fetcher,
 	);
@@ -46,7 +57,9 @@ export default function FolderPage() {
 		toast.success('Mock Created', {
 			description: 'Your mock endpoint has been created successfully',
 		});
-		mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`);
+		mutate(
+			`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
+		);
 	};
 
 	const handleDeleteMock = async (id: string) => {
@@ -55,7 +68,9 @@ export default function FolderPage() {
 			toast.success('Mock Deleted', {
 				description: 'Mock endpoint has been removed',
 			});
-			mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`);
+			mutate(
+				`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
+			);
 		} catch {
 			toast.error('Error', {
 				description: 'Failed to delete mock',
@@ -97,7 +112,9 @@ export default function FolderPage() {
 			toast.success('Mock Updated', {
 				description: 'Mock endpoint has been updated successfully',
 			});
-			mutate(`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}`);
+			mutate(
+				`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
+			);
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -184,9 +201,20 @@ export default function FolderPage() {
 				<div className="grid gap-8">
 					{/* Mocks List */}
 					<div>
-						<h2 className="mb-4 text-2xl font-semibold text-foreground">
-							Mock Endpoints
-						</h2>
+						<div className="mb-4 flex items-center justify-between">
+							<h2 className="text-2xl font-semibold text-foreground">
+								Mock Endpoints
+							</h2>
+							<div className="relative w-72">
+								<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<Input
+									placeholder="Search mocks..."
+									value={search}
+									onChange={(e) => setSearch(e.target.value)}
+									className="pl-9 mockzilla-border bg-card/50"
+								/>
+							</div>
+						</div>
 
 						{mocksLoading ? (
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6">
@@ -195,13 +223,30 @@ export default function FolderPage() {
 						) : mocks.length === 0 ? (
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-12">
 								<div className="text-center">
-									<Plus className="mx-auto h-12 w-12 text-muted-foreground/50" />
+									{debouncedSearch ? (
+										<Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
+									) : (
+										<Plus className="mx-auto h-12 w-12 text-muted-foreground/50" />
+									)}
 									<p className="mt-4 text-lg font-medium text-muted-foreground">
-										No mocks yet
+										{debouncedSearch
+											? 'No mocks match your search'
+											: 'No mocks yet'}
 									</p>
 									<p className="mt-1 text-sm text-muted-foreground">
-										Create your first mock endpoint
+										{debouncedSearch
+											? 'Try a different search term'
+											: 'Create your first mock endpoint'}
 									</p>
+									{debouncedSearch && (
+										<Button
+											variant="outline"
+											onClick={() => setSearch('')}
+											className="mt-4"
+										>
+											Clear Search
+										</Button>
+									)}
 								</div>
 							</Card>
 						) : (

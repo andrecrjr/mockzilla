@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { mockResponses } from '@/lib/db/schema';
@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
 		const searchParams = request.nextUrl.searchParams;
 		const folderId = searchParams.get('folderId');
 		const id = searchParams.get('id');
+		const q = searchParams.get('q');
 		const page = Number.parseInt(searchParams.get('page') || '1', 10);
 		const limit = Number.parseInt(searchParams.get('limit') || '10', 10);
 		const offset = (page - 1) * limit;
@@ -49,34 +50,59 @@ export async function GET(request: NextRequest) {
 		let mocks: (typeof mockResponses.$inferSelect)[];
 		let total: number;
 
+		let mocksQuery = db.select().from(mockResponses);
+		let countQuery = db
+			.select({ count: sql<number>`count(*)` })
+			.from(mockResponses);
+
+		const conditions = [];
 		if (folderId) {
-			const [totalResult] = await db
-				.select({ count: sql<number>`count(*)` })
-				.from(mockResponses)
-				.where(eq(mockResponses.folderId, folderId));
-
-			total = Number(totalResult.count);
-
-			mocks = await db
-				.select()
-				.from(mockResponses)
-				.where(eq(mockResponses.folderId, folderId))
-				.orderBy(mockResponses.createdAt)
-				.limit(limit)
-				.offset(offset);
-		} else {
-			const [totalResult] = await db
-				.select({ count: sql<number>`count(*)` })
-				.from(mockResponses);
-			total = Number(totalResult.count);
-
-			mocks = await db
-				.select()
-				.from(mockResponses)
-				.orderBy(mockResponses.createdAt)
-				.limit(limit)
-				.offset(offset);
+			conditions.push(eq(mockResponses.folderId, folderId));
 		}
+		if (q) {
+			conditions.push(
+				or(
+					ilike(mockResponses.name, `%${q}%`),
+					ilike(mockResponses.endpoint, `%${q}%`),
+				),
+			);
+		}
+
+		if (conditions.length > 0) {
+			const whereClause = sql.join(conditions, sql` AND `);
+			// Using sql construction for complex dynamic where
+			// Drizzle supports .where(and(...)) but dynamic construction is easier with sql helper or array
+		}
+
+		// Re-writing more idiomatically for Drizzle
+		let finalMocksQuery = db.select().from(mockResponses);
+		let finalCountQuery = db
+			.select({ count: sql<number>`count(*)` })
+			.from(mockResponses);
+
+		if (folderId && q) {
+			const whereClause = sql`${mockResponses.folderId} = ${folderId} AND (${ilike(mockResponses.name, `%${q}%`)} OR ${ilike(mockResponses.endpoint, `%${q}%`)})`;
+			finalMocksQuery = finalMocksQuery.where(whereClause) as typeof finalMocksQuery;
+			finalCountQuery = finalCountQuery.where(whereClause) as typeof finalCountQuery;
+		} else if (folderId) {
+			finalMocksQuery = finalMocksQuery.where(eq(mockResponses.folderId, folderId)) as typeof finalMocksQuery;
+			finalCountQuery = finalCountQuery.where(eq(mockResponses.folderId, folderId)) as typeof finalCountQuery;
+		} else if (q) {
+			const whereClause = or(
+				ilike(mockResponses.name, `%${q}%`),
+				ilike(mockResponses.endpoint, `%${q}%`),
+			);
+			finalMocksQuery = finalMocksQuery.where(whereClause) as typeof finalMocksQuery;
+			finalCountQuery = finalCountQuery.where(whereClause) as typeof finalCountQuery;
+		}
+
+		const [totalResult] = await finalCountQuery;
+		total = Number(totalResult.count);
+
+		mocks = await finalMocksQuery
+			.orderBy(desc(sql`COALESCE(${mockResponses.updatedAt}, ${mockResponses.createdAt})`))
+			.limit(limit)
+			.offset(offset);
 
 		const totalPages = Math.ceil(total / limit);
 

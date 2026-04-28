@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { transitions } from '@/lib/db/schema';
+import { scenarios, transitions } from '@/lib/db/schema';
 
 export async function PUT(
 	request: NextRequest,
@@ -69,6 +69,14 @@ export async function PUT(
 			.where(eq(transitions.id, transitionId))
 			.returning();
 
+		// Update scenario updatedAt
+		if (scenarioId) {
+			await db
+				.update(scenarios)
+				.set({ updatedAt: new Date() })
+				.where(eq(scenarios.id, scenarioId));
+		}
+
 		return NextResponse.json(result[0]);
 	} catch (error: unknown) {
 		console.error('Error updating transition:', error);
@@ -117,8 +125,18 @@ export async function DELETE(
 			);
 		}
 
+		const scenarioId = existing[0].scenarioId;
+
 		// Delete the transition
 		await db.delete(transitions).where(eq(transitions.id, transitionId));
+
+		// Update scenario updatedAt
+		if (scenarioId) {
+			await db
+				.update(scenarios)
+				.set({ updatedAt: new Date() })
+				.where(eq(scenarios.id, scenarioId));
+		}
 
 		return NextResponse.json({ message: 'Transition deleted successfully' });
 	} catch (error: unknown) {

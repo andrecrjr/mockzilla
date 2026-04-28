@@ -1,9 +1,9 @@
 'use client';
 
-import { Download, FolderIcon, Trash2, Upload } from 'lucide-react';
+import { Download, FolderIcon, Search, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { CreateFolderDialog } from '@/components/create-folder-dialog';
@@ -14,6 +14,7 @@ import { OpenApiImportDialog } from '@/components/openapi-import-dialog';
 import { PaginationControls } from '@/components/pagination-controls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import type { Folder } from '@/lib/types';
 
 const fetcher = (url: string) =>
@@ -28,18 +29,32 @@ export default function MockzillaAdmin() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
+	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearch(search);
+			setPage(1); // Reset to first page on search
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [search]);
 
 	const { data, isLoading: foldersLoading } = useSWR<{
 		data: Folder[];
 		meta: { total: number; page: number; limit: number; totalPages: number };
-	}>(`/api/folders?page=${page}&limit=${limit}&type=standard`, fetcher, {
-		onError: (error) => {
-			console.log('[v0] SWR error:', error);
-			toast.error('Failed to load folders', {
-				description: 'There was an error connecting to the server',
-			});
+	}>(
+		`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
+		fetcher,
+		{
+			onError: (error) => {
+				console.log('[v0] SWR error:', error);
+				toast.error('Failed to load folders', {
+					description: 'There was an error connecting to the server',
+				});
+			},
 		},
-	});
+	);
 
 	const folders = data?.data || [];
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
@@ -55,7 +70,9 @@ export default function MockzillaAdmin() {
 		toast.success('Folder Created', {
 			description: 'Your folder has been created successfully',
 		});
-		mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
+		mutate(
+			`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
+		);
 		mutate('/api/folders?all=true');
 	};
 
@@ -77,7 +94,9 @@ export default function MockzillaAdmin() {
 			toast.success('Folder Deleted', {
 				description: 'Folder has been removed',
 			});
-			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
+			mutate(
+				`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
+			);
 			mutate('/api/folders?all=true');
 		} catch {
 			toast.error('Error', {
@@ -107,7 +126,9 @@ export default function MockzillaAdmin() {
 			toast.success('Folder Updated', {
 				description: 'Folder has been updated successfully',
 			});
-			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
+			mutate(
+				`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
+			);
 			mutate('/api/folders?all=true');
 		} catch (error: unknown) {
 			toast.error('Error', {
@@ -169,7 +190,9 @@ export default function MockzillaAdmin() {
 				description: `Imported ${result.imported.folders} folders and ${result.imported.mocks} mocks`,
 			});
 
-			mutate(`/api/folders?page=${page}&limit=${limit}&type=standard`);
+			mutate(
+				`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
+			);
 			mutate('/api/folders?all=true');
 		} catch {
 			toast.error('Import Failed', {
@@ -187,7 +210,7 @@ export default function MockzillaAdmin() {
 			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 				<div className="mb-12">
 					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
+						<div className="flex items-center gap-4 w-full justify-between">
 							<div className="flex gap-2">
 								<CreateFolderDialog onSuccess={handleFolderSuccess} />
 								<CreateMockDialog folders={allFolders} />
@@ -210,7 +233,7 @@ export default function MockzillaAdmin() {
 								<OpenApiImportDialog
 									onSuccess={() => {
 										mutate(
-											`/api/folders?page=${page}&limit=${limit}&type=standard`,
+											`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
 										);
 										mutate('/api/folders?all=true');
 									}}
@@ -221,6 +244,15 @@ export default function MockzillaAdmin() {
 									accept=".json"
 									onChange={handleImport}
 									className="hidden"
+								/>
+							</div>
+							<div className="relative w-72">
+								<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<Input
+									placeholder="Search folders..."
+									value={search}
+									onChange={(e) => setSearch(e.target.value)}
+									className="pl-9 mockzilla-border bg-card/50 backdrop-blur-sm"
 								/>
 							</div>
 						</div>
@@ -244,13 +276,30 @@ export default function MockzillaAdmin() {
 						) : folders.length === 0 ? (
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-12">
 								<div className="text-center">
-									<FolderIcon className="mx-auto h-12 w-12 text-muted-foreground/50" />
+									{debouncedSearch ? (
+										<Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
+									) : (
+										<FolderIcon className="mx-auto h-12 w-12 text-muted-foreground/50" />
+									)}
 									<p className="mt-4 text-lg font-semibold text-muted-foreground">
-										No folders created yet
+										{debouncedSearch
+											? 'No folders match your search'
+											: 'No folders created yet'}
 									</p>
 									<p className="mt-1 text-sm text-muted-foreground/75">
-										Create your first folder to organize your mocks
+										{debouncedSearch
+											? 'Try a different search term'
+											: 'Create your first folder to organize your mocks'}
 									</p>
+									{debouncedSearch && (
+										<Button
+											variant="outline"
+											onClick={() => setSearch('')}
+											className="mt-4"
+										>
+											Clear Search
+										</Button>
+									)}
 								</div>
 							</Card>
 						) : (
@@ -265,7 +314,7 @@ export default function MockzillaAdmin() {
 												<div className="flex items-start justify-between">
 													<Link
 														href={`/app/folder/${folder.slug}`}
-														key={folder.id}
+														className="w-full"
 													>
 														<div className="flex items-center gap-3 flex-1">
 															<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-accent/20 transition-all group-hover:from-primary/30 group-hover:to-accent/30">

@@ -1,12 +1,25 @@
-import { eq, sql } from 'drizzle-orm';
+import { desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scenarios, transitions } from '@/lib/db/schema';
 
-export async function GET(_request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
 	try {
+		const searchParams = request.nextUrl.searchParams;
+		const q = searchParams.get('q');
+
 		// Fetch all scenarios from the scenarios table
-		const allScenarios = await db.select().from(scenarios);
+		let scenariosQuery = db.select().from(scenarios);
+
+		if (q) {
+			scenariosQuery = scenariosQuery.where(
+				or(ilike(scenarios.name, `%${q}%`), ilike(scenarios.description, `%${q}%`)),
+			) as typeof scenariosQuery;
+		}
+
+		const allScenarios = await scenariosQuery.orderBy(
+			desc(sql`COALESCE(${scenarios.updatedAt}, ${scenarios.createdAt})`),
+		);
 
 		// Get transition counts per scenario
 		const transitionCounts = await db
@@ -27,6 +40,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 			description: s.description,
 			count: countMap.get(s.id) || 0,
 			createdAt: s.createdAt,
+			updatedAt: s.updatedAt,
 		}));
 
 		return NextResponse.json(result);

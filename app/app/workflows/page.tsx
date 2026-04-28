@@ -7,11 +7,12 @@ import {
 	MoreHorizontal,
 	Pencil,
 	Plus,
+	Search,
 	Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
@@ -71,6 +72,15 @@ export default function WorkflowsPage() {
 	const [newScenarioDescription, setNewScenarioDescription] = useState('');
 	const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
 	const [isEditOpen, setIsEditOpen] = useState(false);
+	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearch(search);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [search]);
 
 	// Fetch scenarios with SWR
 	const {
@@ -78,7 +88,10 @@ export default function WorkflowsPage() {
 		error,
 		isLoading,
 		mutate,
-	} = useSWR<Scenario[]>('/api/workflow/scenarios', fetcher);
+	} = useSWR<Scenario[]>(
+		`/api/workflow/scenarios?q=${debouncedSearch}`,
+		fetcher,
+	);
 
 	const { trigger: triggerCreate, isMutating: isCreating } = useSWRMutation(
 		'/api/workflow/scenarios',
@@ -319,6 +332,18 @@ export default function WorkflowsPage() {
 				</div>
 			</div>
 
+			<div className="mb-6 flex justify-end">
+				<div className="relative w-72">
+					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search scenarios..."
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="pl-9"
+					/>
+				</div>
+			</div>
+
 			{/* Loading State */}
 			{isLoading && (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -345,14 +370,24 @@ export default function WorkflowsPage() {
 			{!isLoading && !error && scenarios?.length === 0 && (
 				<div className="text-center py-16 border-2 border-dashed rounded-lg bg-muted/10">
 					<GitBranch className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-					<h3 className="text-lg font-medium mb-2">No scenarios yet</h3>
+					<h3 className="text-lg font-medium mb-2">
+						{debouncedSearch ? 'No scenarios match your search' : 'No scenarios yet'}
+					</h3>
 					<p className="text-muted-foreground mb-6">
-						Create your first workflow scenario to start defining transitions.
+						{debouncedSearch
+							? 'Try a different search term'
+							: 'Create your first workflow scenario to start defining transitions.'}
 					</p>
-					<Button onClick={() => setIsCreateOpen(true)}>
-						<Plus className="mr-2 h-4 w-4" />
-						Create First Scenario
-					</Button>
+					{debouncedSearch ? (
+						<Button variant="outline" onClick={() => setSearch('')}>
+							Clear Search
+						</Button>
+					) : (
+						<Button onClick={() => setIsCreateOpen(true)}>
+							<Plus className="mr-2 h-4 w-4" />
+							Create First Scenario
+						</Button>
+					)}
 				</div>
 			)}
 

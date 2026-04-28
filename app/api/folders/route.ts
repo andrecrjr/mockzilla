@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders } from '@/lib/db/schema';
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 		const searchParams = request.nextUrl.searchParams;
 		const all = searchParams.get('all') === 'true';
 		const filterType = searchParams.get('type'); // 'extension' | 'standard' | undefined
+		const q = searchParams.get('q');
 
 		const slug = searchParams.get('slug');
 
@@ -84,10 +85,17 @@ export async function GET(request: NextRequest) {
 		}
 
 		if (all) {
-			const allFolders = await db
-				.select()
-				.from(folders)
-				.orderBy(folders.createdAt);
+			let query = db.select().from(folders);
+
+			if (q) {
+				query = query.where(
+					or(ilike(folders.name, `%${q}%`), ilike(folders.slug, `%${q}%`)),
+				) as typeof query;
+			}
+
+			const allFolders = await query.orderBy(
+				desc(sql`COALESCE(${folders.updatedAt}, ${folders.createdAt})`),
+			);
 
 			const mappedFolders = allFolders.map((folder) => {
 				const isExtension = Boolean(
@@ -122,16 +130,24 @@ export async function GET(request: NextRequest) {
 		// and simple SQL filtering might be complex or inefficient depending on the query structure.
 		// For a small number of folders this is fine, but for scale we should consider a dedicated column.
 
-		const paginatedFolders = await db
-			.select()
-			.from(folders)
-			.orderBy(folders.createdAt)
+		let foldersQuery = db.select().from(folders);
+		let countQuery = db.select({ count: sql<number>`count(*)` }).from(folders);
+
+		if (q) {
+			const whereClause = or(
+				ilike(folders.name, `%${q}%`),
+				ilike(folders.slug, `%${q}%`),
+			);
+			foldersQuery = foldersQuery.where(whereClause) as typeof foldersQuery;
+			countQuery = countQuery.where(whereClause) as typeof countQuery;
+		}
+
+		const paginatedFolders = await foldersQuery
+			.orderBy(desc(sql`COALESCE(${folders.updatedAt}, ${folders.createdAt})`))
 			.limit(limit)
 			.offset(offset);
 
-		const [totalResult] = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(folders);
+		const [totalResult] = await countQuery;
 		const total = Number(totalResult.count);
 		const totalPages = Math.ceil(total / limit);
 

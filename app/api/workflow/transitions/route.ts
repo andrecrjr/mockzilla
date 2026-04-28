@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { transitions } from '@/lib/db/schema';
+import { scenarios, transitions } from '@/lib/db/schema';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
 	try {
@@ -47,6 +47,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 		if (!result || result.length === 0) {
 			throw new Error('Failed to create transition: No record returned');
 		}
+
+		// Update scenario updatedAt
+		await db
+			.update(scenarios)
+			.set({ updatedAt: new Date() })
+			.where(eq(scenarios.id, scenarioId));
 
 		return NextResponse.json(result[0], { status: 201 });
 	} catch (error) {
