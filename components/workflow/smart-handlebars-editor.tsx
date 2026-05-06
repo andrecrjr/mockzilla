@@ -133,7 +133,7 @@ export function SmartHandlebarsEditor({
 					</DropdownMenuContent>
 				</DropdownMenu>
 
-				{/* Context Variables */}
+				{/* Context States */}
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1 px-2">
@@ -141,19 +141,6 @@ export function SmartHandlebarsEditor({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start" className="w-56 max-h-[300px] overflow-y-auto">
-						<DropdownMenuGroup>
-							<DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Scenario State</DropdownMenuLabel>
-							{stateData?.state && Object.keys(stateData.state).length > 0 ? (
-								Object.keys(stateData.state).map((key) => (
-									<DropdownMenuItem key={key} onClick={() => insertSnippet(`{{state.${key}}}`)}>
-										<span className="text-xs font-mono">state.{key}</span>
-									</DropdownMenuItem>
-								))
-							) : (
-								<p className="px-2 py-1.5 text-[10px] text-muted-foreground italic">No state variables yet</p>
-							)}
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
 							<DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Mini-DB Tables</DropdownMenuLabel>
 							{stateData?.tables && Object.keys(stateData.tables).length > 0 ? (
@@ -164,6 +151,19 @@ export function SmartHandlebarsEditor({
 								))
 							) : (
 								<p className="px-2 py-1.5 text-[10px] text-muted-foreground italic">No tables yet</p>
+							)}
+						</DropdownMenuGroup>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							<DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Scenario States</DropdownMenuLabel>
+							{stateData?.state && Object.keys(stateData.state).length > 0 ? (
+								Object.keys(stateData.state).map((key) => (
+									<DropdownMenuItem key={key} onClick={() => insertSnippet(`{{state.${key}}}`)}>
+										<span className="text-xs font-mono">state.{key}</span>
+									</DropdownMenuItem>
+								))
+							) : (
+								<p className="px-2 py-1.5 text-[10px] text-muted-foreground italic">No states yet</p>
 							)}
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />

@@ -36,33 +36,17 @@ export function StateInspector({
 				</Button>
 			</div>
 
-			<Tabs defaultValue="state" className="flex-1 flex flex-col">
+			<Tabs defaultValue="tables" className="flex-1 flex flex-col">
 				<div className="px-4 pt-4">
 					<TabsList className="w-full">
-						<TabsTrigger value="state" className="flex-1">
-							Variables
-						</TabsTrigger>
 						<TabsTrigger value="tables" className="flex-1">
 							Database
 						</TabsTrigger>
+						<TabsTrigger value="state" className="flex-1">
+							States
+						</TabsTrigger>
 					</TabsList>
 				</div>
-
-				<TabsContent value="state" className="flex-1 min-h-0 relative">
-					<ScrollArea className="h-full absolute inset-0">
-						<div className="p-4">
-							{Object.keys(data.state || {}).length === 0 ? (
-								<div className="text-center text-muted-foreground text-sm py-8">
-									No variables set
-								</div>
-							) : (
-								<pre className="text-sm font-mono whitespace-pre-wrap">
-									{JSON.stringify(data.state, null, 2)}
-								</pre>
-							)}
-						</div>
-					</ScrollArea>
-				</TabsContent>
 
 				<TabsContent value="tables" className="flex-1 min-h-0 relative">
 					<ScrollArea className="h-full absolute inset-0">
@@ -89,6 +73,22 @@ export function StateInspector({
 										</div>
 									</div>
 								))
+							)}
+						</div>
+					</ScrollArea>
+				</TabsContent>
+
+				<TabsContent value="state" className="flex-1 min-h-0 relative">
+					<ScrollArea className="h-full absolute inset-0">
+						<div className="p-4">
+							{Object.keys(data.state || {}).length === 0 ? (
+								<div className="text-center text-muted-foreground text-sm py-8">
+									No states set
+								</div>
+							) : (
+								<pre className="text-sm font-mono whitespace-pre-wrap">
+									{JSON.stringify(data.state, null, 2)}
+								</pre>
 							)}
 						</div>
 					</ScrollArea>

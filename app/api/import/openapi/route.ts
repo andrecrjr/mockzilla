@@ -59,15 +59,39 @@ function convertOpenApiPathToMockzilla(path: string): {
 }
 
 /**
+ * Safe JSON stringify that handles circular references by returning undefined for cyclic nodes.
+ */
+function safeStringify(obj: unknown): string {
+	const cache = new WeakSet();
+	return JSON.stringify(
+		obj,
+		(_key, value) => {
+			if (typeof value === 'object' && value !== null) {
+				if (cache.has(value)) {
+					return;
+				}
+				cache.add(value);
+			}
+			return value;
+		},
+		2,
+	);
+}
+
+/**
  * Recursively adds maxItems: 3 to array schemas that don't have it,
  * ensuring the generated mock data is not overly heavy.
+ * Includes circular reference protection.
  */
-function limitArrayItems(schema: unknown): unknown {
+function limitArrayItems(schema: unknown, visited = new WeakSet<object>()): unknown {
 	if (!schema || typeof schema !== 'object' || schema === null) return schema;
+
+	if (visited.has(schema)) return schema;
+	visited.add(schema);
 
 	// Handle standard schema or nested objects
 	if (Array.isArray(schema)) {
-		return schema.map((item) => limitArrayItems(item));
+		return schema.map((item) => limitArrayItems(item, visited));
 	}
 
 	const obj = { ...(schema as Record<string, unknown>) };
@@ -77,7 +101,7 @@ function limitArrayItems(schema: unknown): unknown {
 	}
 
 	for (const key of Object.keys(obj)) {
-		obj[key] = limitArrayItems(obj[key]);
+		obj[key] = limitArrayItems(obj[key], visited);
 	}
 
 	return obj;
@@ -86,11 +110,16 @@ function limitArrayItems(schema: unknown): unknown {
 /**
  * Creates a basic fallback object from a schema if generation fails.
  * Ensures the response looks like a real API without extra fields.
+ * Includes circular reference protection.
  */
 function generateFallbackResponse(
 	schema: Record<string, unknown> | null | undefined,
+	visited = new WeakSet<object>(),
 ): unknown {
 	if (!schema) return {};
+
+	if (visited.has(schema)) return {};
+	visited.add(schema);
 
 	const type = schema.type as string | undefined;
 
@@ -111,13 +140,13 @@ function generateFallbackResponse(
 			return false;
 		case 'array':
 			return schema.items
-				? [generateFallbackResponse(schema.items as Record<string, unknown>)]
+				? [generateFallbackResponse(schema.items as Record<string, unknown>, visited)]
 				: [];
 		default:
 			if (schema.properties && typeof schema.properties === 'object') {
 				const obj: Record<string, unknown> = {};
 				for (const [key, prop] of Object.entries(schema.properties)) {
-					obj[key] = generateFallbackResponse(prop as Record<string, unknown>);
+					obj[key] = generateFallbackResponse(prop as Record<string, unknown>, visited);
 				}
 				return obj;
 			}
@@ -160,9 +189,10 @@ async function processOpenApiPaths(
 			const successResponse = responses[successCode] || responses.default;
 			
 			const jsonContent = successResponse?.content?.['application/json'];
-			const schema = jsonContent?.schema;
-			const examples = jsonContent?.examples;
-			const example = jsonContent?.example;
+			// Support both OpenAPI 3.x (jsonContent.schema) and Swagger 2.0 (successResponse.schema)
+			const schema = jsonContent?.schema || (successResponse as any)?.schema;
+			const examples = jsonContent?.examples || (successResponse as any)?.examples;
+			const example = jsonContent?.example || (successResponse as any)?.example;
 
 			// Extract query parameters
 			const queryParams: Record<string, unknown> = {};
@@ -191,7 +221,8 @@ async function processOpenApiPaths(
 					console.error(`[API] Generation error for ${method.toUpperCase()} ${path}:`, genError);
 					responseBody = JSON.stringify(generateFallbackResponse(schema as Record<string, unknown>), null, 2);
 				}
-				jsonSchema = JSON.stringify(schema);
+				// Use safeStringify to prevent crashes on circular references
+				jsonSchema = safeStringify(schema);
 			} else if (examples && typeof examples === 'object') {
 				const firstExampleKey = Object.keys(examples)[0];
 				const firstExample = examples[firstExampleKey];

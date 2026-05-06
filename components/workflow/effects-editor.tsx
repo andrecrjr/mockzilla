@@ -182,16 +182,6 @@ export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorPro
 						</button>
 						<button
 							type="button"
-							onClick={() => setActiveTab('state')}
-							className={cn(
-								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
-								activeTab === 'state' && 'bg-background shadow-sm text-foreground',
-							)}
-						>
-							State
-						</button>
-						<button
-							type="button"
 							onClick={() => setActiveTab('db')}
 							className={cn(
 								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
@@ -199,6 +189,16 @@ export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorPro
 							)}
 						>
 							DB
+						</button>
+						<button
+							type="button"
+							onClick={() => setActiveTab('state')}
+							className={cn(
+								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
+								activeTab === 'state' && 'bg-background shadow-sm text-foreground',
+							)}
+						>
+							States
 						</button>
 					</div>
 				</div>
@@ -283,10 +283,10 @@ function StateSetEditor({
 	return (
 		<div className="grid gap-2">
 			<Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-				Variables
+				States
 				<FieldTooltip
-					label="Variables"
-					description="Set or update state variables for this scenario. State is a persistent key-value store."
+					label="States"
+					description="Set or update states for this scenario. State is a persistent key-value store."
 					example='{ "isLoggedIn": true, "userId": "{{ input.body.id }}" }'
 					docsLink="/docs/workflows#state-set"
 				/>
@@ -294,10 +294,10 @@ function StateSetEditor({
 			<KeyValueEditor
 				data={value}
 				onChange={onChange}
-				keyPlaceholder="Variable Name"
+				keyPlaceholder="State Name"
 				valuePlaceholder="Value (supports interpolation)"
 				suggestions={Object.keys(stateData?.state || {})}
-				addButtonLabel="Add Variable"
+				addButtonLabel="Add State"
 			/>
 		</div>
 	);

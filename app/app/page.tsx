@@ -77,22 +77,10 @@ export default function MockzillaAdmin() {
 	};
 
 	const handleDeleteFolder = async (id: string) => {
-		const response = await fetch(`/api/mocks?folderId=${id}`);
-		const mocksData = await response.json();
-		// Handle both paginated and non-paginated responses just in case, though mocks endpoint is now paginated
-		const mocks = Array.isArray(mocksData) ? mocksData : mocksData.data || [];
-
-		if (mocks.length > 0) {
-			toast.error('Cannot Delete Folder', {
-				description: 'Please delete all mocks in this folder first',
-			});
-			return;
-		}
-
 		try {
 			await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
 			toast.success('Folder Deleted', {
-				description: 'Folder has been removed',
+				description: 'Folder and all its mocks have been removed',
 			});
 			mutate(
 				`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,

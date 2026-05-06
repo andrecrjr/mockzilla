@@ -11,21 +11,34 @@ The import flow, implemented in `app/api/import/openapi/route.ts`, follows these
 - Uses the `yaml` library for robust parsing.
 - Extracts metadata from the `info` block to create a corresponding Folder.
 
-### 2. Path & Endpoint Mapping
+### 2. Supported Specification Formats
+- **OpenAPI 3.x**: Full support for `content['application/json'].schema`.
+- **Swagger 2.0**: Full support for schemas defined directly on the response object (`responses[code].schema`).
+
+### 3. Ref Resolution & Safety
+Mockzilla uses `@apidevtools/json-schema-ref-parser` to resolve all internal and external `$ref` nodes during import.
+
+#### Circular References
+Mockzilla is resilient to circular references in specifications:
+- **Detection**: Recursive functions (like `limitArrayItems`) track visited objects using a `WeakSet`.
+- **Handling**: If a circular reference is detected during response generation, it falls back to a safe, non-recursive object structure.
+- **Storage**: The `jsonSchema` is saved using a circular-safe stringifier to prevent database or import failures.
+
+### 4. Path & Endpoint Mapping
 - Normalizes paths (e.g., removing trailing slashes).
 - Converts OpenAPI path parameters into Mockzilla wildcards:
   - `/users/{id}` → `/users/*`
   - Sets `matchType: 'wildcard'`.
 - Operations without parameters use `matchType: 'exact'`.
 
-### 3. Response Selection
+### 5. Response Selection
 - Analyzes the `responses` object for each operation.
 - Prioritizes successful responses:
   1. Specific `200` or `201` codes.
   2. First available `2xx` response.
   3. Falls back to the `default` response if no `2xx` is found.
 
-### 4. Response Body Generation
+### 6. Response Body Generation
 Mockzilla attempts to create realistic payloads based on the response content:
 
 - **Schema-Driven**: If a `schema` is present, it uses `json-schema-faker` (JSF) and `faker.js` during import to generate a static response body.
@@ -34,12 +47,12 @@ Mockzilla attempts to create realistic payloads based on the response content:
 - **Example-Driven**: If no `schema` is found but `examples` or a single `example` exists, Mockzilla uses the provided example value as the static response body. This ensures high-fidelity mocks even when schemas are missing.
 - **Pre-generation**: Generating static bodies during import makes the dashboard UI significantly faster by avoiding heavy processing on every page load.
 
-### 5. Wildcard Variants
+### 7. Wildcard Variants
 For path parameters converted to wildcards:
 - A default catch-all variant with key `*` is created.
 - This variant stores the generated/fallback response body and status code.
 
-### 6. Feature Defaults
+### 8. Feature Defaults
 - **Write Methods**: For `POST`, `PUT`, and `PATCH` methods without a response schema, `echoRequestBody: true` is enabled by default.
 - **Query Parameters**: Extracts default values or examples from the `parameters` block to populate Mockzilla's query parameter matching.
 

@@ -5,6 +5,17 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { Folder as FolderType, Mock } from '@/lib/types';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { EditFolderDialog } from './edit-folder-dialog';
 
 interface FolderListProps {
@@ -79,14 +90,36 @@ export function FolderList({
 						<div className="border-t border-border bg-muted/50 px-6 py-3 flex items-center justify-between">
 							<div className="flex gap-1">
 								<EditFolderDialog folder={folder} onUpdate={onUpdateFolder} />
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={() => onDeleteFolder(folder.id)}
-									className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
+								<AlertDialog>
+									<AlertDialogTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>Are you sure?</AlertDialogTitle>
+											<AlertDialogDescription>
+												This will permanently delete the folder "{folder.name}"
+												and all its associated mocks. This action cannot be
+												undone.
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel>Cancel</AlertDialogCancel>
+											<AlertDialogAction
+												onClick={() => onDeleteFolder(folder.id)}
+												className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+											>
+												Delete All Mocks
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
 							</div>
 							<p className="text-xs text-muted-foreground">
 								Click to open folder

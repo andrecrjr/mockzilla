@@ -768,7 +768,7 @@ export function TransitionDialog({
 									<div className="space-y-1">
 										<h4 className="text-sm font-medium">2. Logic & Effects</h4>
 										<p className="text-xs text-muted-foreground">
-											Define <strong>what happens</strong> when the trigger fires. Use effects to update persistent state variables or perform CRUD operations on the mini-database tables.
+											Define <strong>what happens</strong> when the trigger fires. Use effects to update persistent states or perform CRUD operations on the mini-database tables.
 											<a href="/docs/reference/workflow-syntax#2-effects" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about effects &rarr;</a>
 										</p>
 									</div>
@@ -857,7 +857,7 @@ export function TransitionDialog({
 									<div className="space-y-1">
 										<h4 className="text-sm font-medium">3. Client Response</h4>
 										<p className="text-xs text-muted-foreground">
-											Define <strong>what is returned</strong> to the client. You can use Handlebars logic and <code>{"{{ interpolation }}"}</code> to inject data from the scenario state, database, or original request.
+											Define <strong>what is returned</strong> to the client. You can use Handlebars logic and <code>{"{{ interpolation }}"}</code> to inject data from the states, database, or original request.
 											<a href="/docs/reference/dynamic-interpolation" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about dynamic responses &rarr;</a>
 										</p>
 									</div>

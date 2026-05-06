@@ -490,6 +490,77 @@ paths:
 		expect(res.status).toBe(400);
 	});
 
+	it('imports Swagger 2.0 with definitions correctly', async () => {
+		const spec = `
+swagger: "2.0"
+info:
+  title: Swagger 2.0 Test
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Item'
+definitions:
+  Item:
+    type: object
+    properties:
+      id: { type: string }
+`;
+		const req = new NextRequest('http://localhost:3000/api/import/openapi', {
+			method: 'POST',
+			body: JSON.stringify({ spec }),
+		});
+		await POST(req);
+		const lastInsert = insertedValues[insertedValues.length - 1];
+		expect(lastInsert.endpoint).toBe('/test');
+		const body = JSON.parse(lastInsert.response);
+		expect(body).toHaveProperty('id');
+		expect(typeof body.id).toBe('string');
+	});
+
+	it('handles circular references without crashing', async () => {
+		const spec = `
+openapi: 3.0.0
+info:
+  title: Circular Ref Test
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+components:
+  schemas:
+    Node:
+      type: object
+      properties:
+        child: { $ref: '#/components/schemas/Node' }
+`;
+		const req = new NextRequest('http://localhost:3000/api/import/openapi', {
+			method: 'POST',
+			body: JSON.stringify({ spec }),
+		});
+		
+		// This should not throw "Maximum call stack size exceeded" or "Converting circular structure to JSON"
+		const res = await POST(req);
+		expect(res.status).toBe(200);
+		
+		const lastInsert = insertedValues[insertedValues.length - 1];
+		expect(lastInsert.endpoint).toBe('/test');
+		// The response might be {} or a partial object depending on how JSF/fallback handles it,
+		// but the key is that it didn't crash.
+		expect(lastInsert.response).toBeDefined();
+	});
+
 	it('returns 500 on database error', async () => {
 		mockDb.transaction = mock(async () => { throw new Error('fail'); });
 		const req = new NextRequest('http://localhost:3000/api/import/openapi', {
