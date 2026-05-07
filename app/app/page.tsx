@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, FolderIcon, Search, Trash2, Upload } from 'lucide-react';
+import { Download, FolderIcon, Search, Upload } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import useSWR, { mutate } from 'swr';
 import { CreateFolderDialog } from '@/components/create-folder-dialog';
 import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
+import { FolderDeleteButton } from '@/components/folder-delete-button';
 import { OpenApiImportDialog } from '@/components/openapi-import-dialog';
 // import { FolderForm } from '@/components/folder-form'; // Removed
 import { PaginationControls } from '@/components/pagination-controls';
@@ -329,17 +330,14 @@ export default function MockzillaAdmin() {
 														folder={folder}
 														onUpdate={handleUpdateFolder}
 													/>
-													<Button
-														variant="ghost"
+													<FolderDeleteButton
+														folderId={folder.id}
+														folderName={folder.name}
+														onDelete={handleDeleteFolder}
+														confirmLabel="Delete Folder"
 														size="sm"
-														onClick={(e) => {
-															e.preventDefault();
-															handleDeleteFolder(folder.id);
-														}}
 														className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-													>
-														<Trash2 className="h-4 w-4" />
-													</Button>
+													/>
 												</div>
 											</div>
 										</Card>

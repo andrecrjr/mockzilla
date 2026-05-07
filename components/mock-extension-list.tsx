@@ -1,25 +1,14 @@
 'use client';
 
-import { FolderIcon, Trash2 } from 'lucide-react';
+import { FolderIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
+import { FolderDeleteButton } from '@/components/folder-delete-button';
 import { PaginationControls } from '@/components/pagination-controls';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { Folder } from '@/lib/types';
 
@@ -179,36 +168,15 @@ export function MockExtensionList() {
 									folder={folder}
 									onUpdate={handleUpdateFolder}
 								/>
-								<AlertDialog>
-									<AlertDialogTrigger asChild>
-										<Button
-											variant="ghost"
-											size="sm"
-											className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-										>
-											<Trash2 className="h-4 w-4" />
-										</Button>
-									</AlertDialogTrigger>
-									<AlertDialogContent>
-										<AlertDialogHeader>
-											<AlertDialogTitle>Are you sure?</AlertDialogTitle>
-											<AlertDialogDescription>
-												This will permanently delete the extension synced folder
-												"{folder.name}" and its mocks from the server. This
-												action cannot be undone.
-											</AlertDialogDescription>
-										</AlertDialogHeader>
-										<AlertDialogFooter>
-											<AlertDialogCancel>Cancel</AlertDialogCancel>
-											<AlertDialogAction
-												onClick={() => handleDeleteFolder(folder.id)}
-												className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-											>
-												Delete All Mocks
-											</AlertDialogAction>
-										</AlertDialogFooter>
-									</AlertDialogContent>
-								</AlertDialog>
+								<FolderDeleteButton
+									folderId={folder.id}
+									folderName={folder.name}
+									onDelete={handleDeleteFolder}
+									description={`This will permanently delete the extension-synced folder "${folder.name}" and its mocks from the server. This action cannot be undone.`}
+									confirmLabel="Delete All Mocks"
+									size="sm"
+									className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+								/>
 							</div>
 						</div>
 					</Card>

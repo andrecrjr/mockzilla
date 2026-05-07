@@ -1,7 +1,8 @@
 'use client';
 
-import { Copy, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
+import { MockDeleteButton } from '@/components/mock-delete-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -136,14 +137,11 @@ export function MockCard({ mock, folder, onDelete, onCopy }: MockCardProps) {
 								<Pencil className="h-4 w-4" />
 							</Link>
 						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => onDelete(mock.id)}
-							className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-						>
-							<Trash2 className="h-4 w-4" />
-						</Button>
+						<MockDeleteButton
+							mockId={mock.id}
+							mockName={mock.name}
+							onDelete={onDelete}
+						/>
 					</div>
 				</div>
 

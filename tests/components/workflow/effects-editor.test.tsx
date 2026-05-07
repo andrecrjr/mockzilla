@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { cleanup, render, screen } from '@testing-library/react';
 import { type EffectItem, EffectsEditor } from '../../../components/workflow/effects-editor';
 import { TooltipProvider } from '../../../components/ui/tooltip';
@@ -40,9 +40,7 @@ describe('EffectsEditor', () => {
       </TooltipProvider>
     );
 
-    // This button should exist in the new structured editor
-    const addPairButton = screen.queryByRole('button', { name: /add variable/i });
-    // In current implementation it doesn't exist, so this will fail if I expect it to be truthy
+    const addPairButton = screen.getByRole('button', { name: /add state/i });
     expect(addPairButton).toBeTruthy();
   });
 });

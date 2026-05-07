@@ -124,6 +124,13 @@ We have modified several base components to provide a more "robust" feel:
 2.  **Card**: Customized with `rounded-xl`, `shadow-sm`, and `gap-6` defaults to provide more internal breathing room than the shadcn default.
 3.  **Inputs & Textareas**: Integrated with `--input` variable which uses `oklch` for more precise color matching in both themes.
 
+### Destructive Action Pattern
+Destructive deletes should use the shared `AlertDialog` confirmation pattern instead of direct one-click actions or `window.confirm`.
+
+*   **Shared Components**: `components/confirm-destructive-action.tsx`, `components/folder-delete-button.tsx`, `components/mock-delete-button.tsx`
+*   **Usage**: Folder deletion must warn that deleting a folder also removes all mocks inside it; single-mock deletion uses separate copy tailored to a single endpoint.
+*   **Action Labels**: Prefer explicit confirm text such as `Delete Folder`, `Delete All Mocks`, or `Delete Mock`.
+
 ### Custom Components (Non-shadcn)
 The following components are unique to Mockzilla and built specifically for our workflow engine:
 

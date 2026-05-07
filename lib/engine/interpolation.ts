@@ -14,6 +14,34 @@ export type InterpolationContext = {
 	[key: string]: unknown;
 };
 
+const HANDLEBARS_HELPERS = new Set([
+	'and',
+	'currency',
+	'dateAdd',
+	'dateFormat',
+	'dateSub',
+	'default',
+	'eq',
+	'faker',
+	'filter',
+	'gt',
+	'gte',
+	'join',
+	'json',
+	'lt',
+	'lte',
+	'math',
+	'neq',
+	'not',
+	'now',
+	'or',
+	'slice',
+	'slugify',
+	'sort',
+	'toFixed',
+	'truncate',
+]);
+
 /**
  * Applies template replacement to a string or object using provided context.
  * Uses a hybrid approach:
@@ -26,39 +54,131 @@ export function replaceTemplates(
 ): unknown {
 	if (data === null || data === undefined) return data;
 
-	let stringified: string;
-	let _isObject = false;
-
 	if (typeof data === 'string') {
-		stringified = data;
-	} else if (typeof data === 'object') {
-		stringified = JSON.stringify(data);
-	} else {
+		return replaceTemplateString(data, context);
+	}
+
+	if (typeof data !== 'object') {
 		return data;
 	}
 
-	// If it contains any double curly braces, we should use Handlebars directly on the whole string.
-	if (stringified.includes('{{')) {
-		const result = compileHandlebars(stringified, context);
-		try {
-			return JSON.parse(result);
-		} catch {
-			return result;
+	if (Array.isArray(data)) {
+		return data.map((item) => replaceNestedValue(item, context));
+	}
+
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(data)) {
+		result[key] = replaceNestedValue(value, context);
+	}
+	return result;
+}
+
+function replaceNestedValue(
+	value: unknown,
+	context: Record<string, unknown>,
+): unknown {
+	if (typeof value === 'string') {
+		if (!value.includes('{{')) {
+			return value;
+		}
+		return replaceTemplateString(value, context);
+	}
+
+	if (Array.isArray(value)) {
+		return value.map((item) => replaceNestedValue(item, context));
+	}
+
+	if (value && typeof value === 'object') {
+		const result: Record<string, unknown> = {};
+		for (const [key, nestedValue] of Object.entries(value)) {
+			result[key] = replaceNestedValue(nestedValue, context);
+		}
+		return result;
+	}
+
+	return value;
+}
+
+function replaceTemplateString(
+	data: string,
+	context: Record<string, unknown>,
+): unknown {
+	if (shouldUseHandlebars(data)) {
+		return parseTemplateResult(compileHandlebars(data, context));
+	}
+
+	try {
+		const parsed = JSON.parse(data);
+		if (parsed === null || typeof parsed !== 'object') {
+			return interpolate(parsed, context);
+		}
+		return replaceTemplates(parsed, context);
+	} catch {
+		return interpolate(data, context);
+	}
+}
+
+function shouldUseHandlebars(value: string): boolean {
+	if (!value.includes('{{')) {
+		return false;
+	}
+
+	if (
+		value.includes('{{{') ||
+		/\{\{\s*[#/!>]/.test(value) ||
+		/\{\{\s*else\b/.test(value)
+	) {
+		return true;
+	}
+
+	const expressions = value.matchAll(/\{\{\s*(.+?)\s*\}\}/g);
+	for (const match of expressions) {
+		const expression = match[1];
+		if (!expression || !isInterpolationExpression(expression)) {
+			return true;
 		}
 	}
 
-	// It's a string or object without Handlebars blocks
-	try {
-		// Attempt to parse as JSON first for type preservation (for strings that are actually JSON)
-		const parsed = typeof data === 'string' ? JSON.parse(stringified) : data;
-		
-		if (parsed === null || typeof parsed !== 'object') {
-		        return interpolate(parsed, context);
+	return false;
+}
+
+function isInterpolationExpression(expression: string): boolean {
+	const trimmed = expression.trim();
+
+	if (trimmed.length === 0) {
+		return false;
+	}
+
+	if (/^["'].*["']$/.test(trimmed) || /^-?\d+(\.\d+)?$/.test(trimmed)) {
+		return true;
+	}
+
+	const helperMatch = trimmed.match(/^([A-Za-z_]\w*)/);
+	if (helperMatch) {
+		const helperName = helperMatch[1];
+		const nextCharacter = trimmed.charAt(helperName.length);
+		if (
+			HANDLEBARS_HELPERS.has(helperName) &&
+			(nextCharacter === '' || nextCharacter === ' ' || nextCharacter === '(')
+		) {
+			return false;
 		}
-		return interpolate(parsed, context);
+	}
+
+	if (/^[\w$.[\]-]+(?:\((.*)\))?$/.test(trimmed)) {
+		return true;
+	}
+
+	return /^[\w$.[\]-]+\s*[+-]\s*(?:[\w$.[\]-]+|-?\d+(?:\.\d+)?|["'].*["'])$/.test(
+		trimmed,
+	);
+}
+
+function parseTemplateResult(result: string): unknown {
+	try {
+		return JSON.parse(result);
 	} catch {
-		// Not JSON or parsing failed, just interpolate as string
-		return interpolate(stringified, context);
+		return result;
 	}
 }
 

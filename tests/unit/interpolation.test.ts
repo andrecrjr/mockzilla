@@ -29,6 +29,22 @@ describe('interpolation engine', () => {
             expect(replaceTemplates(data, context)).toEqual({ msg: 'Hello Gemini' });
         });
 
+        it('should preserve boolean types for exact-match templates inside objects', () => {
+            const data = { active: '{{state.user.active}}' };
+            const typedContext = {
+                ...context,
+                state: {
+                    ...context.state,
+                    user: {
+                        ...context.state.user,
+                        active: true,
+                    },
+                },
+            };
+
+            expect(replaceTemplates(data, typedContext)).toEqual({ active: true });
+        });
+
         it('should handle Handlebars resulting in non-JSON string', () => {
             const result = replaceTemplates('User: {{state.user.name}}', context);
             expect(result).toBe('User: Gemini');
