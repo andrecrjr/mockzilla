@@ -1,4 +1,4 @@
-# Mockzilla 🦖
+# Mockzilla 🦖 by ACJR
 
 A powerful self-hosted API mocking platform for development and testing. Deploy your own private mock server with an intuitive interface and advanced response generation capabilities.
 
@@ -18,7 +18,10 @@ docker run -p 36666:36666 \
   andrecrjr/mockzilla:latest
 ```
 
+
+
 > [!TIP]
+> Docker Image is inside andrecrjr/mockzilla, it's not pure mockzilla, it's another project.
 > This option is ideal for development, testing, and quick experimentation. It starts instantly with no external dependencies. Use volume persistence to keep your mocks between container restarts.
 
 Your mock server will be available at http://localhost:36666
