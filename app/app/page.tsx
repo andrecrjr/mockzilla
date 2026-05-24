@@ -4,6 +4,7 @@ import { Download, FolderIcon, Search, Upload } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useQueryState, parseAsInteger, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { CreateFolderDialog } from '@/components/create-folder-dialog';
@@ -28,10 +29,10 @@ const fetcher = (url: string) =>
 
 export default function MockzillaAdmin() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const [page, setPage] = useState(1);
-	const [limit, setLimit] = useState(10);
-	const [search, setSearch] = useState('');
-	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
+	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
+	const [search, setSearch] = useQueryState('q', parseAsString.withDefault(''));
+	const [debouncedSearch, setDebouncedSearch] = useState(search);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -39,7 +40,7 @@ export default function MockzillaAdmin() {
 			setPage(1); // Reset to first page on search
 		}, 300);
 		return () => clearTimeout(timer);
-	}, [search]);
+	}, [search, setPage]);
 
 	const { data, isLoading: foldersLoading } = useSWR<{
 		data: Folder[];

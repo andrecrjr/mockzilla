@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import type React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import './globals.css';
 import { Toaster } from 'sonner';
 
@@ -82,7 +83,9 @@ export default function RootLayout({
 				/>
 			</head>
 			<body className={`font-sans antialiased`} suppressHydrationWarning>
-				<ThemeProvider>{children}</ThemeProvider>
+				<NuqsAdapter>
+					<ThemeProvider>{children}</ThemeProvider>
+				</NuqsAdapter>
 				<Toaster theme="system" />
 				<Analytics />
 			</body>

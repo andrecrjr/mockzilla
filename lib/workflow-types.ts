@@ -20,6 +20,8 @@ export interface Effect {
 	key?: string;
 	value?: unknown;
 	raw?: Record<string, unknown>;
+	match?: Record<string, unknown>;
+	set?: Record<string, unknown>;
 	id?: string;
 }
 

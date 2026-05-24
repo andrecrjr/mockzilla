@@ -3,6 +3,7 @@
 import { FolderIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useQueryState, parseAsInteger } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 
@@ -21,8 +22,8 @@ const fetcher = (url: string) =>
 		});
 
 export function MockExtensionList() {
-	const [page, setPage] = useState(1);
-	const [limit, setLimit] = useState(10);
+	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
+	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
 
 	const { data, isLoading } = useSWR<{
 		data: Folder[];

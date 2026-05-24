@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useQueryState, parseAsInteger, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { CreateMockDialog } from '@/components/create-mock-dialog';
@@ -21,10 +22,10 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function FolderPage() {
 	const params = useParams();
 	const slug = params.slug as string;
-	const [page, setPage] = useState(1);
-	const [limit, setLimit] = useState(10);
-	const [search, setSearch] = useState('');
-	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
+	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
+	const [search, setSearch] = useQueryState('q', parseAsString.withDefault(''));
+	const [debouncedSearch, setDebouncedSearch] = useState(search);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -32,7 +33,7 @@ export default function FolderPage() {
 			setPage(1); // Reset to first page on search
 		}, 300);
 		return () => clearTimeout(timer);
-	}, [search]);
+	}, [search, setPage]);
 
 	const { data: folders = [] } = useSWR<Folder[]>(
 		'/api/folders?all=true',

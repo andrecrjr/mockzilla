@@ -13,6 +13,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useQueryState, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
@@ -72,8 +73,8 @@ export default function WorkflowsPage() {
 	const [newScenarioDescription, setNewScenarioDescription] = useState('');
 	const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
 	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [search, setSearch] = useState('');
-	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [search, setSearch] = useQueryState('q', parseAsString.withDefault(''));
+	const [debouncedSearch, setDebouncedSearch] = useState(search);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
