@@ -37,7 +37,7 @@ export function generateSlug(name: string): string {
 // FOLDER HANDLERS
 import { logger } from '../logger';
 
-export async function callListFolders(args: z.infer<typeof schemas.ListFoldersArgs>) {
+export async function callListFolders(args: schemas.ListFoldersArgs) {
 	logger.info({ args }, 'MCP Tool: list_folders');
 	const page = args.page ?? 1;
 	const limit = args.limit ?? 10;
@@ -65,7 +65,7 @@ export async function callListFolders(args: z.infer<typeof schemas.ListFoldersAr
 	return { data, meta: { total, page, limit, totalPages } };
 }
 
-export async function callCreateFolder(args: z.infer<typeof schemas.CreateFolderArgs>) {
+export async function callCreateFolder(args: schemas.CreateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_folder');
 	const slug = generateSlug(args.name);
 	const [row] = await db
@@ -87,7 +87,7 @@ export async function callCreateFolder(args: z.infer<typeof schemas.CreateFolder
 	};
 }
 
-export async function callGetFolder(args: z.infer<typeof schemas.GetFolderArgs>) {
+export async function callGetFolder(args: schemas.GetFolderArgs) {
 	logger.info({ args }, 'MCP Tool: get_folder');
 	let row: typeof folders.$inferSelect | null = null;
 	if (args.id) {
@@ -107,7 +107,7 @@ export async function callGetFolder(args: z.infer<typeof schemas.GetFolderArgs>)
 	};
 }
 
-export async function callUpdateFolder(args: z.infer<typeof schemas.UpdateFolderArgs>) {
+export async function callUpdateFolder(args: schemas.UpdateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: update_folder');
 	const slug = generateSlug(args.name);
 	const [row] = await db
@@ -132,14 +132,14 @@ export async function callUpdateFolder(args: z.infer<typeof schemas.UpdateFolder
 	};
 }
 
-export async function callDeleteFolder(args: z.infer<typeof schemas.DeleteFolderArgs>) {
+export async function callDeleteFolder(args: schemas.DeleteFolderArgs) {
 	logger.info({ args }, 'MCP Tool: delete_folder');
 	await db.delete(folders).where(eq(folders.id, args.id));
 	return { success: true } as const;
 }
 
 // MOCK HANDLERS
-export async function callCreateMock(args: z.infer<typeof schemas.CreateMockArgs>) {
+export async function callCreateMock(args: schemas.CreateMockArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock');
 	const folderSlug = args.folderSlug ?? null;
 	const folderIdArg = args.folderId ?? null;
@@ -222,7 +222,7 @@ export async function callCreateMock(args: z.infer<typeof schemas.CreateMockArgs
 	};
 }
 
-export async function callListMocks(args: z.infer<typeof schemas.ListMocksArgs>) {
+export async function callListMocks(args: schemas.ListMocksArgs) {
 	logger.info({ args }, 'MCP Tool: list_mocks');
 	const page = args.page ?? 1;
 	const limit = args.limit ?? 10;
@@ -294,7 +294,7 @@ export async function callListMocks(args: z.infer<typeof schemas.ListMocksArgs>)
 	return { data, meta: { total, page, limit, totalPages } };
 }
 
-export async function callGetMock(args: z.infer<typeof schemas.GetMockArgs>) {
+export async function callGetMock(args: schemas.GetMockArgs) {
 	logger.info({ args }, 'MCP Tool: get_mock');
 	const [row] = await db
 		.select()
@@ -324,7 +324,7 @@ export async function callGetMock(args: z.infer<typeof schemas.GetMockArgs>) {
 	};
 }
 
-export async function callUpdateMock(args: z.infer<typeof schemas.UpdateMockArgs>) {
+export async function callUpdateMock(args: schemas.UpdateMockArgs) {
 	logger.info({ args }, 'MCP Tool: update_mock');
 	const [row] = await db
 		.update(mockResponses)
@@ -372,7 +372,7 @@ export async function callUpdateMock(args: z.infer<typeof schemas.UpdateMockArgs
 	};
 }
 
-export async function callDeleteMock(args: z.infer<typeof schemas.DeleteMockArgs>) {
+export async function callDeleteMock(args: schemas.DeleteMockArgs) {
 	logger.info({ args }, 'MCP Tool: delete_mock');
 	await db.delete(mockResponses).where(eq(mockResponses.id, args.id));
 	return { success: true } as const;
@@ -466,7 +466,7 @@ export async function callCreateSchemaMock(args: {
 	};
 }
 
-export async function callPreviewMock(args: z.infer<typeof schemas.PreviewMockArgs>) {
+export async function callPreviewMock(args: schemas.PreviewMockArgs) {
 	logger.info({ args }, 'MCP Tool: preview_mock');
 	const folderSlug = args.folderSlug;
 	const mockPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
@@ -685,7 +685,7 @@ export async function callPreviewMock(args: z.infer<typeof schemas.PreviewMockAr
 
 // WORKFLOW HANDLERS
 export async function callCreateWorkflowTransition(
-	args: z.infer<typeof schemas.CreateWorkflowTransitionArgs>,
+	args: schemas.CreateWorkflowTransitionArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: create_workflow_transition');
 	// Ensure scenario exists (auto-create if not)
@@ -725,7 +725,7 @@ export async function callCreateWorkflowTransition(
 }
 
 export async function callResetWorkflowState(
-	args: z.infer<typeof schemas.ResetWorkflowStateArgs>,
+	args: schemas.ResetWorkflowStateArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: reset_workflow_state');
 	await db
@@ -735,7 +735,7 @@ export async function callResetWorkflowState(
 }
 
 export async function callInspectWorkflowState(
-	args: z.infer<typeof schemas.InspectWorkflowStateArgs>,
+	args: schemas.InspectWorkflowStateArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: inspect_workflow_state');
 	const [row] = await db
@@ -746,7 +746,7 @@ export async function callInspectWorkflowState(
 }
 
 export async function callUpdateWorkflowTransition(
-	args: z.infer<typeof schemas.UpdateWorkflowTransitionArgs>,
+	args: schemas.UpdateWorkflowTransitionArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: update_workflow_transition');
 	const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -770,7 +770,7 @@ export async function callUpdateWorkflowTransition(
 }
 
 export async function callDeleteWorkflowTransition(
-	args: z.infer<typeof schemas.DeleteWorkflowTransitionArgs>,
+	args: schemas.DeleteWorkflowTransitionArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: delete_workflow_transition');
 	await db.delete(transitions).where(eq(transitions.id, args.id));
@@ -778,7 +778,7 @@ export async function callDeleteWorkflowTransition(
 }
 
 export async function callListWorkflowTransitions(
-	args: z.infer<typeof schemas.ListWorkflowTransitionsArgs>,
+	args: schemas.ListWorkflowTransitionsArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: list_workflow_transitions');
 	const rows = await db
@@ -790,7 +790,7 @@ export async function callListWorkflowTransitions(
 }
 
 export async function callCreateWorkflowScenario(
-	args: z.infer<typeof schemas.CreateWorkflowScenarioArgs>,
+	args: schemas.CreateWorkflowScenarioArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: create_workflow_scenario');
 	const id = generateSlug(args.name);
@@ -806,7 +806,7 @@ export async function callCreateWorkflowScenario(
 }
 
 export async function callListWorkflowScenarios(
-	args: z.infer<typeof schemas.ListWorkflowScenariosArgs>,
+	args: schemas.ListWorkflowScenariosArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: list_workflow_scenarios');
 	const page = args.page ?? 1;
@@ -830,7 +830,7 @@ export async function callListWorkflowScenarios(
 }
 
 export async function callDeleteWorkflowScenario(
-	args: z.infer<typeof schemas.DeleteWorkflowScenarioArgs>,
+	args: schemas.DeleteWorkflowScenarioArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: delete_workflow_scenario');
 	await db.transaction(async (tx) => {
@@ -841,7 +841,7 @@ export async function callDeleteWorkflowScenario(
 	return { success: true };
 }
 
-export async function callTestWorkflow(args: z.infer<typeof schemas.TestWorkflowArgs>) {
+export async function callTestWorkflow(args: schemas.TestWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: test_workflow');
 	const { processWorkflowRequest } = await import('@/lib/engine/processor');
 	const { matches } = await import('@/lib/engine/match');
@@ -1004,7 +1004,7 @@ export async function callTestWorkflow(args: z.infer<typeof schemas.TestWorkflow
 	};
 }
 
-export async function callExportWorkflow(args: z.infer<typeof schemas.ExportWorkflowArgs>) {
+export async function callExportWorkflow(args: schemas.ExportWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: export_workflow');
 	const { scenarioId } = args;
 	let scenariosList: Scenario[] = [];
@@ -1068,7 +1068,7 @@ export async function callExportWorkflow(args: z.infer<typeof schemas.ExportWork
 	};
 }
 
-export async function callImportWorkflow(args: z.infer<typeof schemas.ImportWorkflowArgs>) {
+export async function callImportWorkflow(args: schemas.ImportWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: import_workflow');
 	const data = args.data;
 	// Validate structure before processing
@@ -1144,7 +1144,7 @@ export async function callImportWorkflow(args: z.infer<typeof schemas.ImportWork
 	};
 }
 
-export async function callCreateFullWorkflow(args: z.infer<typeof schemas.CreateFullWorkflowArgs>) {
+export async function callCreateFullWorkflow(args: schemas.CreateFullWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: create_full_workflow');
 	const scenarioId = generateSlug(args.name);
 
@@ -1191,7 +1191,7 @@ export async function callCreateFullWorkflow(args: z.infer<typeof schemas.Create
 	};
 }
 
-export async function callEvaluateTemplate(args: z.infer<typeof schemas.EvaluateTemplateArgs>) {
+export async function callEvaluateTemplate(args: schemas.EvaluateTemplateArgs) {
 	logger.info({ args }, 'MCP Tool: evaluate_template');
 	const { replaceTemplates } = await import('@/lib/engine/interpolation');
 	const { faker } = await import('@faker-js/faker');
@@ -1237,7 +1237,7 @@ export async function callEvaluateTemplate(args: z.infer<typeof schemas.Evaluate
 	};
 }
 
-export async function callSeedWorkflowState(args: z.infer<typeof schemas.SeedWorkflowStateArgs>) {
+export async function callSeedWorkflowState(args: schemas.SeedWorkflowStateArgs) {
 	logger.info({ args }, 'MCP Tool: seed_workflow_state');
 	await db
 		.insert(scenarioState)
@@ -1261,7 +1261,7 @@ export async function callSeedWorkflowState(args: z.infer<typeof schemas.SeedWor
 }
 
 // LOG HANDLERS
-export async function callGetLogs(args: z.infer<typeof schemas.GetLogsArgs>) {
+export async function callGetLogs(args: schemas.GetLogsArgs) {
 	const { getLogs } = await import('../logger');
 	let logs = getLogs(args.limit ?? 100, args.type);
 
@@ -1283,7 +1283,7 @@ export async function callGetLogs(args: z.infer<typeof schemas.GetLogsArgs>) {
 	return logs;
 }
 
-export async function callGetRequestTrace(args: z.infer<typeof schemas.GetRequestTraceArgs>) {
+export async function callGetRequestTrace(args: schemas.GetRequestTraceArgs) {
     const { getRequestTrace } = await import('../logger');
     return getRequestTrace(args.reqId);
 }

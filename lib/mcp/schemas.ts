@@ -4,23 +4,28 @@ export const ListFoldersArgs = z.object({
 	page: z.number().int().min(1).optional(),
 	limit: z.number().int().min(1).max(100).optional(),
 });
+export type ListFoldersArgs = z.infer<typeof ListFoldersArgs>;
 
 export const CreateFolderArgs = z.object({
 	name: z.string(),
 	description: z.string().optional(),
 });
+export type CreateFolderArgs = z.infer<typeof CreateFolderArgs>;
 
 export const GetFolderArgs = z
 	.object({ id: z.string().optional(), slug: z.string().optional() })
 	.refine((v) => !!v.id || !!v.slug, { message: 'id or slug is required' });
+export type GetFolderArgs = z.infer<typeof GetFolderArgs>;
 
 export const UpdateFolderArgs = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().optional(),
 });
+export type UpdateFolderArgs = z.infer<typeof UpdateFolderArgs>;
 
 export const DeleteFolderArgs = z.object({ id: z.string() });
+export type DeleteFolderArgs = z.infer<typeof DeleteFolderArgs>;
 
 export const MockVariantSchema = z.object({
 	key: z.string(),
@@ -28,6 +33,7 @@ export const MockVariantSchema = z.object({
 	statusCode: z.number().int(),
 	bodyType: z.enum(['json', 'text']),
 });
+export type MockVariantSchema = z.infer<typeof MockVariantSchema>;
 
 export const CreateMockArgs = z.object({
 	name: z.string().describe('The name of the mock'),
@@ -91,6 +97,7 @@ export const CreateMockArgs = z.object({
 		.optional()
 		.describe('Response delay in milliseconds'),
 });
+export type CreateMockArgs = z.infer<typeof CreateMockArgs>;
 
 export const PreviewMockArgs = z.object({
 	folderSlug: z.string(),
@@ -102,6 +109,7 @@ export const PreviewMockArgs = z.object({
 	bodyText: z.string().nullable().optional(),
 	bodyJson: z.record(z.unknown()).nullable().optional(),
 });
+export type PreviewMockArgs = z.infer<typeof PreviewMockArgs>;
 
 export const ListMocksArgs = z.object({
 	folderId: z.string().optional().describe('Filter by folder ID'),
@@ -112,8 +120,10 @@ export const ListMocksArgs = z.object({
 	page: z.number().int().min(1).optional(),
 	limit: z.number().int().min(1).max(100).optional(),
 });
+export type ListMocksArgs = z.infer<typeof ListMocksArgs>;
 
 export const GetMockArgs = z.object({ id: z.string().describe('The mock ID') });
+export type GetMockArgs = z.infer<typeof GetMockArgs>;
 
 export const UpdateMockArgs = z.object({
 	id: z.string().describe('The ID of the mock to update'),
@@ -168,8 +178,10 @@ export const UpdateMockArgs = z.object({
 		.optional()
 		.describe('Response delay in milliseconds'),
 });
+export type UpdateMockArgs = z.infer<typeof UpdateMockArgs>;
 
 export const DeleteMockArgs = z.object({ id: z.string() });
+export type DeleteMockArgs = z.infer<typeof DeleteMockArgs>;
 
 export const ConditionSchema = z.object({
 	type: z
@@ -184,6 +196,7 @@ export const ConditionSchema = z.object({
 		),
 	value: z.unknown().optional().describe('Value to compare against'),
 });
+export type ConditionSchema = z.infer<typeof ConditionSchema>;
 
 export const EffectSchema = z.discriminatedUnion('type', [
 	z.object({
@@ -221,6 +234,7 @@ export const EffectSchema = z.discriminatedUnion('type', [
 		table: z.string().describe('Table name to empty'),
 	}),
 ]);
+export type EffectSchema = z.infer<typeof EffectSchema>;
 
 // Helper to parse JSON strings or pass through objects
 export const parseJsonOrPassthrough = (val: unknown) => {
@@ -274,14 +288,17 @@ export const CreateWorkflowTransitionArgs = z.object({
 		),
 	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
+export type CreateWorkflowTransitionArgs = z.infer<typeof CreateWorkflowTransitionArgs>;
 
 export const ResetWorkflowStateArgs = z.object({
 	scenarioId: z.string(),
 });
+export type ResetWorkflowStateArgs = z.infer<typeof ResetWorkflowStateArgs>;
 
 export const InspectWorkflowStateArgs = z.object({
 	scenarioId: z.string(),
 });
+export type InspectWorkflowStateArgs = z.infer<typeof InspectWorkflowStateArgs>;
 
 export const UpdateWorkflowTransitionArgs = z.object({
 	id: z.number().int().describe('ID of the transition to update'),
@@ -317,6 +334,7 @@ export const UpdateWorkflowTransitionArgs = z.object({
 		.describe('Update response configuration.'),
 	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
+export type UpdateWorkflowTransitionArgs = z.infer<typeof UpdateWorkflowTransitionArgs>;
 
 export const CreateWorkflowScenarioArgs = z.object({
 	name: z
@@ -326,23 +344,28 @@ export const CreateWorkflowScenarioArgs = z.object({
 		),
 	description: z.string().optional().describe('Scenario description'),
 });
+export type CreateWorkflowScenarioArgs = z.infer<typeof CreateWorkflowScenarioArgs>;
 
 export const ListWorkflowScenariosArgs = z.object({
 	page: z.number().int().min(1).optional(),
 	limit: z.number().int().min(1).max(100).optional(),
 });
+export type ListWorkflowScenariosArgs = z.infer<typeof ListWorkflowScenariosArgs>;
 
 export const DeleteWorkflowScenarioArgs = z.object({
 	id: z.string().describe('The ID (slug) of the scenario to delete.'),
 });
+export type DeleteWorkflowScenarioArgs = z.infer<typeof DeleteWorkflowScenarioArgs>;
 
 export const DeleteWorkflowTransitionArgs = z.object({
 	id: z.number().int().describe('The transition database ID'),
 });
+export type DeleteWorkflowTransitionArgs = z.infer<typeof DeleteWorkflowTransitionArgs>;
 
 export const ListWorkflowTransitionsArgs = z.object({
 	scenarioId: z.string().describe('Scenario ID or slug'),
 });
+export type ListWorkflowTransitionsArgs = z.infer<typeof ListWorkflowTransitionsArgs>;
 
 export const TestWorkflowArgs = z.object({
 	scenarioId: z.string().describe('Scenario ID or slug'),
@@ -355,6 +378,7 @@ export const TestWorkflowArgs = z.object({
 		z.record(z.string()).optional(),
 	),
 });
+export type TestWorkflowArgs = z.infer<typeof TestWorkflowArgs>;
 
 export const WorkflowScenarioSchema = z.object({
 	id: z.string().describe('Unique identifier for the scenario (slug format)'),
@@ -364,6 +388,7 @@ export const WorkflowScenarioSchema = z.object({
 		.optional()
 		.describe('Description of the scenario flow'),
 });
+export type WorkflowScenarioSchema = z.infer<typeof WorkflowScenarioSchema>;
 
 export const WorkflowTransitionSchema = z.object({
 	scenarioId: z
@@ -414,6 +439,7 @@ export const WorkflowTransitionSchema = z.object({
 		.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional())
 		.describe('Additional metadata'),
 });
+export type WorkflowTransitionSchema = z.infer<typeof WorkflowTransitionSchema>;
 
 export const ImportWorkflowArgs = z.object({
 	data: z
@@ -430,6 +456,7 @@ export const ImportWorkflowArgs = z.object({
 			'The complete workflow data structure containing scenarios and their transitions. Use this structure to generate valid import data.',
 		),
 });
+export type ImportWorkflowArgs = z.infer<typeof ImportWorkflowArgs>;
 
 export const ExportWorkflowArgs = z.object({
 	scenarioId: z
@@ -437,6 +464,7 @@ export const ExportWorkflowArgs = z.object({
 		.optional()
 		.describe('Optional scenario ID to export only one scenario'),
 });
+export type ExportWorkflowArgs = z.infer<typeof ExportWorkflowArgs>;
 
 export const CreateFullWorkflowArgs = z.object({
 	name: z.string().describe('Display name of the scenario'),
@@ -458,6 +486,7 @@ export const CreateFullWorkflowArgs = z.object({
 		})
 	).describe('List of transitions to create for this scenario'),
 });
+export type CreateFullWorkflowArgs = z.infer<typeof CreateFullWorkflowArgs>;
 
 export const EvaluateTemplateArgs = z.object({
 	template: z.unknown().describe('The template string or object to evaluate (e.g. "Hello {{state.name}}")'),
@@ -472,12 +501,39 @@ export const EvaluateTemplateArgs = z.object({
 		}).optional().describe('Simulated request input'),
 	}).optional().describe('The evaluation context'),
 });
+export type EvaluateTemplateArgs = z.infer<typeof EvaluateTemplateArgs>;
 
 export const SeedWorkflowStateArgs = z.object({
 	scenarioId: z.string().describe('ID or slug of the scenario'),
 	state: z.record(z.unknown()).optional().describe('State object to inject'),
 	tables: z.record(z.array(z.unknown())).optional().describe('Mini-database tables to inject'),
 });
+export type SeedWorkflowStateArgs = z.infer<typeof SeedWorkflowStateArgs>;
+
+export const CreateSchemaMockArgs = z.object({
+	name: z.string(),
+	path: z.string(),
+	method: z.enum([
+		'GET',
+		'POST',
+		'PUT',
+		'PATCH',
+		'DELETE',
+		'HEAD',
+		'OPTIONS',
+	]),
+	statusCode: z.number().int(),
+	folderSlug: z.string().nullable().optional(),
+	folderId: z.string().nullable().optional(),
+	jsonSchema: z.string(),
+	enabled: z.boolean().optional(),
+	matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),
+	queryParams: z.record(z.string()).nullable().optional(),
+	variants: z.array(MockVariantSchema).nullable().optional(),
+	wildcardRequireMatch: z.boolean().optional(),
+	echoRequestBody: z.boolean().nullable().optional(),
+});
+export type CreateSchemaMockArgs = z.infer<typeof CreateSchemaMockArgs>;
 
 // LOG SCHEMAS
 export const GetLogsArgs = z.object({
@@ -486,7 +542,9 @@ export const GetLogsArgs = z.object({
 	level: z.union([z.number(), z.string()]).optional().describe('Filter by log level (10-60 or "info", "error", etc)'),
 	search: z.string().optional().describe('Text search within the message'),
 });
+export type GetLogsArgs = z.infer<typeof GetLogsArgs>;
 
 export const GetRequestTraceArgs = z.object({
 	reqId: z.string().describe('The unique request ID to trace (found in logs)'),
 });
+export type GetRequestTraceArgs = z.infer<typeof GetRequestTraceArgs>;
