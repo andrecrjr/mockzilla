@@ -45,12 +45,16 @@ export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorPro
 		let newEffect: Effect;
 		if (type === 'state.set') {
 			newEffect = { type: 'state.set', raw: {} };
+		} else if (type === 'state.patch') {
+			newEffect = { type: 'state.patch', raw: {} };
 		} else if (type === 'db.push') {
 			newEffect = { type: 'db.push', table: '', value: '' };
 		} else if (type === 'db.update') {
 			newEffect = { type: 'db.update', table: '', match: {}, set: {} };
 		} else if (type === 'db.remove') {
 			newEffect = { type: 'db.remove', table: '', match: {} };
+		} else if (type === 'db.clear') {
+			newEffect = { type: 'db.clear', table: '' };
 		} else {
 			newEffect = { type: 'unknown', raw: {} };
 		}

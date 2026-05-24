@@ -13,6 +13,8 @@
 		"isolatedModules": true,
 		"jsx": "react-jsx",
 		"incremental": true,
+		"baseUrl": ".",
+		"skipDefaultLibCheck": true,
 		"plugins": [
 			{
 				"name": "next"
@@ -24,10 +26,21 @@
 	},
 	"include": [
 		"next-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
+		"app/**/*.ts",
+		"app/**/*.tsx",
+		"components/**/*.ts",
+		"components/**/*.tsx",
+		"lib/**/*.ts",
+		"lib/**/*.tsx",
+		"scripts/**/*.ts",
+		"tests/**/*.ts",
+		"tests/**/*.tsx",
+		"mdx-components.tsx",
+		"middleware.ts",
+		"next.config.ts",
+		"theme.config.tsx",
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts"
 	],
-	"exclude": ["node_modules"]
+	"exclude": ["node_modules", ".next", "drizzle/migrations", "public", "dist"]
 }

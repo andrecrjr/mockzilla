@@ -12,7 +12,8 @@ export type EffectType =
 	| 'db.push'
 	| 'db.update'
 	| 'db.remove'
-	| 'db.clear';
+	| 'db.clear'
+	| 'unknown';
 
 export interface Effect {
 	type: EffectType;
