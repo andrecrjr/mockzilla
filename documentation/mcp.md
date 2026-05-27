@@ -61,52 +61,54 @@ When you run this command, you will be prompted to select which specialized skil
 
 ## Tool Reference
 
-Mockzilla exposes 30 specialized tools. They are grouped into five main categories:
+Mockzilla uses 6 consolidated manager tools to provide a clean, high-performance interface for AI agents. Each tool uses an `action` parameter to dispatch operations.
 
-### 1. Folders Management
-Tools for grouping and organizing mocks.
-- `list_folders`: List all folders with pagination.
-- `create_folder`: Create a new folder (name, description).
-- `get_folder`: Fetch detail by ID or slug.
-- `update_folder`: Modify folder metadata.
-- `delete_folder`: Remove a folder.
+### 1. Folders (`manage_folders`)
+Centralized management for mock folders.
+- `list`: List all folders with pagination.
+- `create`: Create a new folder (name, description).
+- `get`: Fetch detail by ID or slug.
+- `update`: Modify folder metadata.
+- `delete`: Remove a folder and all its contents.
 
-### 2. Mocks Management
-Core tools for defining API responses.
-- `list_mocks`: Paginated list of mocks, optionally filtered by folder.
-- `create_mock`: Create a standard mock (static or basic dynamic).
-- `create_schema_mock`: **(Recommended)** Create a mock using JSON Schema with Faker directives.
-- `get_mock`: Get full mock definition.
-- `update_mock`: Update path, status, or response.
-- `delete_mock`: Delete a mock.
-- `preview_mock`: Test what a mock would return given a path and method.
+### 2. Mocks (`manage_mocks`)
+Unified tool for defining and testing API responses.
+- `list`: Paginated list of mocks, optionally filtered by folder.
+- `create`: Create a mock. If `jsonSchema` is provided without a `response`, a dynamic response is auto-generated.
+- `get`: Get full mock definition.
+- `update`: Update path, status, or any configuration field.
+- `delete`: Delete a mock.
+- `preview`: Test what a mock would return given a path, method, and request context.
 
-### 3. Workflow Scenarios
-Manage stateful, multi-step scenarios.
-- `list_workflow_scenarios`: List all active scenarios.
-- `create_workflow_scenario`: Create a container for isolated state.
-- `delete_workflow_scenario`: Delete a scenario and all its data.
-- `export_workflow`: Export a scenario to JSON for analysis or backup.
-- `import_workflow`: Import scenarios and transitions from JSON.
-- `create_full_workflow`: **(Atomic)** Create a scenario and all its transitions in a single Turn.
+### 3. Workflow Scenarios (`manage_scenarios`)
+Manage stateful, multi-step scenario containers.
+- `list`: List all active scenarios.
+- `create`: Create a container for isolated state.
+- `delete`: Delete a scenario and all its transitions/state.
+- `export`: Export scenario(s) to JSON for backup or analysis.
+- `import`: Bulk import scenarios and transitions from JSON data.
 
-### 4. Workflow Transitions & State
-Deep interaction with the workflow engine.
-- `list_workflow_transitions`: List rules for a specific scenario.
-- `create_workflow_transition`: Define a "WHEN/THEN" rule (Path, Method, Conditions, Effects, Response).
-- `update_workflow_transition`: Refine an existing rule.
-- `delete_workflow_transition`: Remove a rule.
-- `inspect_workflow_state`: **(Powerful)** View the current `state` and `tables` (mini-DB) for a scenario.
-- `reset_workflow_state`: Wipe the scenario state to start fresh.
-- `test_workflow`: Simulate a request to verify complex logic/effects. Returns an `executionTrace` showing exactly why transitions did or didn't match.
-- `seed_workflow_state`: Inject specific data into `state` or `tables` to bypass manual flow steps.
+### 4. Workflow Transitions (`manage_transitions`)
+Deep interaction with the logic engine steps.
+- `list`: List all rules for a specific scenario.
+- `create`: Define a "WHEN/THEN" rule (Path, Method, Conditions, Effects, Response).
+- `update`: Surgically patch conditions, effects, or response configuration.
+- `delete`: Remove a specific rule by its database ID.
+- `create_full`: Atomic creation of a scenario and all its transitions in a single call.
 
-### 5. Logs & Observability (AI-First)
-Tools designed to let the AI see reality.
-- `get_logs`: Query structured NDJSON application logs (filter by level, type, or text search).
-- `get_request_trace`: Reconstruct the entire chronological lifecycle of an HTTP request using its `reqId`.
-- `clear_logs`: Maintenance tool to wipe the log file.
-- `evaluate_template`: Statelessly evaluate Handlebars templates, logic blocks (`#if`, `#each`), and helpers against a dummy context to verify complex response logic.
+### 5. Workflow Control (`workflow_control`)
+Active state management and simulation.
+- `inspect`: View the current `state` and `tables` (mini-DB) for a scenario.
+- `reset`: Wipe the scenario state to start fresh.
+- `seed`: Inject specific data into `state` or `tables` to force a specific state.
+- `test`: Simulate a request end-to-end. Returns an `executionTrace` showing logic matching.
+- `evaluate_template`: Statelessly evaluate Handlebars templates against a provided context.
+
+### 6. Logs & Forensics (`manage_logs`)
+Observe live traffic and debug failures.
+- `get`: Query application logs (filter by level, type, or text search).
+- `trace`: Reconstruct the chronological lifecycle of an HTTP request using its `reqId`.
+- `clear`: Wipe the log file.
 
 ---
 
@@ -128,14 +130,13 @@ Conditions use a structured JSON format. Avoid Pure JS.
 Effects handle data transformations.
 - **Allowed types**: `state.set`, `db.push`, `db.update`, `db.remove`.
 - **Interpolation**: Use `{{path}}` to reference input or state.
-- ❌ **No Randomness**: Effects must be deterministic. Use `create_schema_mock` if you need randomness in the response body.
+- ❌ **No Randomness**: Effects must be deterministic. Use `manage_mocks` with `jsonSchema` if you need randomness in the response body.
 
 ---
 
 ## Integration Tips
 
-- **Use Schema Mocks**: For data-heavy mocks, provide the AI with a JSON Schema. It's much more reliable than asking it to generate large JSON blobs.
-- **Inspect Often**: When debugging workflows, use `inspect_workflow_state` to see exactly how your mini-DB tables are evolving.
-- **Trace the Failure**: If `test_workflow` fails, check the `executionTrace`. If you need more detail, find the `reqId` in `get_logs` and call `get_request_trace`.
-- **Transactional Imports**: Use `export_workflow` and `import_workflow` to move complex setups between environments or to "snapshot" a known good state.
-- **Leverage Skills**: Don't just rely on raw tools. Use **Agent Skills** ([skills.md](/documentation/skills.md)) to provide the AI with proven patterns for complex Mockzilla tasks.
+- **Manager-First**: Always use the consolidated manager tools. The granular tools are deprecated to prevent TSC memory exhaustion.
+- **Inspect Often**: When debugging workflows, use `workflow_control` (`action: 'inspect'`) to see exactly how your mini-DB tables are evolving.
+- **Trace the Failure**: If simulation fails, check the `executionTrace`. If you need more detail, find the `reqId` in `manage_logs` (`action: 'get'`) and call `manage_logs` (`action: 'trace'`).
+- **Transactional Imports**: Use `manage_scenarios` (`action: 'export'`) and (`action: 'import'`) to move complex setups between environments.

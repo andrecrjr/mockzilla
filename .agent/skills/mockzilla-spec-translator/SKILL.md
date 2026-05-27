@@ -16,19 +16,12 @@ description: Elite API Architect for industrial-grade project bootstrapping from
 
 ## 🛠️ Available MCP Tools
 
-| Tool | Purpose | When to Use |
+| Tool | Purpose | Action |
 | :--- | :--- | :--- |
-| `create_folder` | Create a top-level folder to group all spec mocks | First step, always |
-| `get_folder` | Fetch folder to confirm it was created (`slug` param) | After creation |
-| `list_folders` | List existing folders to avoid duplicates | Before creating |
-| `create_schema_mock` | Create a mock with JSON Schema + dynamic data | All data endpoints |
-| `create_mock` | Create a static mock | Health checks, 204 empty responses |
-| `create_full_workflow` | Create a scenario and all transitions in one go | When bootstrapping stateful flows from spec |
-| `import_workflow` | Bulk import an entire workflow definition | When restoring or migrating from another environment |
-| `update_mock` | Revise schema or parameters of an existing mock | Iteration after `preview_mock` |
-| `get_mock` | Inspect a mock before editing | Always read before `update_mock` |
-| `list_mocks` | Audit all mocks in a folder | Quality check pass |
-| `preview_mock` | Simulate a mock response end-to-end | Verification of every endpoint |
+| `manage_folders` | Create/Fetch folder for spec grouping | `create`, `get`, `list` |
+| `manage_mocks` | Create data endpoints and health checks | `create`, `update`, `get`, `list`, `preview` |
+| `manage_scenarios` | Import or export complex flows | `import`, `export`, `create` |
+| `manage_transitions` | Atomic creation of full stateful flows | `create_full`, `create` |
 
 ## 🚀 Advanced Bootstrapping Strategy
 
@@ -52,32 +45,32 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 ### 3. Structural Patterns
 - **Pagination**: For `GET /list` style endpoints, always wrap the array in a `data` key and include a `meta` object with `total`, `page`, and `limit`.
 - **Polymorphism**: If a spec uses `oneOf` or `anyOf`, represent this using a complex JSON Schema with `anyOf` sub-objects.
-- **Path Params**: For `/users/:id`, set `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
+- **Path Params**: For `/users/:id`, set `path: "/users/*"`, `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
 - **One-Shot State**: If the spec defines a complex CRUD flow, use `create_full_workflow` instead of individual `create_workflow_transition` calls to reduce latency.
 
 ## 🔄 Orchestration Flow
 
 ```
-list_folders (check for duplicates)
-  └─> create_folder (e.g. "Project X - API")
+manage_folders (action: 'list' - check for duplicates)
+  └─> manage_folders (action: 'create', e.g. "Project X - API")
         └─> For each spec endpoint:
-              └─> create_schema_mock (dynamic) | create_mock (static/empty)
-                    └─> preview_mock (verify first 3 endpoints)
-                          └─> update_mock (fix schema if data looks wrong)
-                                └─> list_mocks (final audit of the folder)
+              └─> manage_mocks (action: 'create')
+                    └─> manage_mocks (action: 'preview' - verify first 3 endpoints)
+                          └─> manage_mocks (action: 'update' - fix schema if needed)
+                                └─> manage_mocks (action: 'list' - final audit)
 ```
 
 **Parameter guidance**:
-- Always use `folderSlug` (not `folderId`) when creating mocks — it's derived from the folder name automatically (lowercased, spaces→`-`, non-alphanumerics removed).
+- Always use `folderSlug` (not `folderId`) when calling `manage_mocks` — it's derived from the folder name automatically.
 - Set `enabled: true` on all mocks.
-- Set `useDynamicResponse: true` via `create_schema_mock` (it's implicit) for all data endpoints.
+- Use `manage_mocks` with `jsonSchema` (it's implicit) for all data endpoints.
 
 ## 💡 Expert Best Practices
 
-- **Path Parameter Precision**: For paths like `/users/:id`, set `matchType: "wildcard"` and provide `variants` for specific IDs like `{ "key": "test-admin", "statusCode": 200, "body": "...", "bodyType": "json" }`.
-- **Pagination Interpolation**: Use `"page": { "const": "{$.query.page}" }` to echo the request's page number back in the response.
-- **Error Variants**: For `matchType: "wildcard"` mocks, add variants for `401`, `403`, `404` responses. Set `wildcardRequireMatch: true` to return 404 if no variant matches.
-- **Echo POST bodies**: For `POST` confirmation endpoints (e.g., `POST /orders`), use `echoRequestBody: true` in `create_mock` to automatically return the submitted payload.
+- **Path Parameter Precision**: For paths like `/users/*`, set `matchType: "wildcard"` and provide `variants` for specific IDs.
+- **Pagination Interpolation**: Use `"page": { "const": "{$.query.page}" }` to echo the request's page number back.
+- **Error Variants**: For `matchType: "wildcard"` mocks, add variants for `401`, `403`, `404`. Set `wildcardRequireMatch: true`.
+- **Echo POST bodies**: For `POST` confirmation endpoints, use `echoRequestBody: true` in `manage_mocks` (action: `create`).
 
 ## ⏭️ Skill Chaining
 

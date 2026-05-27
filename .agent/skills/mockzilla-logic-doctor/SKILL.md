@@ -14,78 +14,70 @@ description: Elite Forensic Specialist for diagnosing and surgically repairing c
 4.  **Preserve the Mini-DB**: If state is corrupted, prefer repairing it via `test_workflow` (action-driven) rather than a full `reset_workflow_state` (wipe).
 5.  **Snapshot First**: Call `export_workflow` before making any bulk changes — it's your safety net.
 
-## 🛠️ Available MCP Tools
+## Available MCP Tools & Signatures
 
-| Tool | Purpose | When to Use |
-| :--- | :--- | :--- |
-| `get_logs` | Search structured NDJSON logs | To find a `reqId` from a failed live request |
-| `get_request_trace` | Reconstruct a request lifecycle | To audit matching, logic, and side-effects by `reqId` |
-| `inspect_workflow_state` | Read exact state vars + db tables | Always first — "What is reality?" |
-| `list_workflow_transitions` | List all transitions in order | Before any diagnosis |
-| `test_workflow` | Simulate a request end-to-end | Reproduce the bug, confirm the fix (check `executionTrace`) |
-| `evaluate_template` | Test interpolation logic in isolation | To debug why a response/effect has broken values |
-| `seed_workflow_state` | Inject specific state/tables | To force a complex scenario state without manual steps |
-| `update_workflow_transition` | Surgically patch conditions/effects/response | The actual cure |
-| `create_workflow_transition` | Add a missing escape path transition | When flow is dead-ended |
-| `delete_workflow_transition` | Remove a duplicate or hijacking transition | When two transitions conflict |
-| `reset_workflow_state` | Wipe all state + db tables | **Last resort only** — data loss |
-| `export_workflow` | Snapshot the entire scenario before repairs | Always before bulk changes |
-| `import_workflow` | Restore from a previous export | Rollback if repairs go wrong |
+| Tool | Action | Required Parameters | Optional Parameters |
+| :--- | :--- | :--- | :--- |
+| `manage_logs` | `get` | None | `limit` (max 500), `type`, `level`, `search` |
+| `manage_logs` | `trace` | `reqId` | None |
+| `workflow_control` | `inspect` | `scenarioId` | None |
+| `workflow_control` | `test` | `scenarioId`, `path`, `method` | `body`, `query`, `headers` |
+| `manage_transitions`| `update` | `id` (integer) | `conditions`, `effects`, `response` |
 
 ## 🔍 Advanced Diagnostic Decision Tree
 
 ### 0. "The Live Autopsy" (New!)
 - **Scenario**: A user says "the frontend is getting a 404/500".
-- **Step A**: Call `get_logs` (filter by `level: 40` (Warn) or `level: 50` (Error)).
+- **Step A**: Call `manage_logs` (action: `get`, filter by `level: 40` (Warn) or `level: 50` (Error)).
 - **Step B**: Find the matching `path` and copy its `reqId`.
-- **Step C**: Call `get_request_trace` with that `reqId`.
+- **Step C**: Call `manage_logs` (action: `trace`, reqId: `reqId`).
 - **Diagnosis**: The trace will show exactly where it failed: `Folder not found`, `No matching mock`, or `Workflow transition handoff`.
 
 ### 1. "No Matching Transition" (The Silent Failure)
-- **Step A**: Call `list_workflow_transitions` — check `path` and `method`. Missing leading `/`? Wrong HTTP verb?
-- **Step B**: Call `inspect_workflow_state` — audit each `condition` field. Is `state.user.id` referenced when `state.user` itself is `undefined`?
-- **Step C**: Verify type matching. Is a condition comparing `"5"` (string) against `5` (number)? Fix with `update_workflow_transition`.
+- **Step A**: Call `manage_transitions` (action: `list`) — check `path` and `method`. Missing leading `/`? Wrong HTTP verb?
+- **Step B**: Call `workflow_control` (action: `inspect`) — audit each `condition` field. Is `state.user.id` referenced when `state.user` itself is `undefined`?
+- **Step C**: Verify type matching. Is a condition comparing `"5"` (string) against `5` (number)? Fix with `manage_transitions` (action: `update`).
 - **Step D**: Check header case-sensitivity. Headers are normalized to lowercase by the engine — `Authorization` → `authorization`.
 
 ### 2. "Wrong Transition Fired" (The Hijack)
 - **Diagnosis**: Two transitions match the same path+method; the earlier one has looser (or no) conditions.
-- **Cure**: Use `update_workflow_transition` on the hijacking transition to add a stricter `exists` or `eq` condition.
+- **Cure**: Use `manage_transitions` (action: `update`) on the hijacking transition to add a stricter `exists` or `eq` condition.
 
 ### 3. "Dead-End Flow" (The State Lock)
 - **Diagnosis**: User is in a state where NO transitions match (e.g., `state.status` is `"locked"` but no transition handles `"locked"`).
-- **Cure**: Use `create_workflow_transition` to add an escape path (e.g., a reset or admin override endpoint).
-- **Alternative**: Use `seed_workflow_state` to jump to a known good state for further testing.
+- **Cure**: Use `manage_transitions` (action: `create`) to add an escape path (e.g., a reset or admin override endpoint).
+- **Alternative**: Use `workflow_control` (action: `seed`) to jump to a known good state for further testing.
 
 ### 4. "Effect Didn't Run" (Silent DB/State Miss)
-- **Diagnosis**: `test_workflow` returns success but `inspect_workflow_state` shows the DB or state unchanged.
+- **Diagnosis**: `workflow_control` (action: `test`) returns success but `workflow_control` (action: `inspect`) shows the DB or state unchanged.
 - **Cure**: Check the `effects` array format — it must be a JSON array of objects, not an object map.
 
 ### 5. "Broken Interpolation" (The {{?}} Bug)
 - **Diagnosis**: Response body or DB fields contain raw `{{...}}` tags or `[object Object]`.
-- **Diagnosis Tool**: Call `evaluate_template` with the problematic string and the current `context` from `inspect_workflow_state`.
-- **Cure**: Fix the field path in `update_workflow_transition`. Remember: `input.body.id`, not just `body.id`.
+- **Diagnosis Tool**: Call `workflow_control` (action: `evaluate_template`) with the problematic string and the current `context` from `inspect`.
+- **Cure**: Fix the field path in `manage_transitions` (action: `update`). Remember: `input.body.id`, not just `body.id`.
 
 ## 💊 The "Pharmacopeia" (Common Cures)
 
 | Illness | The Prescription (Fix) |
 | :--- | :--- |
-| **Numeric Type Drift** | Update condition `"value"` from `"5"` (string) to `5` (number) via `update_workflow_transition`. |
+| **Numeric Type Drift** | Update condition `"value"` from `"5"` (string) to `5` (number) via `manage_transitions` (action: `update`). |
 | **Empty Array Check** | Change condition to `{"type": "gt", "field": "db.items.length", "value": 0}`. |
 | **Auth Header Not Found** | Use `{"type": "exists", "field": "input.headers.authorization"}` (lowercase). |
 | **Relational Mismatch** | Verify `{{input.body.userId}}` actually matches the format in `db.users[0].id` (UUID vs serial). |
-| **Stale State Lock** | Use `reset_workflow_state` only if no action-driven escape path is feasible. |
-| **Duplicate Transition** | Call `list_workflow_transitions`, identify duplicate, call `delete_workflow_transition` on the stale one. |
+| **Stale State Lock** | Use `workflow_control` (action: `reset`) only if no action-driven escape path is feasible. |
+| **Duplicate Transition** | Call `manage_transitions` (action: `list`), identify duplicate, call `manage_transitions` (action: `delete`) on the stale one. |
 
 ## 🛠️ Elite Repair Flow
 
 ```
-get_logs (find the incident)
-  └─> get_request_trace (identify why it failed)
-        └─> inspect_workflow_state (capture exact state/db context)
-              └─> list_workflow_transitions (audit order + conditions)
-                    └─> test_workflow (reproduce and check executionTrace)
-                          └─> update_workflow_transition (apply fix)
-                                └─> test_workflow (confirm success)
+manage_logs (action: 'get' - find the incident)
+  └─> manage_logs (action: 'trace' - identify why it failed)
+        └─> workflow_control (action: 'inspect' - capture exact state/db context)
+              └─> manage_transitions (action: 'list' - audit order + conditions)
+                    └─> workflow_control (action: 'test' - reproduce and check executionTrace)
+                          └─> manage_transitions (action: 'update' - apply fix)
+                                └─> workflow_control (action: 'test' - confirm success)
 ```
 
 ## 💡 Pro Tips for Experts

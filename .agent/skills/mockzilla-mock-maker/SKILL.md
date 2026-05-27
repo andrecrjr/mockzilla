@@ -15,52 +15,64 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 - [JSON Faker Mock References](./resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
 
-## �️ Available MCP Tools
+## Available MCP Tools & Signatures
 
-| Tool | Purpose | Key Parameters |
-| :--- | :--- | :--- |
-| `create_folder` | Create a folder to group mocks | `name`, `description` |
-| `get_folder` | Fetch folder by ID or slug | `id` or `slug` |
-| `list_folders` | List all folders (paginated) | `page`, `limit` |
-| `update_folder` | Update folder name or description | `id`, `name`, `description` |
-| `create_schema_mock` | Create a mock with JSON Schema + dynamic data | `name`, `path`, `method`, `statusCode`, `folderSlug`, `jsonSchema` |
-| `create_mock` | Create a static mock | `name`, `path`, `method`, `statusCode`, `folderSlug`, `response` |
-| `update_mock` | Update an existing mock | `id` + any fields to change |
-| `get_mock` | Fetch a mock by ID | `id` |
-| `list_mocks` | List mocks (paginated, filterable by folder) | `folderSlug`, `page`, `limit` |
-| `delete_mock` | Delete a mock | `id` |
-| `preview_mock` | Preview a mock response without calling the live URL | `folderSlug`, `path`, `method`, `queryParams`, `headers`, `bodyJson` |
-| `evaluate_template` | Test `{$.path}` interpolation logic statelessly | `template`, `context` |
+| Tool | Action | Required Parameters | Optional Parameters |
+| :--- | :--- | :--- | :--- |
+| `manage_folders` | `list` | None | `page`, `limit` |
+| `manage_folders` | `create` | `name` | `description` |
+| `manage_folders` | `get` | `id` OR `slug` | None |
+| `manage_folders` | `update` | `id`, `name` | `description` |
+| `manage_folders` | `delete` | `id` | None |
+| `manage_mocks` | `create` | `name`, `path`, `method` (e.g. GET), `statusCode` | `folderSlug` (preferred) OR `folderId`, `jsonSchema` (preferred), `response` (fallback), `matchType` (`exact`, `substring`, `wildcard`), `useDynamicResponse` (boolean) |
+| `manage_mocks` | `update` | `id` | `name`, `path`, `method`, `statusCode`, `jsonSchema`, `matchType`, `useDynamicResponse` |
+| `manage_mocks` | `preview`| `folderSlug`, `path` (the exact URL path to test), `method` | `contentType`, `queryParams`, `headers`, `bodyText`, `bodyJson` |
+
+> [!WARNING] WILDCARD PATH RULE
+> When creating paths with path parameters for static mocks, Mockzilla uses `*` instead of `:id`.
+> ❌ WRONG: `/users/:id`
+> ✅ CORRECT: `/users/*`
+> If you use `:id`, `matchType: "wildcard"` will fail to match paths like `/users/123`.
+
+### 🔀 Advanced Wildcard Variants
+When using multiple `*` characters in a path, Mockzilla forms a **Composite Key** by joining captured segments with a pipe `|`.
+- **Path**: `/users/*/orders/*`
+- **Request**: `/users/alice/orders/101` → **Key**: `alice|101`
+- **Selection Logic**:
+  1. Tries exact match for the composite key (e.g., `alice|101`).
+  2. Falls back **directly** to the catch-all variant `*`.
+  3. **Note**: Partial keys like `alice|*` are NOT currently supported as intermediate fallbacks.
+
 
 ## 🛡️ Constraints & Boundaries
 
-- **Always** use `create_schema_mock` for dynamic/realistic data.
+- **Always** use `manage_mocks` (action: `create`) with `jsonSchema` for dynamic/realistic data.
 - **Always** set `minItems` and `maxItems` to keep responses manageable.
 - **Never** include state-changing logic (e.g., `db.push`) when using this skill.
 - **Strict Schemas**: Always set `additionalProperties: false` on objects to prevent unwanted random data.
 - **Never** use hardcoded data for more than 3 fields; use Faker instead.
-- **Always** call `preview_mock` after creating a mock to verify the response looks correct before finishing.
+- **Always** call `manage_mocks` (action: `preview`) after creating a mock to verify the response looks correct before finishing.
 - **Syntax Check**: Use `{$.path}` for JSON Schema/Mock interpolation (this skill). Use `{{path}}` ONLY for workflows (Workflow Architect skill).
 
 ## Core Principles
 
-1.  **Schema First**: Use `create_schema_mock` for the majority of UI development. It provides realistic, varied data without manual maintenance.
+1.  **Schema First**: Use `manage_mocks` (action: `create`) with `jsonSchema` for the majority of UI development. It provides realistic, varied data without manual maintenance.
 2.  **Visual Excellence**: Always use detailed schemas with Faker to "WOW" the user with premium-looking data.
 3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
-4.  **Evaluate before Build**: Use `evaluate_template` to verify complex `{$.path}` mappings if you are unsure of the path structure.
+4.  **Evaluate before Build**: Use `workflow_control` (action: `evaluate_template`) to verify complex `{$.path}` mappings if you are unsure of the path structure.
 5.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
-6.  **Verify Always**: Call `preview_mock` to validate every mock immediately after creation.
+6.  **Verify Always**: Call `manage_mocks` (action: `preview`) to validate every mock immediately after creation.
 
 ---
 
 ## 🔄 Standard Workflow
 
 ```
-create_folder (if needed)
-  └─> create_schema_mock (for dynamic) | create_mock (for static)
-        └─> preview_mock (verify output)
-              └─> update_mock (iterate if needed)
-                    └─> preview_mock (confirm fix)
+manage_folders (action: 'create' - if needed)
+  └─> manage_mocks (action: 'create')
+        └─> manage_mocks (action: 'preview' - verify output)
+              └─> manage_mocks (action: 'update' - iterate if needed)
+                    └─> manage_mocks (action: 'preview' - confirm fix)
 ```
 
 ---
@@ -69,10 +81,10 @@ create_folder (if needed)
 
 | Task | Recommended Tool | Why? |
 | :--- | :--- | :--- |
-| **Realistic / Dynamic Data** | `create_schema_mock` | JSON Schema + Faker + Interpolation. Auto-generates varied data on each request. |
-| **Static / Constant Response** | `create_mock` | Quick for fixed responses (health checks, feature flags, enums). |
-| **Iteration / Fix** | `update_mock` + `preview_mock` | Surgically update one field, re-verify. |
-| **Inspect existing** | `get_mock` / `list_mocks` | Read before modifying to avoid overwriting fields. |
+| **Realistic / Dynamic Data** | `manage_mocks` (action: `create` + `jsonSchema`) | JSON Schema + Faker + Interpolation. Auto-generates varied data on each request. |
+| **Static / Constant Response** | `manage_mocks` (action: `create` + `response`) | Quick for fixed responses (health checks, feature flags, enums). |
+| **Iteration / Fix** | `manage_mocks` (action: `update` + `preview`) | Surgically update one field, re-verify. |
+| **Inspect existing** | `manage_mocks` (action: `get` / `list`) | Read before modifying to avoid overwriting fields. |
 
 ---
 
@@ -165,7 +177,7 @@ Reference generated fields within the same object to ensure data consistency. Us
 - **Strictness**: Use `additionalProperties: false` (objects) and `additionalItems: false` (arrays) to ensure the output matches the schema *exactly*.
 - **Always validate**: Call `preview_mock` immediately after `create_schema_mock` to check the generated data quality. Iterate with `update_mock` if needed.
 - **Prefer `folderSlug`**: Use `folderSlug` parameter instead of `folderId` when creating mocks—it's human-readable and avoids needing an extra lookup.
-- **Wildcard paths**: For path params like `/users/:id`, set `matchType: "wildcard"` and add `variants` for specific ID cases (e.g., `test-admin`).
+- **Wildcard paths**: For path params like `/users/*`, set `matchType: "wildcard"` and add `variants` for specific ID cases (e.g., `test-admin`).
 - **Query param matching**: Use `queryParams` to lock a mock to a specific query string signature.
 
 ---

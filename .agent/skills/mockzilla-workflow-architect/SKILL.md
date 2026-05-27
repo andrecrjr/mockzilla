@@ -16,35 +16,28 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 - [Logic Operators Guide](./resources/logic-operators.md): Syntax and use cases for `eq`, `neq`, `exists`, etc.
 - [Complex Flow Recipes](./examples/complex-scenarios.md): Templates for OAuth2, Checkout, and multi-step forms.
 
-## 🛠️ Available MCP Tools
+## Available MCP Tools & Signatures
 
-| Tool | Purpose | Key Parameters |
-| :--- | :--- | :--- |
-| `create_workflow_scenario` | Create a new scenario (state machine) | `name`, `description` |
-| `list_workflow_scenarios` | List existing scenarios | `page`, `limit` |
-| `delete_workflow_scenario` | Delete a scenario and all its transitions | `id` (slug) |
-| `create_workflow_transition` | Add a transition (route + conditions + effects + response) | `scenarioId`, `name`, `path`, `method`, `conditions`, `effects`, `response` |
-| `create_full_workflow` | "One-Shot" creation of scenario + all transitions | `name`, `description`, `transitions` |
-| `update_workflow_transition` | Modify an existing transition | `id` (numeric DB id) + fields to change |
-| `delete_workflow_transition` | Remove a transition | `id` (numeric DB id) |
-| `list_workflow_transitions` | List all transitions in a scenario | `scenarioId` |
-| `test_workflow` | Simulate a request against a scenario | `scenarioId`, `path`, `method`, `body`, `query`, `headers` |
-| `evaluate_template` | Test `{{path}}` interpolation logic | `template`, `context` |
-| `inspect_workflow_state` | Read current scenario state + db tables | `scenarioId` |
-| `seed_workflow_state` | Directly inject state and table data | `scenarioId`, `state`, `tables` |
-| `reset_workflow_state` | Wipe all state and db tables for a scenario | `scenarioId` |
-| `export_workflow` | Export scenario(s) to JSON | `scenarioId` |
-| `import_workflow` | Bulk import scenarios + transitions | `data` |
+| Tool | Action | Required Parameters | Optional Parameters |
+| :--- | :--- | :--- | :--- |
+| `manage_scenarios` | `create` | `name` | `description` |
+| `manage_transitions`| `create` | `scenarioId`, `name`, `path`, `method`, `response` (object with status/body) | `description`, `conditions` (array), `effects` (array) |
+| `manage_transitions`| `create_full`| `name`, `transitions` (array of objects with required transition fields) | `description` |
+| `workflow_control` | `test` | `scenarioId`, `path`, `method` | `body`, `query`, `headers` |
+| `workflow_control` | `inspect` | `scenarioId` | None |
+
+> [!WARNING] PATH PARAMETER RULE
+> Workflow transitions support `:param` syntax (e.g., `/users/:id`). This is different from the stateless Mock Maker which uses `*`.
 
 ## 🛡️ Constraints & Boundaries
 
-- **Always** verify state changes using `inspect_workflow_state` after each `test_workflow` call.
+- **Always** verify state changes using `workflow_control` (action: 'inspect') after each `test` call.
 - **Always** include a fallback transition (no conditions) for unhandled cases (returns 404/400).
-- **Always** list transitions with `list_workflow_transitions` before adding new ones to avoid duplicates.
+- **Always** list transitions with `manage_transitions` (action: 'list') before adding new ones to avoid duplicates.
 - **Syntax Check**: Use `{{path}}` (double braces) for all workflow interpolation (state, db, input). **Never** use `{$.path}` here—that is for the Mock Maker (stateless) skill only.
 - **Never** implement complex business logic (e.g., tax calculation) — echo inputs or return static varied results instead.
-- **Use `export_workflow`** before making major structural changes as a snapshot/backup.
-- **Prefer `create_full_workflow`** for large scenarios to ensure atomic creation and reduce tool-turn overhead.
+- **Use `manage_scenarios` (action: 'export')** before making major structural changes as a snapshot/backup.
+- **Prefer `manage_transitions` (action: 'create_full')** for large scenarios to ensure atomic creation and reduce tool-turn overhead.
 
 ## 🧠 Core Architecture
 
@@ -88,21 +81,21 @@ Actions to persist data. Executed *before* the response is generated.
 ### Transition Priority
 - Mockzilla matches the **first** transition where **all** conditions pass (ordered by `createdAt`).
 - Put **specific / error / edge case** transitions **before** generic "success" ones.
-- Use `list_workflow_transitions` to review the current order.
+- Use `manage_transitions` (action: 'list') to review the current order.
 
 ---
 
 ## 🔄 Standard Workflow
 
 ```
-create_workflow_scenario
-  └─> list_workflow_transitions (confirm empty)
-        └─> create_workflow_transition (most specific cases first)
-              └─> create_workflow_transition (fallback/generic last)
-                    └─> test_workflow (simulate requests)
-                          └─> inspect_workflow_state (verify side-effects)
-                                └─> update_workflow_transition (fix conditions/effects)
-                                      └─> test_workflow (confirm fix)
+manage_scenarios (action: 'create')
+  └─> manage_transitions (action: 'list' - confirm empty)
+        └─> manage_transitions (action: 'create' - most specific cases first)
+              └─> manage_transitions (action: 'create' - fallback/generic last)
+                    └─> workflow_control (action: 'test' - simulate requests)
+                          └─> workflow_control (action: 'inspect' - verify side-effects)
+                                └─> manage_transitions (action: 'update' - fix conditions/effects)
+                                      └─> workflow_control (action: 'test' - confirm fix)
 ```
 
 ---
@@ -146,10 +139,10 @@ create_workflow_scenario
 
 ## 🔍 Debugging & Verification
 
-1.  **Inspect State**: Use `inspect_workflow_state` after `test_workflow` to confirm effects ran.
-2.  **Transition Priority**: Use `list_workflow_transitions` to check order — the first passing transition wins.
-3.  **Test Tool**: Use `test_workflow` to fire a one-off request. Provide `body`, `query`, and `headers` for full context.
-4.  **Snapshot before repair**: Use `export_workflow` before bulk `update_workflow_transition` calls.
+1.  **Inspect State**: Use `workflow_control` (action: 'inspect') after `test` to confirm effects ran.
+2.  **Transition Priority**: Use `manage_transitions` (action: 'list') to check order — the first passing transition wins.
+3.  **Test Tool**: Use `workflow_control` (action: 'test') to fire a one-off request. Provide `body`, `query`, and `headers` for full context.
+4.  **Snapshot before repair**: Use `manage_scenarios` (action: 'export') before bulk `update` calls.
 
 ---
 

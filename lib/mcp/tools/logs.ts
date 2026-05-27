@@ -1,54 +1,19 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import * as schemas from '../schemas';
+import { ManageLogsArgs } from '../schemas/logs';
 
 export function registerLogTools(server: McpServer) {
 	server.registerTool(
-		'get_logs',
+		'manage_logs',
 		{
-			title: 'Get Logs',
-			description:
-				'Retrieve structured application logs with filtering and search capabilities.',
-			inputSchema: schemas.GetLogsArgs,
+			title: 'Manage Logs',
+			description: 'Retrieve, trace, and clear application logs.',
+			inputSchema: ManageLogsArgs as any,
 		},
-		async (args: schemas.GetLogsArgs) => {
-			const { callGetLogs } = await import('../handlers');
-			const result = await callGetLogs(args);
+		async (args: any) => {
+			const { callManageLogs } = await import('../handlers');
+			const result = await callManageLogs(args);
 			return {
-				content: [{ type: 'text', text: JSON.stringify(result) }],
-			};
-		},
-	);
-
-	server.registerTool(
-		'get_request_trace',
-		{
-			title: 'Get Request Trace',
-			description:
-				'Get the full lifecycle trace of a specific HTTP request by its ID.',
-			inputSchema: schemas.GetRequestTraceArgs,
-		},
-		async (args: schemas.GetRequestTraceArgs) => {
-			const { callGetRequestTrace } = await import('../handlers');
-			const result = await callGetRequestTrace(args);
-			return {
-				content: [{ type: 'text', text: JSON.stringify(result) }],
-			};
-		},
-	);
-
-	server.registerTool(
-		'clear_logs',
-		{
-			title: 'Clear Logs',
-			description: 'Clear all application logs.',
-			inputSchema: z.object({}),
-		},
-		async () => {
-			const { callClearLogs } = await import('../handlers');
-			const result = await callClearLogs();
-			return {
-				content: [{ type: 'text', text: JSON.stringify(result) }],
+				content: [{ type: 'text' as const, text: JSON.stringify(result) }],
 			};
 		},
 	);

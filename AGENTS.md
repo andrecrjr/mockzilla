@@ -45,12 +45,12 @@ Tags: #logging #tracing #forensics #pino #ndjson
 - Purpose: Inspect live traffic, debug matching logic, and perform forensic audits on stateful workflows.
 - Implementation: `lib/logger.ts` (Core), `app/api/mock/[...path]/route.ts` (Tracing entry).
 - Capabilities:
-  - Query application logs via `get_logs` (search, level, type filters).
-  - Perform end-to-end request reconstruction using `get_request_trace(reqId)`.
-  - Analyze workflow matching failures via `test_workflow`'s `executionTrace`.
+  - Query application logs via `manage_logs` (action: `get`) (search, level, type filters).
+  - Perform end-to-end request reconstruction using `manage_logs` (action: `trace`, reqId: `reqId`).
+  - Analyze workflow matching failures via `workflow_control` (action: `test`)'s `executionTrace`.
 - Entry Points:
-  - MCP: `get_logs`, `get_request_trace`, `clear_logs`.
-  - Workflow: `test_workflow` (enhanced output).
+  - MCP: `manage_logs` (actions: `get`, `trace`, `clear`).
+  - Workflow: `workflow_control` (action: `test`) (enhanced output).
 - Related Docs:
   - `documentation/mcp.md` (Logs section).
 
@@ -149,13 +149,14 @@ Tags: #crud #mock #pagination #drizzle #nextjs
 - Purpose: Create, read, update, delete mock definitions; list with pagination.
 - Entry Point: `app/api/mocks/route.ts`
 - Capabilities
-  - GET by `id`, or list paginated with optional `folderId` (app/api/mocks/route.ts:7–106).
-  - POST create new mock (app/api/mocks/route.ts:108–149).
-  - PUT update by `id` (app/api/mocks/route.ts:156–210).
-  - DELETE by `id` (app/api/mocks/route.ts:212–226).
+  - List paginated with optional `folderId` via `manage_mocks` (action: `list`).
+  - Create new mock via `manage_mocks` (action: `create`). Supports standard and schema-driven mocks.
+  - Update by `id` via `manage_mocks` (action: `update`).
+  - Delete by `id` via `manage_mocks` (action: `delete`).
+  - Preview matching logic via `manage_mocks` (action: `preview`).
 - Inputs
   - Query: `id`, `folderId`, `page`, `limit`.
-  - Body: `CreateMockRequest` / `UpdateMockRequest` (lib/types.ts; fields map to `mockResponses`).
+  - Body: `ManageMocksArgs` (lib/mcp/schemas/mocks.ts).
 - Outputs
   - JSON with normalized fields: `id, name, path, method, response, statusCode, folderId, matchType, bodyType, enabled, jsonSchema, useDynamicResponse, echoRequestBody, createdAt, updatedAt`.
 - Constraints
@@ -172,10 +173,11 @@ Tags: #crud #folder #slug #drizzle #nextjs
 - Purpose: Manage folders (groups of mocks) and pagination.
 - Entry Point: `app/api/folders/route.ts`
 - Capabilities
-  - GET by `slug`, list all, or paginated (app/api/folders/route.ts:15–89).
-  - POST create with slug generation (app/api/folders/route.ts:91–121).
-  - PUT update by `id` with slug regeneration (app/api/folders/route.ts:123–160).
-  - DELETE by `id` (app/api/folders/route.ts:162–176).
+  - List all, or paginated via `manage_folders` (action: `list`).
+  - Create with slug generation via `manage_folders` (action: `create`).
+  - Get by `id` or `slug` via `manage_folders` (action: `get`).
+  - Update by `id` with slug regeneration via `manage_folders` (action: `update`).
+  - Delete by `id` via `manage_folders` (action: `delete`).
 - Slug Rules
   - Lowercase, trim, spaces→`-`, non-alphanumerics removed (app/api/folders/route.ts:7–13).
 - Outputs
@@ -281,12 +283,15 @@ Tags: #skills #automation #creator #architect
 - Serve a mock
   - "Call Mock Serving Agent with method `GET` at `/api/mock/{folderSlug}/users/42`".
 - Create a mock
-  - "Use Mocks CRUD Agent to POST a JSON mock in folder `{folderId}` with path `/users/{id}` and `statusCode` 200".
+  - "Use Mocks CRUD Agent to call `manage_mocks` with action `create` for a JSON mock in folder `{folderId}` with path `/users/{id}` and `statusCode` 200".
 - Generate dynamic sample
   - "Use Schema Generator Agent with `generateFromSchemaString` and interpolate `{ $.user.id }` into summary field".
 - Perform Forensics
-  - "Use Observability & Forensic Agent to find why the last request to `/api/v1/orders` failed."
-  - "Invoke `get_request_trace` for `reqId` 'abc-123' to audit state mutations."
+  - "Use Observability & Forensic Agent to find why the last request to `/api/v1/orders` failed using `manage_logs`."
+  - "Invoke `manage_logs` with action `trace` and `reqId` 'abc-123' to audit state mutations."
+- Manage Workflows
+  - "Use `manage_scenarios` to list existing scenarios."
+  - "Use `workflow_control` with action `inspect` to check state for scenario 'auth-flow'."
 
 ## Additional References
 - Reference Guide: `documentation/index.md`.

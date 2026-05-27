@@ -23,7 +23,49 @@ import {
 	findBestMatch,
 	selectVariant,
 } from '@/lib/utils/mock-matcher';
-import type * as schemas from './schemas';
+import type { 
+	ListFoldersArgs, 
+	CreateFolderArgs, 
+	GetFolderArgs, 
+	UpdateFolderArgs, 
+	DeleteFolderArgs, 
+	ManageFoldersArgs 
+} from './schemas/folders';
+import type { 
+	CreateMockArgs, 
+	ListMocksArgs, 
+	GetMockArgs, 
+	UpdateMockArgs, 
+	DeleteMockArgs, 
+	CreateSchemaMockArgs, 
+	PreviewMockArgs, 
+	ManageMocksArgs 
+} from './schemas/mocks';
+import type { 
+	ListWorkflowTransitionsArgs, 
+	CreateWorkflowTransitionArgs, 
+	UpdateWorkflowTransitionArgs, 
+	DeleteWorkflowTransitionArgs, 
+	CreateWorkflowScenarioArgs, 
+	DeleteWorkflowScenarioArgs, 
+	ResetWorkflowStateArgs,
+	InspectWorkflowStateArgs,
+	ListWorkflowScenariosArgs,
+	TestWorkflowArgs, 
+	ExportWorkflowArgs, 
+	ImportWorkflowArgs, 
+	CreateFullWorkflowArgs, 
+	EvaluateTemplateArgs, 
+	SeedWorkflowStateArgs, 
+	ManageScenariosArgs, 
+	ManageTransitionsArgs, 
+	WorkflowControlArgs 
+} from './schemas/workflows';
+import type { 
+	GetLogsArgs, 
+	GetRequestTraceArgs, 
+	ManageLogsArgs 
+} from './schemas/logs';
 
 // Helpers
 export function generateSlug(name: string): string {
@@ -37,7 +79,7 @@ export function generateSlug(name: string): string {
 // FOLDER HANDLERS
 import { logger } from '../logger';
 
-export async function callListFolders(args: schemas.ListFoldersArgs) {
+export async function callListFolders(args: ListFoldersArgs) {
 	logger.info({ args }, 'MCP Tool: list_folders');
 	const page = args.page ?? 1;
 	const limit = args.limit ?? 10;
@@ -65,7 +107,7 @@ export async function callListFolders(args: schemas.ListFoldersArgs) {
 	return { data, meta: { total, page, limit, totalPages } };
 }
 
-export async function callCreateFolder(args: schemas.CreateFolderArgs) {
+export async function callCreateFolder(args: CreateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_folder');
 	const slug = generateSlug(args.name);
 	const [row] = await db
@@ -87,7 +129,7 @@ export async function callCreateFolder(args: schemas.CreateFolderArgs) {
 	};
 }
 
-export async function callGetFolder(args: schemas.GetFolderArgs) {
+export async function callGetFolder(args: GetFolderArgs) {
 	logger.info({ args }, 'MCP Tool: get_folder');
 	let row: typeof folders.$inferSelect | null = null;
 	if (args.id) {
@@ -107,7 +149,7 @@ export async function callGetFolder(args: schemas.GetFolderArgs) {
 	};
 }
 
-export async function callUpdateFolder(args: schemas.UpdateFolderArgs) {
+export async function callUpdateFolder(args: UpdateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: update_folder');
 	const slug = generateSlug(args.name);
 	const [row] = await db
@@ -132,14 +174,31 @@ export async function callUpdateFolder(args: schemas.UpdateFolderArgs) {
 	};
 }
 
-export async function callDeleteFolder(args: schemas.DeleteFolderArgs) {
+export async function callDeleteFolder(args: DeleteFolderArgs) {
 	logger.info({ args }, 'MCP Tool: delete_folder');
 	await db.delete(folders).where(eq(folders.id, args.id));
 	return { success: true } as const;
 }
 
+export async function callManageFolders(args: ManageFoldersArgs) {
+	switch (args.action) {
+		case 'list':
+			return callListFolders(args);
+		case 'create':
+			return callCreateFolder(args);
+		case 'get':
+			return callGetFolder(args);
+		case 'update':
+			return callUpdateFolder(args);
+		case 'delete':
+			return callDeleteFolder(args);
+		default:
+			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
+}
+
 // MOCK HANDLERS
-export async function callCreateMock(args: schemas.CreateMockArgs) {
+export async function callCreateMock(args: CreateMockArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock');
 	const folderSlug = args.folderSlug ?? null;
 	const folderIdArg = args.folderId ?? null;
@@ -222,7 +281,7 @@ export async function callCreateMock(args: schemas.CreateMockArgs) {
 	};
 }
 
-export async function callListMocks(args: schemas.ListMocksArgs) {
+export async function callListMocks(args: ListMocksArgs) {
 	logger.info({ args }, 'MCP Tool: list_mocks');
 	const page = args.page ?? 1;
 	const limit = args.limit ?? 10;
@@ -294,7 +353,7 @@ export async function callListMocks(args: schemas.ListMocksArgs) {
 	return { data, meta: { total, page, limit, totalPages } };
 }
 
-export async function callGetMock(args: schemas.GetMockArgs) {
+export async function callGetMock(args: GetMockArgs) {
 	logger.info({ args }, 'MCP Tool: get_mock');
 	const [row] = await db
 		.select()
@@ -324,7 +383,7 @@ export async function callGetMock(args: schemas.GetMockArgs) {
 	};
 }
 
-export async function callUpdateMock(args: schemas.UpdateMockArgs) {
+export async function callUpdateMock(args: UpdateMockArgs) {
 	logger.info({ args }, 'MCP Tool: update_mock');
 	const [row] = await db
 		.update(mockResponses)
@@ -372,10 +431,40 @@ export async function callUpdateMock(args: schemas.UpdateMockArgs) {
 	};
 }
 
-export async function callDeleteMock(args: schemas.DeleteMockArgs) {
+export async function callDeleteMock(args: DeleteMockArgs) {
 	logger.info({ args }, 'MCP Tool: delete_mock');
 	await db.delete(mockResponses).where(eq(mockResponses.id, args.id));
 	return { success: true } as const;
+}
+
+export async function callManageMocks(args: ManageMocksArgs) {
+	switch (args.action) {
+		case 'list':
+			return callListMocks(args);
+		case 'create':
+			if (args.jsonSchema && !args.response) {
+				const { generateFromSchemaString } = await import(
+					'@/lib/schema-generator'
+				);
+				const generated = generateFromSchemaString(args.jsonSchema);
+				return callCreateMock({
+					...args,
+					response: generated,
+					useDynamicResponse: true,
+				} as CreateMockArgs);
+			}
+			return callCreateMock(args as CreateMockArgs);
+		case 'get':
+			return callGetMock(args);
+		case 'update':
+			return callUpdateMock(args as UpdateMockArgs);
+		case 'delete':
+			return callDeleteMock(args);
+		case 'preview':
+			return callPreviewMock(args);
+		default:
+			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
 }
 
 export async function callCreateSchemaMock(args: {
@@ -392,6 +481,7 @@ export async function callCreateSchemaMock(args: {
 	variants?: MockVariant[] | null;
 	wildcardRequireMatch?: boolean;
 	echoRequestBody?: boolean | null;
+	delay?: number;
 }) {
 	logger.info({ args }, 'MCP Tool: create_schema_mock');
 	const folderSlug = args.folderSlug ?? null;
@@ -466,7 +556,7 @@ export async function callCreateSchemaMock(args: {
 	};
 }
 
-export async function callPreviewMock(args: schemas.PreviewMockArgs) {
+export async function callPreviewMock(args: PreviewMockArgs) {
 	logger.info({ args }, 'MCP Tool: preview_mock');
 	const folderSlug = args.folderSlug;
 	const mockPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
@@ -685,7 +775,7 @@ export async function callPreviewMock(args: schemas.PreviewMockArgs) {
 
 // WORKFLOW HANDLERS
 export async function callCreateWorkflowTransition(
-	args: schemas.CreateWorkflowTransitionArgs,
+	args: CreateWorkflowTransitionArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: create_workflow_transition');
 	// Ensure scenario exists (auto-create if not)
@@ -725,7 +815,7 @@ export async function callCreateWorkflowTransition(
 }
 
 export async function callResetWorkflowState(
-	args: schemas.ResetWorkflowStateArgs,
+	args: ResetWorkflowStateArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: reset_workflow_state');
 	await db
@@ -735,7 +825,7 @@ export async function callResetWorkflowState(
 }
 
 export async function callInspectWorkflowState(
-	args: schemas.InspectWorkflowStateArgs,
+	args: InspectWorkflowStateArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: inspect_workflow_state');
 	const [row] = await db
@@ -746,7 +836,7 @@ export async function callInspectWorkflowState(
 }
 
 export async function callUpdateWorkflowTransition(
-	args: schemas.UpdateWorkflowTransitionArgs,
+	args: UpdateWorkflowTransitionArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: update_workflow_transition');
 	const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -770,15 +860,68 @@ export async function callUpdateWorkflowTransition(
 }
 
 export async function callDeleteWorkflowTransition(
-	args: schemas.DeleteWorkflowTransitionArgs,
+	args: DeleteWorkflowTransitionArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: delete_workflow_transition');
 	await db.delete(transitions).where(eq(transitions.id, args.id));
-	return { success: true };
+	return { success: true } as const;
+}
+
+export async function callManageScenarios(args: ManageScenariosArgs) {
+	switch (args.action) {
+		case 'list':
+			return callListWorkflowScenarios(args);
+		case 'create':
+			return callCreateWorkflowScenario(args);
+		case 'delete':
+			return callDeleteWorkflowScenario(args);
+		case 'export':
+			return callExportWorkflow(args);
+		case 'import':
+			return callImportWorkflow(args);
+		default:
+			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
+}
+
+export async function callManageTransitions(
+	args: ManageTransitionsArgs,
+) {
+	switch (args.action) {
+		case 'list':
+			return callListWorkflowTransitions(args);
+		case 'create':
+			return callCreateWorkflowTransition(args);
+		case 'update':
+			return callUpdateWorkflowTransition(args);
+		case 'delete':
+			return callDeleteWorkflowTransition(args);
+		case 'create_full':
+			return callCreateFullWorkflow(args);
+		default:
+			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
+}
+
+export async function callWorkflowControl(args: WorkflowControlArgs) {
+	switch (args.action) {
+		case 'reset':
+			return callResetWorkflowState(args);
+		case 'inspect':
+			return callInspectWorkflowState(args);
+		case 'seed':
+			return callSeedWorkflowState(args);
+		case 'test':
+			return callTestWorkflow(args);
+		case 'evaluate_template':
+			return callEvaluateTemplate(args);
+		default:
+			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
 }
 
 export async function callListWorkflowTransitions(
-	args: schemas.ListWorkflowTransitionsArgs,
+	args: ListWorkflowTransitionsArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: list_workflow_transitions');
 	const rows = await db
@@ -790,7 +933,7 @@ export async function callListWorkflowTransitions(
 }
 
 export async function callCreateWorkflowScenario(
-	args: schemas.CreateWorkflowScenarioArgs,
+	args: CreateWorkflowScenarioArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: create_workflow_scenario');
 	const id = generateSlug(args.name);
@@ -806,7 +949,7 @@ export async function callCreateWorkflowScenario(
 }
 
 export async function callListWorkflowScenarios(
-	args: schemas.ListWorkflowScenariosArgs,
+	args: ListWorkflowScenariosArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: list_workflow_scenarios');
 	const page = args.page ?? 1;
@@ -830,7 +973,7 @@ export async function callListWorkflowScenarios(
 }
 
 export async function callDeleteWorkflowScenario(
-	args: schemas.DeleteWorkflowScenarioArgs,
+	args: DeleteWorkflowScenarioArgs,
 ) {
 	logger.info({ args }, 'MCP Tool: delete_workflow_scenario');
 	await db.transaction(async (tx) => {
@@ -841,7 +984,7 @@ export async function callDeleteWorkflowScenario(
 	return { success: true };
 }
 
-export async function callTestWorkflow(args: schemas.TestWorkflowArgs) {
+export async function callTestWorkflow(args: TestWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: test_workflow');
 	const { processWorkflowRequest } = await import('@/lib/engine/processor');
 	const { matches } = await import('@/lib/engine/match');
@@ -1004,7 +1147,7 @@ export async function callTestWorkflow(args: schemas.TestWorkflowArgs) {
 	};
 }
 
-export async function callExportWorkflow(args: schemas.ExportWorkflowArgs) {
+export async function callExportWorkflow(args: ExportWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: export_workflow');
 	const { scenarioId } = args;
 	let scenariosList: Scenario[] = [];
@@ -1068,7 +1211,7 @@ export async function callExportWorkflow(args: schemas.ExportWorkflowArgs) {
 	};
 }
 
-export async function callImportWorkflow(args: schemas.ImportWorkflowArgs) {
+export async function callImportWorkflow(args: ImportWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: import_workflow');
 	const data = args.data;
 	// Validate structure before processing
@@ -1144,7 +1287,7 @@ export async function callImportWorkflow(args: schemas.ImportWorkflowArgs) {
 	};
 }
 
-export async function callCreateFullWorkflow(args: schemas.CreateFullWorkflowArgs) {
+export async function callCreateFullWorkflow(args: CreateFullWorkflowArgs) {
 	logger.info({ args }, 'MCP Tool: create_full_workflow');
 	const scenarioId = generateSlug(args.name);
 
@@ -1191,7 +1334,7 @@ export async function callCreateFullWorkflow(args: schemas.CreateFullWorkflowArg
 	};
 }
 
-export async function callEvaluateTemplate(args: schemas.EvaluateTemplateArgs) {
+export async function callEvaluateTemplate(args: EvaluateTemplateArgs) {
 	logger.info({ args }, 'MCP Tool: evaluate_template');
 	const { replaceTemplates } = await import('@/lib/engine/interpolation');
 	const { faker } = await import('@faker-js/faker');
@@ -1237,7 +1380,7 @@ export async function callEvaluateTemplate(args: schemas.EvaluateTemplateArgs) {
 	};
 }
 
-export async function callSeedWorkflowState(args: schemas.SeedWorkflowStateArgs) {
+export async function callSeedWorkflowState(args: SeedWorkflowStateArgs) {
 	logger.info({ args }, 'MCP Tool: seed_workflow_state');
 	await db
 		.insert(scenarioState)
@@ -1261,7 +1404,7 @@ export async function callSeedWorkflowState(args: schemas.SeedWorkflowStateArgs)
 }
 
 // LOG HANDLERS
-export async function callGetLogs(args: schemas.GetLogsArgs) {
+export async function callGetLogs(args: GetLogsArgs) {
 	const { getLogs } = await import('../logger');
 	let logs = getLogs(args.limit ?? 100, args.type);
 
@@ -1283,7 +1426,7 @@ export async function callGetLogs(args: schemas.GetLogsArgs) {
 	return logs;
 }
 
-export async function callGetRequestTrace(args: schemas.GetRequestTraceArgs) {
+export async function callGetRequestTrace(args: GetRequestTraceArgs) {
     const { getRequestTrace } = await import('../logger');
     return getRequestTrace(args.reqId);
 }
@@ -1292,4 +1435,17 @@ export async function callClearLogs() {
 	const { clearLogs } = await import('../logger');
 	clearLogs();
 	return { success: true };
+}
+
+export async function callManageLogs(args: ManageLogsArgs) {
+	switch (args.action) {
+		case 'get':
+			return callGetLogs(args);
+		case 'trace':
+			return callGetRequestTrace(args);
+		case 'clear':
+			return callClearLogs();
+		default:
+			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
 }
