@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-typecheck:
+  lint-test-typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
