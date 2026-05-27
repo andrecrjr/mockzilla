@@ -1,5 +1,6 @@
 # Mockzilla 🦖
 
+[![SafeSkill 89/100](https://img.shields.io/badge/SafeSkill-89%2F100_Passes%20with%20Notes-yellow)](https://safeskill.dev/scan/andrecrjr-mockzilla)
 A powerful self-hosted API mocking platform for development and testing. Deploy your own private mock server with an intuitive interface and advanced response generation capabilities.
 
 ## 🚀 Quick Start
