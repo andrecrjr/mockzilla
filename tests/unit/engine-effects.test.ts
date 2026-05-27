@@ -73,8 +73,8 @@ describe('Engine Effects', () => {
 			}
 		], context);
 
-		expect(context.tables.users[0].status).toBe('active');
-		expect(context.tables.users[1].status).toBe('pending');
+		expect((context.tables.users[0] as any).status).toBe('active');
+		expect((context.tables.users[1] as any).status).toBe('pending');
 	});
 
 	test('db.remove: should remove matched items', () => {
@@ -94,7 +94,7 @@ describe('Engine Effects', () => {
 		], context);
 
 		expect(context.tables.users).toHaveLength(1);
-		expect(context.tables.users[0].id).toBe(2);
+		expect((context.tables.users[0] as any).id).toBe(2);
 	});
 
 	test('Legacy format: should support $ prefixed keys', () => {
@@ -127,7 +127,7 @@ describe('Engine Effects', () => {
 		applyEffects({
 			'$db.items.update': { match: { id: 1 }, set: { name: 'updated' } }
 		}, context);
-		expect(context.tables.items[0].name).toBe('updated');
+		expect((context.tables.items[0] as any).name).toBe('updated');
 
 		applyEffects({
 			'$db.items.remove': { id: 1 }

@@ -1,40 +1,6 @@
-import type { Condition, Effect, MatchContext } from '../workflow-types';
+import type { Condition, ConditionTrace, Effect, MatchContext } from '../workflow-types';
 import { resolvePath } from '../utils/path-resolver';
 import { interpolate } from './interpolation';
-
-export type StateSetEffect = {
-	type: 'state.set';
-	/** Key to set in scenario state. */
-	key?: string;
-	/** Value to set (interpolation supported). */
-	value?: unknown;
-	/** Map of multiple keys/values to set. */
-	raw?: Record<string, unknown>;
-};
-
-export type DbPushEffect = {
-	type: 'db.push';
-	table: string;
-	value: unknown;
-};
-
-export type DbUpdateEffect = {
-	type: 'db.update';
-	table: string;
-	match: Record<string, unknown>;
-	set: Record<string, unknown>;
-};
-
-export type DbRemoveEffect = {
-	type: 'db.remove';
-	table: string;
-	match: Record<string, unknown>;
-};
-
-export type UnknownEffect = {
-	type: 'unknown';
-	raw: unknown;
-};
 
 /**
  * Resolves a field path (e.g. "input.body.id" or "state.authorized") to a value.
@@ -56,14 +22,6 @@ function resolveOp(path: string, context: MatchContext): unknown {
 	}
 
 	return undefined;
-}
-
-export interface ConditionTrace {
-	field: string;
-	type: string;
-	expected: unknown;
-	actual: unknown;
-	passed: boolean;
 }
 
 export function matches(
@@ -164,4 +122,4 @@ export function evaluateCondition(
 	return passed;
 }
 
-export type { Condition, Effect, MatchContext };
+export type { Condition, Effect, MatchContext, ConditionTrace };

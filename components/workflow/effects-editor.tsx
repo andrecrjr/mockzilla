@@ -21,7 +21,7 @@ import type {
 	DbUpdateEffect,
 	Effect,
 	StateSetEffect,
-} from '@/lib/engine/match';
+} from '@/lib/workflow-types';
 import { cn } from '@/lib/utils';
 import { SmartHandlebarsEditor } from './smart-handlebars-editor';
 
@@ -46,7 +46,7 @@ export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorPro
 		if (type === 'state.set') {
 			newEffect = { type: 'state.set', raw: {} };
 		} else if (type === 'state.patch') {
-			newEffect = { type: 'state.patch', raw: {} };
+			newEffect = { type: 'state.patch', key: '', value: {} };
 		} else if (type === 'db.push') {
 			newEffect = { type: 'db.push', table: '', value: '' };
 		} else if (type === 'db.update') {

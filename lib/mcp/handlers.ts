@@ -10,6 +10,7 @@ import {
 } from '@/lib/db/schema';
 import type {
 	Condition,
+	ConditionTrace,
 	CreateMockRequest,
 	HttpMethod,
 	MatchType,
@@ -1025,7 +1026,7 @@ export async function callTestWorkflow(args: TestWorkflowArgs) {
 			tables: baseState.tables || {},
 			input: { body, query, params: {}, headers },
 		};
-		const currentTrace: unknown[] = [];
+		const currentTrace: ConditionTrace[] = [];
 		const isMatch = matches(
 			(t.conditions as Record<string, unknown> | Condition[]) || {},
 			ctx,
@@ -1101,7 +1102,7 @@ export async function callTestWorkflow(args: TestWorkflowArgs) {
 			tables: baseState.tables || {},
 			input: { body, query, params, headers },
 		};
-		const currentTrace: unknown[] = [];
+		const currentTrace: ConditionTrace[] = [];
 		const isMatch = matches(
 			(t.conditions as Record<string, unknown> | Condition[]) || {},
 			ctx,

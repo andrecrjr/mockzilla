@@ -60,7 +60,7 @@ describe('applyEffects', () => {
             set: { name: 'Updated' } 
         }], context);
         
-        expect(context.tables.users[0].name).toBe('A');
+        expect((context.tables.users[0] as any).name).toBe('A');
     });
 
     it('should handle db.remove with multiple conditions', () => {
@@ -81,7 +81,7 @@ describe('applyEffects', () => {
         }], context);
         
         expect(context.tables.users).toHaveLength(1);
-        expect(context.tables.users[0].id).toBe(1);
+        expect((context.tables.users[0] as any).id).toBe(1);
     });
 
     it('should handle legacy object-style effects', () => {
@@ -108,7 +108,7 @@ describe('applyEffects', () => {
 
         expect(context.state.theme).toBe('dark');
         expect(context.tables.users).toHaveLength(1);
-        expect(context.tables.users[0].id).toBe(10);
+        expect((context.tables.users[0] as any).id).toBe(10);
         // items: 1 record, updated then removed.
         // Wait, the order in Object.entries might matter, but usually it's insertion order.
         // items[0] was {id:1, status:'old'}

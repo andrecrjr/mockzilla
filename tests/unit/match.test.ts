@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { matches, type ConditionTrace, evaluateCondition } from '../../lib/engine/match';
+import { matches, type ConditionTrace, evaluateCondition, type Condition } from '../../lib/engine/match';
 
 describe('match engine', () => {
     const context = {
@@ -91,13 +91,13 @@ describe('match engine', () => {
         });
 
         it('should handle array of conditions', () => {
-            const conditions = [
+            const conditions: Condition[] = [
                 { field: 'state.role', type: 'eq', value: 'admin' },
                 { field: 'input.body.id', type: 'eq', value: 123 }
             ];
             expect(matches(conditions, context)).toBe(true);
 
-            const failingConditions = [
+            const failingConditions: Condition[] = [
                 { field: 'state.role', type: 'eq', value: 'admin' },
                 { field: 'input.body.id', type: 'eq', value: 999 }
             ];

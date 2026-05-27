@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { interpolate } from '../../lib/engine/interpolation';
 import { applyEffects } from '../../lib/engine/effects';
 import { matches, evaluateCondition } from '../../lib/engine/match';
-import type { MatchContext } from '../../lib/engine/workflow-types';
+import type { MatchContext } from '../../lib/workflow-types';
 
 describe('Engine Edge Cases', () => {
     const createCtx = (overrides = {}): MatchContext => ({
@@ -102,9 +102,9 @@ describe('Engine Edge Cases', () => {
                     set: { status: 'suspended' } 
                 }
             ], ctx);
-            expect(ctx.tables.users[0].status).toBe('suspended');
-            expect(ctx.tables.users[1].status).toBe('active');
-            expect(ctx.tables.users[2].status).toBe('inactive');
+            expect((ctx.tables.users[0] as any).status).toBe('suspended');
+            expect((ctx.tables.users[1] as any).status).toBe('active');
+            expect((ctx.tables.users[2] as any).status).toBe('inactive');
         });
 
         test('db.remove with non-matching criteria', () => {
@@ -150,7 +150,6 @@ describe('Engine Edge Cases', () => {
             const ctx = createCtx();
             expect(matches({}, ctx)).toBe(true);
             expect(matches([], ctx)).toBe(true);
-            // @ts-expect-error - Testing invalid input
             expect(matches(null as unknown as Record<string, unknown>, ctx)).toBe(true);
         });
 
@@ -193,9 +192,9 @@ describe('Engine Edge Cases', () => {
                 match: { val: 'old' }, 
                 set: { val: 'new' } 
             }], ctx);
-            expect(ctx.tables.data[0].val).toBe('new');
-            expect(ctx.tables.data[1].val).toBe('new');
-            expect(ctx.tables.data[2].val).toBe('other');
+            expect((ctx.tables.data[0] as any).val).toBe('new');
+            expect((ctx.tables.data[1] as any).val).toBe('new');
+            expect((ctx.tables.data[2] as any).val).toBe('other');
         });
         test('arithmetic with non-existent path', () => {
             const ctx = createCtx();

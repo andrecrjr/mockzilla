@@ -156,4 +156,4 @@ export interface WorkflowExportData {
 	transitions: Transition[];
 }
 
-export type { Condition, Effect, MatchContext } from './workflow-types';
+export type { Condition, Effect, MatchContext, ConditionTrace } from './workflow-types';

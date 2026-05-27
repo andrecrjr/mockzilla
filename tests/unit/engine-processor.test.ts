@@ -31,7 +31,7 @@ describe('Engine Processor', () => {
 
 	test('should process request and return interpolated response', async () => {
 		const transition: Transition = {
-			id: 't1',
+			id: 1,
 			scenarioId: 's1',
 			path: '/test',
 			method: 'POST',
@@ -46,8 +46,7 @@ describe('Engine Processor', () => {
 			effects: [
 				{ type: 'state.set', key: 'processed', value: true }
 			],
-			createdAt: new Date(),
-			updatedAt: null,
+			createdAt: new Date().toISOString(),
 			name: 'Test Transition',
 			description: null,
 			meta: {}
@@ -71,16 +70,16 @@ describe('Engine Processor', () => {
 
 	test('should return 400 if conditions not met', async () => {
 		const transition: Transition = {
-			id: 't1',
+			id: 2,
 			scenarioId: 's1',
 			path: '/test',
 			method: 'GET',
 			conditions: [
 				{ type: 'eq', field: 'input.query.token', value: 'secret' }
 			],
+			effects: [],
 			response: { status: 200, body: {} },
-			createdAt: new Date(),
-			updatedAt: null,
+			createdAt: new Date().toISOString(),
 			name: 'Auth Test',
 			description: null,
 			meta: {}
@@ -106,13 +105,14 @@ describe('Engine Processor', () => {
 		}));
 
 		const transition: Transition = {
-			id: 't2',
+			id: 3,
 			scenarioId: 'new-s',
 			path: '/new',
 			method: 'GET',
+			conditions: [],
+			effects: [],
 			response: { status: 200, body: { ok: true } },
-			createdAt: new Date(),
-			updatedAt: null,
+			createdAt: new Date().toISOString(),
 			name: 'New',
 			description: null,
 			meta: {}

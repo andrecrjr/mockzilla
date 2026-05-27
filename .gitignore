@@ -46,4 +46,4 @@ data
 .gemini
 .*.log
 *.log
-.logs
+.log
