@@ -170,7 +170,6 @@ function FolderContent() {
 							Back to Folders
 						</Link>
 					</Button>
-					<ThemeSwitcher />
 				</div>
 
 				<div className="mb-8">

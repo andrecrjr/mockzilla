@@ -1,5 +1,6 @@
 import { DocsHeader } from '@/components/docs/docs-header';
 import { DocsSidebar } from '@/components/docs/docs-sidebar';
+import Script from 'next/script';
 import { buildSidebar } from './[[...mdxPath]]/page';
 
 export const metadata = {
@@ -16,6 +17,19 @@ export default function DocsLayout({
 
 	return (
 		<div className="min-h-screen bg-background mockzilla-gradient-light mockzilla-gradient-dark">
+			<Script
+				src="https://www.googletagmanager.com/gtag/js?id=G-6MNRG3E8GZ"
+				strategy="afterInteractive"
+			/>
+			<Script id="google-analytics-docs" strategy="afterInteractive">
+				{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-6MNRG3E8GZ');
+        `}
+			</Script>
 			<DocsHeader sidebar={sidebar} />
 
 			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">

@@ -5,7 +5,7 @@ import type React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import './globals.css';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/toaster-wrapper';
 
 const _inter = Inter({ subsets: ['latin'] });
 const _jetbrainsMono = JetBrains_Mono({ subsets: ['latin'] });
@@ -84,10 +84,12 @@ export default function RootLayout({
 			</head>
 			<body className={`font-sans antialiased`} suppressHydrationWarning>
 				<NuqsAdapter>
-					<ThemeProvider>{children}</ThemeProvider>
+					<ThemeProvider>
+						{children}
+						<Toaster />
+						<Analytics  />
+					</ThemeProvider>
 				</NuqsAdapter>
-				<Toaster theme="system" />
-				<Analytics />
 			</body>
 		</html>
 	);

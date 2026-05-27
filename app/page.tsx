@@ -9,6 +9,7 @@ import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { MCPSection } from '@/components/landing/MCPSection';
 import { QuickInstall } from '@/components/landing/QuickInstall';
 import { faqs } from '@/lib/constants/faq';
+import Script from 'next/script';
 
 export default function LandingPage() {
 	const softwareAppJsonLd = {
@@ -48,6 +49,19 @@ export default function LandingPage() {
 
 	return (
 		<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen flex flex-col">
+			<Script
+				src="https://www.googletagmanager.com/gtag/js?id=G-6MNRG3E8GZ"
+				strategy="afterInteractive"
+			/>
+			<Script id="google-analytics" strategy="afterInteractive">
+				{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-6MNRG3E8GZ');
+        `}
+			</Script>
 			<script
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}

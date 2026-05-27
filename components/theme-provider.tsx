@@ -1,7 +1,14 @@
 'use client';
 
 import type React from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -19,30 +26,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 	const [isDark, setIsDark] = useState(false);
 	const [mounted, setMounted] = useState(false);
 
-	useEffect(() => {
-		const stored = localStorage.getItem('mockzilla-theme') as Theme | null;
-		const initialTheme = stored || 'system';
-
-		const applyTheme = (newTheme: Theme) => {
-			const isDarkMode =
-				newTheme === 'dark' ||
-				(newTheme === 'system' &&
-					window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-			if (isDarkMode) {
-				document.documentElement.classList.add('dark');
-			} else {
-				document.documentElement.classList.remove('dark');
-			}
-			setIsDark(isDarkMode);
-		};
-
-		setThemeState(initialTheme);
-		applyTheme(initialTheme);
-		setMounted(true);
-	}, []);
-
-	const applyTheme = (newTheme: Theme) => {
+	const applyTheme = useCallback((newTheme: Theme) => {
 		const isDarkMode =
 			newTheme === 'dark' ||
 			(newTheme === 'system' &&
@@ -54,18 +38,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 			document.documentElement.classList.remove('dark');
 		}
 		setIsDark(isDarkMode);
-	};
+	}, []);
 
-	const setTheme = (newTheme: Theme) => {
-		setThemeState(newTheme);
-		localStorage.setItem('mockzilla-theme', newTheme);
-		applyTheme(newTheme);
-	};
+	useEffect(() => {
+		const stored = localStorage.getItem('mockzilla-theme') as Theme | null;
+		const initialTheme = stored || 'system';
+
+		setThemeState(initialTheme);
+		applyTheme(initialTheme);
+		setMounted(true);
+	}, [applyTheme]);
+
+	const setTheme = useCallback(
+		(newTheme: Theme) => {
+			setThemeState(newTheme);
+			localStorage.setItem('mockzilla-theme', newTheme);
+			applyTheme(newTheme);
+		},
+		[applyTheme],
+	);
+
+	const value = useMemo(
+		() => ({ theme, setTheme, isDark, mounted }),
+		[theme, setTheme, isDark, mounted],
+	);
 
 	return (
-		<ThemeContext.Provider value={{ theme, setTheme, isDark, mounted }}>
-			{children}
-		</ThemeContext.Provider>
+		<ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 	);
 }
 

@@ -1,8 +1,6 @@
-import { Analytics } from '@vercel/analytics/next';
 import { BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
-import { Toaster } from 'sonner';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 
@@ -66,8 +64,6 @@ export default function AppLayout({
 				</div>
 			</nav>
 			{children}
-			<Toaster theme="system" />
-			<Analytics />
 		</>
 	);
 }
