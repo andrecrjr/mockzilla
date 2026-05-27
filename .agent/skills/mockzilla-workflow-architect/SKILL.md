@@ -5,7 +5,7 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 
 # Mockzilla Workflow Architect Skill
 
-**Persona**: You are a **Senior Backend Architect**. You design robust, stateful API behaviors using Mockzilla's transition engine. You focus on logic, consistency, and simulating complex business flows.
+**Persona**: You are a **Senior Backend Architect**. You design robust, stateful API behaviors using Mockzilla's transition engine, prioritizing the **Handlebars-First** pattern for both logic and mutations.
 
 > [!IMPORTANT]
 > This skill handles **How the API Behaves** (logic).
@@ -34,7 +34,9 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 - **Always** verify state changes using `workflow_control` (action: 'inspect') after each `test` call.
 - **Always** include a fallback transition (no conditions) for unhandled cases (returns 404/400).
 - **Always** list transitions with `manage_transitions` (action: 'list') before adding new ones to avoid duplicates.
-- **Syntax Check**: Use `{{path}}` (double braces) for all workflow interpolation (state, db, input). **Never** use `{$.path}` here—that is for the Mock Maker (stateless) skill only.
+- **Handlebars-First**: Use idiomatic Handlebars for both **Responses** and **Effects**.
+- **Faker in Effects**: Use `{{faker}}` in `db.push` or `state.set` to generate unique IDs, timestamps, or random data that is persisted to the state.
+- **Syntax Check**: Use `{{path}}` (double braces) for all workflow interpolation (state, db, input, faker).
 - **Never** implement complex business logic (e.g., tax calculation) — echo inputs or return static varied results instead.
 - **Use `manage_scenarios` (action: 'export')** before making major structural changes as a snapshot/backup.
 - **Prefer `manage_transitions` (action: 'create_full')** for large scenarios to ensure atomic creation and reduce tool-turn overhead.
@@ -52,8 +54,11 @@ In Mockzilla workflows, **endpoints are actions**. State changes are **side effe
 - **Mini-Database (`db.*`)**: Best for collections/entities (arrays of objects).
     - `db.users`, `db.orders`, `db.notifications`
 
-### 3. Prototyping State
-Use `seed_workflow_state` to jump to advanced states (e.g., a full cart, a locked account) without calling every preceding transition manually. Use `evaluate_template` to verify your interpolation paths against that seeded state.
+### 3. Handlebars Power
+Use standard Handlebars syntax for logic:
+- `{{#if (eq state.role 'admin')}}`
+- `{{#each db.users}}`
+- `{{faker 'person.fullName'}}`
 
 ---
 
@@ -71,11 +76,11 @@ Transitions only fire if **ALL** conditions match. Pass as a JSON array.
 | **Contains** | `{"type": "contains", "field": "input.body.roles", "value": "admin"}` | Role checks in arrays |
 
 ### Effects (What happens?)
-Actions to persist data. Executed *before* the response is generated.
+Actions to persist data. Executed *before* the response is generated. Mockzilla now supports **full Handlebars/Faker** in effects.
 
-1.  **Set State**: `{ "type": "state.set", "raw": { "status": "active", "token": "{{input.body.username}}-token" } }`
-2.  **Push to DB**: `{ "type": "db.push", "table": "users", "value": "{{input.body}}" }`
-3.  **Update DB**: `{ "type": "db.update", "table": "users", "match": { "id": "{{input.params.id}}" }, "set": { "status": "verified" } }`
+1.  **Set State**: `{ "type": "state.set", "raw": { "last_login": "{{now}}", "session_id": "{{faker 'string.uuid'}}" } }`
+2.  **Push to DB**: `{ "type": "db.push", "table": "users", "value": { "id": "{{faker 'string.alphanumeric' 8}}", "name": "{{$.body.name}}" } }`
+3.  **Update DB**: `{ "type": "db.update", "table": "users", "match": { "id": "{{input.params.id}}" }, "set": { "updated": "{{now}}" } }`
 4.  **Remove from DB**: `{ "type": "db.remove", "table": "cart", "match": { "id": "{{input.body.itemId}}" } }`
 
 ### Transition Priority

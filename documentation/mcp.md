@@ -126,11 +126,12 @@ Conditions use a structured JSON format. Avoid Pure JS.
 - **Allowed types**: `eq`, `neq`, `exists`, `gt`, `lt`, `contains`.
 - **Fields**: `input.body.*`, `input.query.*`, `input.params.*`, `input.headers.*`, `state.*`, `db.*`.
 
-### 3. Effect Limitations
-Effects handle data transformations.
+### 3. Handlebars-First Effects
+Effects handle data transformations using the full Power of the **Handlebars Engine**.
 - **Allowed types**: `state.set`, `db.push`, `db.update`, `db.remove`.
-- **Interpolation**: Use `{{path}}` to reference input or state.
-- ❌ **No Randomness**: Effects must be deterministic. Use `manage_mocks` with `jsonSchema` if you need randomness in the response body.
+- **Dynamic Data**: Use `{{faker}}` to generate unique IDs, timestamps, or random properties directly into your database.
+- **Interpolation**: Fully supported for referencing `{{input}}`, `{{state}}`, and `{{db}}`.
+- ❌ **No Pure JS**: Transitions define data transformations via Handlebars, not raw code execution.
 
 ---
 

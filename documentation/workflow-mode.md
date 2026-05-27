@@ -61,12 +61,12 @@ Workflows provide a rich context for interpolation:
 | **Path Access** | `{{$.body.id}}` |
 | **Logic** | `{{#if state.is_active}}Active{{else}}Disabled{{/if}}` |
 | **Loops** | `{{#each db.users}}...{{/each}}` |
-| **Faker** | `{{faker "string.uuid"}}` (Responses only) |
+| **Faker** | `{{faker "string.uuid"}}` |
 | **Arithmetic** | `{{math state.count "+" 1}}` |
 | **JSON Stringify** | `{{{json db.users}}}` (Triple braces recommended) |
 
-> [!WARNING]
-> **Determinism**: Handlebars logic and Faker are supported in **Responses**. However, **Effects** should remain deterministic and currently do not support the `faker` helper to ensure scenario state remains predictable.
+> [!TIP]
+> **Faker & Handlebars in Effects**: Mockzilla supports dynamic data generation even in your database effects. You can use `{{faker}}` to generate unique IDs or dynamic properties that are then stored in your Mini-DB.
 
 ---
 
@@ -184,13 +184,11 @@ When using `create_workflow_transition` or `update_workflow_transition`, you MUS
 
 #### 2. Effects
 - **Allowed Types**: `state.set`, `db.push`, `db.update`, `db.remove`.
-- **Interpolation**: You may ONLY interpolate:
+- **Interpolation**: Fully supported via the Hybrid Engine. You may interpolate:
   - `{{state.var}}`
   - `{{db.table}}`
-  - `{{input.body}}` inside value fields
-  - `{{input.query}}`
-  - `{{input.params}}`
-- ❌ **NO Faker/Random**: Random value generation is NOT supported in effects.
+  - `{{input.body}}`
+  - `{{faker}}` (Supported for dynamic ID generation, etc.)
 - ❌ **NO Pure JS**: Transitions define data transformations, not code execution.
 
 #### 4. Action-Driven State Only

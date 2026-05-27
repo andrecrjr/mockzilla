@@ -67,7 +67,25 @@ export async function processWorkflowRequest(
 	// 3. Apply Effects
 	if (transition.effects) {
 		log.debug({ effectCount: transition.effects.length }, 'Applying effects');
-		applyEffects(transition.effects, scenarioData);
+
+		const { faker } = await import('@faker-js/faker');
+		const effectContext = {
+			...scenarioData,
+			query,
+			params,
+			headers,
+			body,
+			db: scenarioData.tables,
+			$: {
+				query,
+				params,
+				headers,
+				body,
+			},
+			faker,
+		};
+
+		applyEffects(transition.effects, effectContext as any);
 	}
 
 	// 4. Save State

@@ -21,20 +21,32 @@ Unlike standard template engines that return everything as strings, Mockzilla pr
 - `{"msg": "Count is {{state.count}}"}` → Returns a **String** because of the surrounding text.
 
 ### 2. Logic & Loops (Handlebars)
-Use standard Handlebars syntax for loops and conditional branching. This is perfect for generating lists from your Mini-DB.
+Use standard Handlebars syntax for logic blocks. This is perfect for generating lists from your Mini-DB in **Responses** or generating unique IDs in **Effects**.
 
-**Example: Dynamic List**
+**Example: Dynamic List (Response)**
 ```handlebars
 {
   "total": "{{db.products.length}}",
   "items": [
     {{#each db.products}}
     {
-      "id": {{this.id}},
+      "id": "{{this.id}}",
       "name": "{{this.name}}"
     }{{#unless @last}},{{/unless}}
     {{/each}}
   ]
+}
+```
+
+**Example: Dynamic ID (Effect)**
+```json
+{
+  "type": "db.push",
+  "table": "tasks",
+  "value": {
+    "id": "task_{{faker 'string.alphanumeric' 8}}",
+    "title": "{{$.body.title}}"
+  }
 }
 ```
 

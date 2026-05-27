@@ -220,7 +220,7 @@ Tags: #jsonschema #faker #templates #llm-context #handlebars
 - Module: `lib/schema-generator.ts`
 - Capabilities
   - **Smart Hybrid Engine**: Automatically switches between **Type-Preserving Interpolation** (for valid JSON) and **Handlebars** (for logic/loops).
-  - Handlebars support: Loops (`{{#each}}`), conditionals (`{{#if}}`), and custom helpers.
+  - **Handlebars-First Workflows**: Both **Responses** and **Database Effects** support full Handlebars power, including loops, conditionals, and Faker.
   - Custom Helpers: `math` (arithmetic), `faker` (dynamic data), `eq/neq/gt/lt/gte/lte` (comparisons).
   - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts).
   - Validation helper `validateSchema`.

@@ -1,4 +1,4 @@
-import { interpolate } from './interpolation';
+import { interpolate, replaceTemplates } from './interpolation';
 import type { Effect, MatchContext } from './match';
 
 export { interpolate };
@@ -45,17 +45,17 @@ export function applyEffects(
 		if (effect.type === 'state.set') {
 			if (effect.raw) {
 				for (const [key, val] of Object.entries(effect.raw)) {
-					context.state[key] = interpolate(val, context);
+					context.state[key] = replaceTemplates(val, context as any);
 				}
 			} else if (effect.key) {
-				context.state[effect.key] = interpolate(effect.value, context);
+				context.state[effect.key] = replaceTemplates(effect.value, context as any);
 			}
 		} else if (effect.type === 'db.push') {
 			if (!context.tables[effect.table]) {
 				context.tables[effect.table] = [];
 			}
 			const table = context.tables[effect.table];
-			const resolvedValue = interpolate(effect.value, context);
+			const resolvedValue = replaceTemplates(effect.value, context as any);
 			table.push(resolvedValue);
 		} else if (effect.type === 'db.update') {
 			const table = context.tables[effect.table] || [];
@@ -63,14 +63,14 @@ export function applyEffects(
 				const row = table[i] as Record<string, unknown>;
 				let matches = true;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					if (row[mk] != interpolate(mv, context)) {
+					if (row[mk] != replaceTemplates(mv, context as any)) {
 						matches = false;
 						break;
 					}
 				}
 				if (matches) {
 					for (const [sk, sv] of Object.entries(effect.set)) {
-						row[sk] = interpolate(sv, context);
+						row[sk] = replaceTemplates(sv, context as any);
 					}
 				}
 			}
@@ -80,7 +80,7 @@ export function applyEffects(
 			table = table.filter((item) => {
 				const row = item as Record<string, unknown>;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					if (row[mk] == interpolate(mv, context)) {
+					if (row[mk] == replaceTemplates(mv, context as any)) {
 						return false; // remove
 					}
 				}
