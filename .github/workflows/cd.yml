@@ -10,21 +10,31 @@ permissions:
   pull-requests: write
 
 jobs:
-  release-please:
+  release:
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      version: ${{ steps.release.outputs.version }}
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
     steps:
-      - uses: google-github-actions/release-please-action@v4
-        id: release
+      - uses: actions/checkout@v4
         with:
-          release-type: node
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push:
-    needs: release-please
-    # Só roda quando o PR de release do release-please for mergeado no main
-    if: ${{ needs.release-please.outputs.release_created }}
+    needs: release
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,4 +53,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ needs.release-please.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ needs.release.outputs.new_release_version }}

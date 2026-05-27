@@ -122,45 +122,43 @@ jobs:
 
 ### Workflow: `cd.yml`
 
+Automated via **Semantic Release**. It analyzes commits, determines the next version, updates `package.json`/`CHANGELOG.md`, creates a Git tag, and triggers the Docker build.
+
 ```yaml
-name: CD — Build & Push to Docker Hub
+name: CD — Release & Deploy
 on:
   push:
     branches: [main]
 
 jobs:
-  version:
+  release:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get-version.outputs.version }}
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
     steps:
       - uses: actions/checkout@v4
-      - id: get-version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push:
-    needs: version
+    needs: release
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Parse semver components
-      - id: semver
-        run: |
-          VERSION=${{ needs.version.outputs.version }}
-          MAJOR=${VERSION%%.*}
-          MINOR_MAJOR=${VERSION%.*}
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "major=${MAJOR}" >> $GITHUB_OUTPUT
-          echo "minor_major=${MINOR_MAJOR}" >> $GITHUB_OUTPUT
-
-      # Login to Docker Hub
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Build and push multi-tag
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -168,23 +166,19 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ steps.semver.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ steps.semver.outputs.minor_major }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ steps.semver.outputs.major }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ needs.release.outputs.new_release_version }}
 ```
 
 ---
 
 ## Docker Image Tagging
 
-Each CD run pushes **4 tags** to Docker Hub:
+Each CD run pushes **2 tags** to Docker Hub:
 
 | Tag | Example | Purpose |
 |-----|---------|---------|
 | `latest` | `youruser/mockzilla:latest` | Rolling latest stable |
 | `MAJOR.MINOR.PATCH` | `youruser/mockzilla:1.4.2` | Exact semver pin |
-| `MAJOR.MINOR` | `youruser/mockzilla:1.4` | Minor line float |
-| `MAJOR` | `youruser/mockzilla:1` | Major line float |
 
 **Registry:** Docker Hub (`docker.io`)
 

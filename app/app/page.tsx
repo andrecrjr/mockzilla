@@ -3,7 +3,7 @@
 import { Download, FolderIcon, Search, Upload } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useQueryState, parseAsInteger, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -12,7 +12,6 @@ import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { EditFolderDialog } from '@/components/edit-folder-dialog';
 import { FolderDeleteButton } from '@/components/folder-delete-button';
 import { OpenApiImportDialog } from '@/components/openapi-import-dialog';
-// import { FolderForm } from '@/components/folder-form'; // Removed
 import { PaginationControls } from '@/components/pagination-controls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,7 +26,7 @@ const fetcher = (url: string) =>
 			return [];
 		});
 
-export default function MockzillaAdmin() {
+function MockzillaAdminContent() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
 	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
@@ -358,5 +357,13 @@ export default function MockzillaAdmin() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function MockzillaAdmin() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<MockzillaAdminContent />
+		</Suspense>
 	);
 }

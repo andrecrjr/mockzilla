@@ -3,7 +3,7 @@
 import { ArrowLeft, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useQueryState, parseAsInteger, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -19,7 +19,7 @@ import { copyToClipboard } from '@/lib/utils';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function FolderPage() {
+function FolderContent() {
 	const params = useParams();
 	const slug = params.slug as string;
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
@@ -278,5 +278,13 @@ export default function FolderPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function FolderPage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<FolderContent />
+		</Suspense>
 	);
 }

@@ -1,8 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import { MockExtensionList } from '@/components/mock-extension-list';
 
-export default function ExtensionDataPage() {
+function ExtensionDataContent() {
 	return (
 		<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
 			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -19,5 +20,13 @@ export default function ExtensionDataPage() {
 				<MockExtensionList />
 			</div>
 		</div>
+	);
+}
+
+export default function ExtensionDataPage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<ExtensionDataContent />
+		</Suspense>
 	);
 }

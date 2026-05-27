@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useQueryState, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR from 'swr';
@@ -66,7 +66,7 @@ async function createScenario(
 	return res.json();
 }
 
-export default function WorkflowsPage() {
+function WorkflowsContent() {
 	const router = useRouter();
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [newScenarioName, setNewScenarioName] = useState('');
@@ -451,5 +451,33 @@ export default function WorkflowsPage() {
 				</div>
 			)}
 		</div>
+	);
+}
+
+export default function WorkflowsPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="container mx-auto py-8 max-w-7xl">
+					<div className="flex items-center justify-between mb-8">
+						<div>
+							<Skeleton className="h-10 w-48 mb-2" />
+							<Skeleton className="h-4 w-96" />
+						</div>
+					</div>
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{[1, 2, 3].map((skeletonId) => (
+							<Card key={`suspense-skeleton-${skeletonId}`} className="p-6">
+								<Skeleton className="h-10 w-10 rounded-lg mb-4" />
+								<Skeleton className="h-6 w-3/4 mb-2" />
+								<Skeleton className="h-4 w-1/2" />
+							</Card>
+						))}
+					</div>
+				</div>
+			}
+		>
+			<WorkflowsContent />
+		</Suspense>
 	);
 }
