@@ -214,9 +214,14 @@ export function MockEditor({
 		e.preventDefault();
 		if (!validateBeforeSubmit()) return;
 
+		let formattedPath = path.trim();
+		if (formattedPath.length > 1 && formattedPath.endsWith('/')) {
+			formattedPath = formattedPath.slice(0, -1);
+		}
+
 		const values: MockFormValues = {
 			name,
-			path,
+			path: formattedPath,
 			method,
 			statusCode,
 			folderId: folderId || defaultFolderId,

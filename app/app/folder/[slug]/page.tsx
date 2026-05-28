@@ -14,7 +14,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import type { Folder, HttpMethod, Mock } from '@/lib/types';
+import type { Folder, Mock, UpdateMockRequest } from '@/lib/types';
 import { copyToClipboard } from '@/lib/utils';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -79,25 +79,7 @@ function FolderContent() {
 		}
 	};
 
-	const handleUpdateMock = async (
-		id: string,
-		data: {
-			name: string;
-			path: string;
-			method: HttpMethod;
-			response: string;
-			statusCode: number;
-			matchType?: string;
-			queryParams?: Record<string, string> | null;
-			variants?: Array<{
-				key: string;
-				body: string;
-				statusCode: number;
-				bodyType: string;
-			}> | null;
-			wildcardRequireMatch?: boolean;
-		},
-	) => {
+	const handleUpdateMock = async (id: string, data: UpdateMockRequest) => {
 		try {
 			const response = await fetch(`/api/mocks?id=${id}`, {
 				method: 'PUT',

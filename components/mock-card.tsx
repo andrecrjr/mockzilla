@@ -2,39 +2,76 @@
 
 import { Copy, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { MockDeleteButton } from '@/components/mock-delete-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Folder, HttpMethod, Mock } from '@/lib/types';
+import type { Folder, Mock, UpdateMockRequest } from '@/lib/types';
 
 interface MockCardProps {
 	mock: Mock;
 	folder?: Folder;
 	onDelete: (id: string) => void;
-	onUpdate: (
-		id: string,
-		data: {
-			name: string;
-			path: string;
-			method: HttpMethod;
-			response: string;
-			statusCode: number;
-			variants?: Array<{
-				key: string;
-				body: string;
-				statusCode: number;
-				bodyType: string;
-			}> | null;
-			wildcardRequireMatch?: boolean;
-		},
-	) => Promise<void>;
+	onUpdate: (id: string, data: UpdateMockRequest) => Promise<void>;
 	onCopy: (text: string) => void;
 }
 
-export function MockCard({ mock, folder, onDelete, onCopy }: MockCardProps) {
+export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardProps) {
+	const [editedPath, setEditedPath] = useState(mock.path);
+
+	useEffect(() => {
+		setEditedPath(mock.path);
+	}, [mock.path]);
+
+	const handleSavePath = async () => {
+		let newPath = editedPath.trim();
+		
+		// Remove trailing slash if it exists and path is not just "/"
+		if (newPath.length > 1 && newPath.endsWith('/')) {
+			newPath = newPath.slice(0, -1);
+		}
+
+		if (newPath !== mock.path && newPath !== '') {
+			try {
+				const updateData: UpdateMockRequest = {
+					name: mock.name,
+					path: newPath,
+					method: mock.method,
+					response: mock.response,
+					statusCode: mock.statusCode,
+					matchType: mock.matchType,
+					bodyType: mock.bodyType,
+					enabled: mock.enabled,
+					queryParams: mock.queryParams,
+					variants: mock.variants,
+					wildcardRequireMatch: mock.wildcardRequireMatch,
+					jsonSchema: mock.jsonSchema,
+					useDynamicResponse: mock.useDynamicResponse,
+					echoRequestBody: mock.echoRequestBody,
+					delay: mock.delay,
+				};
+				await onUpdate(mock.id, updateData);
+			} catch (error) {
+				setEditedPath(mock.path);
+			}
+		} else {
+			setEditedPath(mock.path);
+		}
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			e.currentTarget.blur();
+		} else if (e.key === 'Escape') {
+			setEditedPath(mock.path);
+			e.currentTarget.blur();
+		}
+	};
+
 	const getMockUrl = (folderSlug: string, path: string) => {
 		if (typeof window !== 'undefined') {
 			return `${window.location.origin}/api/mock/${folderSlug}${path}`;
@@ -148,11 +185,24 @@ export function MockCard({ mock, folder, onDelete, onCopy }: MockCardProps) {
 				<div className="space-y-2">
 					<Label className="text-xs text-muted-foreground">Mock URL</Label>
 					<div className="flex gap-2">
-						<Input
-							value={mockUrlFull}
-							readOnly
-							className="flex-1 font-mono text-sm"
-						/>
+						<div className="flex flex-1 items-center rounded-md border border-input bg-transparent shadow-sm overflow-hidden">
+							<div className="flex h-9 items-center whitespace-nowrap bg-muted/50 px-3 text-sm text-muted-foreground border-r border-input">
+								{getMockUrl(folder?.slug || '', '')}
+							</div>
+							<Input
+								value={editedPath}
+								onChange={(e) => setEditedPath(e.target.value)}
+								onBlur={handleSavePath}
+								onKeyDown={handleKeyDown}
+								className="h-9 flex-1 rounded-none border-0 bg-transparent px-2 font-mono text-sm shadow-none focus-visible:ring-0"
+								title="Edit path directly"
+							/>
+							{queryParamsString && (
+								<div className="flex h-9 items-center whitespace-nowrap bg-muted/50 px-3 text-sm text-muted-foreground border-l border-input">
+									{queryParamsString}
+								</div>
+							)}
+						</div>
 						<Button
 							variant="outline"
 							size="icon"
