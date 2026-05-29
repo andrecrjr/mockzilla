@@ -133,9 +133,20 @@ export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardP
 							>
 								{mock.method}
 							</span>
-							<code className="inline-block rounded bg-muted px-2 py-1 text-sm text-muted-foreground">
-								{mock.path}
-							</code>
+							<div className="flex items-center rounded bg-muted h-7 px-2 border border-transparent focus-within:border-ring/50 focus-within:ring-1 focus-within:ring-ring/50">
+								<span className="text-sm font-mono text-muted-foreground/60 select-none">
+									/{folder?.slug}
+								</span>
+								<Input
+									value={editedPath}
+									onChange={(e) => setEditedPath(e.target.value)}
+									onBlur={handleSavePath}
+									onKeyDown={handleKeyDown}
+									className="h-full border-0 bg-transparent px-1 font-mono text-sm text-muted-foreground shadow-none focus-visible:ring-0"
+									style={{ width: `${Math.max(1, editedPath.length + 1)}ch` }}
+									title="Edit path directly"
+								/>
+							</div>
 							<span
 								className={`inline-block rounded px-2 py-1 text-xs font-medium ${getStatusCodeColor(mock.statusCode)}`}
 							>
@@ -185,24 +196,11 @@ export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardP
 				<div className="space-y-2">
 					<Label className="text-xs text-muted-foreground">Mock URL</Label>
 					<div className="flex gap-2">
-						<div className="flex flex-1 items-center rounded-md border border-input bg-transparent shadow-sm overflow-hidden">
-							<div className="flex h-9 items-center whitespace-nowrap bg-muted/50 px-3 text-sm text-muted-foreground border-r border-input">
-								{getMockUrl(folder?.slug || '', '')}
-							</div>
-							<Input
-								value={editedPath}
-								onChange={(e) => setEditedPath(e.target.value)}
-								onBlur={handleSavePath}
-								onKeyDown={handleKeyDown}
-								className="h-9 flex-1 rounded-none border-0 bg-transparent px-2 font-mono text-sm shadow-none focus-visible:ring-0"
-								title="Edit path directly"
-							/>
-							{queryParamsString && (
-								<div className="flex h-9 items-center whitespace-nowrap bg-muted/50 px-3 text-sm text-muted-foreground border-l border-input">
-									{queryParamsString}
-								</div>
-							)}
-						</div>
+						<Input
+							value={mockUrlFull}
+							readOnly
+							className="h-9 flex-1 bg-muted/50 px-3 font-mono text-sm text-muted-foreground border-input"
+						/>
 						<Button
 							variant="outline"
 							size="icon"
