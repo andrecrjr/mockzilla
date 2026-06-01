@@ -10,7 +10,6 @@ import useSWR, { mutate } from 'swr';
 import { CreateMockDialog } from '@/components/create-mock-dialog';
 import { MockCard } from '@/components/mock-card';
 import { PaginationControls } from '@/components/pagination-controls';
-import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -75,6 +74,48 @@ function FolderContent() {
 		} catch {
 			toast.error('Error', {
 				description: 'Failed to delete mock',
+			});
+		}
+	};
+
+	const handleDuplicateMock = async (mock: Mock) => {
+		try {
+			const res = await fetch('/api/mocks', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: `${mock.name} (Copy)`,
+					path: mock.path,
+					method: mock.method,
+					response: mock.response,
+					statusCode: mock.statusCode,
+					folderId: mock.folderId,
+					matchType: mock.matchType,
+					queryParams: mock.queryParams,
+					jsonSchema: mock.jsonSchema,
+					useDynamicResponse: mock.useDynamicResponse,
+					echoRequestBody: mock.echoRequestBody,
+					delay: mock.delay,
+					variants: mock.variants,
+					wildcardRequireMatch: mock.wildcardRequireMatch,
+				}),
+			});
+
+			if (!res.ok) {
+				const error = await res.json();
+				throw new Error(error.error);
+			}
+
+			toast.success('Mock Duplicated', {
+				description: 'Mock endpoint has been duplicated successfully',
+			});
+			mutate(
+				`/api/mocks?folderId=${folder?.id}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
+			);
+		} catch (error: unknown) {
+			toast.error('Error', {
+				description:
+					error instanceof Error ? error.message : 'Failed to duplicate mock',
 			});
 		}
 	};
@@ -240,6 +281,7 @@ function FolderContent() {
 											mock={mock}
 											folder={folder}
 											onDelete={handleDeleteMock}
+											onDuplicate={handleDuplicateMock}
 											onUpdate={handleUpdateMock}
 											onCopy={handleCopy}
 										/>

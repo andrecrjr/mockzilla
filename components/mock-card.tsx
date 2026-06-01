@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, ExternalLink, Pencil } from 'lucide-react';
+import { Copy, ExternalLink, Pencil, CopyPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { MockDeleteButton } from '@/components/mock-delete-button';
@@ -15,11 +15,12 @@ interface MockCardProps {
 	mock: Mock;
 	folder?: Folder;
 	onDelete: (id: string) => void;
+	onDuplicate?: (mock: Mock) => void;
 	onUpdate: (id: string, data: UpdateMockRequest) => Promise<void>;
 	onCopy: (text: string) => void;
 }
 
-export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardProps) {
+export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy }: MockCardProps) {
 	const [editedPath, setEditedPath] = useState(mock.path);
 
 	useEffect(() => {
@@ -54,7 +55,7 @@ export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardP
 					delay: mock.delay,
 				};
 				await onUpdate(mock.id, updateData);
-			} catch (error) {
+			} catch (_error) {
 				setEditedPath(mock.path);
 			}
 		} else {
@@ -180,6 +181,16 @@ export function MockCard({ mock, folder, onDelete, onUpdate, onCopy }: MockCardP
 						)}
 					</div>
 					<div className="flex gap-1">
+						{onDuplicate && (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => onDuplicate(mock)}
+								title="Duplicate Mock"
+							>
+								<CopyPlus className="h-4 w-4" />
+							</Button>
+						)}
 						<Button variant="ghost" size="icon" asChild>
 							<Link href={`/app/folder/${folder?.slug}/mock/${mock.id}`}>
 								<Pencil className="h-4 w-4" />

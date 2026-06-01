@@ -115,6 +115,53 @@ export default function EditMockPage() {
 		}
 	};
 
+	const handleDuplicate = async () => {
+		if (!mock || !folder) return;
+		setIsLoading(true);
+		try {
+			const res = await fetch('/api/mocks', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: `${mock.name} (Copy)`,
+					path: mock.path,
+					method: mock.method,
+					response: mock.response,
+					statusCode: mock.statusCode,
+					folderId: mock.folderId,
+					matchType: mock.matchType,
+					queryParams: mock.queryParams,
+					jsonSchema: mock.jsonSchema,
+					useDynamicResponse: mock.useDynamicResponse,
+					echoRequestBody: mock.echoRequestBody,
+					delay: mock.delay,
+					variants: mock.variants,
+					wildcardRequireMatch: mock.wildcardRequireMatch,
+				}),
+			});
+
+			if (!res.ok) {
+				const error = await res.json();
+				throw new Error(error.error);
+			}
+
+			const newMock = await res.json();
+			toast.success('Mock Duplicated', {
+				description: 'Mock endpoint has been duplicated successfully',
+			});
+			mutate(`/api/folders?slug=${slug}`);
+			mutate(`/api/mocks?folderId=${folder.id}`);
+			router.push(`/app/folder/${slug}/mock/${newMock.id}`);
+		} catch (error: unknown) {
+			toast.error('Error', {
+				description:
+					error instanceof Error ? error.message : 'Failed to duplicate mock',
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
 	if (!folder || !mock) {
 		return (
 			<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
@@ -171,6 +218,7 @@ export default function EditMockPage() {
 							submitLabel="Save Changes"
 							previewSlug={slug as string}
 							isSubmitting={isLoading}
+							onDuplicate={handleDuplicate}
 							onSubmit={async (values) => {
 								await handleUpdate(values);
 							}}

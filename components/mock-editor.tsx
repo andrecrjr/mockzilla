@@ -45,6 +45,7 @@ interface MockEditorProps {
 	previewSlug?: string;
 	isSubmitting?: boolean;
 	onCancel?: () => void;
+	onDuplicate?: () => void;
 	onSubmit: (values: MockFormValues) => Promise<void>;
 }
 
@@ -85,6 +86,7 @@ export function MockEditor({
 	previewSlug,
 	isSubmitting,
 	onCancel,
+	onDuplicate,
 	onSubmit,
 }: MockEditorProps) {
 	const [name, setName] = useState(initial?.name ?? '');
@@ -389,6 +391,11 @@ export function MockEditor({
 					{onCancel && (
 						<Button type="button" variant="outline" onClick={onCancel}>
 							Cancel
+						</Button>
+					)}
+					{onDuplicate && (
+						<Button type="button" variant="outline" onClick={onDuplicate}>
+							Duplicate
 						</Button>
 					)}
 					<Button type="submit" disabled={isSubmitting}>

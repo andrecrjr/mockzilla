@@ -50,30 +50,6 @@ export async function GET(request: NextRequest) {
 		let mocks: (typeof mockResponses.$inferSelect)[];
 		let total: number;
 
-		let mocksQuery = db.select().from(mockResponses);
-		let countQuery = db
-			.select({ count: sql<number>`count(*)` })
-			.from(mockResponses);
-
-		const conditions = [];
-		if (folderId) {
-			conditions.push(eq(mockResponses.folderId, folderId));
-		}
-		if (q) {
-			conditions.push(
-				or(
-					ilike(mockResponses.name, `%${q}%`),
-					ilike(mockResponses.endpoint, `%${q}%`),
-				),
-			);
-		}
-
-		if (conditions.length > 0) {
-			const whereClause = sql.join(conditions, sql` AND `);
-			// Using sql construction for complex dynamic where
-			// Drizzle supports .where(and(...)) but dynamic construction is easier with sql helper or array
-		}
-
 		// Re-writing more idiomatically for Drizzle
 		let finalMocksQuery = db.select().from(mockResponses);
 		let finalCountQuery = db
