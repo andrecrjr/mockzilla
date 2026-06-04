@@ -77,8 +77,7 @@ export default function RootLayout({
                 } else {
                   document.documentElement.classList.remove('dark');
                 }
-              })();
-            `,
+              })();`,
 					}}
 				/>
 			</head>

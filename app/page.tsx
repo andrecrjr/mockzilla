@@ -62,11 +62,13 @@ export default function LandingPage() {
           gtag('config', 'G-6MNRG3E8GZ');
         `}
 			</Script>
-			<script
+			<Script
+				id="software-app-jsonld"
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
 			/>
-			<script
+			<Script
+				id="faq-jsonld"
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
 			/>
