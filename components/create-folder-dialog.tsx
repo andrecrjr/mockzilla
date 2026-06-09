@@ -166,24 +166,13 @@ export function CreateFolderDialog({
 						</div>
 
 						<div className="grid gap-2">
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-2">
-									<Label htmlFor="folder-slug">URL Slug</Label>
-									<FieldTooltip
-										label="The URL-friendly identifier used in mock endpoint paths."
-										description="Auto-generated from the folder name, but you can customize it. Only lowercase letters, numbers, and hyphens are allowed."
-										example="/api/mock/user-apis/..."
-									/>
-								</div>
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
-									onClick={() => setUseCustomSlug(!useCustomSlug)}
-								>
-									{useCustomSlug ? 'Auto-generate' : 'Customize'}
-								</Button>
+							<div className="flex items-center gap-2">
+								<Label htmlFor="folder-slug">URL Slug</Label>
+								<FieldTooltip
+									label="The URL-friendly identifier used in mock endpoint paths."
+									description="Auto-generated from the folder name, but you can customize it. Only lowercase letters, numbers, and hyphens are allowed."
+									example="/api/mock/user-apis/..."
+								/>
 							</div>
 							<Input
 								id="folder-slug"

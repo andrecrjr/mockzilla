@@ -91,6 +91,10 @@ For mocks using `matchType: 'wildcard'`, Mockzilla supports multiple response va
 3. **Override Response**: If a variant is matched, its `body`, `statusCode`, and `bodyType` override the default mock configuration. 
    - **Note**: When a variant is matched, `useDynamicResponse` is automatically disabled for that request to ensure the variant's static body is returned.
 
+### Proxy & Record
+
+If a matched mock has `meta.proxyTargetUrl`, the route enters **Proxy & Record** mode for that mock. Unmatched requests still return `404`. See [Proxy & Record Mode](./proxy-and-record.md) for full details.
+
 **Match types supported:**
 - `exact`: Path must match exactly
 - `wildcard`: Use `*` as wildcard (e.g., `/users/*`)

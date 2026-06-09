@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
 				useDynamicResponse: mock.useDynamicResponse,
 				echoRequestBody: mock.echoRequestBody,
 				delay: mock.delay,
+				meta: mock.meta,
 				queryParams: mock.queryParams,
 				variants: mock.variants,
 				wildcardRequireMatch: mock.wildcardRequireMatch,
@@ -102,6 +103,7 @@ export async function GET(request: NextRequest) {
 			useDynamicResponse: mock.useDynamicResponse,
 			echoRequestBody: mock.echoRequestBody,
 			delay: mock.delay,
+			meta: mock.meta,
 			updatedAt: mock.updatedAt?.toISOString(),
 		}));
 
@@ -151,6 +153,7 @@ export async function POST(request: NextRequest) {
 				useDynamicResponse: body.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody,
 				delay: body.delay ?? 0,
+				meta: body.meta ?? {},
 			})
 			.returning();
 
@@ -169,6 +172,7 @@ export async function POST(request: NextRequest) {
 				useDynamicResponse: newMock.useDynamicResponse,
 				echoRequestBody: newMock.echoRequestBody,
 				delay: newMock.delay,
+				meta: newMock.meta,
 				queryParams: newMock.queryParams,
 				variants: newMock.variants,
 				wildcardRequireMatch: newMock.wildcardRequireMatch,
@@ -220,6 +224,7 @@ export async function PUT(request: NextRequest) {
 				useDynamicResponse: body.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody,
 				delay: body.delay ?? 0,
+				meta: body.meta,
 				bodyType: body.bodyType || 'json',
 				enabled: body.enabled ?? true,
 				updatedAt: new Date(),
@@ -244,6 +249,7 @@ export async function PUT(request: NextRequest) {
 			useDynamicResponse: updatedMock.useDynamicResponse,
 			echoRequestBody: updatedMock.echoRequestBody,
 			delay: updatedMock.delay,
+			meta: updatedMock.meta,
 			queryParams: updatedMock.queryParams,
 			variants: updatedMock.variants,
 			wildcardRequireMatch: updatedMock.wildcardRequireMatch,

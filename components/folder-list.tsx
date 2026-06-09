@@ -12,7 +12,12 @@ interface FolderListProps {
 	mocks: Mock[];
 	isLoading: boolean;
 	onDeleteFolder: (id: string) => void;
-	onUpdateFolder: (id: string, name: string) => Promise<void>;
+	onUpdateFolder: (
+		id: string,
+		name: string,
+		description?: string,
+		slug?: string,
+	) => Promise<void>;
 	onCopy: (text: string) => void;
 }
 

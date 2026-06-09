@@ -1,5 +1,4 @@
 import * as fs from 'node:fs';
-import { PGlite } from '@electric-sql/pglite';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import type { PgliteDatabase } from 'drizzle-orm/pglite';
@@ -11,7 +10,7 @@ type DbInstance = NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;
 
 let db: DbInstance;
 
-export function initDb(url?: string) {
+export async function initDb(url?: string) {
 	if (url) {
 		// Create PostgreSQL connection pool
 		const pool = new Pool({
@@ -32,11 +31,15 @@ export function initDb(url?: string) {
 	if (!fs.existsSync(dataDir)) {
 		fs.mkdirSync(dataDir, { recursive: true });
 	}
+	const { PGlite } = await import('@electric-sql/pglite');
 	const client = new PGlite(dataDir);
 	return drizzlePglite(client, { schema });
 }
 
-db = initDb(process.env.DATABASE_URL);
+// Initialize DB and export as a promise if needed, but for now we keep synchronous-ish export
+// actually we need to handle the async nature of dynamic import
+const dbPromise = initDb(process.env.DATABASE_URL);
+db = await dbPromise;
 
 // Export schema for use in queries
 export { db, schema };

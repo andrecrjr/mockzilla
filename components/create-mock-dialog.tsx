@@ -55,6 +55,7 @@ export function CreateMockDialog({
 			bodyType: string;
 		}> | null;
 		wildcardRequireMatch?: boolean;
+		meta?: Record<string, unknown>;
 	}) => {
 		try {
 			setIsSubmitting(true);
@@ -73,6 +74,7 @@ export function CreateMockDialog({
 				delay: values.delay ? Number.parseInt(values.delay, 10) : 0,
 				variants: values.variants,
 				wildcardRequireMatch: values.wildcardRequireMatch,
+				meta: values.meta,
 			};
 			const response = await fetch('/api/mocks', {
 				method: 'POST',

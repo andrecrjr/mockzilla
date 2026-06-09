@@ -93,6 +93,7 @@ export default function EditMockPage() {
 					delay: values.delay ? Number.parseInt(values.delay, 10) : 0,
 					variants: values.variants,
 					wildcardRequireMatch: values.wildcardRequireMatch,
+					meta: values.meta,
 				}),
 			});
 			if (!res.ok) {
@@ -137,6 +138,7 @@ export default function EditMockPage() {
 					delay: mock.delay,
 					variants: mock.variants,
 					wildcardRequireMatch: mock.wildcardRequireMatch,
+					meta: mock.meta,
 				}),
 			});
 
@@ -212,6 +214,7 @@ export default function EditMockPage() {
 											delay: mock.delay ? String(mock.delay) : '0',
 											variants: mock.variants,
 											wildcardRequireMatch: Boolean(mock.wildcardRequireMatch),
+											meta: mock.meta as Record<string, unknown>,
 										}
 									: undefined
 							}

@@ -47,6 +47,7 @@ export interface Mock {
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
 	delay?: number;
+	meta?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt?: string;
 }
@@ -68,6 +69,7 @@ export interface CreateMockRequest {
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
 	delay?: number;
+	meta?: Record<string, unknown>;
 }
 
 export interface CreateFolderRequest {
@@ -99,6 +101,7 @@ export interface UpdateMockRequest {
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
 	delay?: number;
+	meta?: Record<string, unknown>;
 }
 
 export interface ExportData {

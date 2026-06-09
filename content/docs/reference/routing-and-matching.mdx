@@ -54,7 +54,20 @@ You can enforce strict matching based on the **Query String**.
 If multiple mocks could match a single request, Mockzilla follows this precedence:
 1.  **Exact** (Highest priority)
 2.  **Wildcard**
-3.  **Substring** (Lowest priority)
+3.  **Substring**
+
+---
+
+## Proxy & Record
+
+When a matched mock has `meta.proxyTargetUrl`:
+1. It **proxies** the request to that URL.
+2. It **auto-captures** the response.
+3. It **creates a new exact mock** in the same folder.
+
+If no mock matches, Mockzilla returns `404`; proxy recording is never enabled by folder metadata.
+
+See the [Proxy & Record Guide](/docs/guides/proxy-and-record) for more.
 
 ---
 

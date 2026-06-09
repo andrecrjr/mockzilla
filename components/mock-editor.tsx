@@ -33,6 +33,7 @@ type MockFormValues = {
 	delay?: string;
 	variants?: MockVariant[] | null;
 	wildcardRequireMatch?: boolean;
+	meta?: Record<string, unknown>;
 };
 
 interface MockEditorProps {
@@ -99,6 +100,9 @@ export function MockEditor({
 		initial?.folderId ?? defaultFolderId ?? '',
 	);
 	const [delay, setDelay] = useState<string>(initial?.delay ? String(initial.delay) : '0');
+	const [proxyTargetUrl, setProxyTargetUrl] = useState<string>(
+		(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ?? '',
+	);
 
 	const [activeTab, setActiveTab] = useState<'manual' | 'schema' | 'advanced'>(
 		initial?.jsonSchema ? 'schema' : 'manual',
@@ -145,6 +149,10 @@ export function MockEditor({
 			setUseDynamicResponse(Boolean(initial?.useDynamicResponse));
 			setEchoRequestBody(Boolean(initial?.echoRequestBody));
 			setDelay(initial?.delay ? String(initial.delay) : '0');
+			setProxyTargetUrl(
+				(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ??
+					'',
+			);
 			setMatchType((initial?.matchType as MatchType) ?? 'exact');
 			const qp = initial?.queryParams as
 				| Record<string, string>
@@ -237,6 +245,10 @@ export function MockEditor({
 			useDynamicResponse,
 			echoRequestBody,
 			delay,
+			meta: {
+				...initial?.meta,
+				proxyTargetUrl: proxyTargetUrl.trim() || undefined,
+			},
 			variants: variants.length > 0 ? variants : null,
 			wildcardRequireMatch,
 		};
@@ -348,6 +360,20 @@ export function MockEditor({
 									</span>
 								</p>
 							)}
+						</div>
+
+						<div className="space-y-2 pt-4 border-t border-border/50">
+							<Label htmlFor="create-proxy">Proxy Target URL (Optional)</Label>
+							<Input
+								id="create-proxy"
+								value={proxyTargetUrl}
+								onChange={(e) => setProxyTargetUrl(e.target.value)}
+								placeholder="e.g., https://api.example.com/v1/users"
+								className="font-mono text-sm"
+							/>
+							<p className="text-[10px] text-muted-foreground">
+								If set, Mockzilla will proxy directly to this full URL (preserving query params).
+							</p>
 						</div>
 					</div>
 

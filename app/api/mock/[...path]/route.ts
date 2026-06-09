@@ -12,6 +12,49 @@ import {
 	selectVariant as selectMockVariant,
 } from '@/lib/utils/mock-matcher';
 
+type MockResponseRecord = typeof mockResponses.$inferSelect;
+
+function getQueryParamCount(queryParams: unknown): number {
+	if (!queryParams || typeof queryParams !== 'object' || Array.isArray(queryParams)) {
+		return 0;
+	}
+
+	return Object.keys(queryParams).length;
+}
+
+function hasProxyTarget(mock: MockResponseRecord): boolean {
+	const meta = mock.meta as { proxyTargetUrl?: string } | null;
+	return Boolean(meta?.proxyTargetUrl);
+}
+
+function getCreatedAtTime(mock: MockResponseRecord): number {
+	return mock.createdAt instanceof Date ? mock.createdAt.getTime() : 0;
+}
+
+function selectExactMock(
+	mocks: MockResponseRecord[],
+	urlQueryParams: Record<string, string>,
+): MockResponseRecord | undefined {
+	return mocks
+		.filter((mock) =>
+			queryParamsMatch(
+				mock.queryParams as Record<string, string> | null,
+				urlQueryParams,
+			),
+		)
+		.sort((a, b) => {
+			const querySpecificity =
+				getQueryParamCount(b.queryParams) - getQueryParamCount(a.queryParams);
+			if (querySpecificity !== 0) return querySpecificity;
+
+			if (hasProxyTarget(a) !== hasProxyTarget(b)) {
+				return hasProxyTarget(a) ? 1 : -1;
+			}
+
+			return getCreatedAtTime(b) - getCreatedAtTime(a);
+		})[0];
+}
+
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const reqId = crypto.randomUUID();
 	const pathSegments = params.path;
@@ -40,7 +83,12 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const urlQueryParams = Object.fromEntries(url.searchParams.entries());
 
 	// Create a scoped logger for this request
-	const log = logger.child({ reqId, path: mockPath, method, type: 'intercept' });
+	const log = logger.child({
+		reqId,
+		path: mockPath,
+		method,
+		type: 'intercept',
+	});
 	log.info('Incoming request');
 
 	try {
@@ -60,7 +108,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		}
 
 		// --- Phase 1: Exact match (existing behavior, zero breaking change) ---
-		const [exactMock] = await db
+		const exactMocks = await db
 			.select()
 			.from(mockResponses)
 			.where(
@@ -70,25 +118,18 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					eq(mockResponses.method, method),
 					eq(mockResponses.enabled, true),
 				),
-			)
-			.limit(1);
+			);
 
+		const exactMock = selectExactMock(exactMocks, urlQueryParams);
 		if (exactMock && exactMock.matchType === 'exact') {
-			// Check query params if the mock has requirements
-			const qpRequired = exactMock.queryParams as Record<string, string> | null;
-			if (!queryParamsMatch(qpRequired, urlQueryParams)) {
-				log.debug('Phase 1: Query params mismatch, falling through to Phase 2');
-			} else {
-				log.info({ mockId: exactMock.id }, 'Phase 1: Exact match found');
-				// Handle response delay if configured
-				if (exactMock.delay && exactMock.delay > 0) {
-					log.info({ delay: exactMock.delay }, 'Applying response delay');
-					await new Promise((resolve) => setTimeout(resolve, exactMock.delay));
-				}
-				return await buildResponse(exactMock, request, {}, log);
+			log.info({ mockId: exactMock.id }, 'Phase 1: Exact match found');
+			// Handle response delay if configured
+			if (exactMock.delay && exactMock.delay > 0) {
+				log.info({ delay: exactMock.delay }, 'Applying response delay');
+				await new Promise((resolve) => setTimeout(resolve, exactMock.delay));
 			}
-		}
- else if (exactMock) {
+			return await buildResponse(exactMock, request, {}, log, mockPath);
+		} else if (exactMock) {
 			// Found by exact path but matchType is not 'exact' — this means
 			// the endpoint happens to equal the path but is configured as wildcard/substring.
 			// We still need to evaluate it properly in Phase 2.
@@ -151,7 +192,10 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			);
 		}
 
-		log.info({ mockId: bestMock.id, matchType: bestMock.matchType }, 'Phase 2: Fallback match found');
+		log.info(
+			{ mockId: bestMock.id, matchType: bestMock.matchType },
+			'Phase 2: Fallback match found',
+		);
 
 		// Handle response delay if configured
 		if (bestMock.delay && bestMock.delay > 0) {
@@ -186,7 +230,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
 					}
-					return await buildResponse(variantMock, request, paramsMap, log);
+					return await buildResponse(variantMock, request, paramsMap, log, mockPath);
 				}
 
 				// No variant matched
@@ -215,7 +259,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			paramsMap[String(i)] = captures[i];
 		}
 
-		return await buildResponse(bestMock, request, paramsMap, log);
+		return await buildResponse(bestMock, request, paramsMap, log, mockPath);
 	} catch (error) {
 		log.error({ err: error }, 'Internal Server Error during mock processing');
 		return NextResponse.json(
@@ -230,8 +274,25 @@ async function buildResponse(
 	request: NextRequest,
 	paramsMap: Record<string, string> = {},
 	log: Logger,
+	mockPath = '/',
 ): Promise<NextResponse> {
 	log.debug({ mockId: mock.id }, 'Building response');
+	const meta = mock.meta as { proxyTargetUrl?: string } | null;
+	if (meta?.proxyTargetUrl) {
+		const urlQueryParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+		const method = (request.method as HttpMethod) || 'GET';
+
+		return await handleProxyAndRecord(
+			meta.proxyTargetUrl,
+			mock.folderId,
+			mockPath,
+			method,
+			request,
+			urlQueryParams,
+			log,
+		);
+	}
+
 	// Check if we should echo the request body
 	if (mock.echoRequestBody) {
 		return handleEchoRequestBody(mock, request, log);
@@ -305,6 +366,80 @@ async function buildResponse(
 		headers: { 'Content-Type': contentType },
 	});
 }
+async function handleProxyAndRecord(
+	targetUrlString: string,
+	folderId: string,
+	mockPath: string,
+	method: HttpMethod,
+	request: NextRequest,
+	queryParams: Record<string, string>,
+	log: Logger,
+): Promise<NextResponse> {
+	log.info({ targetUrlString, mockPath }, 'Proxying request to target');
+
+	const url = new URL(request.url);
+	const targetUrl = new URL(targetUrlString);
+
+	// Preserve incoming query params
+	url.searchParams.forEach((value, key) => {
+		targetUrl.searchParams.set(key, value);
+	});
+	try {
+		// Disable SSL verification for proxy calls in dev environments
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+		const requestClone = request.clone();
+		const headers = Object.fromEntries(request.headers.entries());
+
+		delete headers.host; // Cloudflare requirement: dont send localhost as Host header
+
+		const response = await fetch(targetUrl.toString(), {
+			method,
+			headers,
+			body: ["GET", "HEAD"].includes(method) ? null : await requestClone.text(),
+		});
+
+		const responseText = await response.text();
+		const contentType = response.headers.get("content-type") || "text/plain";
+		const bodyType = contentType.includes("application/json") ? "json" : "text";
+
+		log.info(
+			{ statusCode: response.status, bodyType },
+			"Received proxy response, recording mock",
+		);
+
+		// Save the recorded mock
+		await db.insert(mockResponses).values({
+			name: `Auto-captured: ${method} ${mockPath}`,
+			endpoint: mockPath,
+			method,
+			statusCode: response.status,
+			response: responseText,
+			folderId,
+			matchType: "exact",
+			bodyType,
+			enabled: true,
+			queryParams,
+		});
+
+		// Return the real response to the client
+		return new NextResponse(responseText, {
+			status: response.status,
+			headers: {
+				"Content-Type": contentType,
+			},
+		});
+	} catch (error) {
+		log.error(
+			{ err: error, targetUrl: targetUrl.toString() },
+			"Proxy request failed",
+		);
+		return NextResponse.json(
+			{ error: "Proxy request failed", details: String(error) },
+			{ status: 502 },
+		);
+	}
+}
 
 async function handleEchoRequestBody(
 	mock: typeof mockResponses.$inferSelect,
@@ -317,7 +452,10 @@ async function handleEchoRequestBody(
 	if (contentType.includes('application/json')) {
 		try {
 			const body = await request.clone().json();
-			log.info({ statusCode: mock.statusCode }, 'Returning echoed JSON response');
+			log.info(
+				{ statusCode: mock.statusCode },
+				'Returning echoed JSON response',
+			);
 			return NextResponse.json(body, { status: mock.statusCode });
 		} catch {
 			// If JSON parsing fails, fall back to text
@@ -328,8 +466,7 @@ async function handleEchoRequestBody(
 				headers: { 'Content-Type': contentType },
 			});
 		}
-	}
- else {
+	} else {
 		const body = await request.text();
 		log.info({ statusCode: mock.statusCode }, 'Returning echoed text response');
 		return new NextResponse(body, {
@@ -363,7 +500,10 @@ async function handleDynamicResponse(
 			status: mock.statusCode,
 		});
 	} catch (error) {
-		log.error({ err: error }, 'Error generating from schema, falling back to static');
+		log.error(
+			{ err: error },
+			'Error generating from schema, falling back to static',
+		);
 		// Fallback to static response if generation fails
 		try {
 			return NextResponse.json(JSON.parse(mock.response), {

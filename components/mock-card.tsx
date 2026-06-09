@@ -156,6 +156,14 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 							<Badge variant="outline" className="text-xs">
 								{mock.matchType || 'exact'}
 							</Badge>
+							{(mock.meta as { proxyTargetUrl?: string })?.proxyTargetUrl && (
+								<Badge
+									variant="secondary"
+									className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+								>
+									Proxy: {(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
+								</Badge>
+							)}
 							{mock.matchType === 'wildcard' &&
 								mock.variants &&
 								mock.variants.length > 0 && (
