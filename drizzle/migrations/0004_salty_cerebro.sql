@@ -1,0 +1,1 @@
+ALTER TABLE "mock_responses" ADD COLUMN "meta" jsonb DEFAULT '{}'::jsonb;
