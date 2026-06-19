@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/select';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { validateSchema } from '@/lib/schema-generator';
-import type { Folder, HttpMethod, MatchType, MockVariant } from '@/lib/types';
+import type { Folder, HttpMethod, MatchType, MockSubfolder, MockVariant } from '@/lib/types';
+import { joinMockPaths } from '@/lib/utils/mock-paths';
 
 type MockFormValues = {
 	name: string;
@@ -24,6 +25,7 @@ type MockFormValues = {
 	method: HttpMethod;
 	statusCode: string;
 	folderId?: string;
+	mockFolderId?: string | null;
 	response: string;
 	matchType?: MatchType;
 	queryParams?: Record<string, string> | null;
@@ -39,7 +41,9 @@ type MockFormValues = {
 interface MockEditorProps {
 	mode: 'create' | 'edit';
 	folders?: Folder[];
+	mockSubfolders?: MockSubfolder[];
 	defaultFolderId?: string;
+	defaultMockFolderId?: string | null;
 	initial?: Partial<MockFormValues>;
 	showFolderSelect?: boolean;
 	submitLabel?: string;
@@ -80,7 +84,9 @@ const STATUS_CODES = [
 export function MockEditor({
 	mode,
 	folders = [],
+	mockSubfolders = [],
 	defaultFolderId,
+	defaultMockFolderId = null,
 	initial,
 	showFolderSelect,
 	submitLabel,
@@ -98,6 +104,9 @@ export function MockEditor({
 	);
 	const [folderId, setFolderId] = useState<string>(
 		initial?.folderId ?? defaultFolderId ?? '',
+	);
+	const [mockFolderId, setMockFolderId] = useState<string>(
+		initial?.mockFolderId ?? defaultMockFolderId ?? 'root',
 	);
 	const [delay, setDelay] = useState<string>(initial?.delay ? String(initial.delay) : '0');
 	const [proxyTargetUrl, setProxyTargetUrl] = useState<string>(
@@ -144,6 +153,7 @@ export function MockEditor({
 			setMethod((initial?.method ?? 'GET') as HttpMethod);
 			setStatusCode(String(initial?.statusCode ?? '200'));
 			setFolderId(initial?.folderId ?? defaultFolderId ?? '');
+			setMockFolderId(initial?.mockFolderId ?? defaultMockFolderId ?? 'root');
 			setResponse(initial?.response ?? '');
 			setJsonSchema(initial?.jsonSchema ?? '');
 			setUseDynamicResponse(Boolean(initial?.useDynamicResponse));
@@ -168,7 +178,7 @@ export function MockEditor({
 			setActiveTab(initial?.jsonSchema ? 'schema' : 'manual');
 			hydratedRef.current = true;
 		}
-	}, [initial, mode, defaultFolderId]);
+	}, [initial, mode, defaultFolderId, defaultMockFolderId]);
 
 	useEffect(() => {
 		if (mode !== 'edit' || !initial) return;
@@ -180,13 +190,18 @@ export function MockEditor({
 	const selectedFolder = useMemo(() => {
 		return folders.find((f) => f.id === (folderId || defaultFolderId || ''));
 	}, [folders, folderId, defaultFolderId]);
+	const selectedMockSubfolder = useMemo(() => {
+		if (!mockFolderId || mockFolderId === 'root') return null;
+		return mockSubfolders.find((subfolder) => subfolder.id === mockFolderId) ?? null;
+	}, [mockSubfolders, mockFolderId]);
 
 	const previewUrl = useMemo(() => {
 		const baseSlug = previewSlug ?? selectedFolder?.slug;
 		if (!baseSlug) return null;
 		if (!path.startsWith('/') || path.length <= 1) return null;
-		return `${origin}/api/mock/${baseSlug}${path}`;
-	}, [origin, previewSlug, selectedFolder?.slug, path]);
+		const effectivePath = joinMockPaths(selectedMockSubfolder?.mainPath ?? '/', path);
+		return `${origin}/api/mock/${baseSlug}${effectivePath}`;
+	}, [origin, previewSlug, selectedFolder?.slug, selectedMockSubfolder?.mainPath, path]);
 
 	const showFolder =
 		showFolderSelect ?? (mode === 'create' && !defaultFolderId);
@@ -235,6 +250,7 @@ export function MockEditor({
 			method,
 			statusCode,
 			folderId: folderId || defaultFolderId,
+			mockFolderId: mockFolderId === 'root' ? null : mockFolderId,
 			response,
 			matchType,
 			queryParams:
@@ -272,6 +288,25 @@ export function MockEditor({
 										{folders.map((folder) => (
 											<SelectItem key={folder.id} value={folder.id}>
 												{folder.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+
+						{mockSubfolders.length > 0 && (
+							<div className="space-y-2">
+								<Label htmlFor="create-mock-subfolder">Mock Subfolder</Label>
+								<Select value={mockFolderId || 'root'} onValueChange={setMockFolderId}>
+									<SelectTrigger id="create-mock-subfolder">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="root">Root</SelectItem>
+										{mockSubfolders.map((subfolder) => (
+											<SelectItem key={subfolder.id} value={subfolder.id}>
+												{subfolder.name} ({subfolder.mainPath})
 											</SelectItem>
 										))}
 									</SelectContent>

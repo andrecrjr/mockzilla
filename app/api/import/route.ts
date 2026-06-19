@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { folders, mockResponses } from '@/lib/db/schema';
+import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import type { ExportData, Folder, LegacyImportFormat, Mock } from '@/lib/types';
 
 function generateSlug(name: string): string {
@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
 
 		// Create a map to track old IDs to new IDs for folders
 		const folderIdMap = new Map<string, string>();
+		const subfolderIdMap = new Map<string, string>();
 
 		// Use a transaction for atomic imports
 		await db.transaction(async (tx) => {
@@ -163,6 +164,28 @@ export async function POST(request: NextRequest) {
 				results.folders++;
 			}
 
+			for (const subfolder of exportData.mockSubfolders ?? []) {
+				const mappedFolderId = folderIdMap.get(subfolder.folderId);
+				if (!mappedFolderId) continue;
+
+				const mappedParentId = subfolder.parentId
+					? subfolderIdMap.get(subfolder.parentId) ?? null
+					: null;
+
+				const [newSubfolder] = await tx
+					.insert(mockSubfolders)
+					.values({
+						folderId: mappedFolderId,
+						parentId: mappedParentId,
+						name: subfolder.name,
+						slug: subfolder.slug,
+						mainPath: subfolder.mainPath,
+					})
+					.returning();
+
+				subfolderIdMap.set(subfolder.id, newSubfolder.id);
+			}
+
 			// Import mocks with updated folder IDs
 			for (const mock of exportData.mocks) {
 				const mappedFolderId = folderIdMap.get(mock.folderId);
@@ -188,6 +211,9 @@ export async function POST(request: NextRequest) {
 					statusCode: mock.statusCode,
 					response: mock.response,
 					folderId: mappedFolderId || mock.folderId,
+					mockFolderId: mock.mockFolderId
+						? subfolderIdMap.get(mock.mockFolderId) ?? null
+						: null,
 					matchType: mock.matchType || 'exact',
 					bodyType: mock.bodyType || 'json',
 					enabled: mock.enabled ?? true,

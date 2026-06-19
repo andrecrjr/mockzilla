@@ -311,6 +311,40 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(body).toEqual({ users: [] });
 	});
 
+	it('serves a relative mock path through a subfolder main path', async () => {
+		const subfolderMock = {
+			...mockResponse,
+			id: 'mock-subfolder-1',
+			endpoint: '/123',
+			mockFolderId: 'mock-folder-1',
+			response: JSON.stringify({ nested: true }),
+		};
+		const mockSubfolder = {
+			id: 'mock-folder-1',
+			folderId: 'folder-1',
+			mainPath: '/v1/users',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([]);
+			if (callCount === 3) return createMockBuilder([subfolderMock]);
+			if (callCount === 4) return createMockBuilder([mockSubfolder]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/v1/users/123');
+		const params = Promise.resolve({ path: ['api', 'v1', 'users', '123'] });
+
+		const res = await GET(req, { params });
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body).toEqual({ nested: true });
+	});
+
 	it('responds to OPTIONS with 204', async () => {
 		const _req = new NextRequest('http://localhost:3000/api/mock/api', { method: 'OPTIONS' });
 		const res = await OPTIONS();

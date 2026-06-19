@@ -29,14 +29,28 @@ export interface Folder {
 	updatedAt?: string;
 }
 
+export interface MockSubfolder {
+	id: string;
+	folderId: string;
+	parentId?: string | null;
+	name: string;
+	slug: string;
+	mainPath: string;
+	createdAt: string;
+	updatedAt?: string;
+}
+
 export interface Mock {
 	id: string;
 	name: string;
 	path: string;
+	relativePath?: string;
+	effectivePath?: string;
 	method: HttpMethod;
 	response: string;
 	statusCode: number;
 	folderId: string;
+	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
@@ -59,6 +73,7 @@ export interface CreateMockRequest {
 	response: string;
 	statusCode: number;
 	folderId: string;
+	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
@@ -91,6 +106,7 @@ export interface UpdateMockRequest {
 	method: HttpMethod;
 	response: string;
 	statusCode: number;
+	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
@@ -106,6 +122,7 @@ export interface UpdateMockRequest {
 
 export interface ExportData {
 	folders: Folder[];
+	mockSubfolders?: MockSubfolder[];
 	mocks: Mock[];
 	exportedAt: string;
 }

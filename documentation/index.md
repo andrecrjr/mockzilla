@@ -9,6 +9,7 @@ High-performance mocking server for JSON and stateful API workflows.
 - [OpenAPI Import](/documentation/openapi-import.md) - Specification parsing and mock conversion.
 - [Workflow Mode](/documentation/workflow-mode.md) - Stateful transitions and mini-db logic.
 - [Proxy & Record Mode](/documentation/proxy-and-record.md) - Capture live traffic and auto-generate mocks.
+- [Mock Subfolders](/documentation/mock-subfolders.md) - Nested mock organization and effective serving paths.
 - [Schema Interpolation](/documentation/schema-interpolation.md) - `{$.path}` and `{{input.*}}` templates.
 - [Agent Skills](/documentation/skills.md) - Instruction sets (Creator, Architect).
 - [AGENTS.md](/AGENTS.md) - Capability catalog.

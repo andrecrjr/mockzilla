@@ -1,5 +1,6 @@
 import {
 	boolean,
+	foreignKey,
 	integer,
 	jsonb,
 	pgEnum,
@@ -7,6 +8,7 @@ import {
 	serial,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -34,6 +36,37 @@ export const folders = pgTable('folders', {
 	updatedAt: timestamp('updated_at'),
 });
 
+export const mockSubfolders = pgTable(
+	'mock_subfolders',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		folderId: uuid('folder_id')
+			.notNull()
+			.references(() => folders.id, { onDelete: 'cascade' }),
+		parentId: uuid('parent_id'),
+		name: text('name').notNull(),
+		slug: text('slug').notNull(),
+		mainPath: text('main_path').notNull(),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at'),
+	},
+	(table) => ({
+		folderMainPathUnique: uniqueIndex(
+			'mock_subfolders_folder_main_path_unique',
+		).on(table.folderId, table.mainPath),
+		parentReference: foreignKey({
+			columns: [table.parentId],
+			foreignColumns: [table.id],
+			name: 'mock_subfolders_parent_id_mock_subfolders_id_fk',
+		}).onDelete('cascade'),
+		siblingSlugUnique: uniqueIndex('mock_subfolders_sibling_slug_unique').on(
+			table.folderId,
+			table.parentId,
+			table.slug,
+		),
+	}),
+);
+
 export const mockResponses = pgTable('mock_responses', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: text('name').notNull(),
@@ -44,6 +77,9 @@ export const mockResponses = pgTable('mock_responses', {
 	folderId: uuid('folder_id')
 		.notNull()
 		.references(() => folders.id, { onDelete: 'cascade' }),
+	mockFolderId: uuid('mock_folder_id').references(() => mockSubfolders.id, {
+		onDelete: 'set null',
+	}),
 	matchType: text('match_type').default('exact'),
 	bodyType: bodyTypeEnum('body_type').default('json'),
 	enabled: boolean('enabled').default(true).notNull(),

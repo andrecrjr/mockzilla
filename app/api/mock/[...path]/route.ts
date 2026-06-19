@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { folders, mockResponses } from '@/lib/db/schema';
+import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { type Logger, logger } from '@/lib/logger';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
@@ -11,8 +11,20 @@ import {
 	queryParamsMatch,
 	selectVariant as selectMockVariant,
 } from '@/lib/utils/mock-matcher';
+import { joinMockPaths } from '@/lib/utils/mock-paths';
 
 type MockResponseRecord = typeof mockResponses.$inferSelect;
+type MockSubfolderRecord = typeof mockSubfolders.$inferSelect;
+
+function getEffectiveEndpoint(
+	mock: MockResponseRecord,
+	subfoldersById: Map<string, MockSubfolderRecord>,
+): string {
+	const subfolder = mock.mockFolderId
+		? subfoldersById.get(mock.mockFolderId)
+		: undefined;
+	return joinMockPaths(subfolder?.mainPath ?? '/', mock.endpoint);
+}
 
 function getQueryParamCount(queryParams: unknown): number {
 	if (!queryParams || typeof queryParams !== 'object' || Array.isArray(queryParams)) {
@@ -147,9 +159,15 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				),
 			);
 
+		const subfolders = await db
+			.select()
+			.from(mockSubfolders)
+			.where(eq(mockSubfolders.folderId, folder.id));
+		const subfoldersById = new Map(subfolders.map((subfolder) => [subfolder.id, subfolder]));
+
 		// Build candidates (include full mock reference for variant lookup)
 		const candidates: MockCandidate[] = allMocks.map((m) => ({
-			endpoint: m.endpoint,
+			endpoint: getEffectiveEndpoint(m, subfoldersById),
 			matchType: (m.matchType as MatchType) || 'exact',
 			queryParams: (m.queryParams as Record<string, string> | null) ?? null,
 			_score: 0,
@@ -172,12 +190,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		}
 
 		// Find the full mock record for the best match
-		const bestMock = allMocks.find(
-			(m) =>
-				m.endpoint === best.endpoint &&
-				((m.matchType as MatchType) || 'exact') === best.matchType &&
-				JSON.stringify(m.queryParams) === JSON.stringify(best.queryParams),
-		);
+		const bestMock = allMocks.find((m) => m.id === best._id);
 
 		if (!bestMock) {
 			log.error('Match found in Phase 2 but database record lookup failed');
@@ -207,12 +220,13 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		if (bestMock.matchType === 'wildcard') {
 			const variants = bestMock.variants as MockVariant[] | null;
 			const wildcardRequireMatch = bestMock.wildcardRequireMatch || false;
+			const effectiveEndpoint = getEffectiveEndpoint(bestMock, subfoldersById);
 
 			if (variants && variants.length > 0) {
 				const variant = selectMockVariant(
 					variants,
 					mockPath,
-					bestMock.endpoint,
+					effectiveEndpoint,
 				);
 				if (variant) {
 					log.info({ variantKey: variant.key }, 'Wildcard variant matched');
@@ -225,7 +239,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 						useDynamicResponse: false, // Ensure variants always return their static body
 					};
 					const captures =
-						extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
+						extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
 					const paramsMap: Record<string, string> = {};
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
@@ -250,9 +264,10 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			}
 		}
 
+		const effectiveEndpoint = getEffectiveEndpoint(bestMock, subfoldersById);
 		const captures =
 			bestMock.matchType === 'wildcard'
-				? extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || []
+				? extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || []
 				: [];
 		const paramsMap: Record<string, string> = {};
 		for (let i = 0; i < captures.length; i++) {

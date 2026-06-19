@@ -18,6 +18,11 @@ export const CreateMockArgs = z.object({
 		.describe(
 			'The slug of the parent folder (alternative to folderId, e.g. "my-folder")',
 		),
+	mockFolderId: z
+		.string()
+		.nullable()
+		.optional()
+		.describe('Optional mock subfolder ID. Null means root of the parent folder.'),
 	response: z.string().describe('The response body (JSON string or text)'),
 	matchType: z
 		.enum(['exact', 'substring', 'wildcard'])
@@ -83,6 +88,11 @@ export const ListMocksArgs = z.object({
 		.string()
 		.optional()
 		.describe('Filter by folder slug (e.g. "my-folder")'),
+	mockFolderId: z
+		.string()
+		.nullable()
+		.optional()
+		.describe('Filter by mock subfolder ID. Null means root-level mocks.'),
 	page: z.number().int().min(1).optional(),
 	limit: z.number().int().min(1).max(100).optional(),
 });
@@ -100,6 +110,7 @@ export const UpdateMockArgs = z.object({
 		.describe('HTTP method'),
 	statusCode: z.number().int().describe('HTTP status code to return'),
 	response: z.string().describe('The response body (JSON string or text)'),
+	mockFolderId: z.string().nullable().optional(),
 	matchType: z
 		.enum(['exact', 'substring', 'wildcard'])
 		.optional()
@@ -165,6 +176,7 @@ export const ManageMocksArgs = z.discriminatedUnion('action', [
 		statusCode: z.number().int(),
 		folderId: z.string().optional(),
 		folderSlug: z.string().optional(),
+		mockFolderId: z.string().nullable().optional(),
 		response: z.string().optional().describe('Response body (required if jsonSchema not provided)'),
 		matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),
 		bodyType: z.enum(['json', 'text']).optional(),
@@ -189,6 +201,7 @@ export const ManageMocksArgs = z.discriminatedUnion('action', [
 		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
 		statusCode: z.number().int().optional(),
 		response: z.string().optional(),
+		mockFolderId: z.string().nullable().optional(),
 		matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),
 		bodyType: z.enum(['json', 'text']).optional(),
 		enabled: z.boolean().optional(),
@@ -233,6 +246,7 @@ export const CreateSchemaMockArgs = z.object({
 	statusCode: z.number().int(),
 	folderSlug: z.string().nullable().optional(),
 	folderId: z.string().nullable().optional(),
+	mockFolderId: z.string().nullable().optional(),
 	jsonSchema: z.string(),
 	enabled: z.boolean().optional(),
 	matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),

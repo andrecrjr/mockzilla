@@ -53,6 +53,7 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 					useDynamicResponse: mock.useDynamicResponse,
 					echoRequestBody: mock.echoRequestBody,
 					delay: mock.delay,
+					mockFolderId: mock.mockFolderId,
 				};
 				await onUpdate(mock.id, updateData);
 			} catch (_error) {
@@ -116,7 +117,13 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 		}
 	};
 
-	const mockUrl = getMockUrl(folder?.slug || '', mock.path);
+	const effectivePath = mock.effectivePath || mock.path;
+	const relativePath = mock.relativePath || mock.path;
+	const subfolderPrefix =
+		effectivePath !== relativePath && effectivePath.endsWith(relativePath)
+			? effectivePath.slice(0, -relativePath.length) || '/'
+			: '';
+	const mockUrl = getMockUrl(folder?.slug || '', effectivePath);
 	const queryParamsString = getQueryParamsString();
 	const mockUrlFull = queryParamsString
 		? `${mockUrl}${queryParamsString}`
@@ -137,6 +144,7 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 							<div className="flex items-center rounded bg-muted h-7 px-2 border border-transparent focus-within:border-ring/50 focus-within:ring-1 focus-within:ring-ring/50">
 								<span className="text-sm font-mono text-muted-foreground/60 select-none">
 									/{folder?.slug}
+									{subfolderPrefix}
 								</span>
 								<Input
 									value={editedPath}

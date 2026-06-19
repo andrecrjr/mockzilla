@@ -1,5 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
-import type { z } from 'zod';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import {
 	folders,
@@ -38,7 +37,6 @@ import type {
 	GetMockArgs, 
 	UpdateMockArgs, 
 	DeleteMockArgs, 
-	CreateSchemaMockArgs, 
 	PreviewMockArgs, 
 	ManageMocksArgs 
 } from './schemas/mocks';
@@ -225,6 +223,7 @@ export async function callCreateMock(args: CreateMockArgs) {
 		method: args.method as HttpMethod,
 		statusCode: args.statusCode,
 		folderId: targetFolderId,
+		mockFolderId: args.mockFolderId ?? null,
 		response: args.response,
 		matchType: args.matchType,
 		bodyType: args.bodyType,
@@ -246,6 +245,7 @@ export async function callCreateMock(args: CreateMockArgs) {
 			statusCode: body.statusCode,
 			response: body.response,
 			folderId: body.folderId,
+			mockFolderId: body.mockFolderId ?? null,
 			matchType: body.matchType || 'exact',
 			bodyType: body.bodyType || 'json',
 			enabled: body.enabled ?? true,
@@ -267,6 +267,7 @@ export async function callCreateMock(args: CreateMockArgs) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
+		mockFolderId: row.mockFolderId,
 		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
@@ -304,16 +305,25 @@ export async function callListMocks(args: ListMocksArgs) {
 
 	let total = 0;
 	let rows: (typeof mockResponses.$inferSelect)[] = [];
+	const mockFolderClause =
+		args.mockFolderId === null
+			? isNull(mockResponses.mockFolderId)
+			: args.mockFolderId
+				? eq(mockResponses.mockFolderId, args.mockFolderId)
+				: undefined;
 	if (targetFolderId) {
+		const whereClause = mockFolderClause
+			? and(eq(mockResponses.folderId, targetFolderId), mockFolderClause)
+			: eq(mockResponses.folderId, targetFolderId);
 		const [countRow] = await db
 			.select({ count: sql<number>`count(*)` })
 			.from(mockResponses)
-			.where(eq(mockResponses.folderId, targetFolderId));
+			.where(whereClause);
 		total = Number(countRow.count);
 		rows = await db
 			.select()
 			.from(mockResponses)
-			.where(eq(mockResponses.folderId, targetFolderId))
+			.where(whereClause)
 			.orderBy(mockResponses.createdAt)
 			.limit(limit)
 			.offset(offset);
@@ -338,6 +348,7 @@ export async function callListMocks(args: ListMocksArgs) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
+		mockFolderId: row.mockFolderId,
 		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
@@ -369,6 +380,7 @@ export async function callGetMock(args: GetMockArgs) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
+		mockFolderId: row.mockFolderId,
 		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
@@ -394,6 +406,7 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 			method: args.method,
 			statusCode: args.statusCode,
 			response: args.response,
+			mockFolderId: args.mockFolderId ?? undefined,
 			matchType: args.matchType || 'exact',
 			bodyType: args.bodyType || 'json',
 			enabled: args.enabled ?? true,
@@ -417,6 +430,7 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
+		mockFolderId: row.mockFolderId,
 		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
@@ -475,6 +489,7 @@ export async function callCreateSchemaMock(args: {
 	statusCode: number;
 	folderSlug?: string | null;
 	folderId?: string | null;
+	mockFolderId?: string | null;
 	jsonSchema: string;
 	enabled?: boolean;
 	matchType?: MatchType;
@@ -521,6 +536,7 @@ export async function callCreateSchemaMock(args: {
 			statusCode: args.statusCode,
 			response: generated,
 			folderId: targetFolderId,
+			mockFolderId: args.mockFolderId ?? null,
 			matchType: args.matchType || 'exact',
 			bodyType: 'json',
 			enabled: args.enabled ?? true,
@@ -542,6 +558,7 @@ export async function callCreateSchemaMock(args: {
 		response: row.response,
 		statusCode: row.statusCode,
 		folderId: row.folderId,
+		mockFolderId: row.mockFolderId,
 		matchType: (row.matchType as MatchType) || 'exact',
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,

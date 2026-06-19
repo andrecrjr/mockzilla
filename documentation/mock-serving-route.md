@@ -19,6 +19,7 @@ The route uses Next.js catch-all segments to match mock requests:
 - `/api/mock/users/` - Root endpoint for the "users" folder (path: "/")
 - `/api/mock/users/list` - Matches mock with path "/list" in "users" folder
 - `/api/mock/users/123/profile` - Matches mock with path "/123/profile" in "users" folder
+- `/api/mock/users/v1/accounts/123` - Can match a mock stored as `/123` inside a subfolder whose main path is `/v1/accounts`
 
 ## Path Resolution
 
@@ -76,9 +77,12 @@ If an exact match is found and its `matchType` is `'exact'`, the route checks qu
 
 Fetches all enabled mocks for the folder and method, then evaluates them using the mock matcher:
 
-1. **Build candidates**: All mocks with their match types and query params
+1. **Resolve subfolders**: Load mock subfolders for the top-level folder.
+2. **Build candidates**: All mocks with their match types, query params, and effective paths.
 2. **Find best match**: Uses `findBestMatch()` to score and rank candidates
 3. **Select variant**: For wildcard mocks, selects the appropriate variant if configured
+
+For mocks in subfolders, the matcher uses `subfolder.mainPath + mock.path`. The stored mock path remains relative to that subfolder.
 
 #### Variant Selection for Wildcards
 

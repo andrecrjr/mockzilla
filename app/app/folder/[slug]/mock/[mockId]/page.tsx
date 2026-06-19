@@ -11,7 +11,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { validateSchema } from '@/lib/schema-generator';
-import type { Folder, Mock } from '@/lib/types';
+import type { Folder, Mock, MockSubfolder } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -30,6 +30,10 @@ export default function EditMockPage() {
 		mockId ? `/api/mocks?id=${mockId}` : null,
 		fetcher,
 	);
+	const { data: mockSubfolders = [] } = useSWR<MockSubfolder[]>(
+		folder ? `/api/mock-subfolders?folderId=${folder.id}&all=true` : null,
+		fetcher,
+	);
 
 	const [isLoading, setIsLoading] = useState(false);
 
@@ -39,6 +43,7 @@ export default function EditMockPage() {
 		method: string;
 		statusCode: string;
 		response: string;
+		mockFolderId?: string | null;
 		matchType?: string;
 		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
@@ -52,6 +57,7 @@ export default function EditMockPage() {
 			bodyType: string;
 		}> | null;
 		wildcardRequireMatch?: boolean;
+		meta?: Record<string, unknown>;
 	}) => {
 		if (!mock || !folder) return;
 		setIsLoading(true);
@@ -85,6 +91,7 @@ export default function EditMockPage() {
 					method: values.method,
 					response: values.response,
 					statusCode: Number.parseInt(values.statusCode, 10),
+					mockFolderId: values.mockFolderId ?? null,
 					matchType: values.matchType,
 					queryParams: values.queryParams,
 					jsonSchema: values.jsonSchema,
@@ -130,6 +137,7 @@ export default function EditMockPage() {
 					response: mock.response,
 					statusCode: mock.statusCode,
 					folderId: mock.folderId,
+					mockFolderId: mock.mockFolderId,
 					matchType: mock.matchType,
 					queryParams: mock.queryParams,
 					jsonSchema: mock.jsonSchema,
@@ -203,6 +211,7 @@ export default function EditMockPage() {
 									? {
 											name: mock.name,
 											path: mock.path,
+											mockFolderId: mock.mockFolderId ?? null,
 											method: mock.method,
 											statusCode: mock.statusCode.toString(),
 											response: mock.response,
@@ -220,6 +229,10 @@ export default function EditMockPage() {
 							}
 							submitLabel="Save Changes"
 							previewSlug={slug as string}
+							folders={[folder]}
+							mockSubfolders={mockSubfolders}
+							defaultFolderId={folder.id}
+							defaultMockFolderId={mock.mockFolderId ?? null}
 							isSubmitting={isLoading}
 							onDuplicate={handleDuplicate}
 							onSubmit={async (values) => {

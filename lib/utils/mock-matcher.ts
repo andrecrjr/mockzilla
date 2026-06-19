@@ -12,6 +12,7 @@ export interface MockCandidate {
 	matchType: MatchType;
 	queryParams: Record<string, string> | null;
 	_score: number;
+	_id?: string;
 }
 
 // -------------------------------------------------------
