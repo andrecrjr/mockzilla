@@ -48,41 +48,14 @@ When only the folder slug is provided (e.g., `/api/mock/users/`), the route trea
 
 ## Matching Logic
 
-The route uses a two-phase matching strategy:
-
-### Phase 1: Exact Match
-
-Attempts to find an exact match for the endpoint and HTTP method:
-
-```typescript
-const [exactMock] = await db
-  .select()
-  .from(mockResponses)
-  .where(
-    and(
-      eq(mockResponses.folderId, folder.id),
-      eq(mockResponses.endpoint, mockPath),
-      eq(mockResponses.method, method),
-      eq(mockResponses.enabled, true),
-    ),
-  )
-  .limit(1);
-```
-
-If an exact match is found and its `matchType` is `'exact'`, the route checks query parameters:
-- If query params match → return response immediately
-- If query params don't match → fall through to Phase 2
-
-### Phase 2: Fallback Matching
-
-Fetches all enabled mocks for the folder and method, then evaluates them using the mock matcher:
+The route fetches all enabled mocks for the folder and method, then evaluates them using the mock matcher:
 
 1. **Resolve subfolders**: Load mock subfolders for the top-level folder.
 2. **Build candidates**: All mocks with their match types, query params, and effective paths.
-2. **Find best match**: Uses `findBestMatch()` to score and rank candidates
-3. **Select variant**: For wildcard mocks, selects the appropriate variant if configured
+3. **Find best match**: Uses `findBestMatch()` to score and rank candidates.
+4. **Select variant**: For wildcard mocks, selects the appropriate variant if configured.
 
-For mocks in subfolders, the matcher uses `subfolder.mainPath + mock.path`. The stored mock path remains relative to that subfolder.
+For mocks in subfolders, the matcher uses `subfolder.mainPath + mock.path`. The subfolder `mainPath` is derived from the nested subfolder slug hierarchy, and the stored mock path remains relative to that subfolder.
 
 #### Variant Selection for Wildcards
 

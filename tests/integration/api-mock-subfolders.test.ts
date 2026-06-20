@@ -10,7 +10,18 @@ const mockSubfolder = {
 	parentId: null,
 	name: 'Users',
 	slug: 'users',
-	mainPath: '/v1/users',
+	mainPath: '/users',
+	createdAt: new Date('2024-01-01'),
+	updatedAt: null,
+};
+
+const childSubfolder = {
+	id: '33333333-3333-4333-8333-333333333333',
+	folderId,
+	parentId: subfolderId,
+	name: 'Details',
+	slug: 'details',
+	mainPath: '/users/details',
 	createdAt: new Date('2024-01-01'),
 	updatedAt: null,
 };
@@ -50,6 +61,9 @@ const mockDb = {
 	insert: mock(() => createMockBuilder([mockSubfolder])),
 	update: mock(() => createMockBuilder([mockSubfolder])),
 	delete: mock(() => createMockBuilder([])),
+	transaction: mock(async (callback: (tx: typeof mockDb) => Promise<unknown>) =>
+		callback(mockDb),
+	),
 };
 
 mock.module('@/lib/db', () => ({ db: mockDb }));
@@ -68,6 +82,10 @@ describe('API /api/mock-subfolders', () => {
 		mockDb.insert = mock(() => createMockBuilder([mockSubfolder]));
 		mockDb.update = mock(() => createMockBuilder([mockSubfolder]));
 		mockDb.delete = mock(() => createMockBuilder([]));
+		mockDb.transaction = mock(
+			async (callback: (tx: typeof mockDb) => Promise<unknown>) =>
+				callback(mockDb),
+		);
 	});
 
 	it('lists subfolders for a folder and parent', async () => {
@@ -81,17 +99,16 @@ describe('API /api/mock-subfolders', () => {
 
 		expect(res.status).toBe(200);
 		expect(body).toHaveLength(1);
-		expect(body[0].mainPath).toBe('/v1/users');
+		expect(body[0].mainPath).toBe('/users');
 	});
 
-	it('creates a subfolder with normalized main path', async () => {
-		selectResults = [[], []];
+	it('creates a root subfolder with a slug-derived main path', async () => {
+		selectResults = [[]];
 		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
 			method: 'POST',
 			body: JSON.stringify({
 				folderId,
 				name: 'Users',
-				mainPath: 'v1/users/',
 			}),
 		});
 
@@ -100,7 +117,26 @@ describe('API /api/mock-subfolders', () => {
 
 		expect(res.status).toBe(201);
 		expect(body.slug).toBe('users');
-		expect(mockDb.insert).toHaveBeenCalled();
+		expect(body.mainPath).toBe('/users');
+	});
+
+	it('creates a child subfolder under the parent main path', async () => {
+		selectResults = [[mockSubfolder], []];
+		mockDb.insert = mock(() => createMockBuilder([childSubfolder]));
+		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
+			method: 'POST',
+			body: JSON.stringify({
+				folderId,
+				parentId: subfolderId,
+				name: 'Details',
+			}),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(201);
+		expect(body.mainPath).toBe('/users/details');
 	});
 
 	it('rejects duplicate sibling names', async () => {
@@ -110,7 +146,6 @@ describe('API /api/mock-subfolders', () => {
 			body: JSON.stringify({
 				folderId,
 				name: 'Users',
-				mainPath: '/v2/users',
 			}),
 		});
 
@@ -119,20 +154,67 @@ describe('API /api/mock-subfolders', () => {
 		expect(res.status).toBe(409);
 	});
 
-	it('updates a subfolder main path', async () => {
-		selectResults = [[mockSubfolder], [], []];
+	it('updates a subfolder name and derived main path', async () => {
+		const updatedSubfolder = {
+			...mockSubfolder,
+			name: 'Accounts',
+			slug: 'accounts',
+			mainPath: '/accounts',
+		};
+		selectResults = [[mockSubfolder], [mockSubfolder], []];
+		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
 			{
 				method: 'PUT',
-				body: JSON.stringify({ mainPath: '/v2/users/' }),
+				body: JSON.stringify({ name: 'Accounts' }),
+			},
+		);
+
+		const res = await PUT(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.mainPath).toBe('/accounts');
+	});
+
+	it('renaming a parent recomputes descendant main paths', async () => {
+		const updatedSubfolder = {
+			...mockSubfolder,
+			name: 'Accounts',
+			slug: 'accounts',
+			mainPath: '/accounts',
+		};
+		selectResults = [[mockSubfolder], [mockSubfolder, childSubfolder], []];
+		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
+		const req = new NextRequest(
+			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({ name: 'Accounts' }),
 			},
 		);
 
 		const res = await PUT(req);
 
 		expect(res.status).toBe(200);
-		expect(mockDb.update).toHaveBeenCalled();
+		expect(mockDb.update).toHaveBeenCalledTimes(2);
+		expect(mockDb.update.mock.calls[1]).toBeDefined();
+	});
+
+	it('rejects moving a subfolder under its descendant', async () => {
+		selectResults = [[mockSubfolder], [mockSubfolder, childSubfolder]];
+		const req = new NextRequest(
+			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({ parentId: childSubfolder.id }),
+			},
+		);
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(400);
 	});
 
 	it('blocks deleting non-empty subfolders', async () => {

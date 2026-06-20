@@ -8,7 +8,6 @@ import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
 	extractCaptureKey,
 	findBestMatch,
-	queryParamsMatch,
 	selectVariant as selectMockVariant,
 } from '@/lib/utils/mock-matcher';
 import { joinMockPaths } from '@/lib/utils/mock-paths';
@@ -26,14 +25,6 @@ function getEffectiveEndpoint(
 	return joinMockPaths(subfolder?.mainPath ?? '/', mock.endpoint);
 }
 
-function getQueryParamCount(queryParams: unknown): number {
-	if (!queryParams || typeof queryParams !== 'object' || Array.isArray(queryParams)) {
-		return 0;
-	}
-
-	return Object.keys(queryParams).length;
-}
-
 function hasProxyTarget(mock: MockResponseRecord): boolean {
 	const meta = mock.meta as { proxyTargetUrl?: string } | null;
 	return Boolean(meta?.proxyTargetUrl);
@@ -43,28 +34,15 @@ function getCreatedAtTime(mock: MockResponseRecord): number {
 	return mock.createdAt instanceof Date ? mock.createdAt.getTime() : 0;
 }
 
-function selectExactMock(
+function sortMocksForMatchTieBreakers(
 	mocks: MockResponseRecord[],
-	urlQueryParams: Record<string, string>,
-): MockResponseRecord | undefined {
-	return mocks
-		.filter((mock) =>
-			queryParamsMatch(
-				mock.queryParams as Record<string, string> | null,
-				urlQueryParams,
-			),
-		)
-		.sort((a, b) => {
-			const querySpecificity =
-				getQueryParamCount(b.queryParams) - getQueryParamCount(a.queryParams);
-			if (querySpecificity !== 0) return querySpecificity;
-
-			if (hasProxyTarget(a) !== hasProxyTarget(b)) {
-				return hasProxyTarget(a) ? 1 : -1;
-			}
-
-			return getCreatedAtTime(b) - getCreatedAtTime(a);
-		})[0];
+): MockResponseRecord[] {
+	return [...mocks].sort((a, b) => {
+		if (hasProxyTarget(a) !== hasProxyTarget(b)) {
+			return hasProxyTarget(a) ? 1 : -1;
+		}
+		return getCreatedAtTime(b) - getCreatedAtTime(a);
+	});
 }
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
@@ -119,35 +97,6 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			);
 		}
 
-		// --- Phase 1: Exact match (existing behavior, zero breaking change) ---
-		const exactMocks = await db
-			.select()
-			.from(mockResponses)
-			.where(
-				and(
-					eq(mockResponses.folderId, folder.id),
-					eq(mockResponses.endpoint, mockPath),
-					eq(mockResponses.method, method),
-					eq(mockResponses.enabled, true),
-				),
-			);
-
-		const exactMock = selectExactMock(exactMocks, urlQueryParams);
-		if (exactMock && exactMock.matchType === 'exact') {
-			log.info({ mockId: exactMock.id }, 'Phase 1: Exact match found');
-			// Handle response delay if configured
-			if (exactMock.delay && exactMock.delay > 0) {
-				log.info({ delay: exactMock.delay }, 'Applying response delay');
-				await new Promise((resolve) => setTimeout(resolve, exactMock.delay));
-			}
-			return await buildResponse(exactMock, request, {}, log, mockPath);
-		} else if (exactMock) {
-			// Found by exact path but matchType is not 'exact' — this means
-			// the endpoint happens to equal the path but is configured as wildcard/substring.
-			// We still need to evaluate it properly in Phase 2.
-		}
-
-		// --- Phase 2: Fallback — fetch all mocks for folder+method and evaluate ---
 		const allMocks = await db
 			.select()
 			.from(mockResponses)
@@ -165,8 +114,8 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			.where(eq(mockSubfolders.folderId, folder.id));
 		const subfoldersById = new Map(subfolders.map((subfolder) => [subfolder.id, subfolder]));
 
-		// Build candidates (include full mock reference for variant lookup)
-		const candidates: MockCandidate[] = allMocks.map((m) => ({
+		const matchableMocks = sortMocksForMatchTieBreakers(allMocks);
+		const candidates: MockCandidate[] = matchableMocks.map((m) => ({
 			endpoint: getEffectiveEndpoint(m, subfoldersById),
 			matchType: (m.matchType as MatchType) || 'exact',
 			queryParams: (m.queryParams as Record<string, string> | null) ?? null,
@@ -190,7 +139,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		}
 
 		// Find the full mock record for the best match
-		const bestMock = allMocks.find((m) => m.id === best._id);
+		const bestMock = matchableMocks.find((m) => m.id === best._id);
 
 		if (!bestMock) {
 			log.error('Match found in Phase 2 but database record lookup failed');
@@ -207,7 +156,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 
 		log.info(
 			{ mockId: bestMock.id, matchType: bestMock.matchType },
-			'Phase 2: Fallback match found',
+			'Mock match found',
 		);
 
 		// Handle response delay if configured

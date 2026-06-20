@@ -1,6 +1,15 @@
 'use client';
 
-import { ArrowLeft, FolderOpen, FolderPlus, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+	ArrowLeft,
+	ArrowUp,
+	FolderOpen,
+	FolderPlus,
+	Pencil,
+	Plus,
+	Search,
+	Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type React from 'react';
@@ -24,6 +33,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { Folder, Mock, MockSubfolder, UpdateMockRequest } from '@/lib/types';
 import { copyToClipboard } from '@/lib/utils';
+import { generateSlug, joinMockPaths } from '@/lib/utils/mock-paths';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -39,13 +49,11 @@ function FolderContent() {
 	);
 	const [debouncedSearch, setDebouncedSearch] = useState(search);
 	const [newSubfolderName, setNewSubfolderName] = useState('');
-	const [newSubfolderPath, setNewSubfolderPath] = useState('');
 	const [isCreateSubfolderOpen, setIsCreateSubfolderOpen] = useState(false);
 	const [editingSubfolder, setEditingSubfolder] = useState<MockSubfolder | null>(
 		null,
 	);
 	const [editSubfolderName, setEditSubfolderName] = useState('');
-	const [editSubfolderPath, setEditSubfolderPath] = useState('');
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -79,6 +87,9 @@ function FolderContent() {
 	const parentSubfolder = currentSubfolder?.parentId
 		? allSubfolders.find((subfolder) => subfolder.id === currentSubfolder.parentId) ?? null
 		: null;
+	const editingParentSubfolder = editingSubfolder?.parentId
+		? allSubfolders.find((subfolder) => subfolder.id === editingSubfolder.parentId) ?? null
+		: null;
 
 	const { data, isLoading: mocksLoading } = useSWR<{
 		data: Mock[];
@@ -92,6 +103,16 @@ function FolderContent() {
 
 	const mocks = data?.data || [];
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
+	const newSubfolderPreviewPath = joinMockPaths(
+		currentSubfolder?.mainPath ?? '/',
+		`/${generateSlug(newSubfolderName) || 'subfolder'}`,
+	);
+	const editSubfolderPreviewPath = editingSubfolder
+		? joinMockPaths(
+				editingParentSubfolder?.mainPath ?? '/',
+				`/${generateSlug(editSubfolderName) || editingSubfolder.slug}`,
+			)
+		: '/';
 
 	const handleMockSuccess = () => {
 		toast.success('Mock Created', {
@@ -119,7 +140,6 @@ function FolderContent() {
 					folderId: folder.id,
 					parentId: currentMockFolderId === 'root' ? null : currentMockFolderId,
 					name: newSubfolderName,
-					mainPath: newSubfolderPath,
 				}),
 			});
 			if (!response.ok) {
@@ -127,7 +147,6 @@ function FolderContent() {
 				throw new Error(error.error);
 			}
 			setNewSubfolderName('');
-			setNewSubfolderPath('');
 			setIsCreateSubfolderOpen(false);
 			toast.success('Subfolder Created');
 			refreshSubfolders();
@@ -161,7 +180,6 @@ function FolderContent() {
 	const openEditSubfolder = (subfolder: MockSubfolder) => {
 		setEditingSubfolder(subfolder);
 		setEditSubfolderName(subfolder.name);
-		setEditSubfolderPath(subfolder.mainPath);
 	};
 
 	const handleUpdateSubfolder = async (event: React.FormEvent) => {
@@ -175,7 +193,6 @@ function FolderContent() {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						name: editSubfolderName,
-						mainPath: editSubfolderPath,
 					}),
 				},
 			);
@@ -186,7 +203,6 @@ function FolderContent() {
 			toast.success('Subfolder Updated');
 			setEditingSubfolder(null);
 			setEditSubfolderName('');
-			setEditSubfolderPath('');
 			refreshSubfolders();
 		} catch (error: unknown) {
 			toast.error('Error', {
@@ -295,6 +311,10 @@ function FolderContent() {
 			});
 		}
 	};
+	const navigateToParentSubfolder = () => {
+		setPage(1);
+		setMockFolderId(parentSubfolder?.id ?? 'root');
+	};
 
 	if (!folder) {
 		return (
@@ -374,28 +394,15 @@ function FolderContent() {
 									{currentSubfolder ? currentSubfolder.name : 'Root'}
 								</h2>
 								{currentMockFolderId !== 'root' && (
-									<>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => {
-												setPage(1);
-												setMockFolderId(parentSubfolder?.id ?? 'root');
-											}}
-										>
-											Up
-										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => {
-												setPage(1);
-												setMockFolderId('root');
-											}}
-										>
-											Root
-										</Button>
-									</>
+									<Button
+										variant="outline"
+										size="icon"
+										onClick={navigateToParentSubfolder}
+										aria-label="Go to parent subfolder"
+										title="Go to parent subfolder"
+									>
+										<ArrowUp className="h-4 w-4" />
+									</Button>
 								)}
 							</div>
 							<div className="flex items-center gap-3">
@@ -413,7 +420,7 @@ function FolderContent() {
 										<DialogHeader>
 											<DialogTitle>Create Subfolder</DialogTitle>
 											<DialogDescription>
-												Create a nested mock group with its own base path.
+												Create a nested mock group with a path derived from its name.
 											</DialogDescription>
 										</DialogHeader>
 										<form onSubmit={handleCreateSubfolder} className="space-y-4">
@@ -434,23 +441,11 @@ function FolderContent() {
 													required
 												/>
 											</div>
-											<div className="space-y-2">
-												<label
-													htmlFor="subfolder-main-path"
-													className="text-sm font-medium"
-												>
-													Main Path
-												</label>
-												<Input
-													id="subfolder-main-path"
-													placeholder="/v1/users"
-													value={newSubfolderPath}
-													onChange={(event) =>
-														setNewSubfolderPath(event.target.value)
-													}
-													required
-													className="font-mono"
-												/>
+											<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+												<p className="text-xs text-muted-foreground">Path</p>
+												<p className="mt-1 font-mono text-sm">
+													{newSubfolderPreviewPath}
+												</p>
 											</div>
 											<div className="flex justify-end gap-2 pt-2">
 												<Button
@@ -538,7 +533,7 @@ function FolderContent() {
 								<DialogHeader>
 									<DialogTitle>Edit Subfolder</DialogTitle>
 									<DialogDescription>
-										Update the subfolder name or the base path used for its mocks.
+										Update the subfolder name. Its path is derived from the folder hierarchy.
 									</DialogDescription>
 								</DialogHeader>
 								<form onSubmit={handleUpdateSubfolder} className="space-y-4">
@@ -558,22 +553,11 @@ function FolderContent() {
 											required
 										/>
 									</div>
-									<div className="space-y-2">
-										<label
-											htmlFor="edit-subfolder-main-path"
-											className="text-sm font-medium"
-										>
-											Main Path
-										</label>
-										<Input
-											id="edit-subfolder-main-path"
-											value={editSubfolderPath}
-											onChange={(event) =>
-												setEditSubfolderPath(event.target.value)
-											}
-											required
-											className="font-mono"
-										/>
+									<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+										<p className="text-xs text-muted-foreground">Path</p>
+										<p className="mt-1 font-mono text-sm">
+											{editSubfolderPreviewPath}
+										</p>
 									</div>
 									<div className="flex justify-end gap-2 pt-2">
 										<Button

@@ -3,13 +3,19 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
-import { generateSlug, normalizeAbsolutePath } from '@/lib/utils/mock-paths';
+import {
+	collectDescendantSubfolders,
+	computeSubtreeMainPaths,
+	deriveSubfolderMainPath,
+	findMainPathConflict,
+} from '@/lib/mock-subfolders';
+import { generateSlug } from '@/lib/utils/mock-paths';
 
 const CreateMockSubfolderSchema = z.object({
 	folderId: z.string().uuid(),
 	parentId: z.string().uuid().nullable().optional(),
 	name: z.string().min(1),
-	mainPath: z.string().min(1),
+	mainPath: z.string().min(1).optional(),
 });
 type CreateMockSubfolderInput = z.infer<typeof CreateMockSubfolderSchema>;
 
@@ -41,6 +47,19 @@ function getParentClause(folderId: string, parentId: string | null) {
 		: and(eq(mockSubfolders.folderId, folderId), isNull(mockSubfolders.parentId));
 }
 
+async function getParentSubfolder(
+	folderId: string,
+	parentId: string | null,
+): Promise<MockSubfolderRow | null> {
+	if (!parentId) return null;
+	const [parent] = await db
+		.select()
+		.from(mockSubfolders)
+		.where(and(eq(mockSubfolders.id, parentId), eq(mockSubfolders.folderId, folderId)))
+		.limit(1);
+	return parent ?? null;
+}
+
 async function hasSiblingSlug(
 	folderId: string,
 	parentId: string | null,
@@ -52,36 +71,6 @@ async function hasSiblingSlug(
 		.from(mockSubfolders)
 		.where(and(getParentClause(folderId, parentId), eq(mockSubfolders.slug, slug)));
 	return rows.some((row) => row.id !== excludeId);
-}
-
-async function hasMainPath(
-	folderId: string,
-	mainPath: string,
-	excludeId?: string,
-): Promise<boolean> {
-	const rows = await db
-		.select()
-		.from(mockSubfolders)
-		.where(
-			and(
-				eq(mockSubfolders.folderId, folderId),
-				eq(mockSubfolders.mainPath, mainPath),
-			),
-		);
-	return rows.some((row) => row.id !== excludeId);
-}
-
-async function parentBelongsToFolder(
-	folderId: string,
-	parentId: string | null,
-): Promise<boolean> {
-	if (!parentId) return true;
-	const [parent] = await db
-		.select()
-		.from(mockSubfolders)
-		.where(and(eq(mockSubfolders.id, parentId), eq(mockSubfolders.folderId, folderId)))
-		.limit(1);
-	return Boolean(parent);
 }
 
 export async function GET(request: NextRequest) {
@@ -146,12 +135,12 @@ export async function POST(request: NextRequest) {
 		);
 		const parentId = body.parentId ?? null;
 		const slug = generateSlug(body.name);
-		const mainPath = normalizeAbsolutePath(body.mainPath);
 
 		if (!slug) {
 			return NextResponse.json({ error: 'Subfolder name is invalid' }, { status: 400 });
 		}
-		if (!(await parentBelongsToFolder(body.folderId, parentId))) {
+		const parent = await getParentSubfolder(body.folderId, parentId);
+		if (parentId && !parent) {
 			return NextResponse.json({ error: 'Parent subfolder not found' }, { status: 404 });
 		}
 		if (await hasSiblingSlug(body.folderId, parentId, slug)) {
@@ -160,12 +149,8 @@ export async function POST(request: NextRequest) {
 				{ status: 409 },
 			);
 		}
-		if (await hasMainPath(body.folderId, mainPath)) {
-			return NextResponse.json(
-				{ error: 'A subfolder with this main path already exists' },
-				{ status: 409 },
-			);
-		}
+
+		const mainPath = deriveSubfolderMainPath(parent?.mainPath, slug);
 
 		const [row] = await db
 			.insert(mockSubfolders)
@@ -221,10 +206,6 @@ export async function PUT(request: NextRequest) {
 		const nextParentId = body.parentId === undefined ? existing.parentId : body.parentId;
 		const nextName = body.name?.trim() ?? existing.name;
 		const nextSlug = body.name === undefined ? existing.slug : generateSlug(nextName);
-		const nextMainPath =
-			body.mainPath === undefined
-				? existing.mainPath
-				: normalizeAbsolutePath(body.mainPath);
 
 		if (!nextSlug) {
 			return NextResponse.json({ error: 'Subfolder name is invalid' }, { status: 400 });
@@ -232,7 +213,24 @@ export async function PUT(request: NextRequest) {
 		if (nextParentId === id) {
 			return NextResponse.json({ error: 'Subfolder cannot be its own parent' }, { status: 400 });
 		}
-		if (!(await parentBelongsToFolder(existing.folderId, nextParentId))) {
+
+		const folderSubfolders = await db
+			.select()
+			.from(mockSubfolders)
+			.where(eq(mockSubfolders.folderId, existing.folderId));
+		const descendants = collectDescendantSubfolders(folderSubfolders, id);
+		const descendantIds = new Set(descendants.map((row) => row.id));
+		if (nextParentId && descendantIds.has(nextParentId)) {
+			return NextResponse.json(
+				{ error: 'Subfolder cannot be moved under its descendant' },
+				{ status: 400 },
+			);
+		}
+
+		const parent = nextParentId
+			? folderSubfolders.find((row) => row.id === nextParentId) ?? null
+			: null;
+		if (nextParentId && !parent) {
 			return NextResponse.json({ error: 'Parent subfolder not found' }, { status: 404 });
 		}
 		if (await hasSiblingSlug(existing.folderId, nextParentId, nextSlug, id)) {
@@ -241,24 +239,54 @@ export async function PUT(request: NextRequest) {
 				{ status: 409 },
 			);
 		}
-		if (await hasMainPath(existing.folderId, nextMainPath, id)) {
+
+		const nextMainPath = deriveSubfolderMainPath(parent?.mainPath, nextSlug);
+		const rootUpdate: MockSubfolderRow = {
+			...existing,
+			parentId: nextParentId,
+			name: nextName,
+			slug: nextSlug,
+			mainPath: nextMainPath,
+		};
+		const rowsForPathComputation = folderSubfolders.map((row) =>
+			row.id === id ? rootUpdate : row,
+		);
+		const nextPaths = computeSubtreeMainPaths(rowsForPathComputation, rootUpdate);
+		const conflictingPath = findMainPathConflict(folderSubfolders, nextPaths);
+		if (conflictingPath) {
 			return NextResponse.json(
 				{ error: 'A subfolder with this main path already exists' },
 				{ status: 409 },
 			);
 		}
 
-		const [row] = await db
-			.update(mockSubfolders)
-			.set({
-				parentId: nextParentId,
-				name: nextName,
-				slug: nextSlug,
-				mainPath: nextMainPath,
-				updatedAt: new Date(),
-			})
-			.where(eq(mockSubfolders.id, id))
-			.returning();
+		const row = await db.transaction(async (tx) => {
+			const [updatedRoot] = await tx
+				.update(mockSubfolders)
+				.set({
+					parentId: nextParentId,
+					name: nextName,
+					slug: nextSlug,
+					mainPath: nextMainPath,
+					updatedAt: new Date(),
+				})
+				.where(eq(mockSubfolders.id, id))
+				.returning();
+
+			for (const descendant of descendants) {
+				const descendantMainPath = nextPaths.get(descendant.id);
+				if (!descendantMainPath || descendantMainPath === descendant.mainPath) continue;
+				await tx
+					.update(mockSubfolders)
+					.set({
+						mainPath: descendantMainPath,
+						updatedAt: new Date(),
+					})
+					.where(eq(mockSubfolders.id, descendant.id));
+			}
+
+			return updatedRoot;
+		});
 
 		return NextResponse.json(formatMockSubfolder(row));
 	} catch (error: unknown) {

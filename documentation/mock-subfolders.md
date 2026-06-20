@@ -10,18 +10,18 @@ Mock subfolders organize mocks inside a top-level folder without changing the pu
   - `folderId`: parent top-level folder.
   - `parentId`: optional parent subfolder for nesting.
   - `name` and generated `slug`.
-  - `mainPath`: the absolute base path used when serving mocks.
+  - `mainPath`: the derived absolute base path used when serving mocks.
 - Mocks store `mockFolderId` and a relative `path`.
 
 ## Effective Paths
 
-Mockzilla serves a mock by joining the subfolder `mainPath` with the mock's relative path.
+Mockzilla derives each subfolder `mainPath` from the nested slug hierarchy, then serves a mock by joining that `mainPath` with the mock's relative path.
 
-| Subfolder main path | Mock path | Served path |
-| --- | --- | --- |
-| `/` | `/users` | `/users` |
-| `/v1/users` | `/123` | `/v1/users/123` |
-| `/v1/users` | `/` | `/v1/users` |
+| Subfolder hierarchy | Derived main path | Mock path | Served path |
+| --- | --- | --- | --- |
+| `users` | `/users` | `/123` | `/users/123` |
+| `users/details` | `/users/details` | `/123` | `/users/details/123` |
+| `users/details` | `/users/details` | `/` | `/users/details` |
 
 The public URL remains:
 
@@ -32,7 +32,7 @@ The public URL remains:
 Example:
 
 ```text
-/api/mock/api/v1/users/123
+/api/mock/api/users/details/123
 ```
 
 ## API
@@ -43,16 +43,27 @@ Subfolders are managed through `/api/mock-subfolders`.
 - `GET /api/mock-subfolders?folderId={id}&parentId={subfolderId}` lists children.
 - `GET /api/mock-subfolders?folderId={id}&all=true` lists all subfolders in a folder.
 - `GET /api/mock-subfolders?id={id}` returns one subfolder.
-- `POST /api/mock-subfolders` creates a subfolder with `folderId`, optional `parentId`, `name`, and `mainPath`.
-- `PUT /api/mock-subfolders?id={id}` updates `name`, `mainPath`, or `parentId`.
+- `POST /api/mock-subfolders` creates a subfolder with `folderId`, optional `parentId`, and `name`.
+- `PUT /api/mock-subfolders?id={id}` updates `name` or `parentId`.
 - `DELETE /api/mock-subfolders?id={id}` deletes only empty subfolders.
+
+`mainPath` is returned by the API but is not client-controlled. Renaming or moving a subfolder recomputes its `mainPath` and all descendant `mainPath` values.
 
 Mocks use `mockFolderId`:
 
 - `mockFolderId: null` means the root of the top-level folder.
+- `mockFolderId` must belong to the same top-level folder as the mock.
 - `GET /api/mocks?folderId={id}&mockFolderId=root` lists root mocks.
 - `GET /api/mocks?folderId={id}&mockFolderId={subfolderId}` lists mocks in one subfolder.
 - Create and update calls accept `mockFolderId` to place or move mocks.
+
+Imports rebuild subfolder `mainPath` from imported parent/slug relationships instead of trusting exported `mainPath` values.
+
+## Implementation Notes
+
+- Shared hierarchy helpers live in `lib/mock-subfolders.ts`.
+- Subfolder rename/move updates run in a transaction so parent and descendant paths change atomically.
+- Live serving matches all root and subfolder mocks through the same effective-path matcher.
 
 ## UI Behavior
 

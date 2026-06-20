@@ -61,6 +61,28 @@ async function getSubfoldersByIdForMocks(
 	return new Map(rows.map((row) => [row.id, row]));
 }
 
+async function validateMockFolderOwnership(
+	folderId: string,
+	mockFolderId: string | null | undefined,
+): Promise<NextResponse | null> {
+	if (!mockFolderId) return null;
+	const [subfolder] = await db
+		.select()
+		.from(mockSubfolders)
+		.where(
+			and(
+				eq(mockSubfolders.id, mockFolderId),
+				eq(mockSubfolders.folderId, folderId),
+			),
+		)
+		.limit(1);
+	if (subfolder) return null;
+	return NextResponse.json(
+		{ error: 'Mock subfolder not found for this folder' },
+		{ status: 400 },
+	);
+}
+
 export async function GET(request: NextRequest) {
 	try {
 		const searchParams = request.nextUrl.searchParams;
@@ -166,6 +188,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body: CreateMockRequest = await request.json();
+		const ownershipError = await validateMockFolderOwnership(
+			body.folderId,
+			body.mockFolderId,
+		);
+		if (ownershipError) return ownershipError;
 
 		const [newMock] = await db
 			.insert(mockResponses)
@@ -218,6 +245,21 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body: UpdateMockRequest = await request.json();
+
+		const [existingMock] = await db
+			.select()
+			.from(mockResponses)
+			.where(eq(mockResponses.id, id))
+			.limit(1);
+		if (!existingMock) {
+			return NextResponse.json({ error: 'Mock not found' }, { status: 404 });
+		}
+
+		const ownershipError = await validateMockFolderOwnership(
+			existingMock.folderId,
+			body.mockFolderId,
+		);
+		if (ownershipError) return ownershipError;
 
 		const [updatedMock] = await db
 			.update(mockResponses)

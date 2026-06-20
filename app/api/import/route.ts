@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
+import {
+	deriveSubfolderMainPath,
+	orderSubfoldersByHierarchy,
+} from '@/lib/mock-subfolders';
 import type { ExportData, Folder, LegacyImportFormat, Mock } from '@/lib/types';
 
 function generateSlug(name: string): string {
@@ -129,6 +133,7 @@ export async function POST(request: NextRequest) {
 		// Create a map to track old IDs to new IDs for folders
 		const folderIdMap = new Map<string, string>();
 		const subfolderIdMap = new Map<string, string>();
+		const subfolderMainPathByOldId = new Map<string, string>();
 
 		// Use a transaction for atomic imports
 		await db.transaction(async (tx) => {
@@ -164,13 +169,20 @@ export async function POST(request: NextRequest) {
 				results.folders++;
 			}
 
-			for (const subfolder of exportData.mockSubfolders ?? []) {
+			const orderedSubfolders = orderSubfoldersByHierarchy(
+				exportData.mockSubfolders ?? [],
+			);
+			for (const subfolder of orderedSubfolders) {
 				const mappedFolderId = folderIdMap.get(subfolder.folderId);
 				if (!mappedFolderId) continue;
 
 				const mappedParentId = subfolder.parentId
 					? subfolderIdMap.get(subfolder.parentId) ?? null
 					: null;
+				const parentMainPath = subfolder.parentId
+					? subfolderMainPathByOldId.get(subfolder.parentId)
+					: null;
+				const mainPath = deriveSubfolderMainPath(parentMainPath, subfolder.slug);
 
 				const [newSubfolder] = await tx
 					.insert(mockSubfolders)
@@ -179,11 +191,12 @@ export async function POST(request: NextRequest) {
 						parentId: mappedParentId,
 						name: subfolder.name,
 						slug: subfolder.slug,
-						mainPath: subfolder.mainPath,
+						mainPath,
 					})
 					.returning();
 
 				subfolderIdMap.set(subfolder.id, newSubfolder.id);
+				subfolderMainPathByOldId.set(subfolder.id, newSubfolder.mainPath);
 			}
 
 			// Import mocks with updated folder IDs

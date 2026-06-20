@@ -164,6 +164,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 	it('serves static text mock', async () => {
 		const textMock = {
 			...mockResponse,
+			endpoint: '/text',
 			bodyType: 'text',
 			response: 'Hello World',
 			statusCode: 200,
@@ -225,6 +226,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 	it('serves a dynamic JSON mock from schema', async () => {
 		const schemaMock = {
 			...mockResponse,
+			endpoint: '/dynamic',
 			useDynamicResponse: true,
 			jsonSchema: JSON.stringify({
 				type: 'object',
@@ -285,7 +287,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		// If normalized correctly, it should have matched mockResponse which is /users
 	});
 
-	it('serves a mock via Phase 2 fallback (substring match)', async () => {
+	it('serves a mock via substring match', async () => {
 		const substringMock = {
 			...mockResponse,
 			id: 'substring-1',
@@ -297,8 +299,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		mockDb.select = mock(() => {
 			callCount++;
 			if (callCount === 1) return createMockBuilder([mockFolder]);
-			if (callCount === 2) return createMockBuilder([]); // Phase 1: No exact match
-			if (callCount === 3) return createMockBuilder([substringMock]); // Phase 2: Get all mocks
+			if (callCount === 2) return createMockBuilder([substringMock]);
 			return createMockBuilder([]);
 		});
 
@@ -322,21 +323,20 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		const mockSubfolder = {
 			id: 'mock-folder-1',
 			folderId: 'folder-1',
-			mainPath: '/v1/users',
+			mainPath: '/users/details',
 		};
 
 		let callCount = 0;
 		mockDb.select = mock(() => {
 			callCount++;
 			if (callCount === 1) return createMockBuilder([mockFolder]);
-			if (callCount === 2) return createMockBuilder([]);
-			if (callCount === 3) return createMockBuilder([subfolderMock]);
-			if (callCount === 4) return createMockBuilder([mockSubfolder]);
+			if (callCount === 2) return createMockBuilder([subfolderMock]);
+			if (callCount === 3) return createMockBuilder([mockSubfolder]);
 			return createMockBuilder([]);
 		});
 
-		const req = new NextRequest('http://localhost:3000/api/mock/api/v1/users/123');
-		const params = Promise.resolve({ path: ['api', 'v1', 'users', '123'] });
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users/details/123');
+		const params = Promise.resolve({ path: ['api', 'users', 'details', '123'] });
 
 		const res = await GET(req, { params });
 		const body = await res.json();
@@ -351,7 +351,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(res.status).toBe(204);
 	});
 
-	it('falls through to Phase 2 when query params mismatch in Phase 1', async () => {
+	it('skips query-specific mocks when query params mismatch', async () => {
 		const qpMock = {
 			...mockResponse,
 			matchType: 'exact',
@@ -362,8 +362,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		mockDb.select = mock(() => {
 			callCount++;
 			if (callCount === 1) return createMockBuilder([mockFolder]);
-			if (callCount === 2) return createMockBuilder([qpMock]); // Phase 1 match
-			if (callCount === 3) return createMockBuilder([mockResponse]); // Phase 2 matches
+			if (callCount === 2) return createMockBuilder([qpMock, mockResponse]);
 			return createMockBuilder([]);
 		});
 
@@ -528,22 +527,12 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(resDelete.status).toBe(200);
 	});
 
-	it('handles Phase 2 match found but database record lookup failed', async () => {
+	it('returns 404 when no effective-path candidate matches', async () => {
 		let callCount = 0;
 		mockDb.select = mock(() => {
 			callCount++;
 			if (callCount === 1) return createMockBuilder([mockFolder]);
-			if (callCount === 2) return createMockBuilder([]); // Phase 1: No match
-			if (callCount === 3) {
-				// Phase 2: findBestMatch will be called on this array.
-				// We return an array that will produce a match, but then bestMock lookup will fail 
-				// if we are tricky, OR we just trust the logic.
-				// Actually, we can just mock the array's find method if we want to be surgical.
-				const results = [{ ...mockResponse, matchType: 'substring' }];
-				// @ts-expect-error
-				results.find = () => null; 
-				return createMockBuilder(results);
-			}
+			if (callCount === 2) return createMockBuilder([{ ...mockResponse, endpoint: '/other' }]);
 			return createMockBuilder([]);
 		});
 

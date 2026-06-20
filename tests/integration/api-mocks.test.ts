@@ -113,6 +113,29 @@ describe('API /api/mocks', () => {
 		expect(body.delay).toBeDefined();
 	});
 
+	it('POST rejects a mock subfolder outside the folder', async () => {
+		mockResolvedValue = [];
+		const payload = {
+			name: 'Invalid Subfolder Mock',
+			path: '/new',
+			method: 'GET',
+			statusCode: 200,
+			response: '{}',
+			folderId: 'folder-123',
+			mockFolderId: 'other-folder-subfolder',
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(400);
+		expect(body.error).toBe('Mock subfolder not found for this folder');
+	});
+
 	it('PUT updates a mock', async () => {
 		const payload = { name: 'Updated Mock', delay: 2000 };
 		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
@@ -125,6 +148,34 @@ describe('API /api/mocks', () => {
 		expect(res.status).toBe(200);
 		expect(mockDb.update).toHaveBeenCalled();
 		expect(body.delay).toBeDefined();
+	});
+
+	it('PUT rejects a mock subfolder outside the existing mock folder', async () => {
+		let callCount = 0;
+		mockDb.select = mock((args: { count: unknown } | null) => {
+			if (args?.count) {
+				return createMockBuilder([{ count: 5 }]);
+			}
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockMockData]);
+			return createMockBuilder([]);
+		});
+		const payload = { mockFolderId: 'other-folder-subfolder' };
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await PUT(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(400);
+		expect(body.error).toBe('Mock subfolder not found for this folder');
+		mockDb.select = mock((args) =>
+			args?.count
+				? createMockBuilder([{ count: 5 }])
+				: createMockBuilder(mockResolvedValue),
+		);
 	});
 
 	it('GET (without folderId) returns all mocks', async () => {
