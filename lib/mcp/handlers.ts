@@ -10,9 +10,11 @@ import {
 } from '@/lib/db/schema';
 import {
 	collectDescendantSubfolders,
+	computeCanonicalSubfolderMainPaths,
 	computeSubtreeMainPaths,
 	deriveSubfolderMainPath,
 	findMainPathConflict,
+	withCanonicalSubfolderMainPaths,
 } from '@/lib/mock-subfolders';
 import type {
 	Condition,
@@ -212,14 +214,14 @@ export async function callManageFolders(args: ManageFoldersArgs) {
 
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
 
-function formatMockSubfolder(row: MockSubfolderRow) {
+function formatMockSubfolder(row: MockSubfolderRow, canonicalMainPath?: string) {
 	return {
 		id: row.id,
 		folderId: row.folderId,
 		parentId: row.parentId,
 		name: row.name,
 		slug: row.slug,
-		mainPath: row.mainPath,
+		mainPath: canonicalMainPath ?? row.mainPath,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() ?? null,
 	};
@@ -233,21 +235,6 @@ function getEffectiveMockEndpoint(
 		? subfoldersById.get(mock.mockFolderId)
 		: undefined;
 	return joinMockPaths(subfolder?.mainPath ?? '/', mock.endpoint);
-}
-
-function getMockSubfolderParentClause(
-	folderId: string,
-	parentId: string | null,
-) {
-	return parentId
-		? and(
-				eq(mockSubfolders.folderId, folderId),
-				eq(mockSubfolders.parentId, parentId),
-			)
-		: and(
-				eq(mockSubfolders.folderId, folderId),
-				isNull(mockSubfolders.parentId),
-			);
 }
 
 async function resolveFolderIdForSubfolders(args: {
@@ -269,59 +256,42 @@ async function resolveFolderIdForSubfolders(args: {
 	throw new Error('folderId or folderSlug is required');
 }
 
-async function getMockSubfolderParent(
-	folderId: string,
-	parentId: string | null,
-): Promise<MockSubfolderRow | null> {
-	if (!parentId) return null;
-	const [parent] = await db
-		.select()
-		.from(mockSubfolders)
-		.where(
-			and(
-				eq(mockSubfolders.id, parentId),
-				eq(mockSubfolders.folderId, folderId),
-			),
-		)
-		.limit(1);
-	return parent ?? null;
-}
-
-async function hasMockSubfolderSiblingSlug(
-	folderId: string,
+function hasMockSubfolderSiblingSlugInRows(
+	rows: MockSubfolderRow[],
 	parentId: string | null,
 	slug: string,
 	excludeId?: string,
-): Promise<boolean> {
-	const rows = await db
-		.select()
-		.from(mockSubfolders)
-		.where(
-			and(
-				getMockSubfolderParentClause(folderId, parentId),
-				eq(mockSubfolders.slug, slug),
-			),
-		);
-	return rows.some((row) => row.id !== excludeId);
+): boolean {
+	return rows.some(
+		(row) =>
+			row.parentId === parentId &&
+			row.slug === slug &&
+			row.id !== excludeId,
+	);
 }
 
 export async function callListMockSubfolders(args: ListMockSubfoldersArgs) {
 	logger.info({ args }, 'MCP Tool: list_mock_subfolders');
 	const folderId = await resolveFolderIdForSubfolders(args);
 	const parentId = args.parentId ?? null;
+	const folderSubfolders = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.folderId, folderId));
+	const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
 	const rows = args.all
-		? await db
-				.select()
-				.from(mockSubfolders)
-				.where(eq(mockSubfolders.folderId, folderId))
-				.orderBy(mockSubfolders.mainPath)
-		: await db
-				.select()
-				.from(mockSubfolders)
-				.where(getMockSubfolderParentClause(folderId, parentId))
-				.orderBy(mockSubfolders.name);
+		? [...folderSubfolders].sort((a, b) =>
+				(canonicalPaths.get(a.id) ?? a.mainPath).localeCompare(
+					canonicalPaths.get(b.id) ?? b.mainPath,
+				),
+			)
+		: folderSubfolders
+				.filter((row) =>
+					parentId ? row.parentId === parentId : row.parentId === null,
+				)
+				.sort((a, b) => a.name.localeCompare(b.name));
 
-	return rows.map(formatMockSubfolder);
+	return rows.map((row) => formatMockSubfolder(row, canonicalPaths.get(row.id)));
 }
 
 export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
@@ -333,13 +303,23 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 		throw new Error('Subfolder name is invalid');
 	}
 
-	const parent = await getMockSubfolderParent(folderId, parentId);
+	const folderSubfolders = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.folderId, folderId));
+	const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
+	const parent = parentId
+		? (folderSubfolders.find((row) => row.id === parentId) ?? null)
+		: null;
 	if (parentId && !parent) {
 		throw new Error('Parent subfolder not found');
 	}
-	if (await hasMockSubfolderSiblingSlug(folderId, parentId, slug)) {
+	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, parentId, slug)) {
 		throw new Error('A subfolder with this name already exists here');
 	}
+	const parentMainPath = parent
+		? canonicalPaths.get(parent.id) ?? parent.mainPath
+		: null;
 
 	const [row] = await db
 		.insert(mockSubfolders)
@@ -348,7 +328,7 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 			parentId,
 			name: args.name.trim(),
 			slug,
-			mainPath: deriveSubfolderMainPath(parent?.mainPath, slug),
+			mainPath: deriveSubfolderMainPath(parentMainPath, slug),
 		})
 		.returning();
 
@@ -362,7 +342,13 @@ export async function callGetMockSubfolder(args: GetMockSubfolderArgs) {
 		.from(mockSubfolders)
 		.where(eq(mockSubfolders.id, args.id))
 		.limit(1);
-	return row ? formatMockSubfolder(row) : null;
+	if (!row) return null;
+	const folderSubfolders = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.folderId, row.folderId));
+	const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
+	return formatMockSubfolder(row, canonicalPaths.get(row.id));
 }
 
 export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
@@ -386,10 +372,11 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 		throw new Error('Subfolder cannot be its own parent');
 	}
 
-	const folderSubfolders = await db
+	const storedFolderSubfolders = await db
 		.select()
 		.from(mockSubfolders)
 		.where(eq(mockSubfolders.folderId, existing.folderId));
+	const folderSubfolders = withCanonicalSubfolderMainPaths(storedFolderSubfolders);
 	const descendants = collectDescendantSubfolders(folderSubfolders, args.id);
 	const descendantIds = new Set(descendants.map((row) => row.id));
 	if (nextParentId && descendantIds.has(nextParentId)) {
@@ -402,14 +389,7 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 	if (nextParentId && !parent) {
 		throw new Error('Parent subfolder not found');
 	}
-	if (
-		await hasMockSubfolderSiblingSlug(
-			existing.folderId,
-			nextParentId,
-			nextSlug,
-			args.id,
-		)
-	) {
+	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, args.id)) {
 		throw new Error('A subfolder with this name already exists here');
 	}
 
@@ -914,8 +894,9 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		.select()
 		.from(mockSubfolders)
 		.where(eq(mockSubfolders.folderId, folder.id));
+	const canonicalSubfolders = withCanonicalSubfolderMainPaths(subfolders);
 	const subfoldersById = new Map(
-		subfolders.map((subfolder) => [subfolder.id, subfolder]),
+		canonicalSubfolders.map((subfolder) => [subfolder.id, subfolder]),
 	);
 
 	const candidates: MockCandidate[] = allMocks.map((m) => ({

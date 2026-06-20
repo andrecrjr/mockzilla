@@ -1,13 +1,15 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
 import {
 	collectDescendantSubfolders,
+	computeCanonicalSubfolderMainPaths,
 	computeSubtreeMainPaths,
 	deriveSubfolderMainPath,
 	findMainPathConflict,
+	withCanonicalSubfolderMainPaths,
 } from '@/lib/mock-subfolders';
 import { generateSlug } from '@/lib/utils/mock-paths';
 
@@ -28,49 +30,31 @@ type UpdateMockSubfolderInput = z.infer<typeof UpdateMockSubfolderSchema>;
 
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
 
-function formatMockSubfolder(row: MockSubfolderRow) {
+function formatMockSubfolder(row: MockSubfolderRow, canonicalMainPath?: string) {
 	return {
 		id: row.id,
 		folderId: row.folderId,
 		parentId: row.parentId,
 		name: row.name,
 		slug: row.slug,
-		mainPath: row.mainPath,
+		mainPath: canonicalMainPath ?? row.mainPath,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString(),
 	};
 }
 
-function getParentClause(folderId: string, parentId: string | null) {
-	return parentId
-		? and(eq(mockSubfolders.folderId, folderId), eq(mockSubfolders.parentId, parentId))
-		: and(eq(mockSubfolders.folderId, folderId), isNull(mockSubfolders.parentId));
-}
-
-async function getParentSubfolder(
-	folderId: string,
-	parentId: string | null,
-): Promise<MockSubfolderRow | null> {
-	if (!parentId) return null;
-	const [parent] = await db
-		.select()
-		.from(mockSubfolders)
-		.where(and(eq(mockSubfolders.id, parentId), eq(mockSubfolders.folderId, folderId)))
-		.limit(1);
-	return parent ?? null;
-}
-
-async function hasSiblingSlug(
-	folderId: string,
+function hasSiblingSlugInRows(
+	rows: MockSubfolderRow[],
 	parentId: string | null,
 	slug: string,
 	excludeId?: string,
-): Promise<boolean> {
-	const rows = await db
-		.select()
-		.from(mockSubfolders)
-		.where(and(getParentClause(folderId, parentId), eq(mockSubfolders.slug, slug)));
-	return rows.some((row) => row.id !== excludeId);
+): boolean {
+	return rows.some(
+		(row) =>
+			row.parentId === parentId &&
+			row.slug === slug &&
+			row.id !== excludeId,
+	);
 }
 
 export async function GET(request: NextRequest) {
@@ -91,7 +75,12 @@ export async function GET(request: NextRequest) {
 			if (!row) {
 				return NextResponse.json({ error: 'Subfolder not found' }, { status: 404 });
 			}
-			return NextResponse.json(formatMockSubfolder(row));
+			const folderSubfolders = await db
+				.select()
+				.from(mockSubfolders)
+				.where(eq(mockSubfolders.folderId, row.folderId));
+			const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
+			return NextResponse.json(formatMockSubfolder(row, canonicalPaths.get(row.id)));
 		}
 
 		if (!folderId) {
@@ -101,19 +90,26 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
+		const folderSubfolders = await db
+			.select()
+			.from(mockSubfolders)
+			.where(eq(mockSubfolders.folderId, folderId));
+		const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
 		const rows = all
-			? await db
-					.select()
-					.from(mockSubfolders)
-					.where(eq(mockSubfolders.folderId, folderId))
-					.orderBy(mockSubfolders.mainPath)
-			: await db
-					.select()
-					.from(mockSubfolders)
-					.where(getParentClause(folderId, parentId))
-					.orderBy(mockSubfolders.name);
+			? [...folderSubfolders].sort((a, b) =>
+					(canonicalPaths.get(a.id) ?? a.mainPath).localeCompare(
+						canonicalPaths.get(b.id) ?? b.mainPath,
+					),
+				)
+			: folderSubfolders
+					.filter((row) =>
+						parentId ? row.parentId === parentId : row.parentId === null,
+					)
+					.sort((a, b) => a.name.localeCompare(b.name));
 
-		return NextResponse.json(rows.map(formatMockSubfolder));
+		return NextResponse.json(
+			rows.map((row) => formatMockSubfolder(row, canonicalPaths.get(row.id))),
+		);
 	} catch (error: unknown) {
 		console.error('[API] Error fetching mock subfolders:', error);
 		return NextResponse.json(
@@ -139,18 +135,28 @@ export async function POST(request: NextRequest) {
 		if (!slug) {
 			return NextResponse.json({ error: 'Subfolder name is invalid' }, { status: 400 });
 		}
-		const parent = await getParentSubfolder(body.folderId, parentId);
+		const folderSubfolders = await db
+			.select()
+			.from(mockSubfolders)
+			.where(eq(mockSubfolders.folderId, body.folderId));
+		const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
+		const parent = parentId
+			? folderSubfolders.find((row) => row.id === parentId) ?? null
+			: null;
 		if (parentId && !parent) {
 			return NextResponse.json({ error: 'Parent subfolder not found' }, { status: 404 });
 		}
-		if (await hasSiblingSlug(body.folderId, parentId, slug)) {
+		if (hasSiblingSlugInRows(folderSubfolders, parentId, slug)) {
 			return NextResponse.json(
 				{ error: 'A subfolder with this name already exists here' },
 				{ status: 409 },
 			);
 		}
 
-		const mainPath = deriveSubfolderMainPath(parent?.mainPath, slug);
+		const parentMainPath = parent
+			? canonicalPaths.get(parent.id) ?? parent.mainPath
+			: null;
+		const mainPath = deriveSubfolderMainPath(parentMainPath, slug);
 
 		const [row] = await db
 			.insert(mockSubfolders)
@@ -214,10 +220,11 @@ export async function PUT(request: NextRequest) {
 			return NextResponse.json({ error: 'Subfolder cannot be its own parent' }, { status: 400 });
 		}
 
-		const folderSubfolders = await db
+		const storedFolderSubfolders = await db
 			.select()
 			.from(mockSubfolders)
 			.where(eq(mockSubfolders.folderId, existing.folderId));
+		const folderSubfolders = withCanonicalSubfolderMainPaths(storedFolderSubfolders);
 		const descendants = collectDescendantSubfolders(folderSubfolders, id);
 		const descendantIds = new Set(descendants.map((row) => row.id));
 		if (nextParentId && descendantIds.has(nextParentId)) {
@@ -233,7 +240,7 @@ export async function PUT(request: NextRequest) {
 		if (nextParentId && !parent) {
 			return NextResponse.json({ error: 'Parent subfolder not found' }, { status: 404 });
 		}
-		if (await hasSiblingSlug(existing.folderId, nextParentId, nextSlug, id)) {
+		if (hasSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, id)) {
 			return NextResponse.json(
 				{ error: 'A subfolder with this name already exists here' },
 				{ status: 409 },

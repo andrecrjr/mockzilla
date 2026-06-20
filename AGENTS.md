@@ -11,6 +11,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Always use Docker to get all context about server.
 - Makefile is the main entry point for all commands.
 - **Docker Usage**: Always prefer to use Docker (via `Makefile`) to run commands. Never run scripts like `migrate` or `db:generate` locally; execute them inside the container.
+- **Local Checks**: Run `bun run typecheck` and `bun run lint` locally from the repository root, not inside Docker.
 - **Migrations**: Always use `bun run db:generate` inside Docker (or `make db-generate`) to create migrations.
 - **Bun**: Use `bun` as the primary runtime and package manager inside Docker.
 - **Biome** : Lint and prettier default

@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { type Logger, logger } from '@/lib/logger';
+import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
@@ -112,7 +113,10 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			.select()
 			.from(mockSubfolders)
 			.where(eq(mockSubfolders.folderId, folder.id));
-		const subfoldersById = new Map(subfolders.map((subfolder) => [subfolder.id, subfolder]));
+		const canonicalSubfolders = withCanonicalSubfolderMainPaths(subfolders);
+		const subfoldersById = new Map(
+			canonicalSubfolders.map((subfolder) => [subfolder.id, subfolder]),
+		);
 
 		const matchableMocks = sortMocksForMatchTieBreakers(allMocks);
 		const candidates: MockCandidate[] = matchableMocks.map((m) => ({

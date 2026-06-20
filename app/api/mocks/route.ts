@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
+import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
 import type { CreateMockRequest, UpdateMockRequest } from '@/lib/types';
 import { joinMockPaths } from '@/lib/utils/mock-paths';
 
@@ -58,7 +59,8 @@ async function getSubfoldersByIdForMocks(
 		.select()
 		.from(mockSubfolders)
 		.where(eq(mockSubfolders.folderId, folderId));
-	return new Map(rows.map((row) => [row.id, row]));
+	const canonicalRows = withCanonicalSubfolderMainPaths(rows);
+	return new Map(canonicalRows.map((row) => [row.id, row]));
 }
 
 async function validateMockFolderOwnership(

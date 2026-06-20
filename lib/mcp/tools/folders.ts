@@ -1,9 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import {
 	ManageFoldersArgs,
 	ManageMockSubfoldersArgs,
-	type ManageMockSubfoldersArgs as ManageMockSubfoldersArgsType,
 } from '../schemas/folders';
+
+function asMcpInputSchema(schema: unknown): AnySchema {
+	return schema as AnySchema;
+}
 
 export function registerFolderTools(server: McpServer) {
 	server.registerTool(
@@ -12,11 +16,11 @@ export function registerFolderTools(server: McpServer) {
 			title: 'Manage Folders',
 			description:
 				'Perform CRUD operations on folders (list, create, get, update, delete).',
-			inputSchema: ManageFoldersArgs as any,
+			inputSchema: asMcpInputSchema(ManageFoldersArgs),
 		},
-		async (args: any) => {
+		async (args: unknown) => {
 			const { callManageFolders } = await import('../handlers');
-			const result = await callManageFolders(args);
+			const result = await callManageFolders(ManageFoldersArgs.parse(args));
 			return {
 				content: [{ type: 'text' as const, text: JSON.stringify(result) }],
 			};
@@ -29,11 +33,13 @@ export function registerFolderTools(server: McpServer) {
 			title: 'Manage Mock Subfolders',
 			description:
 				'Perform CRUD operations on mock subfolders nested inside a top-level folder.',
-			inputSchema: ManageMockSubfoldersArgs,
+			inputSchema: asMcpInputSchema(ManageMockSubfoldersArgs),
 		},
-		async (args: ManageMockSubfoldersArgsType) => {
+		async (args: unknown) => {
 			const { callManageMockSubfolders } = await import('../handlers');
-			const result = await callManageMockSubfolders(args);
+			const result = await callManageMockSubfolders(
+				ManageMockSubfoldersArgs.parse(args),
+			);
 			return {
 				content: [{ type: 'text' as const, text: JSON.stringify(result) }],
 			};

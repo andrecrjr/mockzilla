@@ -48,6 +48,48 @@ export function computeSubtreeMainPaths<
 	return nextPaths;
 }
 
+export function computeCanonicalSubfolderMainPaths<
+	TRow extends Pick<MockSubfolderHierarchyRow, 'id' | 'parentId' | 'slug'>,
+>(rows: TRow[]): Map<string, string> {
+	const rowsById = new Map(rows.map((row) => [row.id, row]));
+	const paths = new Map<string, string>();
+	const visiting = new Set<string>();
+
+	const visit = (row: TRow): string => {
+		const existingPath = paths.get(row.id);
+		if (existingPath) return existingPath;
+		if (visiting.has(row.id)) {
+			const fallbackPath = deriveSubfolderMainPath(null, row.slug);
+			paths.set(row.id, fallbackPath);
+			return fallbackPath;
+		}
+
+		visiting.add(row.id);
+		const parent = row.parentId ? rowsById.get(row.parentId) : undefined;
+		const parentPath = parent ? visit(parent) : null;
+		const path = deriveSubfolderMainPath(parentPath, row.slug);
+		visiting.delete(row.id);
+		paths.set(row.id, path);
+		return path;
+	};
+
+	for (const row of rows) {
+		visit(row);
+	}
+
+	return paths;
+}
+
+export function withCanonicalSubfolderMainPaths<
+	TRow extends Pick<MockSubfolderHierarchyRow, 'id' | 'parentId' | 'slug' | 'mainPath'>,
+>(rows: TRow[]): TRow[] {
+	const paths = computeCanonicalSubfolderMainPaths(rows);
+	return rows.map((row) => ({
+		...row,
+		mainPath: paths.get(row.id) ?? row.mainPath,
+	}));
+}
+
 export function findMainPathConflict<
 	TRow extends Pick<MockSubfolderHierarchyRow, 'id' | 'mainPath'>,
 >(rows: TRow[], nextPaths: Map<string, string>): TRow | null {

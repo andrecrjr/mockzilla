@@ -49,6 +49,8 @@ Subfolders are managed through `/api/mock-subfolders`.
 
 `mainPath` is returned by the API but is not client-controlled. Renaming or moving a subfolder recomputes its `mainPath` and all descendant `mainPath` values.
 
+Read paths are also canonicalized from `parentId` plus each subfolder `slug`. If older data contains a stale flat `mainPath`, API responses, mock listing, MCP preview, and live serving still resolve the effective path as the full nested hierarchy, such as `/users/details/history`.
+
 ## MCP
 
 Agents can manage the same hierarchy through `manage_mock_subfolders`.
@@ -102,6 +104,7 @@ Imports rebuild subfolder `mainPath` from imported parent/slug relationships ins
 ## Implementation Notes
 
 - Shared hierarchy helpers live in `lib/mock-subfolders.ts`.
+- Canonical path helpers rebuild nested paths from parent links before formatting subfolders or resolving mock effective paths.
 - Subfolder rename/move updates run in a transaction so parent and descendant paths change atomically.
 - Live serving matches all root and subfolder mocks through the same effective-path matcher.
 

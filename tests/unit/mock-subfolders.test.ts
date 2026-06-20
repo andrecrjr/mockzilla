@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	collectDescendantSubfolders,
+	computeCanonicalSubfolderMainPaths,
 	computeSubtreeMainPaths,
 	deriveSubfolderMainPath,
 	findMainPathConflict,
+	withCanonicalSubfolderMainPaths,
 	orderSubfoldersByHierarchy,
 } from '../../lib/mock-subfolders';
 
@@ -61,6 +63,28 @@ describe('mock subfolder hierarchy helpers', () => {
 		expect(paths.get('users')).toBe('/accounts');
 		expect(paths.get('details')).toBe('/accounts/details');
 		expect(paths.get('history')).toBe('/accounts/details/history');
+	});
+
+	it('rebuilds canonical paths from parent links when stored paths are stale', () => {
+		const staleRows = [
+			rows[0],
+			{
+				...rows[1],
+				mainPath: '/details',
+			},
+			{
+				...rows[2],
+				mainPath: '/history',
+			},
+		];
+
+		const paths = computeCanonicalSubfolderMainPaths(staleRows);
+		const canonicalRows = withCanonicalSubfolderMainPaths(staleRows);
+
+		expect(paths.get('details')).toBe('/users/details');
+		expect(paths.get('history')).toBe('/users/details/history');
+		expect(canonicalRows[1].mainPath).toBe('/users/details');
+		expect(canonicalRows[2].mainPath).toBe('/users/details/history');
 	});
 
 	it('finds path conflicts outside the updated subtree', () => {

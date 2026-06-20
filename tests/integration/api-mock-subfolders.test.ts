@@ -26,6 +26,11 @@ const childSubfolder = {
 	updatedAt: null,
 };
 
+const staleChildSubfolder = {
+	...childSubfolder,
+	mainPath: '/details',
+};
+
 const createMockBuilder = (resolvedValue: unknown) => {
 	const builder = {
 		from: mock(() => builder),
@@ -102,6 +107,22 @@ describe('API /api/mock-subfolders', () => {
 		expect(body[0].mainPath).toBe('/users');
 	});
 
+	it('returns canonical nested paths when stored main paths are stale', async () => {
+		selectResults = [[mockSubfolder, staleChildSubfolder]];
+		const req = new NextRequest(
+			`http://localhost:3000/api/mock-subfolders?folderId=${folderId}&all=true`,
+		);
+
+		const res = await GET(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.map((row: { mainPath: string }) => row.mainPath)).toEqual([
+			'/users',
+			'/users/details',
+		]);
+	});
+
 	it('creates a root subfolder with a slug-derived main path', async () => {
 		selectResults = [[]];
 		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
@@ -121,7 +142,7 @@ describe('API /api/mock-subfolders', () => {
 	});
 
 	it('creates a child subfolder under the parent main path', async () => {
-		selectResults = [[mockSubfolder], []];
+		selectResults = [[mockSubfolder]];
 		mockDb.insert = mock(() => createMockBuilder([childSubfolder]));
 		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
 			method: 'POST',
@@ -161,7 +182,7 @@ describe('API /api/mock-subfolders', () => {
 			slug: 'accounts',
 			mainPath: '/accounts',
 		};
-		selectResults = [[mockSubfolder], [mockSubfolder], []];
+		selectResults = [[mockSubfolder], [mockSubfolder]];
 		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
@@ -185,7 +206,7 @@ describe('API /api/mock-subfolders', () => {
 			slug: 'accounts',
 			mainPath: '/accounts',
 		};
-		selectResults = [[mockSubfolder], [mockSubfolder, childSubfolder], []];
+		selectResults = [[mockSubfolder], [mockSubfolder, childSubfolder]];
 		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
