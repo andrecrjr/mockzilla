@@ -3,10 +3,17 @@ import { db } from '@/lib/db';
 import {
 	folders,
 	mockResponses,
+	mockSubfolders,
 	scenarioState,
 	scenarios,
 	transitions,
 } from '@/lib/db/schema';
+import {
+	collectDescendantSubfolders,
+	computeSubtreeMainPaths,
+	deriveSubfolderMainPath,
+	findMainPathConflict,
+} from '@/lib/mock-subfolders';
 import type {
 	Condition,
 	ConditionTrace,
@@ -23,47 +30,54 @@ import {
 	findBestMatch,
 	selectVariant,
 } from '@/lib/utils/mock-matcher';
-import type { 
-	ListFoldersArgs, 
-	CreateFolderArgs, 
-	GetFolderArgs, 
-	UpdateFolderArgs, 
-	DeleteFolderArgs, 
-	ManageFoldersArgs 
+import { joinMockPaths } from '@/lib/utils/mock-paths';
+import type {
+	ListFoldersArgs,
+	CreateFolderArgs,
+	GetFolderArgs,
+	UpdateFolderArgs,
+	DeleteFolderArgs,
+	ManageFoldersArgs,
+	ListMockSubfoldersArgs,
+	CreateMockSubfolderArgs,
+	GetMockSubfolderArgs,
+	UpdateMockSubfolderArgs,
+	DeleteMockSubfolderArgs,
+	ManageMockSubfoldersArgs,
 } from './schemas/folders';
-import type { 
-	CreateMockArgs, 
-	ListMocksArgs, 
-	GetMockArgs, 
-	UpdateMockArgs, 
-	DeleteMockArgs, 
-	PreviewMockArgs, 
-	ManageMocksArgs 
+import type {
+	CreateMockArgs,
+	ListMocksArgs,
+	GetMockArgs,
+	UpdateMockArgs,
+	DeleteMockArgs,
+	PreviewMockArgs,
+	ManageMocksArgs,
 } from './schemas/mocks';
-import type { 
-	ListWorkflowTransitionsArgs, 
-	CreateWorkflowTransitionArgs, 
-	UpdateWorkflowTransitionArgs, 
-	DeleteWorkflowTransitionArgs, 
-	CreateWorkflowScenarioArgs, 
-	DeleteWorkflowScenarioArgs, 
+import type {
+	ListWorkflowTransitionsArgs,
+	CreateWorkflowTransitionArgs,
+	UpdateWorkflowTransitionArgs,
+	DeleteWorkflowTransitionArgs,
+	CreateWorkflowScenarioArgs,
+	DeleteWorkflowScenarioArgs,
 	ResetWorkflowStateArgs,
 	InspectWorkflowStateArgs,
 	ListWorkflowScenariosArgs,
-	TestWorkflowArgs, 
-	ExportWorkflowArgs, 
-	ImportWorkflowArgs, 
-	CreateFullWorkflowArgs, 
-	EvaluateTemplateArgs, 
-	SeedWorkflowStateArgs, 
-	ManageScenariosArgs, 
-	ManageTransitionsArgs, 
-	WorkflowControlArgs 
+	TestWorkflowArgs,
+	ExportWorkflowArgs,
+	ImportWorkflowArgs,
+	CreateFullWorkflowArgs,
+	EvaluateTemplateArgs,
+	SeedWorkflowStateArgs,
+	ManageScenariosArgs,
+	ManageTransitionsArgs,
+	WorkflowControlArgs,
 } from './schemas/workflows';
-import type { 
-	GetLogsArgs, 
-	GetRequestTraceArgs, 
-	ManageLogsArgs 
+import type {
+	GetLogsArgs,
+	GetRequestTraceArgs,
+	ManageLogsArgs,
 } from './schemas/logs';
 
 // Helpers
@@ -193,6 +207,297 @@ export async function callManageFolders(args: ManageFoldersArgs) {
 			return callDeleteFolder(args);
 		default:
 			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
+}
+
+type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
+
+function formatMockSubfolder(row: MockSubfolderRow) {
+	return {
+		id: row.id,
+		folderId: row.folderId,
+		parentId: row.parentId,
+		name: row.name,
+		slug: row.slug,
+		mainPath: row.mainPath,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt?.toISOString() ?? null,
+	};
+}
+
+function getEffectiveMockEndpoint(
+	mock: typeof mockResponses.$inferSelect,
+	subfoldersById: Map<string, MockSubfolderRow>,
+): string {
+	const subfolder = mock.mockFolderId
+		? subfoldersById.get(mock.mockFolderId)
+		: undefined;
+	return joinMockPaths(subfolder?.mainPath ?? '/', mock.endpoint);
+}
+
+function getMockSubfolderParentClause(
+	folderId: string,
+	parentId: string | null,
+) {
+	return parentId
+		? and(
+				eq(mockSubfolders.folderId, folderId),
+				eq(mockSubfolders.parentId, parentId),
+			)
+		: and(
+				eq(mockSubfolders.folderId, folderId),
+				isNull(mockSubfolders.parentId),
+			);
+}
+
+async function resolveFolderIdForSubfolders(args: {
+	folderId?: string | null;
+	folderSlug?: string | null;
+}): Promise<string> {
+	if (args.folderId) return args.folderId;
+	if (args.folderSlug) {
+		const [folder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.slug, args.folderSlug))
+			.limit(1);
+		if (!folder) {
+			throw new Error('Folder not found for provided slug');
+		}
+		return folder.id;
+	}
+	throw new Error('folderId or folderSlug is required');
+}
+
+async function getMockSubfolderParent(
+	folderId: string,
+	parentId: string | null,
+): Promise<MockSubfolderRow | null> {
+	if (!parentId) return null;
+	const [parent] = await db
+		.select()
+		.from(mockSubfolders)
+		.where(
+			and(
+				eq(mockSubfolders.id, parentId),
+				eq(mockSubfolders.folderId, folderId),
+			),
+		)
+		.limit(1);
+	return parent ?? null;
+}
+
+async function hasMockSubfolderSiblingSlug(
+	folderId: string,
+	parentId: string | null,
+	slug: string,
+	excludeId?: string,
+): Promise<boolean> {
+	const rows = await db
+		.select()
+		.from(mockSubfolders)
+		.where(
+			and(
+				getMockSubfolderParentClause(folderId, parentId),
+				eq(mockSubfolders.slug, slug),
+			),
+		);
+	return rows.some((row) => row.id !== excludeId);
+}
+
+export async function callListMockSubfolders(args: ListMockSubfoldersArgs) {
+	logger.info({ args }, 'MCP Tool: list_mock_subfolders');
+	const folderId = await resolveFolderIdForSubfolders(args);
+	const parentId = args.parentId ?? null;
+	const rows = args.all
+		? await db
+				.select()
+				.from(mockSubfolders)
+				.where(eq(mockSubfolders.folderId, folderId))
+				.orderBy(mockSubfolders.mainPath)
+		: await db
+				.select()
+				.from(mockSubfolders)
+				.where(getMockSubfolderParentClause(folderId, parentId))
+				.orderBy(mockSubfolders.name);
+
+	return rows.map(formatMockSubfolder);
+}
+
+export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
+	logger.info({ args }, 'MCP Tool: create_mock_subfolder');
+	const folderId = await resolveFolderIdForSubfolders(args);
+	const parentId = args.parentId ?? null;
+	const slug = generateSlug(args.name);
+	if (!slug) {
+		throw new Error('Subfolder name is invalid');
+	}
+
+	const parent = await getMockSubfolderParent(folderId, parentId);
+	if (parentId && !parent) {
+		throw new Error('Parent subfolder not found');
+	}
+	if (await hasMockSubfolderSiblingSlug(folderId, parentId, slug)) {
+		throw new Error('A subfolder with this name already exists here');
+	}
+
+	const [row] = await db
+		.insert(mockSubfolders)
+		.values({
+			folderId,
+			parentId,
+			name: args.name.trim(),
+			slug,
+			mainPath: deriveSubfolderMainPath(parent?.mainPath, slug),
+		})
+		.returning();
+
+	return formatMockSubfolder(row);
+}
+
+export async function callGetMockSubfolder(args: GetMockSubfolderArgs) {
+	logger.info({ args }, 'MCP Tool: get_mock_subfolder');
+	const [row] = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.id, args.id))
+		.limit(1);
+	return row ? formatMockSubfolder(row) : null;
+}
+
+export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
+	logger.info({ args }, 'MCP Tool: update_mock_subfolder');
+	const [existing] = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.id, args.id))
+		.limit(1);
+	if (!existing) return null;
+
+	const nextParentId =
+		args.parentId === undefined ? existing.parentId : args.parentId;
+	const nextName = args.name?.trim() ?? existing.name;
+	const nextSlug =
+		args.name === undefined ? existing.slug : generateSlug(nextName);
+	if (!nextSlug) {
+		throw new Error('Subfolder name is invalid');
+	}
+	if (nextParentId === args.id) {
+		throw new Error('Subfolder cannot be its own parent');
+	}
+
+	const folderSubfolders = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.folderId, existing.folderId));
+	const descendants = collectDescendantSubfolders(folderSubfolders, args.id);
+	const descendantIds = new Set(descendants.map((row) => row.id));
+	if (nextParentId && descendantIds.has(nextParentId)) {
+		throw new Error('Subfolder cannot be moved under its descendant');
+	}
+
+	const parent = nextParentId
+		? (folderSubfolders.find((row) => row.id === nextParentId) ?? null)
+		: null;
+	if (nextParentId && !parent) {
+		throw new Error('Parent subfolder not found');
+	}
+	if (
+		await hasMockSubfolderSiblingSlug(
+			existing.folderId,
+			nextParentId,
+			nextSlug,
+			args.id,
+		)
+	) {
+		throw new Error('A subfolder with this name already exists here');
+	}
+
+	const nextMainPath = deriveSubfolderMainPath(parent?.mainPath, nextSlug);
+	const rootUpdate: MockSubfolderRow = {
+		...existing,
+		parentId: nextParentId,
+		name: nextName,
+		slug: nextSlug,
+		mainPath: nextMainPath,
+	};
+	const rowsForPathComputation = folderSubfolders.map((row) =>
+		row.id === args.id ? rootUpdate : row,
+	);
+	const nextPaths = computeSubtreeMainPaths(rowsForPathComputation, rootUpdate);
+	const conflictingPath = findMainPathConflict(folderSubfolders, nextPaths);
+	if (conflictingPath) {
+		throw new Error('A subfolder with this main path already exists');
+	}
+
+	const row = await db.transaction(async (tx) => {
+		const [updatedRoot] = await tx
+			.update(mockSubfolders)
+			.set({
+				parentId: nextParentId,
+				name: nextName,
+				slug: nextSlug,
+				mainPath: nextMainPath,
+				updatedAt: new Date(),
+			})
+			.where(eq(mockSubfolders.id, args.id))
+			.returning();
+
+		for (const descendant of descendants) {
+			const descendantMainPath = nextPaths.get(descendant.id);
+			if (!descendantMainPath || descendantMainPath === descendant.mainPath) {
+				continue;
+			}
+			await tx
+				.update(mockSubfolders)
+				.set({
+					mainPath: descendantMainPath,
+					updatedAt: new Date(),
+				})
+				.where(eq(mockSubfolders.id, descendant.id));
+		}
+
+		return updatedRoot;
+	});
+
+	return formatMockSubfolder(row);
+}
+
+export async function callDeleteMockSubfolder(args: DeleteMockSubfolderArgs) {
+	logger.info({ args }, 'MCP Tool: delete_mock_subfolder');
+	const [childCount] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.parentId, args.id));
+	const [mockCount] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(mockResponses)
+		.where(eq(mockResponses.mockFolderId, args.id));
+
+	if (Number(childCount.count) > 0 || Number(mockCount.count) > 0) {
+		throw new Error('Subfolder must be empty before it can be deleted');
+	}
+
+	await db.delete(mockSubfolders).where(eq(mockSubfolders.id, args.id));
+	return { success: true } as const;
+}
+
+export async function callManageMockSubfolders(args: ManageMockSubfoldersArgs) {
+	switch (args.action) {
+		case 'list':
+			return callListMockSubfolders(args);
+		case 'create':
+			return callCreateMockSubfolder(args);
+		case 'get':
+			return callGetMockSubfolder(args);
+		case 'update':
+			return callUpdateMockSubfolder(args);
+		case 'delete':
+			return callDeleteMockSubfolder(args);
+		default: {
+			const exhaustive: never = args;
+			throw new Error(`Unknown action: ${JSON.stringify(exhaustive)}`);
+		}
 	}
 }
 
@@ -605,12 +910,20 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 				eq(mockResponses.enabled, true),
 			),
 		);
+	const subfolders = await db
+		.select()
+		.from(mockSubfolders)
+		.where(eq(mockSubfolders.folderId, folder.id));
+	const subfoldersById = new Map(
+		subfolders.map((subfolder) => [subfolder.id, subfolder]),
+	);
 
 	const candidates: MockCandidate[] = allMocks.map((m) => ({
-		endpoint: m.endpoint,
+		endpoint: getEffectiveMockEndpoint(m, subfoldersById),
 		matchType: (m.matchType as MatchType) || 'exact',
 		queryParams: (m.queryParams as Record<string, string> | null) ?? null,
 		_score: 0,
+		_id: m.id,
 	}));
 
 	const best = findBestMatch(mockPath, urlQueryParams, candidates);
@@ -630,12 +943,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		};
 	}
 
-	const bestMock = allMocks.find(
-		(m) =>
-			m.endpoint === best.endpoint &&
-			((m.matchType as MatchType) || 'exact') === best.matchType &&
-			JSON.stringify(m.queryParams) === JSON.stringify(best.queryParams),
-	);
+	const bestMock = allMocks.find((m) => m.id === best._id);
 
 	if (!bestMock) {
 		return {
@@ -650,19 +958,20 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 	let finalStatusCode = bestMock.statusCode;
 	let finalBodyType = bestMock.bodyType || 'json';
 	let paramsMap: Record<string, string> = {};
+	const effectiveEndpoint = getEffectiveMockEndpoint(bestMock, subfoldersById);
 
 	// Handle Wildcard Variants
 	if (bestMock.matchType === 'wildcard') {
 		const variants = bestMock.variants as MockVariant[] | null;
 		if (variants && variants.length > 0) {
-			const variant = selectVariant(variants, mockPath, bestMock.endpoint);
+			const variant = selectVariant(variants, mockPath, effectiveEndpoint);
 			if (variant) {
 				finalResponse = variant.body;
 				finalStatusCode = variant.statusCode;
 				finalBodyType = variant.bodyType as 'json' | 'text';
 
 				const captures =
-					extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
+					extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
 				for (let i = 0; i < captures.length; i++) {
 					paramsMap[String(i)] = captures[i];
 				}
@@ -678,7 +987,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 
 		if (Object.keys(paramsMap).length === 0) {
 			const captures =
-				extractCaptureKey(mockPath, bestMock.endpoint)?.split('|') || [];
+				extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
 			for (let i = 0; i < captures.length; i++) {
 				paramsMap[String(i)] = captures[i];
 			}
@@ -832,9 +1141,7 @@ export async function callCreateWorkflowTransition(
 	return row;
 }
 
-export async function callResetWorkflowState(
-	args: ResetWorkflowStateArgs,
-) {
+export async function callResetWorkflowState(args: ResetWorkflowStateArgs) {
 	logger.info({ args }, 'MCP Tool: reset_workflow_state');
 	await db
 		.delete(scenarioState)
@@ -842,9 +1149,7 @@ export async function callResetWorkflowState(
 	return { success: true };
 }
 
-export async function callInspectWorkflowState(
-	args: InspectWorkflowStateArgs,
-) {
+export async function callInspectWorkflowState(args: InspectWorkflowStateArgs) {
 	logger.info({ args }, 'MCP Tool: inspect_workflow_state');
 	const [row] = await db
 		.select()
@@ -902,9 +1207,7 @@ export async function callManageScenarios(args: ManageScenariosArgs) {
 	}
 }
 
-export async function callManageTransitions(
-	args: ManageTransitionsArgs,
-) {
+export async function callManageTransitions(args: ManageTransitionsArgs) {
 	switch (args.action) {
 		case 'list':
 			return callListWorkflowTransitions(args);
@@ -1069,7 +1372,9 @@ export async function callTestWorkflow(args: TestWorkflowArgs) {
 			);
 
 			// Fetch updated state to return to AI
-			const updatedState = await callInspectWorkflowState({ scenarioId: args.scenarioId });
+			const updatedState = await callInspectWorkflowState({
+				scenarioId: args.scenarioId,
+			});
 
 			return {
 				success: true,
@@ -1145,7 +1450,9 @@ export async function callTestWorkflow(args: TestWorkflowArgs) {
 			);
 
 			// Fetch updated state to return to AI
-			const updatedState = await callInspectWorkflowState({ scenarioId: args.scenarioId });
+			const updatedState = await callInspectWorkflowState({
+				scenarioId: args.scenarioId,
+			});
 
 			return {
 				success: true,
@@ -1311,18 +1618,21 @@ export async function callCreateFullWorkflow(args: CreateFullWorkflowArgs) {
 
 	await db.transaction(async (tx) => {
 		// 1. Create scenario
-		await tx.insert(scenarios).values({
-			id: scenarioId,
-			name: args.name,
-			description: args.description,
-		}).onConflictDoUpdate({
-			target: scenarios.id,
-			set: {
+		await tx
+			.insert(scenarios)
+			.values({
+				id: scenarioId,
 				name: args.name,
 				description: args.description,
-				updatedAt: new Date(),
-			},
-		});
+			})
+			.onConflictDoUpdate({
+				target: scenarios.id,
+				set: {
+					name: args.name,
+					description: args.description,
+					updatedAt: new Date(),
+				},
+			});
 
 		// 2. Clear existing transitions if updating
 		await tx.delete(transitions).where(eq(transitions.scenarioId, scenarioId));
@@ -1340,7 +1650,7 @@ export async function callCreateFullWorkflow(args: CreateFullWorkflowArgs) {
 					effects: t.effects || [],
 					response: t.response,
 					meta: t.meta || {},
-				}))
+				})),
 			);
 		}
 	});
@@ -1393,7 +1703,7 @@ export async function callEvaluateTemplate(args: EvaluateTemplateArgs) {
 				params: baseContext.input.params,
 				headers: baseContext.input.headers,
 				body: baseContext.input.body,
-			}
+			},
 		},
 	};
 }
@@ -1427,26 +1737,38 @@ export async function callGetLogs(args: GetLogsArgs) {
 	let logs = getLogs(args.limit ?? 100, args.type);
 
 	if (args.level) {
-		const levels: Record<string, number> = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60 };
-		const levelVal = typeof args.level === 'string' ? 
-			levels[args.level.toLowerCase()] 
-			: args.level;
+		const levels: Record<string, number> = {
+			trace: 10,
+			debug: 20,
+			info: 30,
+			warn: 40,
+			error: 50,
+			fatal: 60,
+		};
+		const levelVal =
+			typeof args.level === 'string'
+				? levels[args.level.toLowerCase()]
+				: args.level;
 		if (levelVal) {
-			logs = logs.filter(l => (l.level as number) >= levelVal);
+			logs = logs.filter((l) => (l.level as number) >= levelVal);
 		}
 	}
 
 	if (args.search) {
 		const s = args.search.toLowerCase();
-		logs = logs.filter(l => (l.msg && String(l.msg).toLowerCase().includes(s)) || JSON.stringify(l).toLowerCase().includes(s));
+		logs = logs.filter(
+			(l) =>
+				(l.msg && String(l.msg).toLowerCase().includes(s)) ||
+				JSON.stringify(l).toLowerCase().includes(s),
+		);
 	}
 
 	return logs;
 }
 
 export async function callGetRequestTrace(args: GetRequestTraceArgs) {
-    const { getRequestTrace } = await import('../logger');
-    return getRequestTrace(args.reqId);
+	const { getRequestTrace } = await import('../logger');
+	return getRequestTrace(args.reqId);
 }
 
 export async function callClearLogs() {

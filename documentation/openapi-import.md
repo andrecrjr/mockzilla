@@ -26,6 +26,11 @@ Mockzilla is resilient to circular references in specifications:
 
 ### 4. Path & Endpoint Mapping
 - Normalizes paths (e.g., removing trailing slashes).
+- Creates mock subfolders from static path prefixes when a path has nested segments:
+  - `/v1/users` → subfolder `/v1`, mock path `/users`
+  - `/v1/users/{id}` → subfolder `/v1/users`, mock path `/*`
+  - `/v1/users/{id}/orders` → subfolder `/v1/users`, mock path `/*/orders`
+- Only path segments that are already valid subfolder slugs are used for subfolders. If a segment contains case-sensitive or symbolic characters, Mockzilla keeps that segment in the relative mock path so the served URL does not change.
 - Converts OpenAPI path parameters into Mockzilla wildcards:
   - `/users/{id}` → `/users/*`
   - Sets `matchType: 'wildcard'`.
@@ -60,6 +65,7 @@ For path parameters converted to wildcards:
 
 | Feature | Mockzilla Implementation |
 | :--- | :--- |
+| **Nested Paths** | Static path prefixes become mock subfolders; mocks store relative paths with `mockFolderId` |
 | **Path Params** | `*` Wildcard + Variant with key `*` |
 | **JSON Schema** | Pre-generated static body + stored Schema reference |
 | **Array Items** | Limited to 3 for performance |

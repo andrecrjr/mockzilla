@@ -19,6 +19,7 @@ description: Elite API Architect for industrial-grade project bootstrapping from
 | Tool | Purpose | Action |
 | :--- | :--- | :--- |
 | `manage_folders` | Create/Fetch folder for spec grouping | `create`, `get`, `list` |
+| `manage_mock_subfolders` | Create nested endpoint groups inside a folder | `create`, `update`, `get`, `list`, `delete` |
 | `manage_mocks` | Create data endpoints and health checks | `create`, `update`, `get`, `list`, `preview` |
 | `manage_scenarios` | Import or export complex flows | `import`, `export`, `create` |
 | `manage_transitions` | Atomic creation of full stateful flows | `create_full`, `create` |
@@ -46,6 +47,7 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 - **Pagination**: For `GET /list` style endpoints, always wrap the array in a `data` key and include a `meta` object with `total`, `page`, and `limit`.
 - **Polymorphism**: If a spec uses `oneOf` or `anyOf`, represent this using a complex JSON Schema with `anyOf` sub-objects.
 - **Path Params**: For `/users/:id`, set `path: "/users/*"`, `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
+- **Nested Resource Groups**: When a spec is naturally grouped by tag or prefix, create subfolders with `manage_mock_subfolders`, then pass the returned `id` as `mockFolderId` and keep each mock path relative to that subfolder.
 - **One-Shot State**: If the spec defines a complex CRUD flow, use `create_full_workflow` instead of individual `create_workflow_transition` calls to reduce latency.
 
 ## 🔄 Orchestration Flow
@@ -53,8 +55,9 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 ```
 manage_folders (action: 'list' - check for duplicates)
   └─> manage_folders (action: 'create', e.g. "Project X - API")
-        └─> For each spec endpoint:
-              └─> manage_mocks (action: 'create')
+        └─> manage_mock_subfolders (action: 'create' - when tags/prefixes need nested organization)
+              └─> For each spec endpoint:
+                    └─> manage_mocks (action: 'create', mockFolderId if grouped)
                     └─> manage_mocks (action: 'preview' - verify first 3 endpoints)
                           └─> manage_mocks (action: 'update' - fix schema if needed)
                                 └─> manage_mocks (action: 'list' - final audit)
@@ -62,6 +65,7 @@ manage_folders (action: 'list' - check for duplicates)
 
 **Parameter guidance**:
 - Always use `folderSlug` (not `folderId`) when calling `manage_mocks` — it's derived from the folder name automatically.
+- Use `manage_mock_subfolders` before `manage_mocks` when creating nested groups. A subfolder `mainPath` like `/admin/users` plus a relative mock path `/123` serves at `/api/mock/{folderSlug}/admin/users/123`.
 - Set `enabled: true` on all mocks.
 - Use `manage_mocks` with `jsonSchema` (it's implicit) for all data endpoints.
 

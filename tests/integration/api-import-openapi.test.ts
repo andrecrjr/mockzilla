@@ -12,6 +12,7 @@ const mockFolder = {
 };
 
 interface MockResponseRecord {
+	name?: string;
 	endpoint: string;
 	method: string;
 	response: string;
@@ -25,27 +26,87 @@ interface MockResponseRecord {
 	echoRequestBody?: boolean;
 	queryParams?: Record<string, unknown>;
 	variants?: unknown[];
+	mockFolderId?: string | null;
+}
+
+interface MockSubfolderRecord {
+	id?: string;
+	folderId: string;
+	parentId?: string | null;
+	name: string;
+	slug: string;
+	mainPath: string;
+	updatedAt?: Date | null;
 }
 
 // Track inserted values
-let insertedValues: MockResponseRecord[] = [];
+let insertedValues: Array<
+	MockResponseRecord | MockSubfolderRecord | typeof mockFolder
+> = [];
+
+function isMockResponseRecord(value: unknown): value is MockResponseRecord {
+	return Boolean(
+		value &&
+			typeof value === 'object' &&
+			'endpoint' in value &&
+			'method' in value,
+	);
+}
+
+function isMockSubfolderRecord(value: unknown): value is MockSubfolderRecord {
+	return Boolean(
+		value &&
+			typeof value === 'object' &&
+			'mainPath' in value &&
+			'slug' in value,
+	);
+}
+
+function getInsertedMocks(): MockResponseRecord[] {
+	return insertedValues.filter(isMockResponseRecord);
+}
+
+function getInsertedSubfolders(): MockSubfolderRecord[] {
+	return insertedValues.filter(isMockSubfolderRecord);
+}
 
 // 2. Define the chainable mock builder
 const createMockBuilder = (resolvedValue: unknown) => {
+	let currentValue:
+		| MockResponseRecord
+		| MockSubfolderRecord
+		| typeof mockFolder
+		| null = null;
 	const builder = {
 		from: mock(() => builder),
 		where: mock(() => builder),
 		orderBy: mock(() => builder),
 		limit: mock(() => builder),
 		offset: mock(() => builder),
-		values: mock((val: MockResponseRecord) => {
-			insertedValues.push(val);
-			return builder;
-		}),
+		values: mock(
+			(val: MockResponseRecord | MockSubfolderRecord | typeof mockFolder) => {
+				currentValue = val;
+				insertedValues.push(val);
+				return builder;
+			},
+		),
 		set: mock(() => builder),
 		returning: mock(() => builder),
 		onConflictDoUpdate: mock(() => builder),
-		then: (resolve: (val: unknown) => void) => resolve(resolvedValue),
+		then: (resolve: (val: unknown) => void) => {
+			if (currentValue && isMockSubfolderRecord(currentValue)) {
+				resolve([
+					{
+						...currentValue,
+						id: `subfolder-${insertedValues.filter(isMockSubfolderRecord).length}`,
+						createdAt: new Date('2024-01-01'),
+						updatedAt: null,
+					},
+				]);
+				return;
+			}
+			resolve(resolvedValue);
+		},
 	};
 	return builder;
 };
@@ -167,7 +228,8 @@ describe('API /api/import/openapi', () => {
 		expect(body.importedCount).toBe(2);
 
 		expect(mockDb.transaction).toHaveBeenCalled();
-		expect(mockDb.insert).toHaveBeenCalledTimes(3);
+		expect(getInsertedMocks()).toHaveLength(2);
+		expect(getInsertedSubfolders()).toHaveLength(1);
 	});
 
 	it('handles POST/PUT/PATCH with and without schema correctly', async () => {
@@ -204,11 +266,10 @@ paths:
 		const res = await POST(req);
 		expect(res.status).toBe(200);
 
-		const echoMock = insertedValues[1];
+		const [echoMock, generateMock] = getInsertedMocks();
 		expect(echoMock.method).toBe('POST');
 		expect(echoMock.echoRequestBody).toBe(true);
 
-		const generateMock = insertedValues[2];
 		expect(generateMock.method).toBe('PUT');
 		expect(JSON.parse(generateMock.response)).toHaveProperty('success');
 	});
@@ -230,10 +291,11 @@ paths:
 
 		await POST(req);
 
-		const mockValue = insertedValues[1];
-		expect(mockValue.endpoint).toBe('/users/*');
+		const mockValue = getInsertedMocks()[0];
+		expect(mockValue.endpoint).toBe('/*');
 		expect(mockValue.matchType).toBe('wildcard');
 		expect(mockValue.variants).toHaveLength(1);
+		expect(mockValue.mockFolderId).toBeDefined();
 	});
 
 	it('extracts query parameters and status codes correctly', async () => {
@@ -272,7 +334,7 @@ paths:
 		const res = await POST(req);
 		expect(res.status).toBe(200);
 
-		const mockValue = insertedValues[1];
+		const mockValue = getInsertedMocks()[0];
 		expect(mockValue.endpoint).toBe('/search');
 		expect(mockValue.statusCode).toBe(201);
 		expect(mockValue.queryParams).toEqual({
@@ -307,11 +369,11 @@ paths:
 		const res = await POST(req);
 		expect(res.status).toBe(200);
 
-		const mockValue = insertedValues[1];
+		const mockValue = getInsertedMocks()[0];
 		const response = JSON.parse(mockValue.response);
 
 		// Fallback should trigger because enum: [] is impossible to satisfy
-        // However, JSF is very resilient, so we check the structure
+		// However, JSF is very resilient, so we check the structure
 		expect(response).toHaveProperty('id');
 		expect(response.name).toBeNull();
 	});
@@ -346,7 +408,7 @@ components:
 
 		await POST(req);
 
-		const mockValue = insertedValues[1];
+		const mockValue = getInsertedMocks()[0];
 		const response = JSON.parse(mockValue.response);
 		expect(response).toHaveProperty('name');
 	});
@@ -366,7 +428,7 @@ paths:
 			body: JSON.stringify({ spec }),
 		});
 		await POST(req);
-		expect(insertedValues[1].endpoint).toBe('/slash');
+		expect(getInsertedMocks()[0].endpoint).toBe('/slash');
 	});
 
 	it('uses multiple examples when schema is missing', async () => {
@@ -389,7 +451,7 @@ paths:
 			body: JSON.stringify({ spec }),
 		});
 		await POST(req);
-		expect(JSON.parse(insertedValues[1].response)).toEqual({ val: 1 });
+		expect(JSON.parse(getInsertedMocks()[0].response)).toEqual({ val: 1 });
 	});
 
 	it('covers more fallback cases and methods', async () => {
@@ -422,7 +484,7 @@ paths:
 		});
 		await POST(req);
 		// Should have imported GET, HEAD, OPTIONS, DELETE (but not TRACE)
-        // insertedValues count will increase by 4
+		// insertedValues count will increase by 4
 	});
 
 	it('generates fallback responses for various types', async () => {
@@ -452,15 +514,19 @@ paths:
                   empty: {}
 `;
 		// Use impossible constraints to force fallback if generateFromSchema is strict,
-        // or just mock generateFromSchema. 
-        // Actually, we can use a schema with a format that JSF doesn't know and doesn't have a default for if it's invalid.
-        // But the easiest is to just use a schema that IS valid JSON but NOT valid JSON Schema for JSF.
-        const req = new NextRequest('http://localhost:3000/api/import/openapi', {
+		// or just mock generateFromSchema.
+		// Actually, we can use a schema with a format that JSF doesn't know and doesn't have a default for if it's invalid.
+		// But the easiest is to just use a schema that IS valid JSON but NOT valid JSON Schema for JSF.
+		const req = new NextRequest('http://localhost:3000/api/import/openapi', {
 			method: 'POST',
-			body: JSON.stringify({ spec: spec.replace('type: string', 'type: [string, number]').replace('enum: [val1]', 'enum: []') }),
+			body: JSON.stringify({
+				spec: spec
+					.replace('type: string', 'type: [string, number]')
+					.replace('enum: [val1]', 'enum: []'),
+			}),
 		});
 		await POST(req);
-		const resp = JSON.parse(insertedValues[1].response);
+		const resp = JSON.parse(getInsertedMocks()[0].response);
 		expect(resp).toHaveProperty('str');
 		expect(resp).toHaveProperty('num');
 		expect(resp).toHaveProperty('int');
@@ -515,7 +581,7 @@ definitions:
 			body: JSON.stringify({ spec }),
 		});
 		await POST(req);
-		const lastInsert = insertedValues[insertedValues.length - 1];
+		const [lastInsert] = getInsertedMocks();
 		expect(lastInsert.endpoint).toBe('/test');
 		const body = JSON.parse(lastInsert.response);
 		expect(body).toHaveProperty('id');
@@ -549,12 +615,12 @@ components:
 			method: 'POST',
 			body: JSON.stringify({ spec }),
 		});
-		
+
 		// This should not throw "Maximum call stack size exceeded" or "Converting circular structure to JSON"
 		const res = await POST(req);
 		expect(res.status).toBe(200);
-		
-		const lastInsert = insertedValues[insertedValues.length - 1];
+
+		const [lastInsert] = getInsertedMocks();
 		expect(lastInsert.endpoint).toBe('/test');
 		// The response might be {} or a partial object depending on how JSF/fallback handles it,
 		// but the key is that it didn't crash.
@@ -562,14 +628,55 @@ components:
 	});
 
 	it('returns 500 on database error', async () => {
-		mockDb.transaction = mock(async () => { throw new Error('fail'); });
+		mockDb.transaction = mock(async () => {
+			throw new Error('fail');
+		});
 		const req = new NextRequest('http://localhost:3000/api/import/openapi', {
 			method: 'POST',
-			body: JSON.stringify({ spec: 'openapi: 3.0.0\ninfo:\n  title: t\npaths: {}' }),
+			body: JSON.stringify({
+				spec: 'openapi: 3.0.0\ninfo:\n  title: t\npaths: {}',
+			}),
 		});
 		const res = await POST(req);
 		expect(res.status).toBe(500);
 		// Restore
-		mockDb.transaction = mock(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockDb));
+		mockDb.transaction = mock(async (cb: (tx: unknown) => Promise<unknown>) =>
+			cb(mockDb),
+		);
+	});
+
+	it('creates subfolders for nested OpenAPI paths and stores relative mock paths', async () => {
+		const spec = `
+openapi: 3.0.0
+info: { title: "Nested Import Test", version: "1.0.0" }
+paths:
+  /v1/admin/users/{id}/orders:
+    get:
+      responses:
+        '200': { description: "OK" }
+`;
+		const req = new NextRequest('http://localhost:3000/api/import/openapi', {
+			method: 'POST',
+			body: JSON.stringify({ spec }),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.importedCount).toBe(1);
+		expect(body.importedSubfoldersCount).toBe(3);
+
+		const subfolders = getInsertedSubfolders();
+		expect(subfolders.map((subfolder) => subfolder.mainPath)).toEqual([
+			'/v1',
+			'/v1/admin',
+			'/v1/admin/users',
+		]);
+
+		const [mockValue] = getInsertedMocks();
+		expect(mockValue.endpoint).toBe('/*/orders');
+		expect(mockValue.matchType).toBe('wildcard');
+		expect(mockValue.mockFolderId).toBeDefined();
 	});
 });

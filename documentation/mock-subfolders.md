@@ -49,6 +49,46 @@ Subfolders are managed through `/api/mock-subfolders`.
 
 `mainPath` is returned by the API but is not client-controlled. Renaming or moving a subfolder recomputes its `mainPath` and all descendant `mainPath` values.
 
+## MCP
+
+Agents can manage the same hierarchy through `manage_mock_subfolders`.
+
+- `list`: Requires `folderId` or `folderSlug`; optional `parentId` lists children; `parentId: null` lists root-level subfolders; `all: true` lists the full tree ordered by `mainPath`.
+- `create`: Requires `folderId` or `folderSlug` and `name`; optional `parentId` creates a nested child.
+- `get`: Requires `id`.
+- `update`: Requires `id`; optional `name` renames; optional `parentId` moves the subfolder and recomputes descendant paths.
+- `delete`: Requires `id`; only succeeds when the subfolder has no child subfolders or mocks.
+
+Example MCP sequence:
+
+```json
+{ "action": "create", "folderSlug": "api", "name": "Users" }
+```
+
+```json
+{
+  "action": "create",
+  "folderSlug": "api",
+  "parentId": "returned-users-subfolder-id",
+  "name": "Details"
+}
+```
+
+Then create a mock with `manage_mocks` using the returned `Details` subfolder ID:
+
+```json
+{
+  "action": "create",
+  "folderSlug": "api",
+  "mockFolderId": "returned-details-subfolder-id",
+  "name": "User Details",
+  "path": "/123",
+  "method": "GET",
+  "statusCode": 200,
+  "response": "{\"ok\":true}"
+}
+```
+
 Mocks use `mockFolderId`:
 
 - `mockFolderId: null` means the root of the top-level folder.

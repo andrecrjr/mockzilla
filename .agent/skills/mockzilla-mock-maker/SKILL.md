@@ -24,8 +24,13 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 | `manage_folders` | `get` | `id` OR `slug` | None |
 | `manage_folders` | `update` | `id`, `name` | `description` |
 | `manage_folders` | `delete` | `id` | None |
-| `manage_mocks` | `create` | `name`, `path`, `method` (e.g. GET), `statusCode` | `folderSlug` (preferred) OR `folderId`, `jsonSchema` (preferred), `response` (fallback), `matchType` (`exact`, `substring`, `wildcard`), `useDynamicResponse` (boolean) |
-| `manage_mocks` | `update` | `id` | `name`, `path`, `method`, `statusCode`, `jsonSchema`, `matchType`, `useDynamicResponse` |
+| `manage_mock_subfolders` | `list` | `folderSlug` OR `folderId` | `parentId`, `all` |
+| `manage_mock_subfolders` | `create` | `folderSlug` OR `folderId`, `name` | `parentId` |
+| `manage_mock_subfolders` | `get` | `id` | None |
+| `manage_mock_subfolders` | `update` | `id` | `name`, `parentId` |
+| `manage_mock_subfolders` | `delete` | `id` | None |
+| `manage_mocks` | `create` | `name`, `path`, `method` (e.g. GET), `statusCode` | `folderSlug` (preferred) OR `folderId`, `mockFolderId`, `jsonSchema` (preferred), `response` (fallback), `matchType` (`exact`, `substring`, `wildcard`), `useDynamicResponse` (boolean) |
+| `manage_mocks` | `update` | `id` | `name`, `path`, `method`, `statusCode`, `mockFolderId`, `jsonSchema`, `matchType`, `useDynamicResponse` |
 | `manage_mocks` | `preview`| `folderSlug`, `path` (the exact URL path to test), `method` | `contentType`, `queryParams`, `headers`, `bodyText`, `bodyJson` |
 
 > [!WARNING] WILDCARD PATH RULE
@@ -69,7 +74,8 @@ When using multiple `*` characters in a path, Mockzilla forms a **Composite Key*
 
 ```
 manage_folders (action: 'create' - if needed)
-  └─> manage_mocks (action: 'create')
+  └─> manage_mock_subfolders (action: 'create' - if nested organization is needed)
+        └─> manage_mocks (action: 'create', mockFolderId: subfolder.id)
         └─> manage_mocks (action: 'preview' - verify output)
               └─> manage_mocks (action: 'update' - iterate if needed)
                     └─> manage_mocks (action: 'preview' - confirm fix)
@@ -83,6 +89,7 @@ manage_folders (action: 'create' - if needed)
 | :--- | :--- | :--- |
 | **Realistic / Dynamic Data** | `manage_mocks` (action: `create` + `jsonSchema`) | JSON Schema + Faker + Interpolation. Auto-generates varied data on each request. |
 | **Static / Constant Response** | `manage_mocks` (action: `create` + `response`) | Quick for fixed responses (health checks, feature flags, enums). |
+| **Nested organization** | `manage_mock_subfolders` before `manage_mocks` | Creates a subfolder path like `/users/details`; pass the returned `id` as `mockFolderId` and keep mock `path` relative. |
 | **Iteration / Fix** | `manage_mocks` (action: `update` + `preview`) | Surgically update one field, re-verify. |
 | **Inspect existing** | `manage_mocks` (action: `get` / `list`) | Read before modifying to avoid overwriting fields. |
 
@@ -177,6 +184,7 @@ Reference generated fields within the same object to ensure data consistency. Us
 - **Strictness**: Use `additionalProperties: false` (objects) and `additionalItems: false` (arrays) to ensure the output matches the schema *exactly*.
 - **Always validate**: Call `preview_mock` immediately after `create_schema_mock` to check the generated data quality. Iterate with `update_mock` if needed.
 - **Prefer `folderSlug`**: Use `folderSlug` parameter instead of `folderId` when creating mocks—it's human-readable and avoids needing an extra lookup.
+- **Subfolder paths**: Use `manage_mock_subfolders` to create nested levels. For a subfolder with `mainPath: "/users/details"`, create mocks with `mockFolderId` set to that subfolder ID and `path` relative to the subfolder, such as `/123`; the served URL becomes `/api/mock/{folderSlug}/users/details/123`.
 - **Wildcard paths**: For path params like `/users/*`, set `matchType: "wildcard"` and add `variants` for specific ID cases (e.g., `test-admin`).
 - **Query param matching**: Use `queryParams` to lock a mock to a specific query string signature.
 

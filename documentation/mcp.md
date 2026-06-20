@@ -61,7 +61,7 @@ When you run this command, you will be prompted to select which specialized skil
 
 ## Tool Reference
 
-Mockzilla uses 6 consolidated manager tools to provide a clean, high-performance interface for AI agents. Each tool uses an `action` parameter to dispatch operations.
+Mockzilla uses 7 consolidated manager tools to provide a clean, high-performance interface for AI agents. Each tool uses an `action` parameter to dispatch operations.
 
 ### 1. Folders (`manage_folders`)
 Centralized management for mock folders.
@@ -71,7 +71,28 @@ Centralized management for mock folders.
 - `update`: Modify folder metadata.
 - `delete`: Remove a folder and all its contents.
 
-### 2. Mocks (`manage_mocks`)
+### 2. Mock Subfolders (`manage_mock_subfolders`)
+Nested organization inside a top-level folder.
+- `list`: List root-level subfolders, children of a `parentId`, or all subfolders with `all: true`.
+- `create`: Create a subfolder with `folderId` or `folderSlug`, optional `parentId`, and `name`.
+- `get`: Fetch one subfolder by ID.
+- `update`: Rename or move a subfolder by changing `name` or `parentId`.
+- `delete`: Delete an empty subfolder.
+
+Subfolder `mainPath` is derived by Mockzilla and returned in the result. To place a mock in a subfolder, pass the returned subfolder `id` as `mockFolderId` to `manage_mocks`. Keep the mock `path` relative to that subfolder.
+
+Example:
+
+```json
+{
+  "action": "create",
+  "folderSlug": "api",
+  "parentId": null,
+  "name": "Users"
+}
+```
+
+### 3. Mocks (`manage_mocks`)
 Unified tool for defining and testing API responses.
 - `list`: Paginated list of mocks, optionally filtered by folder.
 - `create`: Create a mock. If `jsonSchema` is provided without a `response`, a dynamic response is auto-generated.
@@ -80,7 +101,7 @@ Unified tool for defining and testing API responses.
 - `delete`: Delete a mock.
 - `preview`: Test what a mock would return given a path, method, and request context.
 
-### 3. Workflow Scenarios (`manage_scenarios`)
+### 4. Workflow Scenarios (`manage_scenarios`)
 Manage stateful, multi-step scenario containers.
 - `list`: List all active scenarios.
 - `create`: Create a container for isolated state.
@@ -88,7 +109,7 @@ Manage stateful, multi-step scenario containers.
 - `export`: Export scenario(s) to JSON for backup or analysis.
 - `import`: Bulk import scenarios and transitions from JSON data.
 
-### 4. Workflow Transitions (`manage_transitions`)
+### 5. Workflow Transitions (`manage_transitions`)
 Deep interaction with the logic engine steps.
 - `list`: List all rules for a specific scenario.
 - `create`: Define a "WHEN/THEN" rule (Path, Method, Conditions, Effects, Response).
@@ -96,7 +117,7 @@ Deep interaction with the logic engine steps.
 - `delete`: Remove a specific rule by its database ID.
 - `create_full`: Atomic creation of a scenario and all its transitions in a single call.
 
-### 5. Workflow Control (`workflow_control`)
+### 6. Workflow Control (`workflow_control`)
 Active state management and simulation.
 - `inspect`: View the current `state` and `tables` (mini-DB) for a scenario.
 - `reset`: Wipe the scenario state to start fresh.
@@ -104,7 +125,7 @@ Active state management and simulation.
 - `test`: Simulate a request end-to-end. Returns an `executionTrace` showing logic matching.
 - `evaluate_template`: Statelessly evaluate Handlebars templates against a provided context.
 
-### 6. Logs & Forensics (`manage_logs`)
+### 7. Logs & Forensics (`manage_logs`)
 Observe live traffic and debug failures.
 - `get`: Query application logs (filter by level, type, or text search).
 - `trace`: Reconstruct the chronological lifecycle of an HTTP request using its `reqId`.
