@@ -92,8 +92,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/123');
@@ -140,8 +140,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/456');
@@ -182,8 +182,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/999');
@@ -224,8 +224,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/999');
@@ -272,8 +272,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest(
@@ -322,8 +322,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest(
@@ -361,8 +361,8 @@ describe('Mock Serving — wildcard variants', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		// When no variants exist and wildcardRequireMatch is true, it should fall through

@@ -323,6 +323,7 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		const mockSubfolder = {
 			id: 'mock-folder-1',
 			folderId: 'folder-1',
+			slug: 'users/details',
 			mainPath: '/users/details',
 		};
 

@@ -201,9 +201,8 @@ describe('Mock Serving — matchType & search params', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			// Exact match returns empty, then fallback fetches all mocks
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/123');
@@ -249,8 +248,8 @@ describe('Mock Serving — matchType & search params', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([wildcardActive, wildcardBanned]);
+			if (selectCall === 2) return createMockBuilder([wildcardActive, wildcardBanned]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest(
@@ -286,8 +285,8 @@ describe('Mock Serving — matchType & search params', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([substringMock]);
+			if (selectCall === 2) return createMockBuilder([substringMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest(
@@ -337,8 +336,8 @@ describe('Mock Serving — matchType & search params', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([exactMock, wildcardMock]);
+			if (selectCall === 2) return createMockBuilder([exactMock, wildcardMock]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/123');

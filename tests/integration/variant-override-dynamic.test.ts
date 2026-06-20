@@ -86,8 +86,8 @@ describe('Mock Serving — variant override dynamic', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([dynamicMockWithVariant]);
+			if (selectCall === 2) return createMockBuilder([dynamicMockWithVariant]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/123');
@@ -132,8 +132,8 @@ describe('Mock Serving — variant override dynamic', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([]);
-			return createMockBuilder([dynamicMockWithVariant]);
+			if (selectCall === 2) return createMockBuilder([dynamicMockWithVariant]);
+			return createMockBuilder([]);
 		});
 
 		const req = new NextRequest('http://localhost:3000/api/mock/api/users/999');

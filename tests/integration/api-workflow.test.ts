@@ -71,6 +71,9 @@ import * as scenarioItemRoute from '../../app/api/workflow/scenarios/[slug]/rout
 import * as transitionsRoute from '../../app/api/workflow/transitions/route';
 import * as transitionItemRoute from '../../app/api/workflow/transitions/[id]/route';
 import * as execRoute from '../../app/api/workflow/exec/[scenarioSlug]/[...path]/route';
+import * as stateHandler from '../../app/api/workflow/state/[scenario]/route';
+import * as exportHandler from '../../app/api/workflow/export/route';
+import * as importHandler from '../../app/api/workflow/import/route';
 
 describe('Workflow API Integration', () => {
     beforeEach(() => {
@@ -380,8 +383,6 @@ describe('Workflow API Integration', () => {
     });
 
     describe('State API', () => {
-        const stateHandler = require('../../app/api/workflow/state/[scenario]/route');
-
         it('GET /api/workflow/state/[scenario] returns current state', async () => {
             mockDb.select = mock(() => createMockBuilder([{ data: { state: { foo: 'bar' }, tables: {} } }]));
 
@@ -421,9 +422,6 @@ describe('Workflow API Integration', () => {
     });
 
     describe('Export/Import API', () => {
-        const exportHandler = require('../../app/api/workflow/export/route');
-        const importHandler = require('../../app/api/workflow/import/route');
-
         it('GET /api/workflow/export returns all workflow data', async () => {
             let callCount = 0;
             mockDb.select = mock(() => {
