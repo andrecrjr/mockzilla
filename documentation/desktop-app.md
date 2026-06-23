@@ -21,33 +21,23 @@ If `MOCKZILLA_DATA_DIR` is not set, server and Docker builds keep using `./data`
 bun run desktop:dev
 bun run desktop:build
 make desktop-smoke
-make desktop-e2e
 ```
 
 `desktop:build` runs the Next standalone build, stages desktop resources, copies the local Node binary as the Tauri sidecar, and builds the installer for the current OS.
 
-`make desktop-smoke` validates the bundled Next server path with PGlite. It does not open a WebView.
+### Linux Build Prerequisites
 
-`make desktop-e2e` runs the real Tauri GUI through WebDriver. On Linux, install Tauri's WebKitGTK dependencies plus `webkit2gtk-driver` and `xvfb`, then run it with a display or `xvfb-run`.
-
-Tauri WebDriver desktop tests are supported on Linux and Windows. They are not supported on macOS because macOS does not provide a WKWebView driver tool.
-
-## GUI Test Dependencies
-
-Linux:
+Building for Linux (especially when packaging as an `AppImage` using `linuxdeploy`) requires `libfuse2` to be installed on the host system (particularly on newer distributions like Ubuntu 22.04+ where it is not pre-installed).
 
 ```bash
-sudo apt update
-sudo apt install -y \
-  libwebkit2gtk-4.1-dev \
-  libayatana-appindicator3-dev \
-  librsvg2-dev \
-  webkit2gtk-driver \
-  xvfb
-
-cargo install tauri-driver --locked
-xvfb-run -a bun run desktop:e2e
+sudo apt-get update && sudo apt-get install -y libfuse2
 ```
+
+Alternatively, if you do not want to build an `AppImage` (which avoids running `linuxdeploy`), you can remove `"appimage"` from the `"targets"` array in `src-tauri/tauri.conf.json`.
+
+`make desktop-smoke` validates the bundled Next server path with PGlite. It does not open a WebView.
+
+
 
 ## Release
 

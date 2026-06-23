@@ -81,7 +81,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -90,6 +90,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NO_STRIP: "true"
+          LD_LIBRARY_PATH: ${{ github.workspace }}/src-tauri/resources/lib
         with:
           tagName: v${{ needs.release.outputs.new_release_version }}
           releaseName: Mockzilla v${{ needs.release.outputs.new_release_version }}

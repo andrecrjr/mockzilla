@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
 	output: 'standalone',
-	serverExternalPackages: ['pg', '@electric-sql/pglite'],
+	serverExternalPackages: ['pg', '@electric-sql/pglite', 'handlebars'],
 	allowedDevOrigins: ['192.168.1.20'],
 	async rewrites() {
 		return [
@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
 			};
 		}
 		return config;
+	},
+	turbopack: {
+		resolveAlias: {
+			handlebars: 'handlebars/dist/handlebars.js',
+		},
 	},
 };
 

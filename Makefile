@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio desktop-build desktop-dev desktop-smoke desktop-e2e clean
+.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio desktop-build desktop-dev desktop-smoke clean
 
 # Default target
 help:
@@ -29,7 +29,6 @@ help:
 	@echo "  make desktop-dev     - Run the Tauri desktop app in development"
 	@echo "  make desktop-build   - Build desktop installers for this OS"
 	@echo "  make desktop-smoke   - Smoke-test the staged desktop server"
-	@echo "  make desktop-e2e     - Run Tauri GUI WebDriver tests locally"
 	@echo ""
 	@echo "Utility Commands:"
 	@echo "  make clean         - Remove all containers, volumes, and images"
@@ -105,12 +104,9 @@ desktop-build:
 	bun run desktop:build
 
 desktop-smoke:
-	bun run build
+	bun run build:desktop
 	bun run desktop:prepare
 	bun run desktop:smoke
-
-desktop-e2e:
-	bun run desktop:e2e
 
 # Utility commands
 clean:
