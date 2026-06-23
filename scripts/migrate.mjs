@@ -4,7 +4,29 @@ import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
 import { sql } from 'drizzle-orm';
+import path from 'node:path';
 import pg from 'pg';
+
+function getPgliteDataDir() {
+	return path.resolve(process.env.MOCKZILLA_DATA_DIR || './data');
+}
+
+function assertPgliteDataDir(dataDir, fs) {
+	if (!fs.existsSync(dataDir)) {
+		fs.mkdirSync(dataDir, { recursive: true });
+		return;
+	}
+
+	const entries = fs.readdirSync(dataDir);
+	if (entries.length === 0 || entries.includes('PG_VERSION')) {
+		return;
+	}
+
+	throw new Error(
+		`PGlite data directory must be empty or contain an existing PostgreSQL data directory. ` +
+			`Found unrelated files in ${dataDir}. Use a dedicated subdirectory such as ${path.join(dataDir, 'pglite')}.`,
+	);
+}
 
 async function seedProduction(db) {
 	if (process.env.NODE_ENV !== 'production' && process.env.FORCE_SEED !== 'true')
@@ -153,12 +175,11 @@ async function runMigrations() {
 	} else {
 		console.log('DATABASE_URL not set, running PGlite migrations...');
 		try {
-			// In Docker, mount a volume to /app/data for persistence
-			const dataDir = './data';
+			// In Docker, mount a volume to /app/data for persistence.
+			// In desktop builds, MOCKZILLA_DATA_DIR points at a dedicated PGlite directory.
+			const dataDir = getPgliteDataDir();
 			const fs = await import('node:fs');
-			if (!fs.existsSync(dataDir)) {
-				fs.mkdirSync(dataDir, { recursive: true });
-			}
+			assertPgliteDataDir(dataDir, fs);
 			const client = new PGlite(dataDir);
 			const db = drizzlePglite(client);
 			console.log('Running PGlite migrations...');

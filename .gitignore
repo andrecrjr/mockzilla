@@ -19,6 +19,9 @@
 
 # production
 /build
+/desktop-dist/server
+/src-tauri/binaries/mockzilla-node-*
+/src-tauri/target
 
 # misc
 .DS_Store

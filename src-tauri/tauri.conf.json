@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "Mockzilla",
+	"version": "1.0.0",
+	"identifier": "dev.mockzilla.app",
+	"build": {
+		"beforeDevCommand": "bun run dev",
+		"beforeBuildCommand": "bun run build && bun run desktop:prepare",
+		"devUrl": "http://localhost:36666",
+		"frontendDist": "../desktop-dist/empty"
+	},
+	"app": {
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": ["nsis", "dmg", "appimage", "deb", "rpm"],
+		"externalBin": ["binaries/mockzilla-node"],
+		"resources": {
+			"../desktop-dist/server": "desktop-server"
+		}
+	}
+}

@@ -105,6 +105,8 @@ Copy `.env.example` to `.env` and customize as needed. Here are the key configur
 
 ### Mockzilla Specifics
 - `MOCKZILLA_MAX_ITEMS`: **(New)** Controls the maximum number of items generated in arrays when using Dynamic Responses (JSON Schema). Default is `1000`. This prevents accidental memory exhaustion from massive schemas.
+- `MOCKZILLA_DESKTOP`: Set to `1` by the Tauri launcher for desktop runtime detection.
+- `MOCKZILLA_DATA_DIR`: Absolute directory for PGlite data in desktop builds. Tauri sets this to a dedicated `pglite` folder under the OS app-data directory. If unset, Mockzilla uses `./data`.
 - `DEPLOY_MODE`: Controls the application's feature set.
   - `full` (default): Enables the complete Mockzilla dashboard and API mocking engine.
   - `landing`: Hides the dashboard and API routes, serving only the marketing landing page. Useful for public-facing informational sites.

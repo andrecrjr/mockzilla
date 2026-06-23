@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio clean
+.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio desktop-build desktop-dev desktop-smoke desktop-e2e clean
 
 # Default target
 help:
@@ -24,6 +24,12 @@ help:
 	@echo "  make landing-up      - Start landing-only environment"
 	@echo "  make landing-down    - Stop landing-only environment"
 	@echo "  make landing-logs    - View landing-only logs"
+	@echo ""
+	@echo "Desktop Commands:"
+	@echo "  make desktop-dev     - Run the Tauri desktop app in development"
+	@echo "  make desktop-build   - Build desktop installers for this OS"
+	@echo "  make desktop-smoke   - Smoke-test the staged desktop server"
+	@echo "  make desktop-e2e     - Run Tauri GUI WebDriver tests locally"
 	@echo ""
 	@echo "Utility Commands:"
 	@echo "  make clean         - Remove all containers, volumes, and images"
@@ -90,6 +96,21 @@ landing-logs:
 	docker logs -f mockzilla-landing
 
 landing-run: prod-build landing-up
+
+# Desktop commands
+desktop-dev:
+	bun run desktop:dev
+
+desktop-build:
+	bun run desktop:build
+
+desktop-smoke:
+	bun run build
+	bun run desktop:prepare
+	bun run desktop:smoke
+
+desktop-e2e:
+	bun run desktop:e2e
 
 # Utility commands
 clean:

@@ -20,6 +20,15 @@ const nextConfig: NextConfig = {
 			},
 		];
 	},
+	webpack(config, { isServer }) {
+		if (!isServer) {
+			config.resolve.alias = {
+				...config.resolve.alias,
+				handlebars: 'handlebars/dist/handlebars.js',
+			};
+		}
+		return config;
+	},
 };
 
 export default nextConfig;

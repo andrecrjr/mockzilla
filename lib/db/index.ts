@@ -5,10 +5,13 @@ import type { PgliteDatabase } from 'drizzle-orm/pglite';
 import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { Pool } from 'pg';
 import * as schema from './schema';
+import { getPgliteDataDir } from './runtime';
 
 type DbInstance = NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;
 
 let db: DbInstance;
+
+export { getPgliteDataDir };
 
 export async function initDb(url?: string) {
 	if (url) {
@@ -26,8 +29,9 @@ export async function initDb(url?: string) {
 
 	console.log('DATABASE_URL not set, falling back to PGlite');
 	// Create PGlite instance with persistent storage
-	// In Docker, mount a volume to /app/data for persistence
-	const dataDir = './data';
+	// In Docker, mount a volume to /app/data for persistence.
+	// In desktop builds, MOCKZILLA_DATA_DIR points at a dedicated PGlite directory.
+	const dataDir = getPgliteDataDir();
 	if (!fs.existsSync(dataDir)) {
 		fs.mkdirSync(dataDir, { recursive: true });
 	}

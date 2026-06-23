@@ -14,6 +14,7 @@ High-performance mocking server for JSON and stateful API workflows.
 - [Agent Skills](/documentation/skills.md) - Instruction sets (Creator, Architect).
 - [AGENTS.md](/AGENTS.md) - Capability catalog.
 - [Technical Setup](/documentation/technical-index.md) - Docker, Makefiles, and config.
+- [Desktop App](/documentation/desktop-app.md) - Tauri packaging for Windows, macOS, and Linux.
 
 ## 🛠️ Observability
 
