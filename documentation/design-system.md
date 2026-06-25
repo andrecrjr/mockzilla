@@ -102,6 +102,7 @@ While we use standard Tailwind spacing utilities, certain patterns are prevalent
 *   **Form Spacing**: Form elements are typically stacked with `space-y-4` or `space-y-6`.
 *   **Dialog Spacing**: `DialogContent` usually includes `p-6` with `gap-4` for headers and footers.
 *   **Global Footer**: `components/site-footer.tsx` is rendered from the root layout so every page ends with the AC-JR open-source attribution and GitHub link.
+*   **Mock List Overflow**: Mock cards contain user-controlled names, endpoint paths, query parameters, and generated URLs. Keep flex children on these cards shrinkable with `min-w-0`, keep method/status/match badges grouped in the metadata row, place editable endpoint controls on their own row, and truncate long URL fields inside inputs instead of allowing path text to set the page width.
 
 ### Custom Utilities
 *   **`.scrollbar-thin`**: A custom utility for Firefox and Webkit to provide a non-obtrusive scrolling experience.

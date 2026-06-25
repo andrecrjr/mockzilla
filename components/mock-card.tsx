@@ -131,31 +131,18 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 
 	return (
 		<Card className="border-border bg-card p-6 transition-colors hover:bg-accent/5">
-			<div className="space-y-4">
-				<div className="flex items-start justify-between">
-					<div className="flex-1">
-						<h3 className="font-semibold text-card-foreground">{mock.name}</h3>
+			<div className="min-w-0 space-y-4">
+				<div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+					<div className="min-w-0 flex-1">
+						<h3 className="truncate font-semibold text-card-foreground">
+							{mock.name}
+						</h3>
 						<div className="mt-2 flex flex-wrap items-center gap-2">
 							<span
 								className={`inline-block rounded px-2 py-1 text-xs font-medium ${getMethodColor(mock.method)}`}
 							>
 								{mock.method}
 							</span>
-							<div className="flex items-center rounded bg-muted h-7 px-2 border border-transparent focus-within:border-ring/50 focus-within:ring-1 focus-within:ring-ring/50">
-								<span className="text-sm font-mono text-muted-foreground/60 select-none">
-									/{folder?.slug}
-									{subfolderPrefix}
-								</span>
-								<Input
-									value={editedPath}
-									onChange={(e) => setEditedPath(e.target.value)}
-									onBlur={handleSavePath}
-									onKeyDown={handleKeyDown}
-									className="h-full border-0 bg-transparent px-1 font-mono text-sm text-muted-foreground shadow-none focus-visible:ring-0"
-									style={{ width: `${Math.max(1, editedPath.length + 1)}ch` }}
-									title="Edit path directly"
-								/>
-							</div>
 							<span
 								className={`inline-block rounded px-2 py-1 text-xs font-medium ${getStatusCodeColor(mock.statusCode)}`}
 							>
@@ -167,7 +154,8 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 							{(mock.meta as { proxyTargetUrl?: string })?.proxyTargetUrl && (
 								<Badge
 									variant="secondary"
-									className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+									className="max-w-full truncate border-blue-500/20 bg-blue-500/10 text-xs text-blue-600 dark:text-blue-400"
+									title={(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
 								>
 									Proxy: {(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
 								</Badge>
@@ -181,14 +169,33 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 									</Badge>
 								)}
 						</div>
+						<div className="mt-2 flex h-7 min-w-0 max-w-full items-center rounded border border-transparent bg-muted px-2 focus-within:border-ring/50 focus-within:ring-1 focus-within:ring-ring/50">
+							<span className="min-w-0 shrink truncate text-sm font-mono text-muted-foreground/60 select-none">
+								/{folder?.slug}
+								{subfolderPrefix}
+							</span>
+							<Input
+								value={editedPath}
+								onChange={(e) => setEditedPath(e.target.value)}
+								onBlur={handleSavePath}
+								onKeyDown={handleKeyDown}
+								className="h-full min-w-[6rem] flex-1 border-0 bg-transparent px-1 font-mono text-sm text-muted-foreground shadow-none focus-visible:ring-0"
+								title="Edit path directly"
+							/>
+						</div>
 						{queryParamsString && (
-							<div className="mt-2 flex flex-wrap items-center gap-1">
+							<div className="mt-2 flex min-w-0 flex-wrap items-center gap-1">
 								<span className="text-xs text-muted-foreground">
 									Required params:
 								</span>
 								{Object.entries(mock.queryParams as Record<string, string>).map(
 									([key, value]) => (
-										<Badge key={key} variant="secondary" className="text-xs">
+										<Badge
+											key={key}
+											variant="secondary"
+											className="max-w-full truncate text-xs"
+											title={`${key}=${value}`}
+										>
 											{key}={value}
 										</Badge>
 									),
@@ -196,7 +203,7 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 							</div>
 						)}
 					</div>
-					<div className="flex gap-1">
+					<div className="flex shrink-0 gap-1">
 						{onDuplicate && (
 							<Button
 								variant="ghost"
@@ -222,11 +229,11 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 
 				<div className="space-y-2">
 					<Label className="text-xs text-muted-foreground">Mock URL</Label>
-					<div className="flex gap-2">
+					<div className="flex min-w-0 gap-2">
 						<Input
 							value={mockUrlFull}
 							readOnly
-							className="h-9 flex-1 bg-muted/50 px-3 font-mono text-sm text-muted-foreground border-input"
+							className="h-9 min-w-0 flex-1 border-input bg-muted/50 px-3 font-mono text-sm text-muted-foreground"
 						/>
 						<Button
 							variant="outline"
