@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/andrecrjr/mockzilla/compare/v1.0.0...v1.0.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* bootstrap desktop server entrypoint ([9a2ddd9](https://github.com/andrecrjr/mockzilla/commit/9a2ddd961ff1b94f68c15c204ba25098ff6365bf))
+* update release workflow versioning ([dfbdcae](https://github.com/andrecrjr/mockzilla/commit/dfbdcae492025703fdac5f2ec008e5e71c356fc2))
+
 # 1.0.0 (2026-06-25)
 
 
