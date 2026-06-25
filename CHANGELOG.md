@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/andrecrjr/mockzilla/compare/v1.0.1...v1.0.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* update docker builds ([dae1a1b](https://github.com/andrecrjr/mockzilla/commit/dae1a1b5ea8e69ed3d4ff6a96307565a8a2d1ea6))
+
 ## [1.0.1](https://github.com/andrecrjr/mockzilla/compare/v1.0.0...v1.0.1) (2026-06-25)
 
 
