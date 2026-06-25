@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/andrecrjr/mockzilla/compare/v1.0.2...v1.0.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* update process for docker and desktop ([7e6cb25](https://github.com/andrecrjr/mockzilla/commit/7e6cb25ae21c6c949eaa7f20a764efaa790cc279))
+
 ## [1.0.2](https://github.com/andrecrjr/mockzilla/compare/v1.0.1...v1.0.2) (2026-06-25)
 
 
