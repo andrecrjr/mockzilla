@@ -37,6 +37,12 @@ Desktop builds set `MOCKZILLA_DATA_DIR` to a dedicated `pglite` folder inside th
 
 If `MOCKZILLA_DATA_DIR` is not set, server and Docker builds keep using `./data`.
 
+## Log Storage
+
+Desktop builds set `MOCKZILLA_LOG_DIR` to a writable `logs` folder beside the desktop `pglite` data directory. The Next.js server writes `mockzilla.log` there instead of creating `.logs` under the bundled server install path, which can be read-only after Linux deb/AppImage installation.
+
+For non-desktop runs, logs keep using `.logs/mockzilla.log` under the current working directory. Set `MOCKZILLA_LOG_DIR` to override the log location explicitly.
+
 ## Local Commands
 
 ```bash

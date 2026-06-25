@@ -1,6 +1,6 @@
 ---
 name: mockzilla-workflow-architect
-description: Specialized skill for designing complex, stateful workflows, logic, and transitions in Mockzilla.
+description: Use when designing Mockzilla stateful scenarios, workflow transitions, action-driven APIs, mini-DB state, Handlebars responses/effects, auth flows, checkouts, or persistent CRUD simulations.
 ---
 
 # Mockzilla Workflow Architect Skill
@@ -13,6 +13,7 @@ description: Specialized skill for designing complex, stateful workflows, logic,
 
 ## 📜 External References
 
+- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools, actions, and deprecated names to avoid.
 - [Logic Operators Guide](./resources/logic-operators.md): Syntax and use cases for `eq`, `neq`, `exists`, etc.
 - [Complex Flow Recipes](./examples/complex-scenarios.md): Templates for OAuth2, Checkout, and multi-step forms.
 
@@ -155,3 +156,11 @@ manage_scenarios (action: 'create')
 
 - **For Data Quality**: If the response bodies look unrealistic, switch to `mockzilla-mock-maker` to improve JSON schemas.
 - **For Diagnostics**: If a transition refuses to fire unexpectedly, switch to `mockzilla-logic-doctor` for a forensic audit.
+
+## ✅ Before Finishing
+
+- Create large scenarios with `manage_transitions` (action: `create_full`) when practical.
+- Include fallback transitions for unhandled cases.
+- Test each core path with `workflow_control` (action: `test`).
+- Inspect state with `workflow_control` (action: `inspect`) after tests that should mutate state.
+- Export scenarios before bulk updates and update `documentation/` when workflow conventions change.

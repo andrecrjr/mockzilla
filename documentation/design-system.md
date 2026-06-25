@@ -64,6 +64,10 @@ Workflow mode uses a color-coding system to distinguish between State and Databa
 
 ### Custom Documentation Styles
 The documentation components (`@components/docs/**`) use a specific "Editor" theme for code previews.
+
+The docs header logo uses the shared `mockzilla-logo.png` asset inside a fixed-height container. Keep the rendered image shorter than the wrapper height so the transparent bitmap is not clipped by the rounded overflow mask.
+
+Docs previous/next navigation links are styled as bordered controls inside the MDX article. Keep that navigation wrapped with `not-prose` and keep `no-underline hover:no-underline` on the links so prose typography does not make them look like inline text links.
 *   **Editor Block**: `bg-[#1e1e1e] text-white p-4 rounded-lg overflow-x-auto shadow-inner`
 *   **Tip/Note Cards**: `bg-primary/5 border border-primary/20 rounded-lg p-4`
 

@@ -136,42 +136,37 @@ Test frontend loading states by progressing through "Stages".
 
 ## MCP Integration
 
-Mockzilla exposes **24 specialized tools** to AI assistants (Claude, Cursor, etc.). Use `inspect_workflow_state` during development to watch your Mini-DB tables evolve in real-time as your application makes API calls.
-
----
-
-## MCP Integration
-
 Use AI assistants to interact with the Workflow engine via the MCP server at `app/api/[transport]/route.ts`.
 
 ### Available Tools
 
-Mockzilla exposes **24 specialized tools** to AI assistants. They are grouped into four categories:
+Mockzilla exposes consolidated manager tools to AI assistants. Each tool uses an `action` parameter so agents can work through a small, stable interface.
 
 #### 1. Folders & Mocks
-- `list_folders`, `create_folder`, `get_folder`, `update_folder`, `delete_folder`
-- `list_mocks`, `get_mock`, `create_mock`, `update_mock`, `delete_mock`
-  - Note: `create_mock` and `list_mocks` support `folderSlug` for easier AI automation.
-- `create_schema_mock` (**Recommended** for dynamic data)
-- `preview_mock` (Validate responses)
+- `manage_folders`: `list`, `create`, `get`, `update`, `delete`
+- `manage_mock_subfolders`: `list`, `create`, `get`, `update`, `delete`
+- `manage_mocks`: `list`, `create`, `get`, `update`, `delete`, `preview`
+  - Use `manage_mocks` (action: `create`) with `jsonSchema` for dynamic data.
+  - Use `manage_mocks` (action: `preview`) to validate responses.
 
 #### 2. Workflow Scenarios
-- `list_workflow_scenarios`
-- `create_workflow_scenario`, `delete_workflow_scenario`
-- `export_workflow`, `import_workflow` (Snapshot and restore)
+- `manage_scenarios`: `list`, `create`, `delete`, `export`, `import`
+  - Use `manage_scenarios` (action: `export`) before bulk workflow changes.
 
 #### 3. Transitions & State
-- `list_workflow_transitions`
-- `create_workflow_transition`, `update_workflow_transition`, `delete_workflow_transition`
-- `inspect_workflow_state` (View mini-DB and state variables)
-- `reset_workflow_state` (Wipe scenario data)
-- `test_workflow` (Simulate requests)
+- `manage_transitions`: `list`, `create`, `update`, `delete`, `create_full`
+- `workflow_control`: `inspect`, `reset`, `seed`, `test`, `evaluate_template`
+  - Use `workflow_control` (action: `inspect`) to view mini-DB tables and state variables.
+  - Use `workflow_control` (action: `test`) to simulate requests.
+
+#### 4. Logs & Forensics
+- `manage_logs`: `get`, `trace`, `clear`
 
 For detailed installation and configuration, see `documentation/mcp.md`.
 
 ### LLM Rules & Constraints
 
-When using `create_workflow_transition` or `update_workflow_transition`, you MUST follow these validation rules. **Failure to follow these rules will result in validation errors.**
+When using `manage_transitions` (action: `create` or `update`), you MUST follow these validation rules. **Failure to follow these rules will result in validation errors.**
 
 #### 1. Conditions
 - **Format**: use the explicit rule array format for clarity.
@@ -205,4 +200,3 @@ When using `create_workflow_transition` or `update_workflow_transition`, you MUS
   ```
 - **Interpolation**: Fully supported via Handlebars. Use `{{state}}`, `{{db}}`, `{{$ or input}}`, and `{{faker}}`.
 - ✅ **Dynamic Logic**: You can use `{{#if}}` and `{{#each}}` inside response bodies to create complex data structures.
-

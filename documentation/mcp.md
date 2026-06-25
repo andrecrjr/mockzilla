@@ -131,6 +131,8 @@ Observe live traffic and debug failures.
 - `trace`: Reconstruct the chronological lifecycle of an HTTP request using its `reqId`.
 - `clear`: Wipe the log file.
 
+The log file lives at `.logs/mockzilla.log` for web/dev runs. Packaged desktop builds use `MOCKZILLA_LOG_DIR/mockzilla.log`, which defaults to a writable `logs` folder beside the desktop PGlite data directory.
+
 ---
 
 ## Workflow Rules & Guidelines

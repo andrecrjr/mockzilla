@@ -1,6 +1,6 @@
 ---
 name: mockzilla-spec-translator
-description: Elite API Architect for industrial-grade project bootstrapping from OpenAPI, technical specs, or Jira requirements.
+description: Use when translating OpenAPI, Swagger, technical specs, Jira requirements, or endpoint inventories into Mockzilla folders, subfolders, stateless mocks, variants, and stateful workflows.
 ---
 
 # 🏗️ Mockzilla Spec Translator: Elite Architect
@@ -12,7 +12,11 @@ description: Elite API Architect for industrial-grade project bootstrapping from
 2.  **Schema Strictness**: Always set `additionalProperties: false`. A mock that allows "anything" is a mock that hides bugs.
 3.  **Consistent IDs**: Ensure that if an ID appears in multiple mocks (e.g., `userId`), it follows a consistent format (e.g., UUID vs. Serial).
 4.  **Proactive Variants**: If a spec mentions an error code (401, 403, 422), implement it immediately as a wildcard variant.
-5.  **Always verify**: Call `preview_mock` on the first 3 primary endpoints before finishing.
+5.  **Always verify**: Call `manage_mocks` (action: `preview`) on the first 3 primary endpoints before finishing.
+
+## References
+
+- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools, actions, and deprecated names to avoid.
 
 ## 🛠️ Available MCP Tools
 
@@ -48,7 +52,7 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 - **Polymorphism**: If a spec uses `oneOf` or `anyOf`, represent this using a complex JSON Schema with `anyOf` sub-objects.
 - **Path Params**: For `/users/:id`, set `path: "/users/*"`, `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
 - **Nested Resource Groups**: When a spec is naturally grouped by tag or prefix, create subfolders with `manage_mock_subfolders`, then pass the returned `id` as `mockFolderId` and keep each mock path relative to that subfolder.
-- **One-Shot State**: If the spec defines a complex CRUD flow, use `create_full_workflow` instead of individual `create_workflow_transition` calls to reduce latency.
+- **One-Shot State**: If the spec defines a complex CRUD flow, use `manage_transitions` (action: `create_full`) instead of many `manage_transitions` (action: `create`) calls to reduce latency.
 
 ## 🔄 Orchestration Flow
 
@@ -80,3 +84,11 @@ manage_folders (action: 'list' - check for duplicates)
 
 - **For Logic**: If the spec defines state (e.g., "Updating a user increments the revision count"), switch to `mockzilla-workflow-architect`.
 - **For Fine-Tuning**: For surgical UI-specific data tweaks on an existing mock, switch to `mockzilla-mock-maker`.
+
+## ✅ Before Finishing
+
+- Use only consolidated manager tools: `manage_folders`, `manage_mock_subfolders`, `manage_mocks`, `manage_scenarios`, `manage_transitions`, and `workflow_control`.
+- Preview at least the first 3 primary stateless endpoints with `manage_mocks` (action: `preview`).
+- Test representative stateful flows with `workflow_control` (action: `test`) and inspect state with `workflow_control` (action: `inspect`).
+- List created mocks and transitions for a final audit.
+- Update `documentation/` when imported conventions, examples, or skill guidance change.

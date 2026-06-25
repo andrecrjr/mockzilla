@@ -35,11 +35,11 @@ export function DocsHeader({ sidebar }: DocsHeaderProps) {
 						className="flex items-center gap-4 font-bold text-xl"
 						title="Back to App"
 					>
-						<div className="flex h-10 w-24 items-center justify-center rounded-lg overflow-hidden">
+						<div className="flex h-10 w-28 items-center justify-center rounded-lg overflow-hidden">
 							<img
 								src="/mockzilla-logo.png"
 								alt="Mockzilla logo"
-								className="h-12 w-full object-contain invert dark:filter-none"
+								className="h-9 w-full object-contain invert dark:filter-none"
 							/>
 						</div>
 					</Link>

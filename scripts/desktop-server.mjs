@@ -58,11 +58,13 @@ requireFile(migratePath, 'Migration script');
 
 const port = Number(process.env.PORT || (await findAvailablePort(36666)));
 const dataDir = process.env.MOCKZILLA_DATA_DIR || path.join(root, 'data');
+const logDir = process.env.MOCKZILLA_LOG_DIR || path.resolve(dataDir, '..', 'logs');
 const env = {
 	...process.env,
 	HOSTNAME: '127.0.0.1',
 	MOCKZILLA_DESKTOP: '1',
 	MOCKZILLA_DATA_DIR: dataDir,
+	MOCKZILLA_LOG_DIR: logDir,
 	NODE_ENV: 'production',
 	PORT: String(port),
 };

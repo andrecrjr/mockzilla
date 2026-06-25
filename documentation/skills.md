@@ -4,6 +4,26 @@ Agent Skills are specialized instruction sets (located in `.agent/skills/`) that
 
 ---
 
+## Maintenance Contract
+
+Skills should instruct agents to use the consolidated MCP manager tools:
+
+| Area | Tool |
+| :--- | :--- |
+| Folders | `manage_folders` |
+| Mock subfolders | `manage_mock_subfolders` |
+| Mocks | `manage_mocks` |
+| Workflow scenarios | `manage_scenarios` |
+| Workflow transitions | `manage_transitions` |
+| Workflow state/testing | `workflow_control` |
+| Logs and traces | `manage_logs` |
+
+Avoid deprecated granular names such as `preview_mock`, `create_schema_mock`, `inspect_workflow_state`, `test_workflow`, and `create_workflow_transition` in skill instructions. The canonical mapping lives in `.agent/skills/shared/mcp-manager-tools.md`.
+
+Each skill also has `agents/openai.yaml` metadata for UI display and default prompts. Keep that metadata aligned with the corresponding `SKILL.md` frontmatter.
+
+---
+
 ## 🛠️ Available Skills
 
 ### 1. Mockzilla Mock Maker (`mockzilla-mock-maker`)
@@ -11,21 +31,25 @@ Expert for high-fidelity, data-heavy mocks using JSON Schema + Faker.
 - **Resources**: [JSON Faker Mock References](/documentation/json-schema-faker.md)
 - **Best for**: Catalogs, User profiles, Search results, Analytics events.
 - **Principle**: "Stateless First" - Use powerful schemas for 90% of your mocking needs.
+- **Verify with**: `manage_mocks` (action: `preview`).
 
 ### 2. Mockzilla Workflow Architect (`mockzilla-workflow-architect`)
 Expert for stateful, interactive API scenarios and business logic.
 - **Best for**: Checkouts, Authentication flows, Inventory management, State-dependent responses.
 - **Principle**: "Action-Driven" - Endpoints are actions, and state changes are side-effects stored in the mini-DB.
+- **Verify with**: `workflow_control` (actions: `test`, `inspect`).
 
 ### 3. Mockzilla Spec Translator (`mockzilla-spec-translator`)
 High-velocity architect for project bootstrapping from external specs.
 - **Best for**: Migrating from OpenAPI, Jira requirements, or legacy documentation.
 - **Workflow**: Automated creation of folders and high-fidelity schema mocks.
+- **Verify with**: `manage_mocks` (action: `preview`) for stateless endpoints and `workflow_control` (action: `test`) for stateful flows.
 
 ### 4. Mockzilla Logic Doctor (`mockzilla-logic-doctor`)
 Forensic specialist for debugging complex workflow matching and state issues.
 - **Best for**: Resolving "No matching transition found" and state corruption errors.
 - **Method**: Step-by-step reproduction and surgical fixes using MCP tools.
+- **Verify with**: `manage_logs` (action: `trace`) and `workflow_control` (actions: `test`, `inspect`).
 
 ---
 
@@ -62,3 +86,4 @@ Skills are activated through **Inference-based Activation**. You don't need to m
 - **Mention the skill name**: It helps the agent identify the best expert for the task.
 - **Provide a spec**: Skills work best when you provide an OpenAPI or JSON Schema as a starting point.
 - **Verify state**: When using the Workflow Architect, ask the agent to "Show me the mini-DB tables" to confirm state is being handled correctly.
+- **Keep docs synced**: When changing skill behavior, update this page and the relevant reference in `documentation/`.

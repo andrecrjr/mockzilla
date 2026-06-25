@@ -1,0 +1,3 @@
+display_name: Mockzilla Spec Translator
+short_description: Translate OpenAPI, Swagger, Jira, or endpoint specs into Mockzilla mocks and workflows.
+default_prompt: Use mockzilla-spec-translator to convert this API spec into organized Mockzilla folders, subfolders, realistic mocks, variants, and workflows.

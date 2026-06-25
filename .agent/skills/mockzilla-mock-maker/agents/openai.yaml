@@ -1,0 +1,3 @@
+display_name: Mockzilla Mock Maker
+short_description: Create realistic stateless Mockzilla mocks with JSON Schema, Faker, variants, and previews.
+default_prompt: Use mockzilla-mock-maker to create or improve realistic stateless mocks with manage_mocks, JSON Schema Faker, wildcard variants, and preview verification.

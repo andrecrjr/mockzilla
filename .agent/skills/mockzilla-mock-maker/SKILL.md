@@ -1,6 +1,6 @@
 ---
 name: mockzilla-mock-maker
-description: Expert for creating high-quality, stateless mocks and dynamic schemas in Mockzilla.
+description: Use when creating stateless Mockzilla mocks, JSON Schema Faker responses, wildcard mock variants, realistic API response data, or query/header/body-aware previews through manage_mocks.
 ---
 
 # Mockzilla Mock Maker Skill
@@ -13,6 +13,7 @@ description: Expert for creating high-quality, stateless mocks and dynamic schem
 
 ## 📜 External References
 
+- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools, actions, and deprecated names to avoid.
 - [JSON Faker Mock References](./resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
 
 ## Available MCP Tools & Signatures
@@ -64,7 +65,7 @@ When using multiple `*` characters in a path, Mockzilla forms a **Composite Key*
 1.  **Schema First**: Use `manage_mocks` (action: `create`) with `jsonSchema` for the majority of UI development. It provides realistic, varied data without manual maintenance.
 2.  **Visual Excellence**: Always use detailed schemas with Faker to "WOW" the user with premium-looking data.
 3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
-4.  **Evaluate before Build**: Use `workflow_control` (action: `evaluate_template`) to verify complex `{$.path}` mappings if you are unsure of the path structure.
+4.  **Evaluate before Build**: Use `workflow_control` (action: `evaluate_template`) only for Handlebars templates. For JSON Schema interpolation, use `manage_mocks` (action: `preview`) against a real request context.
 5.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
 6.  **Verify Always**: Call `manage_mocks` (action: `preview`) to validate every mock immediately after creation.
 
@@ -97,66 +98,9 @@ manage_folders (action: 'create' - if needed)
 
 ## 🎨 Premium JSON Schema Patterns
 
-Use these patterns to generate data that feels like a real production API.
-
-### 1. User Profile (The "Sleek" Template)
-```json
-{
-  "type": "object",
-  "required": ["id", "profile", "contact", "status"],
-  "additionalProperties": false,
-  "properties": {
-    "id": { "type": "string", "faker": "string.uuid" },
-    "profile": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "fullName": { "type": "string", "faker": "person.fullName" },
-        "jobTitle": { "type": "string", "faker": "person.jobTitle" },
-        "avatar": { "type": "string", "faker": "image.avatar" },
-        "bio": { "type": "string", "faker": "lorem.sentence" }
-      }
-    },
-    "contact": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "email": { "type": "string", "faker": "internet.email" },
-        "phone": { "type": "string", "faker": "phone.number" }
-      }
-    },
-    "status": { "type": "string", "enum": ["Active", "Idle", "Away"] }
-  }
-}
-```
-
-### 2. E-Commerce Product
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": { "type": "string", "faker": "string.uuid" },
-    "name": { "type": "string", "faker": "commerce.productName" },
-    "price": { "type": "string", "faker": "commerce.price" },
-    "category": { "type": "string", "faker": "commerce.department" },
-    "rating": { "type": "number", "faker": { "number.float": { "min": 3, "max": 5, "precision": 0.1 } } },
-    "inStock": { "type": "boolean", "faker": "datatype.boolean" }
-  }
-}
-```
-
-### 3. Financial Transaction
-```json
-{
-  "type": "object",
-  "properties": {
-    "txId": { "type": "string", "faker": "string.alphanumeric" },
-    "amount": { "type": "string", "faker": { "finance.amount": { "min": 10, "max": 1000, "dec": 2, "symbol": "$" } } },
-    "date": { "type": "string", "faker": "date.recent" },
-    "account": { "type": "string", "faker": "finance.accountNumber" }
-  }
-}
-```
+Use the linked reference instead of expanding large examples in this file.
+- User profiles, ecommerce products, finance transactions, dashboards, pagination, errors, and healthcare examples live in [JSON Faker Mock References](./resources/json-faker-mock-references.md).
+- Load that reference when the request needs domain-specific fields, polished UI data, or complex schema examples.
 
 ---
 
@@ -182,7 +126,7 @@ Reference generated fields within the same object to ensure data consistency. Us
 - **Faker Arguments**: Use **object notation** for named parameters: `{"faker": {"finance.amount": {"min": 10, "max": 100}}}`.
 - **Array Content**: Always provide an `items` subschema for arrays, fixed or dynamic.
 - **Strictness**: Use `additionalProperties: false` (objects) and `additionalItems: false` (arrays) to ensure the output matches the schema *exactly*.
-- **Always validate**: Call `preview_mock` immediately after `create_schema_mock` to check the generated data quality. Iterate with `update_mock` if needed.
+- **Always validate**: Call `manage_mocks` (action: `preview`) immediately after `manage_mocks` (action: `create`) to check the generated data quality. Iterate with `manage_mocks` (action: `update`) if needed.
 - **Prefer `folderSlug`**: Use `folderSlug` parameter instead of `folderId` when creating mocks—it's human-readable and avoids needing an extra lookup.
 - **Subfolder paths**: Use `manage_mock_subfolders` to create nested levels. For a subfolder with `mainPath: "/users/details"`, create mocks with `mockFolderId` set to that subfolder ID and `path` relative to the subfolder, such as `/123`; the served URL becomes `/api/mock/{folderSlug}/users/details/123`.
 - **Wildcard paths**: For path params like `/users/*`, set `matchType: "wildcard"` and add `variants` for specific ID cases (e.g., `test-admin`).
@@ -220,3 +164,11 @@ If you need:
 - Mass-creating mocks across many endpoints
 
 **👉 Switch to `mockzilla-spec-translator`**
+
+## ✅ Before Finishing
+
+- Create or update mocks only through `manage_mocks`.
+- Preview every new or changed mock with `manage_mocks` (action: `preview`).
+- Use `folderSlug` when possible and `mockFolderId` only for subfolder placement.
+- Avoid deprecated granular tool names listed in [Manager Tools Contract](../shared/mcp-manager-tools.md).
+- Update `documentation/` when behavior, examples, or conventions change.

@@ -276,11 +276,11 @@ export default async function DocPage({
 					}}
 				/>
 
-				<nav className="mt-16 pt-8 border-t flex flex-col sm:flex-row gap-4 justify-between items-center">
+				<nav className="not-prose mt-16 pt-8 border-t flex flex-col sm:flex-row gap-4 justify-between items-center">
 					{prev ? (
 						<Link
 							href={`/docs/${prev.slug === 'index' ? '' : prev.slug}`}
-							className="flex items-center gap-2 px-4 py-3 rounded-xl border bg-card hover:bg-muted transition-colors w-full sm:w-auto group"
+							className="flex items-center gap-2 px-4 py-3 rounded-xl border bg-card hover:bg-muted transition-colors w-full sm:w-auto group no-underline hover:no-underline"
 						>
 							<ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
 							<div className="flex flex-col">
@@ -295,7 +295,7 @@ export default async function DocPage({
 					{next ? (
 						<Link
 							href={`/docs/${next.slug === 'index' ? '' : next.slug}`}
-							className="flex items-center justify-end gap-2 px-4 py-3 rounded-xl border bg-card hover:bg-muted transition-colors w-full sm:w-auto group text-right ml-auto"
+							className="flex items-center justify-end gap-2 px-4 py-3 rounded-xl border bg-card hover:bg-muted transition-colors w-full sm:w-auto group text-right ml-auto no-underline hover:no-underline"
 						>
 							<div className="flex flex-col">
 								<span className="text-xs text-muted-foreground">Next</span>
