@@ -13,6 +13,7 @@ High-performance mocking server for JSON and stateful API workflows.
 - [Schema Interpolation](/documentation/schema-interpolation.md) - `{$.path}` and `{{input.*}}` templates.
 - [Agent Skills](/documentation/skills.md) - Instruction sets (Creator, Architect).
 - [Skills Maintenance](/documentation/skills-maintenance.md) - Rules for keeping `.agent/skills/` current.
+- [Release Process](/documentation/release-process.md) - Commit and branch rules for releases and docs-only changes.
 - [AGENTS.md](/AGENTS.md) - Capability catalog.
 - [Technical Setup](/documentation/technical-index.md) - Docker, Makefiles, and config.
 - [Desktop App](/documentation/desktop-app.md) - Tauri packaging for Windows, macOS, and Linux.
