@@ -3,7 +3,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
 	output: process.env.NODE_ENV === 'development' ? undefined : 'standalone',
 	serverExternalPackages: ['pg', '@electric-sql/pglite', 'handlebars'],
-	allowedDevOrigins: ['192.168.1.20'],
+	allowedDevOrigins: process.env.NODE_ORIGINS?.split(',').map((origin) => origin.trim()) || [],
 	async rewrites() {
 		return [
 			{
