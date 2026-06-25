@@ -62,9 +62,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
           - platform: ubuntu-22.04
+            bundles: appimage,deb
           - platform: windows-latest
+            bundles: nsis
+          - platform: macos-latest
+            bundles: dmg
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -86,15 +89,34 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build desktop installers
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Windows desktop installer
+        if: matrix.platform == 'windows-latest'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NO_STRIP: "true"
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Build Linux desktop installers
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
           NO_STRIP: "true"
           LD_LIBRARY_PATH: ${{ github.workspace }}/src-tauri/resources/lib
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Build macOS desktop installer
+        if: matrix.platform == 'macos-latest'
+        env:
+          NO_STRIP: "true"
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Upload desktop installers
+        uses: softprops/action-gh-release@v2
         with:
-          tagName: v${{ needs.release.outputs.new_release_version }}
-          releaseName: Mockzilla v${{ needs.release.outputs.new_release_version }}
-          releaseBody: Desktop installers for Mockzilla.
-          releaseDraft: false
-          prerelease: false
+          tag_name: v${{ needs.release.outputs.new_release_version }}
+          files: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.dmg
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

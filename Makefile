@@ -104,8 +104,7 @@ desktop-build:
 	bun run desktop:build
 
 desktop-smoke:
-	bun run build:desktop
-	bun run desktop:prepare
+	bun run desktop:stage
 	bun run desktop:smoke
 
 # Utility commands

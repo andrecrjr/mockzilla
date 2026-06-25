@@ -20,8 +20,8 @@ function isBlockedRoute(pathname: string): boolean {
 	return BLOCKED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-// Global CORS middleware for all /api/* routes
-export function middleware(request: NextRequest) {
+// Global CORS proxy for all /api/* routes
+export function proxy(request: NextRequest) {
 	const pathname = new URL(request.url).pathname;
 
 	// Landing-only mode: block app and API routes
@@ -71,7 +71,7 @@ export function middleware(request: NextRequest) {
 	return response;
 }
 
-// Run middleware on all routes except static assets
+// Run proxy on all routes except static assets
 export const config = {
 	matcher: [
 		'/((?!_next/static|_next/image|favicon.ico|.*\\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2|ttf|json)$).*)',

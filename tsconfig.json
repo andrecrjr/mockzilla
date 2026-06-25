@@ -32,7 +32,7 @@
 		"tests/**/*.ts",
 		"tests/**/*.tsx",
 		"mdx-components.tsx",
-		"middleware.ts",
+		"proxy.ts",
 		"next.config.ts",
 		"theme.config.tsx",
 		".next/types/**/*.ts",

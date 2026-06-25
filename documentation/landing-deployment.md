@@ -4,7 +4,7 @@ Deploy Mockzilla as a landing page only, hiding the main app (`/app/*`) and API 
 
 ## How It Works
 
-The `DEPLOY_MODE` environment variable controls route access at runtime via middleware:
+The `DEPLOY_MODE` environment variable controls route access at runtime via the Next.js `proxy.ts` file:
 
 - **`full`** (default): All routes accessible — landing, app, and API
 - **`landing`**: Blocks `/app/*` and `/api/*` routes with a 404 response
@@ -50,4 +50,4 @@ make landing-logs    # View logs
 
 ## Architecture
 
-Single Docker image, different `.env` file. No separate build needed — the middleware gates routes at runtime based on `DEPLOY_MODE`.
+Single Docker image, different `.env` file. No separate build needed — the Next.js proxy gates routes at runtime based on `DEPLOY_MODE`.

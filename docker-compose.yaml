@@ -30,6 +30,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-mockzilla}:${POSTGRES_PASSWORD:-mockzilla}@postgres:5432/${POSTGRES_DB:-mockzilla}
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1
+      - START_CMD=node node_modules/next/dist/bin/next dev -p 36666
     env_file:
       - .env
     volumes:
@@ -40,8 +41,9 @@ services:
       - ./public:/app/public
       - ./drizzle:/app/drizzle
       - ./content:/app/content
-      - ./middleware.ts:/app/middleware.ts
+      - ./proxy.ts:/app/proxy.ts
       - ./next.config.ts:/app/next.config.ts
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
       - ./tsconfig.json:/app/tsconfig.json
       - ./postcss.config.mjs:/app/postcss.config.mjs
       - ./drizzle.config.ts:/app/drizzle.config.ts

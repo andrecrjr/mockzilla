@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-	output: 'standalone',
+	output: process.env.NODE_ENV === 'development' ? undefined : 'standalone',
 	serverExternalPackages: ['pg', '@electric-sql/pglite', 'handlebars'],
 	allowedDevOrigins: ['192.168.1.20'],
 	async rewrites() {
