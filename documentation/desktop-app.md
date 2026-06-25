@@ -26,8 +26,9 @@ Desktop startup is intentionally separate from Docker development startup:
 2. Tauri runs `bun run desktop:stage` through `beforeBuildCommand`.
 3. `scripts/desktop-stage.mjs` builds the Next.js standalone server, then copies `.next/standalone`, static assets, `public`, Drizzle migrations, migration runtime packages, and `scripts/desktop-server.mjs` into `desktop-dist/server`.
 4. Tauri bundles a supported Node sidecar into `src-tauri/binaries`.
-5. At launch, `desktop-server.mjs` selects an available localhost port starting at `36666`, sets `MOCKZILLA_DESKTOP=1`, sets `MOCKZILLA_DATA_DIR`, runs migrations, and starts the standalone Next server.
-6. The Tauri WebView opens the selected local server URL.
+5. At launch, Tauri starts the Node sidecar with an inline ESM bootstrap and passes the staged `desktop-server.mjs` path through `MOCKZILLA_DESKTOP_ENTRY`. This avoids passing a Windows drive-letter path as Node's main script argument.
+6. `desktop-server.mjs` selects an available localhost port starting at `36666`, sets `MOCKZILLA_DESKTOP=1`, sets `MOCKZILLA_DATA_DIR`, runs migrations, and starts the standalone Next server.
+7. The Tauri WebView opens the selected local server URL.
 
 The web app still uses the same App Router tree in desktop and Docker development. Shared UI providers must therefore be available to `/app` pages in both paths; the `/app` shell owns its own theme provider boundary so navigation and nested app pages can render theme-aware controls during server rendering and hydration.
 
