@@ -101,6 +101,7 @@ While we use standard Tailwind spacing utilities, certain patterns are prevalent
 *   **Grid Gaps**: Dashboard grids and lists usually use `gap-4` or `gap-6`.
 *   **Form Spacing**: Form elements are typically stacked with `space-y-4` or `space-y-6`.
 *   **Dialog Spacing**: `DialogContent` usually includes `p-6` with `gap-4` for headers and footers.
+*   **Global Footer**: `components/site-footer.tsx` is rendered from the root layout so every page ends with the AC-JR open-source attribution and GitHub link.
 
 ### Custom Utilities
 *   **`.scrollbar-thin`**: A custom utility for Firefox and Webkit to provide a non-obtrusive scrolling experience.

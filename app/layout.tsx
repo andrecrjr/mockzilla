@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next';
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import type React from 'react';
+import { SiteFooter } from '@/components/site-footer';
 import { ThemeProvider } from '@/components/theme-provider';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import './globals.css';
@@ -85,8 +86,9 @@ export default function RootLayout({
 				<NuqsAdapter>
 					<ThemeProvider>
 						{children}
+						<SiteFooter />
 						<Toaster />
-						<Analytics  />
+						<Analytics />
 					</ThemeProvider>
 				</NuqsAdapter>
 			</body>

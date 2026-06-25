@@ -4,7 +4,6 @@ import { Features } from '@/components/landing/Features';
 import { Hero } from '@/components/landing/Hero';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { HttpServer } from '@/components/landing/HttpServer';
-import { LandingFooter } from '@/components/landing/LandingFooter';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { MCPSection } from '@/components/landing/MCPSection';
 import { QuickInstall } from '@/components/landing/QuickInstall';
@@ -83,7 +82,6 @@ export default function LandingPage() {
 				<MCPSection />
 				<FAQ />
 			</main>
-			<LandingFooter />
 		</div>
 	);
 }
