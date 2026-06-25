@@ -1,6 +1,24 @@
 #!/bin/sh
 set -e
 
+if command -v node >/dev/null 2>&1; then
+  JS_RUNTIME="$(command -v node)"
+elif command -v bun >/dev/null 2>&1; then
+  JS_RUNTIME="$(command -v bun)"
+else
+  echo "Error: Neither node nor bun was found in PATH. Cannot run migrations or start the app."
+  exit 1
+fi
+
+case "$(basename "$JS_RUNTIME")" in
+  bun)
+    DEFAULT_START_CMD="$JS_RUNTIME run dev"
+    ;;
+  *)
+    DEFAULT_START_CMD="$JS_RUNTIME node_modules/next/dist/bin/next dev -p ${PORT:-36666}"
+    ;;
+esac
+
 # Handle permissions and user switching for Production
 if [ "$NODE_ENV" = "production" ]; then
   # Ensure the data directory is owned by the nextjs user
@@ -36,19 +54,17 @@ if [ "$DEPLOY_MODE" = "landing" ]; then
 else
   echo "Running database migrations..."
   if [ "$NODE_ENV" = "production" ] && [ "$(id -u)" = "0" ] && id "nextjs" >/dev/null 2>&1; then
-    su nextjs -s /bin/sh -c "node scripts/migrate.mjs"
-  elif command -v node >/dev/null 2>&1; then
-    node scripts/migrate.mjs
+    su nextjs -s /bin/sh -c "$JS_RUNTIME scripts/migrate.mjs"
   else
-    bun scripts/migrate.mjs
+    "$JS_RUNTIME" scripts/migrate.mjs
   fi
 fi
 
 echo "Starting application ($NODE_ENV)..."
 if [ "$NODE_ENV" = "production" ] && [ "$(id -u)" = "0" ] && id "nextjs" >/dev/null 2>&1; then
   # Use node for production standalone as optimized by Next.js
-  exec su nextjs -s /bin/sh -c "node server.js"
+  exec su nextjs -s /bin/sh -c "$JS_RUNTIME server.js"
 else
-  # In dev, use the START_CMD (defaults to bun dev)
-  exec sh -c "${START_CMD:-bun run dev}"
+  # In dev, use the START_CMD when provided by Docker Compose.
+  exec sh -c "${START_CMD:-$DEFAULT_START_CMD}"
 fi

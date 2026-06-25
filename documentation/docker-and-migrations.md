@@ -33,7 +33,7 @@ The development server renders the normal App Router tree. The root layout provi
 
 ## Database Migrations with Bun
 
-Mockzilla uses **Drizzle ORM** and **Bun** for database management.
+Mockzilla uses **Drizzle ORM** and **Bun** for development database management.
 
 ### Generating Migrations
 
@@ -49,7 +49,9 @@ docker compose run --rm --entrypoint "bun run db:generate" app
 
 ### Applying Migrations
 
-Migrations are automatically applied on container startup via the `docker-entrypoint.sh` script. If you need to manually apply them while the system is running:
+Migrations are automatically applied on container startup via the `docker-entrypoint.sh` script. The entrypoint resolves the available JavaScript runtime before running migrations: development images normally use the Bun-based image with a real Node binary, while production images run the migration script with Node from the `node:24-alpine` runtime. Production images do not require a `bun` binary at startup.
+
+If you need to manually apply migrations while the system is running:
 
 ```bash
 make db-migrate
