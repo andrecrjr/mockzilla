@@ -15,3 +15,11 @@ jobs:
       - run: bun run typecheck
       - run: bun run test
 
+  docker-build:
+    needs: lint-test-typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production Docker image
+        run: make prod-build

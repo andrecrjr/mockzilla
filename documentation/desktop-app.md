@@ -85,6 +85,8 @@ GitHub Actions publishes desktop installers after semantic-release creates a ver
 - Windows: NSIS exe
 - macOS: DMG
 
+During the semantic-release prepare step, `scripts/sync-release-version.mjs` writes the next semantic version into `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the Mockzilla entry in `src-tauri/Cargo.lock`. The release commit includes those files, and the Docker and desktop packaging jobs explicitly check out `v${version}` before building. That keeps Docker tags, GitHub release tags, and installer metadata aligned.
+
 CI installs Node 24 before packaging so the bundled sidecar uses the same major runtime as the production Docker image. Local builds can also use Node 22 or Node 20.9+, but Node 25 is intentionally skipped for desktop packaging because Next.js 16 Webpack builds can fail in that runtime.
 
 The desktop release workflow must call `bun run desktop:build` rather than invoking the Tauri CLI action directly. That keeps CI/CD on the same wrapper path as local builds: supported Node selection, `next build --webpack`, desktop resource staging, Sharp musl pruning on Linux, and installer generation. The workflow uploads the generated files from `src-tauri/target/release/bundle`.
