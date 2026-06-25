@@ -14,7 +14,46 @@ permissions:
   pull-requests: write
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docker_only: ${{ steps.detect.outputs.docker_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Docker-only changes
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          before="${{ github.event.before }}"
+          after="${{ github.sha }}"
+
+          if [[ "$before" =~ ^0+$ ]]; then
+            git diff-tree --no-commit-id --name-only -r "$after" > changed-files.txt
+          else
+            git diff --name-only "$before" "$after" > changed-files.txt
+          fi
+
+          if [[ ! -s changed-files.txt ]]; then
+            echo "docker_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          non_docker_changes="$(grep -Ev '^(README\.md|documentation/|content/docs/|Dockerfile(\..*)?$|docker-compose\.ya?ml$|compose\.ya?ml$|\.dockerignore$)' changed-files.txt || true)"
+
+          if [[ -z "$non_docker_changes" ]]; then
+            echo "docker_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker_only=false" >> "$GITHUB_OUTPUT"
+          fi
+
   release:
+    needs: changes
+    if: ${{ needs.changes.outputs.docker_only != 'true' }}
     runs-on: ubuntu-latest
     outputs:
       new_release_published: ${{ steps.semantic.outputs.new_release_published }}
@@ -37,13 +76,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push:
-    needs: release
-    if: ${{ needs.release.outputs.new_release_published == 'true' }}
+    needs:
+      - changes
+      - release
+    if: ${{ always() && (needs.changes.outputs.docker_only == 'true' || needs.release.outputs.new_release_published == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: v${{ needs.release.outputs.new_release_version }}
+          ref: ${{ needs.changes.outputs.docker_only == 'true' && github.sha || format('v{0}', needs.release.outputs.new_release_version) }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -59,10 +100,12 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ needs.release.outputs.new_release_version }}
+            ${{ needs.changes.outputs.docker_only == 'true' && format('{0}/mockzilla:{1}', secrets.DOCKERHUB_USERNAME, github.sha) || format('{0}/mockzilla:{1}', secrets.DOCKERHUB_USERNAME, needs.release.outputs.new_release_version) }}
 
   desktop-release:
-    needs: release
+    needs:
+      - changes
+      - release
     if: ${{ needs.release.outputs.new_release_published == 'true' }}
     strategy:
       fail-fast: false
