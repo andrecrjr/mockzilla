@@ -19,6 +19,26 @@ The desktop packaging jobs also check out `v${version}` before building
 installers, so Docker tags, GitHub release tags, package metadata, and desktop
 installer metadata stay aligned.
 
+## Docker-only changes
+
+Pushes to `main` that only change Docker configuration skip semantic-release
+and desktop packaging. Documentation-only files may be included in the same
+push without changing this behavior. The CD workflow detects Docker changes
+limited to:
+
+- `Dockerfile`
+- `Dockerfile.*`
+- `docker-compose.yml`
+- `docker-compose.yaml`
+- `compose.yml`
+- `compose.yaml`
+- `.dockerignore`
+
+For these changes, CD only builds and pushes the Docker image. It updates
+`andrecrjr/mockzilla:latest` and also publishes a commit-SHA image tag. Mixed
+changes, such as Docker plus application code, follow the normal versioned
+release flow.
+
 ## Docs-only changes
 
 Use a `docs/` branch prefix for documentation updates:

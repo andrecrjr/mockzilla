@@ -3,6 +3,9 @@ set -e
 
 if command -v node >/dev/null 2>&1; then
   JS_RUNTIME="$(command -v node)"
+elif [ "$NODE_ENV" = "production" ]; then
+  echo "Error: Production Docker runtime requires node, but node was not found in PATH."
+  exit 1
 elif command -v bun >/dev/null 2>&1; then
   JS_RUNTIME="$(command -v bun)"
 else

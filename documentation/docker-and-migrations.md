@@ -49,7 +49,7 @@ docker compose run --rm --entrypoint "bun run db:generate" app
 
 ### Applying Migrations
 
-Migrations are automatically applied on container startup via the `docker-entrypoint.sh` script. The entrypoint resolves the available JavaScript runtime before running migrations: development images normally use the Bun-based image with a real Node binary, while production images run the migration script with Node from the `node:24-alpine` runtime. Production images do not require a `bun` binary at startup.
+Migrations are automatically applied on container startup via the `docker-entrypoint.sh` script. The entrypoint resolves the available JavaScript runtime before running migrations: development images normally use the Bun-based image with a real Node binary, while production images run the migration script with Node from the `node:24-alpine` runtime. Production Docker runtime requires Node and fails fast if `node` is missing; it never falls back to `bun`.
 
 If you need to manually apply migrations while the system is running:
 
