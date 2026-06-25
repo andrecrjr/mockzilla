@@ -12,23 +12,26 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
 } from '@/components/ui/dialog';
-import type { CreateMockRequest, Folder } from '@/lib/types';
+import type { CreateMockRequest, Folder, MockSubfolder } from '@/lib/types';
 
 interface CreateMockDialogProps {
 	folders: Folder[];
+	mockSubfolders?: MockSubfolder[];
 	defaultFolderId?: string;
+	defaultMockFolderId?: string | null;
 	trigger?: React.ReactNode;
 	onSuccess?: () => void;
 }
 
 export function CreateMockDialog({
 	folders,
+	mockSubfolders = [],
 	defaultFolderId,
+	defaultMockFolderId = null,
 	trigger,
 	onSuccess,
 }: CreateMockDialogProps) {
@@ -42,9 +45,22 @@ export function CreateMockDialog({
 		method: string;
 		statusCode: string;
 		folderId?: string;
+		mockFolderId?: string | null;
 		response: string;
+		matchType?: string;
+		queryParams?: Record<string, string> | null;
 		jsonSchema?: string;
 		useDynamicResponse?: boolean;
+		echoRequestBody?: boolean;
+		delay?: string;
+		variants?: Array<{
+			key: string;
+			body: string;
+			statusCode: number;
+			bodyType: string;
+		}> | null;
+		wildcardRequireMatch?: boolean;
+		meta?: Record<string, unknown>;
 	}) => {
 		try {
 			setIsSubmitting(true);
@@ -53,10 +69,18 @@ export function CreateMockDialog({
 				path: values.path,
 				method: values.method as CreateMockRequest['method'],
 				response: values.response,
-				statusCode: Number.parseInt(values.statusCode),
+				statusCode: Number.parseInt(values.statusCode, 10),
 				folderId: values.folderId || defaultFolderId || '',
+				mockFolderId: values.mockFolderId ?? defaultMockFolderId ?? null,
+				matchType: values.matchType as CreateMockRequest['matchType'],
+				queryParams: values.queryParams,
 				jsonSchema: values.jsonSchema,
 				useDynamicResponse: values.useDynamicResponse,
+				echoRequestBody: values.echoRequestBody,
+				delay: values.delay ? Number.parseInt(values.delay, 10) : 0,
+				variants: values.variants,
+				wildcardRequireMatch: values.wildcardRequireMatch,
+				meta: values.meta,
 			};
 			const response = await fetch('/api/mocks', {
 				method: 'POST',
@@ -78,7 +102,7 @@ export function CreateMockDialog({
 				);
 				if (selectedFolder) {
 					mutate(`/api/mocks?folderId=${selectedFolder.id}`);
-					router.push(`/folder/${selectedFolder.slug}`);
+					router.push(`/app/folder/${selectedFolder.slug}`);
 				}
 			}
 			setOpen(false);
@@ -116,7 +140,9 @@ export function CreateMockDialog({
 				<MockEditor
 					mode="create"
 					folders={folders}
+					mockSubfolders={mockSubfolders}
 					defaultFolderId={defaultFolderId}
+					defaultMockFolderId={defaultMockFolderId}
 					showFolderSelect={!defaultFolderId}
 					onCancel={() => setOpen(false)}
 					isSubmitting={isSubmitting}

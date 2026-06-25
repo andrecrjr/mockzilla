@@ -1,243 +1,126 @@
-# Mockzilla 🦖
+<p align="center">
+  <img src="public/mockzilla-logo.png" alt="Mockzilla Logo" width="180" />
+</p>
 
-[![SafeSkill 89/100](https://img.shields.io/badge/SafeSkill-89%2F100_Passes%20with%20Notes-yellow)](https://safeskill.dev/scan/andrecrjr-mockzilla)
+<p align="center">
+  <a href="https://safeskill.dev/scan/andrecrjr-mockzilla"><img src="https://img.shields.io/badge/SafeSkill-89%2F100_Passes%20with%20Notes-yellow?style=flat-square" alt="SafeSkill Status" /></a>
+  <a href="https://hub.docker.com/r/andrecrjr/mockzilla"><img src="https://img.shields.io/docker/pulls/andrecrjr/mockzilla?style=flat-square" alt="Docker Pulls" /></a>
+  <a href="https://github.com/andrecrjr/mockzilla/stargazers"><img src="https://img.shields.io/github/stars/andrecrjr/mockzilla?style=flat-square" alt="GitHub Stars" /></a>
+  <a href="https://github.com/andrecrjr/mockzilla/blob/main/LICENSE.txt"><img src="https://img.shields.io/github/license/andrecrjr/mockzilla?style=flat-square" alt="License: MIT" /></a>
+  <a href="https://bun.sh/"><img src="https://img.shields.io/badge/Bun-%23000000.svg?style=flat-square&logo=bun&logoColor=white" alt="Bun" /></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-black?style=flat-square&logo=next.js" alt="Next.js" /></a>
+  <a href="https://tauri.app/"><img src="https://img.shields.io/badge/Tauri-FFC107?style=flat-square&logo=tauri&logoColor=black" alt="Tauri" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+</p>
+
+# Mockzilla
+
 A powerful self-hosted API mocking platform for development and testing. Deploy your own private mock server with an intuitive interface and advanced response generation capabilities.
 
-## 🚀 Quick Start
+## Quick Start
 
-### Option 1: Fast In-Memory with PGLite (Recommended for Development)
+### In-Memory with PGLite (Recommended for Development)
 
-Perfect for quick testing and development. By default, all data is stored in memory and will be lost when the container stops. Use volume persistence to maintain data between restarts (if needed).
-
+Start instantly with ephemeral storage:
 ```bash
-# Pull the latest image
-docker pull andrecrjr/mockzilla:latest
-
-# run with volume persistence to maintain data between container restarts
-docker run -p 36666:36666 \
-  -v mockzilla-data:/data \
-  andrecrjr/mockzilla:latest
+docker run -p 36666:36666 andrecrjr/mockzilla:latest
 ```
 
-> [!TIP]
-> This option is ideal for development, testing, and quick experimentation. It starts instantly with no external dependencies. Use volume persistence to keep your mocks between container restarts.
-
-Your mock server will be available at http://localhost:36666
-
-### Option 2: Persistent with External PostgreSQL (Recommended for Production)
-
-For production use or when you need data persistence between container restarts.
-
+To persist data between container restarts:
 ```bash
-# Pull the latest image
-docker pull andrecrjr/mockzilla:latest
-
-# Run with external PostgreSQL database
-docker run -p 36666:36666 \
-  -e DATABASE_URL=postgresql://username:password@host:5432/database_name \
-  andrecrjr/mockzilla:latest
+docker run -p 36666:36666 -v mockzilla-data:/data andrecrjr/mockzilla:latest
 ```
 
-> [!NOTE]
-> This option is recommended for production environments where data persistence is required. Make sure your PostgreSQL database is accessible from the container.
+### Persistent with External PostgreSQL (Recommended for Production)
 
-Your mock server will be available at http://localhost:36666
-
-## 🤖 AI Agent Skills
-
-Mockzilla includes specialized AI agent skills to help you build and manage mocks.
-You can add easier with add-skill:
-
-`npx add-skill https://github.com/andrecrjr/mockzilla` 
-
-or copy the `.agent/skills` folder to your project's root.
-
-## 📦 Available Scripts
-
-### Development
-- `bun run dev` - Start development server on port 36666
-- `bun run build` - Build for production
-- `bun run start` - Start production server
-- `bun run lint` - Run ESLint
-
-### Database
-- `bun run db:generate` - Generate database migrations
-- `bun run db:migrate` - Run database migrations
-- `bun run db:push` - Push schema changes to database
-- `bun run db:studio` - Open Drizzle Studio (database UI)
-
-### Docker Commands
-- `docker pull andrecrjr/mockzilla:latest` - Pull latest image
-- `docker run -p 36666:36666 andrecrjr/mockzilla:latest` - Run with PGLite (in-memory)
-- `docker run -p 36666:36666 -e DATABASE_URL=... andrecrjr/mockzilla:latest` - Run with PostgreSQL
-
-### Running in Background
+Run with an external database:
 ```bash
-docker run -d \
-  --name mockzilla \
-  -p 36666:36666 \
-  andrecrjr/mockzilla:latest
+docker run -p 36666:36666 -e DATABASE_URL=postgresql://username:password@host:5432/database_name andrecrjr/mockzilla:latest
 ```
 
-### Running with Volume Persistence
-```bash
-docker run -d \
-  --name mockzilla \
-  -p 36666:36666 \
-  -v mockzilla-data:/data \
-  andrecrjr/mockzilla:latest
-```
+The mock server and dashboard will be available at http://localhost:36666
 
-### Development and Contributing
-For development purposes, the project includes Makefile commands:
-- `make dev-up` - Start development environment with hot-reload
-- `make dev-down` - Stop development environment
-- `make dev-logs` - View logs
-- `make db-studio` - Open Drizzle Studio in Docker
-- `make help` - See all available development commands
+## Configuration
 
-> [!NOTE]
-> Makefile commands are primarily for development and contributing to the project, not for production self-hosting.
+The following environment variables can be configured:
 
-## 🛠️ Self-Hosting Stack
-
-Mockzilla is designed for easy self-hosting with the following technologies:
-
-- **Framework**: [Next.js 16](https://nextjs.org/) with App Router (for mock server UI)
-- **Runtime**: [Bun](https://bun.sh/) (fast JavaScript runtime)
-- **Language**: TypeScript
-- **Database**: PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/) (for mock configuration storage)
-- **Styling**: Tailwind CSS 4
-- **UI Components**: Radix UI
-- **Forms**: React Hook Form + Zod
-- **Containerization**: Docker (for simplified self-hosting)
-
-## 🐳 Self-Hosting with Docker
-
-Mockzilla provides optimized Docker images for reliable self-hosting:
-
-- **Docker Hub Image**: `andrecrjr/mockzilla:latest` - Production-ready image
-- **In-Memory Option**: Uses PGLite for fast, ephemeral storage
-- **Persistent Option**: Connects to external PostgreSQL for data persistence
-
-### Pulling the Image
-
-Always start by pulling the latest image:
-
-```bash
-docker pull andrecrjr/mockzilla:latest
-```
-
-### Running with Data Persistence
-
-For production use, connect to an external PostgreSQL database:
-
-```bash
-docker run -d \
-  --name mockzilla \
-  -p 36666:36666 \
-  -e DATABASE_URL=postgresql://username:password@host:5432/database_name \
-  andrecrjr/mockzilla:latest
-```
-
-### Running with Volume Persistence
-
-To persist data without an external database, mount a volume to `/data/`:
-
-```bash
-docker run -d \
-  --name mockzilla \
-  -p 36666:36666 \
-  -v mockzilla-data:/data \
-  andrecrjr/mockzilla:latest
-```
-
-Or mount a local directory:
-
-```bash
-docker run -d \
-  --name mockzilla \
-  -p 36666:36666 \
-  -v /path/to/local/data:/data \
-  andrecrjr/mockzilla:latest
-```
-
-> [!NOTE]
-> Using volume persistence at `/data/` will maintain your mocks and configurations between container restarts while still using the in-memory PGLite database.
-
-### Environment Variables
-
-- `DATABASE_URL` (optional): PostgreSQL connection string (when using external database)
+- `DATABASE_URL` (optional): PostgreSQL connection string (when using an external database)
 - `PORT` (optional): Port to run the server on (default: 36666)
 
-### Data Persistence
+## AI Agent Skills
 
-- Volume mount: Mount a volume to `/data/` to persist mocks and configurations between container restarts when using PGLite
+Integrate Mockzilla's specialized AI experts into your agent workflows:
+```bash
+npx skills add github.com/andrecrjr/mockzilla
+```
 
-## 📁 Self-Hosting Structure
+Available experts:
+- Mock Maker: High-fidelity mocks using JSON Schema and Faker.
+- Workflow Architect: Stateful scenarios and business logic.
+- Spec Translator: Fast bootstrapping from OpenAPI/technical specifications.
+- Logic Doctor: Forensic debugging and state repair.
+
+## Self-Hosting Stack
+
+- Framework: Next.js 16 (App Router)
+- Runtime: Bun (JavaScript runtime)
+- Database: PostgreSQL with Drizzle ORM
+- Styling: Tailwind CSS 4
+- Components: Radix UI
+- Desktop: Tauri
+
+## Project Structure
 
 ```
 mockzilla/
-├── app/              # Next.js app directory (mock server UI)
-├── components/       # React components (UI elements)
-├── lib/              # Utility functions and configurations
-│   └── db/          # Database schema and connection (for mock storage)
-├── drizzle/         # Database migrations (for self-hosted database)
-├── public/          # Static assets
-├── Dockerfile       # Development Docker configuration (for local self-hosting)
-├── Dockerfile.dev   # Development Docker configuration (legacy)
-├── Dockerfile.prd   # Production Docker configuration (for production self-hosting)
-└── docker-compose.yaml  # Development compose file (for easy self-hosting setup)
+├── app/                  # Next.js app directory (mock server UI)
+├── components/           # React components (UI elements)
+├── lib/                  # Utility functions and configurations
+├── drizzle/              # Database migrations
+├── public/               # Static assets
+├── Dockerfile            # Production container specification
+└── docker-compose.yaml   # Development compose file
 ```
 
-## 🗄️ Self-Hosted Database Management
+## Contributing
 
-### Using Drizzle Studio
+We welcome contributions to this open-source project. Please make sure you have Docker and Bun installed locally.
 
-Drizzle Studio provides a visual interface for managing your self-hosted database:
+### Development Setup
 
-### Running Migrations
-
-**With Docker (self-hosting):**
+Start the development environment with hot-reloading:
 ```bash
-docker exec -it mockzilla-app-dev bun run db:push
+make dev-up
 ```
 
-**Without Docker (self-hosting):**
+Generate and apply database migrations:
 ```bash
-bun run db:push
+make db-generate && make db-migrate
 ```
 
-## 🔧 Self-Hosting Configuration
-
-When running with an external PostgreSQL database, configure the `DATABASE_URL` environment variable:
-
+Open database GUI (Drizzle Studio):
 ```bash
-# PostgreSQL connection string (when using external database)
-DATABASE_URL=postgresql://username:password@host:5432/database_name
+make db-studio
 ```
 
-## 🤝 Contributing
+Run checks locally before submitting code:
+```bash
+bun run lint && bun run typecheck
+```
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Stop the development environment:
+```bash
+make dev-down
+```
 
-## 📚 Self-Hosting Documentation
+### Contribution Process
 
-For more information about running your own Mockzilla instance:
+1. Fork the repository.
+2. Create your feature branch: `git checkout -b feature/amazing-feature`.
+3. Commit your changes: `git commit -m 'Add some amazing feature'`.
+4. Push to the branch: `git push origin feature/amazing-feature`.
+5. Open a Pull Request.
 
-- [Next.js Documentation](https://nextjs.org/docs) (for understanding the UI)
-- [Drizzle ORM Documentation](https://orm.drizzle.team/) (for database management)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs) (for UI customization)
-- [Docker Documentation](https://docs.docker.com/) (for containerized self-hosting)
+## License
 
-## 📄 License
-
-This project is open source under MIT license
-
----
-
-Deploy your own Mockzilla instance with ❤️ using Next.js and Bun
+This project is licensed under the MIT License.

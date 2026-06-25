@@ -1,0 +1,3 @@
+display_name: Mockzilla Workflow Architect
+short_description: Design stateful Mockzilla workflows, transitions, mini-DB effects, and action-driven API simulations.
+default_prompt: Use mockzilla-workflow-architect to design a stateful Mockzilla scenario with transitions, conditions, effects, fallback responses, tests, and state inspection.

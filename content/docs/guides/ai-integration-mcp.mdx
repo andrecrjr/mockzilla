@@ -1,0 +1,100 @@
+---
+title: AI Integration (MCP)
+description: Let your AI assistant build your mocks for you using the Model Context Protocol.
+---
+
+# AI Integration (MCP)
+
+Mockzilla is built for the era of AI. It supports the **Model Context Protocol (MCP)**, which means you can give any modern AI agent direct access to your Mockzilla server tools.
+---
+
+## 🤖 AI-First: Agent Skills
+While raw MCP tools are powerful, you can supercharge your AI agent with specialized **Mockzilla Skills**. These are expert instruction sets that teach your agent exactly how to follow our best practices for spec-driven development.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">Universal Installation</CardTitle>
+      <CardDescription>Install our expert skills into any compatible agent using the universal npx skills tool.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="space-y-2">
+      <div className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
+        npx skills add github.com/andrecrjr/mockzilla
+      </div>
+    </div>
+    <div className="text-sm space-y-1">
+      <p><strong>Available Experts:</strong></p>
+      <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+        <li><strong>Mock Maker:</strong> High-fidelity mocks with JSON Schema + Faker.</li>
+        <li><strong>Workflow Architect:</strong> Stateful scenarios and business logic.</li>
+        <li><strong>Spec Translator:</strong> Bootstrapping from OpenAPI/Specs.</li>
+        <li><strong>Logic Doctor:</strong> Forensic debugging and state repair.</li>
+      </ul>
+    </div>
+    <Link href="/docs/getting-started/installing-skills">
+      <Button variant="link" className="p-0 h-auto text-sm text-blue-500">View Installation Guide →</Button>
+    </Link>
+  </CardContent>
+</Card>
+
+## Orchestrating with AI Agents
+
+Mockzilla provides the critical "Ground Truth" infrastructure for modern AI orchestrators like **Claude Opus**, **GPT**, and **Gemini**.
+
+### 🏗️ The Orchestrator
+High-reasoning AI assistants manage complex development lifecycles. They use Mockzilla to:
+- **Spec-to-Mock**: Convert project requirements into functional API simulations.
+- **Traffic Audit**: Compare real-world traffic captured by the Mockzilla Extension with existing specifications.
+- **Team Sync**: Push and pull mocks between local environments and shared servers.
+
+### 🦎 The Edge Agent
+Minimalist agents designed for edge devices can leverage Mockzilla for:
+- **API Heartbeats**: Constantly monitor mock consistency during development.
+- **Remote Relay**: Act as a lightweight proxy for Mockzilla tools in resource-constrained environments.
+
+---
+
+## Why use Mockzilla with AI?
+
+Instead of clicking through the dashboard yourself, you can just **ask your assistant**:
+
+- **"Create a new mock for /api/products."**
+- **"Generate a realistic JSON schema for an e-commerce order."**
+- **"Test the /users endpoint and tell me if it matches the schema."**
+- **"Build a checkout workflow that updates the inventory table."**
+
+---
+
+## Quick Connection
+
+To connect Mockzilla to your preferred AI assistant, use the following configuration details:
+
+### MCP Server URL
+For web-based or editor-integrated agents, add this URL to your MCP settings:
+
+```
+http://localhost:36666/api/mcp
+```
+
+### Local Configuration
+For desktop-based agents that require a local configuration file, add Mockzilla as an MCP server:
+
+```json
+{
+  "mcpServers": {
+    "mockzilla": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:36666/api/mcp"]
+    }
+  }
+}
+```
+
+> **Pro Tip:** Ask your AI assistant to design the perfect API response while you focus on building the UI. It's like having a backend engineer built into your editor!
+
+> **Pro Tip:** Ask your AI assistant to design the perfect API response while you focus on building the UI. It's like having a backend engineer built into your editor!

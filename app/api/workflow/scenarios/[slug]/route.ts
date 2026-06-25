@@ -42,6 +42,7 @@ export async function PUT(
 			.set({
 				name: name.trim(),
 				description: description?.trim() || null,
+				updatedAt: new Date(),
 			})
 			.where(eq(scenarios.id, slug))
 			.returning();

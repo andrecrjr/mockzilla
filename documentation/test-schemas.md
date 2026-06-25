@@ -177,6 +177,24 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
 
 ---
 
+## Best Practices
+
+### Required Fields
+By default, Mockzilla is configured with `fillProperties: false` to ensure that only the properties you explicitly define are generated. Because of this, **you must include all properties you want to see in the `required` array**. 
+
+If a property is not in the `required` list, it may not be generated even if it is defined in `properties`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "age": { "type": "integer" }
+  },
+  "required": ["name", "age"]
+}
+```
+
 ## How to Test
 
 1. Copy a test schema from above

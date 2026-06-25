@@ -1,0 +1,59 @@
+---
+title: "Microservices: Mocking Legacy APIs"
+description: Replace slow, rate-limited legacy APIs with blazing fast local Mockzilla instances for your entire team.
+---
+
+# Mocking Legacy & Third-Party APIs
+
+**The Problem:** Your startup is building a new integration with a legacy banking API (or a rate-limited third-party service like Stripe). The sandbox environment is incredibly slow, frequently goes down, and has strict rate limits that block your CI pipeline.
+
+**The Mock-First Solution:** Capture the real responses once, and serve them locally at 0ms latency for the entire team using Mockzilla.
+
+---
+
+## 1. The Capture Phase
+
+Instead of reading a 400-page manual for the legacy API, make a real request using your browser with the Mockzilla Chrome Extension active.
+
+1. **Open the Legacy Dashboard:** Go to the third-party sandbox.
+2. **Trigger the Request:** Click around to trigger the API calls (e.g., "Fetch Account Details").
+3. **Capture & Sync:** Open the Mockzilla Chrome Extension, find that exact request, and click **"Sync to Dashboard."**
+
+Mockzilla automatically creates a new folder and a new mock with the exact headers, status code, and JSON payload the real API returned.
+
+## 2. The Refinement Phase: Snapshot to Living Mock
+
+The captured data is static. To make it useful for testing multiple scenarios, transform it into a **Dynamic Mock**.
+
+1. Go to the Mockzilla Dashboard.
+2. Edit the newly captured mock. Change the path to a wildcard (e.g., `GET /v1/accounts/:id`).
+3. Switch to the **JSON Schema** tab. Mockzilla can convert that static payload into a dynamic blueprint:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "account_id": { "type": "string", "faker": "string.uuid" },
+    "status": { "type": "string", "enum": ["ACTIVE", "FROZEN", "PENDING"] },
+    "balance": { "type": "number", "minimum": 0, "maximum": 10000 },
+    "currency": { "type": "string", "const": "USD" }
+  },
+  "required": ["account_id", "status", "balance"]
+}
+```
+
+## 3. The Result: A Local Playground for the Team
+
+Now, point your app to `http://localhost:36666/api/mock/legacy-api/...`.
+
+- **Speed:** 3-second legacy calls now take 5ms locally.
+- **Reliability:** CI/CD pipelines never fail because the sandbox is down.
+- **Cost:** Avoid hitting rate limits or usage charges for third-party sandboxes.
+- **Team Portability:** Since Mockzilla runs in Docker, you can commit the `data/` folder to Git. Your entire team gets the exact same mocked environment instantly.
+
+<div className="mt-8 p-6 bg-primary/10 rounded-xl border border-primary/20">
+  <h3 className="text-xl font-bold mb-2">🤖 Do it with AI</h3>
+  <blockquote className="border-l-4 border-primary pl-4 italic">
+    "Take this legacy JSON snapshot and create a Mockzilla endpoint. Convert it into a dynamic schema using Faker for the account IDs and balances, ensuring the currency remains USD."
+  </blockquote>
+</div>

@@ -1,0 +1,1 @@
+ALTER TABLE "mock_responses" ADD COLUMN "query_params" jsonb;

@@ -1,3 +1,5 @@
+import type { Condition, Effect } from './workflow-types';
+
 export type HttpMethod =
 	| 'GET'
 	| 'POST'
@@ -8,6 +10,13 @@ export type HttpMethod =
 	| 'OPTIONS';
 export type MatchType = 'exact' | 'substring' | 'wildcard';
 export type BodyType = 'json' | 'text';
+
+export interface MockVariant {
+	key: string;
+	body: string;
+	statusCode: number;
+	bodyType: string;
+}
 
 export interface Folder {
 	id: string;
@@ -20,20 +29,39 @@ export interface Folder {
 	updatedAt?: string;
 }
 
+export interface MockSubfolder {
+	id: string;
+	folderId: string;
+	parentId?: string | null;
+	name: string;
+	slug: string;
+	mainPath: string;
+	createdAt: string;
+	updatedAt?: string;
+}
+
 export interface Mock {
 	id: string;
 	name: string;
 	path: string;
+	relativePath?: string;
+	effectivePath?: string;
 	method: HttpMethod;
 	response: string;
 	statusCode: number;
 	folderId: string;
+	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
+	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
+	delay?: number;
+	meta?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt?: string;
 }
@@ -45,22 +73,30 @@ export interface CreateMockRequest {
 	response: string;
 	statusCode: number;
 	folderId: string;
+	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
+	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
+	delay?: number;
+	meta?: Record<string, unknown>;
 }
 
 export interface CreateFolderRequest {
 	name: string;
 	description?: string;
+	slug?: string;
 }
 
 export interface UpdateFolderRequest {
 	name: string;
 	description?: string;
+	slug?: string;
 	meta?: Record<string, unknown>;
 }
 
@@ -70,16 +106,23 @@ export interface UpdateMockRequest {
 	method: HttpMethod;
 	response: string;
 	statusCode: number;
+	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
 	enabled?: boolean;
+	queryParams?: Record<string, string> | null;
+	variants?: MockVariant[] | null;
+	wildcardRequireMatch?: boolean;
 	jsonSchema?: string;
 	useDynamicResponse?: boolean;
 	echoRequestBody?: boolean;
+	delay?: number;
+	meta?: Record<string, unknown>;
 }
 
 export interface ExportData {
 	folders: Folder[];
+	mockSubfolders?: MockSubfolder[];
 	mocks: Mock[];
 	exportedAt: string;
 }
@@ -103,8 +146,6 @@ export interface LegacyImportFormat {
 	}>;
 }
 
-export type { MatchContext, Condition, Effect } from './engine/match';
-
 export interface Scenario {
 	id: string;
 	name: string;
@@ -112,8 +153,6 @@ export interface Scenario {
 	createdAt: string;
 	updatedAt?: string;
 }
-
-import type { Condition, Effect } from './engine/match';
 
 export interface Transition {
 	id: number;
@@ -136,3 +175,5 @@ export interface WorkflowExportData {
 	scenarios: Scenario[];
 	transitions: Transition[];
 }
+
+export type { Condition, Effect, MatchContext, ConditionTrace } from './workflow-types';

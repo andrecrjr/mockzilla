@@ -1,0 +1,247 @@
+'use client';
+
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import useSWR, { mutate } from 'swr';
+import { MockEditor } from '@/components/mock-editor';
+import { ThemeSwitcher } from '@/components/theme-switcher';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { validateSchema } from '@/lib/schema-generator';
+import type { Folder, Mock, MockSubfolder } from '@/lib/types';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export default function EditMockPage() {
+	const params = useParams();
+	const router = useRouter();
+	const slug = params.slug as string;
+	const mockId = params.mockId as string;
+
+	const { data: folder } = useSWR<Folder>(
+		slug ? `/api/folders?slug=${slug}` : null,
+		fetcher,
+	);
+
+	const { data: mock } = useSWR<Mock>(
+		mockId ? `/api/mocks?id=${mockId}` : null,
+		fetcher,
+	);
+	const { data: mockSubfolders = [] } = useSWR<MockSubfolder[]>(
+		folder ? `/api/mock-subfolders?folderId=${folder.id}&all=true` : null,
+		fetcher,
+	);
+
+	const [isLoading, setIsLoading] = useState(false);
+
+	const handleUpdate = async (values: {
+		name: string;
+		path: string;
+		method: string;
+		statusCode: string;
+		response: string;
+		mockFolderId?: string | null;
+		matchType?: string;
+		queryParams?: Record<string, string> | null;
+		jsonSchema?: string;
+		useDynamicResponse?: boolean;
+		echoRequestBody?: boolean;
+		delay?: string;
+		variants?: Array<{
+			key: string;
+			body: string;
+			statusCode: number;
+			bodyType: string;
+		}> | null;
+		wildcardRequireMatch?: boolean;
+		meta?: Record<string, unknown>;
+	}) => {
+		if (!mock || !folder) return;
+		setIsLoading(true);
+		try {
+			if (!values.path.startsWith('/')) {
+				toast.error('Error', { description: 'Path must start with /' });
+				setIsLoading(false);
+				return;
+			}
+			try {
+				if (values.useDynamicResponse) {
+					const validation = validateSchema(values.jsonSchema || '');
+					if (!validation.valid) {
+						throw new Error(validation.error || 'Invalid JSON Schema');
+					}
+					JSON.parse(values.jsonSchema || '');
+				} else {
+					JSON.parse(values.response);
+				}
+			} catch {
+				toast.error('Error', { description: 'Please provide valid JSON' });
+				setIsLoading(false);
+				return;
+			}
+			const res = await fetch(`/api/mocks?id=${mock.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: values.name,
+					path: values.path,
+					method: values.method,
+					response: values.response,
+					statusCode: Number.parseInt(values.statusCode, 10),
+					mockFolderId: values.mockFolderId ?? null,
+					matchType: values.matchType,
+					queryParams: values.queryParams,
+					jsonSchema: values.jsonSchema,
+					useDynamicResponse: values.useDynamicResponse,
+					echoRequestBody: values.echoRequestBody,
+					delay: values.delay ? Number.parseInt(values.delay, 10) : 0,
+					variants: values.variants,
+					wildcardRequireMatch: values.wildcardRequireMatch,
+					meta: values.meta,
+				}),
+			});
+			if (!res.ok) {
+				const error = await res.json();
+				throw new Error(error.error);
+			}
+			toast.success('Mock Updated', {
+				description: 'Mock endpoint has been updated successfully',
+			});
+			mutate(`/api/mocks?folderId=${folder.id}`);
+			mutate(`/api/mocks?id=${mock.id}`);
+			router.push(`/app/folder/${slug}`);
+		} catch (error: unknown) {
+			toast.error('Error', {
+				description:
+					error instanceof Error ? error.message : 'Failed to update mock',
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleDuplicate = async () => {
+		if (!mock || !folder) return;
+		setIsLoading(true);
+		try {
+			const res = await fetch('/api/mocks', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: `${mock.name} (Copy)`,
+					path: mock.path,
+					method: mock.method,
+					response: mock.response,
+					statusCode: mock.statusCode,
+					folderId: mock.folderId,
+					mockFolderId: mock.mockFolderId,
+					matchType: mock.matchType,
+					queryParams: mock.queryParams,
+					jsonSchema: mock.jsonSchema,
+					useDynamicResponse: mock.useDynamicResponse,
+					echoRequestBody: mock.echoRequestBody,
+					delay: mock.delay,
+					variants: mock.variants,
+					wildcardRequireMatch: mock.wildcardRequireMatch,
+					meta: mock.meta,
+				}),
+			});
+
+			if (!res.ok) {
+				const error = await res.json();
+				throw new Error(error.error);
+			}
+
+			const newMock = await res.json();
+			toast.success('Mock Duplicated', {
+				description: 'Mock endpoint has been duplicated successfully',
+			});
+			mutate(`/api/folders?slug=${slug}`);
+			mutate(`/api/mocks?folderId=${folder.id}`);
+			router.push(`/app/folder/${slug}/mock/${newMock.id}`);
+		} catch (error: unknown) {
+			toast.error('Error', {
+				description:
+					error instanceof Error ? error.message : 'Failed to duplicate mock',
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	if (!folder || !mock) {
+		return (
+			<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
+				<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+					<div className="flex items-center justify-center h-[50vh]">
+						<Loader2 className="h-8 w-8 animate-spin text-primary" />
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="mockzilla-gradient-light mockzilla-gradient-dark min-h-screen">
+			<div className="mx-auto w-full px-4 py-8 sm:px-6 lg:px-8">
+				<div className="mb-8 flex items-center justify-between">
+					<div className="flex items-center gap-4">
+						<Button variant="ghost" asChild>
+							<Link href={`/app/folder/${slug}`}>
+								<ArrowLeft className="mr-2 h-4 w-4" />
+								Back to {folder?.name}
+							</Link>
+						</Button>
+						<h1 className="text-2xl font-bold text-foreground">Edit Mock</h1>
+					</div>
+					<div className="flex items-center gap-2">
+						<ThemeSwitcher />
+					</div>
+				</div>
+
+				<div className="grid gap-8">
+					<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 overflow-y-auto">
+						<MockEditor
+							mode="edit"
+							initial={
+								mock
+									? {
+											name: mock.name,
+											path: mock.path,
+											mockFolderId: mock.mockFolderId ?? null,
+											method: mock.method,
+											statusCode: mock.statusCode.toString(),
+											response: mock.response,
+											matchType: mock.matchType,
+											queryParams: mock.queryParams,
+											jsonSchema: mock.jsonSchema || '',
+											useDynamicResponse: Boolean(mock.useDynamicResponse),
+											echoRequestBody: Boolean(mock.echoRequestBody),
+											delay: mock.delay ? String(mock.delay) : '0',
+											variants: mock.variants,
+											wildcardRequireMatch: Boolean(mock.wildcardRequireMatch),
+											meta: mock.meta as Record<string, unknown>,
+										}
+									: undefined
+							}
+							submitLabel="Save Changes"
+							previewSlug={slug as string}
+							folders={[folder]}
+							mockSubfolders={mockSubfolders}
+							defaultFolderId={folder.id}
+							defaultMockFolderId={mock.mockFolderId ?? null}
+							isSubmitting={isLoading}
+							onDuplicate={handleDuplicate}
+							onSubmit={async (values) => {
+								await handleUpdate(values);
+							}}
+						/>
+					</Card>
+				</div>
+			</div>
+		</div>
+	);
+}

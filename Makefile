@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio clean
+.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio desktop-build desktop-dev desktop-smoke clean
 
 # Default target
 help:
@@ -19,6 +19,17 @@ help:
 	@echo "  make prod-logs     - View production logs"
 	@echo "  make prod-build    - Rebuild production containers"
 	@echo ""
+	@echo "Landing-Only Deploy:"
+	@echo "  make landing-run     - Build and start landing-only deployment"
+	@echo "  make landing-up      - Start landing-only environment"
+	@echo "  make landing-down    - Stop landing-only environment"
+	@echo "  make landing-logs    - View landing-only logs"
+	@echo ""
+	@echo "Desktop Commands:"
+	@echo "  make desktop-dev     - Run the Tauri desktop app in development"
+	@echo "  make desktop-build   - Build desktop installers for this OS"
+	@echo "  make desktop-smoke   - Smoke-test the staged desktop server"
+	@echo ""
 	@echo "Utility Commands:"
 	@echo "  make clean         - Remove all containers, volumes, and images"
 	@echo "  make db-shell      - Open PostgreSQL shell"
@@ -34,7 +45,7 @@ db-migrate:
 
 # Development commands
 dev-up:
-	docker compose up --remove-orphans
+	docker compose up --remove-orphans -d
 
 dev-down:
 	docker compose down --remove-orphans
@@ -43,7 +54,7 @@ dev-logs:
 	docker compose logs -f
 
 dev-build:
-	docker compose build --no-cache
+	docker compose up --build -d
 
 dev-restart:
 	docker compose restart
@@ -71,6 +82,30 @@ prod-logs:
 	docker logs -f mockzilla-prod
 
 prod-run: prod-build prod-up
+
+# Landing-only deploy
+landing-up:
+	docker run -d --env-file .env.landing -p 36666:36666 --name mockzilla-landing mockzilla:latest
+
+landing-down:
+	docker stop mockzilla-landing 2>/dev/null || true
+	docker rm mockzilla-landing 2>/dev/null || true
+
+landing-logs:
+	docker logs -f mockzilla-landing
+
+landing-run: prod-build landing-up
+
+# Desktop commands
+desktop-dev:
+	bun run desktop:dev
+
+desktop-build:
+	bun run desktop:build
+
+desktop-smoke:
+	bun run desktop:stage
+	bun run desktop:smoke
 
 # Utility commands
 clean:

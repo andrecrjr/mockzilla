@@ -1,0 +1,3 @@
+display_name: Mockzilla Logic Doctor
+short_description: Diagnose workflow matching failures, state drift, request traces, and broken transition logic.
+default_prompt: Use mockzilla-logic-doctor to investigate this Mockzilla failure with logs, request traces, workflow tests, state inspection, and minimal repairs.

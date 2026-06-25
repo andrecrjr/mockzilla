@@ -1,15 +1,59 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { folders, mockResponses } from '@/lib/db/schema';
-import type { HttpMethod } from '@/lib/types';
+import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
+import { type Logger, logger } from '@/lib/logger';
+import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
+import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
+import type { MockCandidate } from '@/lib/utils/mock-matcher';
+import {
+	extractCaptureKey,
+	findBestMatch,
+	selectVariant as selectMockVariant,
+} from '@/lib/utils/mock-matcher';
+import { joinMockPaths } from '@/lib/utils/mock-paths';
+
+type MockResponseRecord = typeof mockResponses.$inferSelect;
+type MockSubfolderRecord = typeof mockSubfolders.$inferSelect;
+
+function getEffectiveEndpoint(
+	mock: MockResponseRecord,
+	subfoldersById: Map<string, MockSubfolderRecord>,
+): string {
+	const subfolder = mock.mockFolderId
+		? subfoldersById.get(mock.mockFolderId)
+		: undefined;
+	return joinMockPaths(subfolder?.mainPath ?? '/', mock.endpoint);
+}
+
+function hasProxyTarget(mock: MockResponseRecord): boolean {
+	const meta = mock.meta as { proxyTargetUrl?: string } | null;
+	return Boolean(meta?.proxyTargetUrl);
+}
+
+function getCreatedAtTime(mock: MockResponseRecord): number {
+	return mock.createdAt instanceof Date ? mock.createdAt.getTime() : 0;
+}
+
+function sortMocksForMatchTieBreakers(
+	mocks: MockResponseRecord[],
+): MockResponseRecord[] {
+	return [...mocks].sort((a, b) => {
+		if (hasProxyTarget(a) !== hasProxyTarget(b)) {
+			return hasProxyTarget(a) ? 1 : -1;
+		}
+		return getCreatedAtTime(b) - getCreatedAtTime(a);
+	});
+}
 
 async function handleRequest(request: NextRequest, params: { path: string[] }) {
+	const reqId = crypto.randomUUID();
 	const pathSegments = params.path;
 	const method = (request.method as HttpMethod) || 'GET';
 
-	// Expected format: /mock/{folderSlug}/{mockPath}
-	if (pathSegments.length < 2) {
+	// Expected format: /mock/{folderSlug}/{mockPath...}
+	// If only folderSlug provided (1 segment), treat as root path "/"
+	if (pathSegments.length < 1) {
 		return NextResponse.json(
 			{ error: 'Invalid mock URL format' },
 			{ status: 400 },
@@ -17,7 +61,26 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	}
 
 	const folderSlug = pathSegments[0];
-	const mockPath = `/${pathSegments.slice(1).join('/')}`;
+	let mockPath =
+		pathSegments.length === 1 ? '/' : `/${pathSegments.slice(1).join('/')}`;
+
+	// Normalize: remove trailing slash for consistency
+	if (mockPath.endsWith('/') && mockPath.length > 1) {
+		mockPath = mockPath.slice(0, -1);
+	}
+
+	// Extract query params from request URL
+	const url = request.nextUrl;
+	const urlQueryParams = Object.fromEntries(url.searchParams.entries());
+
+	// Create a scoped logger for this request
+	const log = logger.child({
+		reqId,
+		path: mockPath,
+		method,
+		type: 'intercept',
+	});
+	log.info('Incoming request');
 
 	try {
 		// Find the folder by slug
@@ -28,26 +91,46 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			.limit(1);
 
 		if (!folder) {
+			log.warn({ folderSlug }, 'Folder not found');
 			return NextResponse.json(
 				{ error: 'Folder not found', folderSlug },
 				{ status: 404 },
 			);
 		}
 
-		// Find matching mock by folderId, endpoint, and method
-		const [mock] = await db
+		const allMocks = await db
 			.select()
 			.from(mockResponses)
 			.where(
 				and(
 					eq(mockResponses.folderId, folder.id),
-					eq(mockResponses.endpoint, mockPath),
 					eq(mockResponses.method, method),
+					eq(mockResponses.enabled, true),
 				),
-			)
-			.limit(1);
+			);
 
-		if (!mock) {
+		const subfolders = await db
+			.select()
+			.from(mockSubfolders)
+			.where(eq(mockSubfolders.folderId, folder.id));
+		const canonicalSubfolders = withCanonicalSubfolderMainPaths(subfolders);
+		const subfoldersById = new Map(
+			canonicalSubfolders.map((subfolder) => [subfolder.id, subfolder]),
+		);
+
+		const matchableMocks = sortMocksForMatchTieBreakers(allMocks);
+		const candidates: MockCandidate[] = matchableMocks.map((m) => ({
+			endpoint: getEffectiveEndpoint(m, subfoldersById),
+			matchType: (m.matchType as MatchType) || 'exact',
+			queryParams: (m.queryParams as Record<string, string> | null) ?? null,
+			_score: 0,
+			_id: m.id,
+		}));
+
+		const best = findBestMatch(mockPath, urlQueryParams, candidates);
+
+		if (!best) {
+			log.warn('No matching mock found');
 			return NextResponse.json(
 				{
 					error: 'Mock endpoint not found',
@@ -58,93 +141,348 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 				{ status: 404 },
 			);
 		}
-		// Check if we should echo the request body
-		if (mock.echoRequestBody) {
-			const contentType = request.headers.get('content-type') || 'text/plain';
 
-			if (contentType.includes('application/json')) {
-				try {
-					const body = await request.json();
-					return NextResponse.json(body, { status: mock.statusCode });
-				} catch {
-					// If JSON parsing fails, fall back to text
-					const body = await request.text();
-					return new NextResponse(body, {
-						status: mock.statusCode,
-						headers: { 'Content-Type': contentType },
-					});
+		// Find the full mock record for the best match
+		const bestMock = matchableMocks.find((m) => m.id === best._id);
+
+		if (!bestMock) {
+			log.error('Match found in Phase 2 but database record lookup failed');
+			return NextResponse.json(
+				{
+					error: 'Mock endpoint not found',
+					folder: folderSlug,
+					path: mockPath,
+					method,
+				},
+				{ status: 404 },
+			);
+		}
+
+		log.info(
+			{ mockId: bestMock.id, matchType: bestMock.matchType },
+			'Mock match found',
+		);
+
+		// Handle response delay if configured
+		if (bestMock.delay && bestMock.delay > 0) {
+			log.info({ delay: bestMock.delay }, 'Applying response delay');
+			await new Promise((resolve) => setTimeout(resolve, bestMock.delay));
+		}
+
+		// For wildcard mocks with variants, try to select a matching variant
+		if (bestMock.matchType === 'wildcard') {
+			const variants = bestMock.variants as MockVariant[] | null;
+			const wildcardRequireMatch = bestMock.wildcardRequireMatch || false;
+			const effectiveEndpoint = getEffectiveEndpoint(bestMock, subfoldersById);
+
+			if (variants && variants.length > 0) {
+				const variant = selectMockVariant(
+					variants,
+					mockPath,
+					effectiveEndpoint,
+				);
+				if (variant) {
+					log.info({ variantKey: variant.key }, 'Wildcard variant matched');
+					// Use variant's body, statusCode, bodyType
+					const variantMock = {
+						...bestMock,
+						response: variant.body,
+						statusCode: variant.statusCode,
+						bodyType: variant.bodyType as 'json' | 'text',
+						useDynamicResponse: false, // Ensure variants always return their static body
+					};
+					const captures =
+						extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
+					const paramsMap: Record<string, string> = {};
+					for (let i = 0; i < captures.length; i++) {
+						paramsMap[String(i)] = captures[i];
+					}
+					return await buildResponse(variantMock, request, paramsMap, log, mockPath);
 				}
-			} else {
-				const body = await request.text();
-				return new NextResponse(body, {
-					status: mock.statusCode,
-					headers: { 'Content-Type': contentType },
-				});
-			}
-		}
 
-		// Check if this mock uses dynamic schema-based responses
-		if (mock.useDynamicResponse && mock.jsonSchema) {
-			try {
-				// Import the schema generator utility
-				const { generateFromSchema } = await import('@/lib/schema-generator');
-
-				// Generate fresh JSON from the schema on each request
-				const generatedJson = generateFromSchema(JSON.parse(mock.jsonSchema));
-
-				return NextResponse.json(JSON.parse(generatedJson), {
-					status: mock.statusCode,
-				});
-			} catch (error) {
-				console.error('[API] Error generating from schema:', error);
-				// Fallback to static response if generation fails
-				try {
-					return NextResponse.json(JSON.parse(mock.response), {
-						status: mock.statusCode,
-					});
-				} catch {
-					return new NextResponse(mock.response, {
-						status: mock.statusCode,
-						headers: { 'Content-Type': 'application/json' },
-					});
+				// No variant matched
+				if (wildcardRequireMatch) {
+					log.warn('Wildcard requires match but no variant found');
+					return NextResponse.json(
+						{
+							error: 'No matching variant found',
+							folder: folderSlug,
+							path: mockPath,
+							method,
+						},
+						{ status: 404 },
+					);
 				}
+				// Fall back to default mock body
 			}
 		}
 
-		// Return the mock response with the configured status code
-		const contentType =
-			mock.bodyType === 'json' ? 'application/json' : 'text/plain';
-
-		// Try to parse as JSON if bodyType is json
-		const responseBody = mock.response;
-		if (mock.bodyType === 'json') {
-			try {
-				return NextResponse.json(JSON.parse(mock.response), {
-					status: mock.statusCode,
-				});
-			} catch {
-				// If parsing fails, return as text
-				return new NextResponse(mock.response, {
-					status: mock.statusCode,
-					headers: { 'Content-Type': contentType },
-				});
-			}
+		const effectiveEndpoint = getEffectiveEndpoint(bestMock, subfoldersById);
+		const captures =
+			bestMock.matchType === 'wildcard'
+				? extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || []
+				: [];
+		const paramsMap: Record<string, string> = {};
+		for (let i = 0; i < captures.length; i++) {
+			paramsMap[String(i)] = captures[i];
 		}
 
-		return new NextResponse(responseBody, {
+		return await buildResponse(bestMock, request, paramsMap, log, mockPath);
+	} catch (error) {
+		log.error({ err: error }, 'Internal Server Error during mock processing');
+		return NextResponse.json(
+			{ error: 'Internal Server Error', details: String(error) },
+			{ status: 500 },
+		);
+	}
+}
+
+async function buildResponse(
+	mock: typeof mockResponses.$inferSelect,
+	request: NextRequest,
+	paramsMap: Record<string, string> = {},
+	log: Logger,
+	mockPath = '/',
+): Promise<NextResponse> {
+	log.debug({ mockId: mock.id }, 'Building response');
+	const meta = mock.meta as { proxyTargetUrl?: string } | null;
+	if (meta?.proxyTargetUrl) {
+		const urlQueryParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+		const method = (request.method as HttpMethod) || 'GET';
+
+		return await handleProxyAndRecord(
+			meta.proxyTargetUrl,
+			mock.folderId,
+			mockPath,
+			method,
+			request,
+			urlQueryParams,
+			log,
+		);
+	}
+
+	// Check if we should echo the request body
+	if (mock.echoRequestBody) {
+		return handleEchoRequestBody(mock, request, log);
+	}
+
+	// Extract query params and headers from request
+	const url = request.nextUrl;
+	const urlQueryParams = Object.fromEntries(url.searchParams.entries());
+	const requestHeaders = Object.fromEntries(request.headers.entries());
+
+	const { faker } = await import('@faker-js/faker');
+
+	const context = {
+		input: {
+			query: urlQueryParams,
+			params: paramsMap,
+			headers: requestHeaders,
+		},
+		// Support $. aliases
+		query: urlQueryParams,
+		params: paramsMap,
+		headers: requestHeaders,
+		// Explicit $ alias for Handlebars
+		$: {
+			query: urlQueryParams,
+			params: paramsMap,
+			headers: requestHeaders,
+		},
+		// Add faker to context
+		faker,
+	};
+
+	// Check if this mock uses dynamic schema-based responses
+	if (mock.useDynamicResponse && mock.jsonSchema) {
+		return handleDynamicResponse(mock, context, log);
+	}
+
+	// Apply template replacement to static responses
+	const { replaceTemplates } = await import('@/lib/engine/interpolation');
+	const templatedResult = replaceTemplates(mock.response, context);
+
+	// Return the mock response with the configured status code
+	const contentType =
+		mock.bodyType === 'json' ? 'application/json' : 'text/plain';
+
+	log.info({ statusCode: mock.statusCode }, 'Returning static response');
+
+	if (mock.bodyType === 'json') {
+		if (typeof templatedResult === 'object' && templatedResult !== null) {
+			return NextResponse.json(templatedResult, {
+				status: mock.statusCode,
+			});
+		}
+
+		try {
+			// If it's a string, try parsing it as JSON (Handlebars might have produced a JSON string)
+			return NextResponse.json(JSON.parse(String(templatedResult)), {
+				status: mock.statusCode,
+			});
+		} catch {
+			// If parsing fails, return as text
+			return new NextResponse(String(templatedResult), {
+				status: mock.statusCode,
+				headers: { 'Content-Type': contentType },
+			});
+		}
+	}
+
+	return new NextResponse(String(templatedResult), {
+		status: mock.statusCode,
+		headers: { 'Content-Type': contentType },
+	});
+}
+async function handleProxyAndRecord(
+	targetUrlString: string,
+	folderId: string,
+	mockPath: string,
+	method: HttpMethod,
+	request: NextRequest,
+	queryParams: Record<string, string>,
+	log: Logger,
+): Promise<NextResponse> {
+	log.info({ targetUrlString, mockPath }, 'Proxying request to target');
+
+	const url = new URL(request.url);
+	const targetUrl = new URL(targetUrlString);
+
+	// Preserve incoming query params
+	url.searchParams.forEach((value, key) => {
+		targetUrl.searchParams.set(key, value);
+	});
+	try {
+		// Disable SSL verification for proxy calls in dev environments
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+		const requestClone = request.clone();
+		const headers = Object.fromEntries(request.headers.entries());
+
+		delete headers.host; // Cloudflare requirement: dont send localhost as Host header
+
+		const response = await fetch(targetUrl.toString(), {
+			method,
+			headers,
+			body: ["GET", "HEAD"].includes(method) ? null : await requestClone.text(),
+		});
+
+		const responseText = await response.text();
+		const contentType = response.headers.get("content-type") || "text/plain";
+		const bodyType = contentType.includes("application/json") ? "json" : "text";
+
+		log.info(
+			{ statusCode: response.status, bodyType },
+			"Received proxy response, recording mock",
+		);
+
+		// Save the recorded mock
+		await db.insert(mockResponses).values({
+			name: `Auto-captured: ${method} ${mockPath}`,
+			endpoint: mockPath,
+			method,
+			statusCode: response.status,
+			response: responseText,
+			folderId,
+			matchType: "exact",
+			bodyType,
+			enabled: true,
+			queryParams,
+		});
+
+		// Return the real response to the client
+		return new NextResponse(responseText, {
+			status: response.status,
+			headers: {
+				"Content-Type": contentType,
+			},
+		});
+	} catch (error) {
+		log.error(
+			{ err: error, targetUrl: targetUrl.toString() },
+			"Proxy request failed",
+		);
+		return NextResponse.json(
+			{ error: "Proxy request failed", details: String(error) },
+			{ status: 502 },
+		);
+	}
+}
+
+async function handleEchoRequestBody(
+	mock: typeof mockResponses.$inferSelect,
+	request: NextRequest,
+	log: Logger,
+): Promise<NextResponse> {
+	log.debug('Handling echo request body');
+	const contentType = request.headers.get('content-type') || 'text/plain';
+
+	if (contentType.includes('application/json')) {
+		try {
+			const body = await request.clone().json();
+			log.info(
+				{ statusCode: mock.statusCode },
+				'Returning echoed JSON response',
+			);
+			return NextResponse.json(body, { status: mock.statusCode });
+		} catch {
+			// If JSON parsing fails, fall back to text
+			log.warn('Failed to parse JSON for echo, falling back to text');
+			const body = await request.text();
+			return new NextResponse(body, {
+				status: mock.statusCode,
+				headers: { 'Content-Type': contentType },
+			});
+		}
+	} else {
+		const body = await request.text();
+		log.info({ statusCode: mock.statusCode }, 'Returning echoed text response');
+		return new NextResponse(body, {
 			status: mock.statusCode,
 			headers: { 'Content-Type': contentType },
 		});
-	} catch (error) {
-		if (error instanceof Error) {
-			console.error('[API] Error serving mock:', error.message);
-		} else {
-			console.error('[API] Unknown error serving mock:', error);
+	}
+}
+
+async function handleDynamicResponse(
+	mock: typeof mockResponses.$inferSelect,
+	context: Record<string, unknown> = {},
+	log: Logger,
+): Promise<NextResponse> {
+	log.debug('Generating dynamic response');
+	try {
+		// Import the schema generator utility
+		const { generateFromSchema } = await import('@/lib/schema-generator');
+
+		// Generate fresh JSON from the schema on each request
+		if (!mock.jsonSchema) {
+			throw new Error('JSON Schema is required for dynamic response');
 		}
-		return NextResponse.json(
-			{ error: 'Failed to serve mock response' },
-			{ status: 500 },
+		const generatedJson = generateFromSchema(
+			JSON.parse(mock.jsonSchema),
+			context,
 		);
+
+		log.info({ statusCode: mock.statusCode }, 'Returning dynamic response');
+		return NextResponse.json(JSON.parse(generatedJson), {
+			status: mock.statusCode,
+		});
+	} catch (error) {
+		log.error(
+			{ err: error },
+			'Error generating from schema, falling back to static',
+		);
+		// Fallback to static response if generation fails
+		try {
+			return NextResponse.json(JSON.parse(mock.response), {
+				status: mock.statusCode,
+			});
+		} catch {
+			return new NextResponse(mock.response, {
+				status: mock.statusCode,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
 	}
 }
 

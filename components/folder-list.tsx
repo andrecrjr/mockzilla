@@ -1,10 +1,10 @@
 'use client';
 
-import { Folder, Trash2 } from 'lucide-react';
+import { Folder } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { Folder as FolderType, Mock } from '@/lib/types';
+import { FolderDeleteButton } from './folder-delete-button';
 import { EditFolderDialog } from './edit-folder-dialog';
 
 interface FolderListProps {
@@ -12,9 +12,12 @@ interface FolderListProps {
 	mocks: Mock[];
 	isLoading: boolean;
 	onDeleteFolder: (id: string) => void;
-	onDeleteMock: (id: string) => void;
-	onUpdateFolder: (id: string, name: string) => Promise<void>;
-	onUpdateMock: (id: string, data: Partial<Mock>) => Promise<void>;
+	onUpdateFolder: (
+		id: string,
+		name: string,
+		description?: string,
+		slug?: string,
+	) => Promise<void>;
 	onCopy: (text: string) => void;
 }
 
@@ -23,10 +26,7 @@ export function FolderList({
 	mocks,
 	isLoading,
 	onDeleteFolder,
-	onDeleteMock,
 	onUpdateFolder,
-	onUpdateMock,
-	onCopy,
 }: FolderListProps) {
 	if (isLoading) {
 		return (
@@ -62,7 +62,7 @@ export function FolderList({
 						key={folder.id}
 						className="border-border bg-card p-0 overflow-hidden group hover:border-primary/50 transition-colors"
 					>
-						<Link href={`/folder/${folder.slug}`}>
+						<Link href={`/app/folder/${folder.slug}`}>
 							<div className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
 								<div className="flex items-center gap-3">
 									<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -84,14 +84,14 @@ export function FolderList({
 						<div className="border-t border-border bg-muted/50 px-6 py-3 flex items-center justify-between">
 							<div className="flex gap-1">
 								<EditFolderDialog folder={folder} onUpdate={onUpdateFolder} />
-								<Button
-									variant="ghost"
+								<FolderDeleteButton
+									folderId={folder.id}
+									folderName={folder.name}
+									onDelete={onDeleteFolder}
 									size="icon"
-									onClick={() => onDeleteFolder(folder.id)}
+									onTriggerClick={(e) => e.stopPropagation()}
 									className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
+								/>
 							</div>
 							<p className="text-xs text-muted-foreground">
 								Click to open folder

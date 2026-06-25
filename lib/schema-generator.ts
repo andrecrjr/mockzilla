@@ -1,67 +1,119 @@
 import { faker } from '@faker-js/faker';
 import jsf from 'json-schema-faker';
+import { replaceTemplates } from './engine/interpolation';
 
-jsf.extend('faker', () => faker);
-
-jsf.option({
-	alwaysFakeOptionals: true,
-	useDefaultValue: true,
-	useExamplesValue: true,
-	fixedProbabilities: true,
-	minItems: 1,
-	maxItems: 5,
-});
-
-import { resolvePath } from './utils/path-resolver';
-
+let jsfConfigured = false;
 
 /**
- * Deep traverses the generated object and applies template replacement
- * This is a second-pass traversal that resolves all {$.path} references
- *
- * @param rootData - The complete generated object
- * @param currentData - Current node being processed
- * @param visited - Set to track visited objects (prevent circular refs)
- * @returns Processed data with all templates resolved
+ * Configure JSON Schema Faker with extensions and options.
+ * This is done lazily to ensure it only happens once and can be re-triggered if needed.
  */
-function deepReplaceTemplates(
-	rootData: any,
-	currentData: any = rootData,
-	visited = new WeakSet(),
-): any {
+function configureJsf() {
+	if (jsfConfigured) return;
+
+	jsf.extend('faker', () => faker);
+	jsf.extend('x-faker', () => faker);
+
+	// Add support for common OpenAPI/JSON Schema formats
+	jsf.format('password', () => faker.internet.password());
+	jsf.format('byte', () => faker.string.alphanumeric(10)); // Base64 encoded placeholder
+	jsf.format('binary', () => faker.string.alphanumeric(10));
+	jsf.format('uri', () => faker.internet.url());
+	jsf.format('hostname', () => faker.internet.domainName());
+	jsf.format('ipv4', () => faker.internet.ipv4());
+	jsf.format('ipv6', () => faker.internet.ipv6());
+
+	// Even more faker formats
+	jsf.format('phone', () => faker.phone.number());
+	jsf.format('country', () => faker.location.country());
+	jsf.format('country-code', () => faker.location.countryCode());
+	jsf.format('currency', () => faker.finance.currencyCode());
+	jsf.format('currency-symbol', () => faker.finance.currencySymbol());
+	jsf.format('credit-card', () => faker.finance.creditCardNumber());
+	jsf.format('user-agent', () => faker.internet.userAgent());
+	jsf.format('mac', () => faker.internet.mac());
+	jsf.format('color', () => faker.color.human());
+
+	jsfConfigured = true;
+}
+
+/**
+ * Generates sample JSON data from a JSON Schema with support for:
+ * Post-processing templates: {$.field} or {{$.field}} syntax
+ *
+ * @param schema - JSON Schema object
+ * @returns JSON string with generated data
+ */
+export function generateFromSchema(
+	schema: object,
+	context: Record<string, unknown> = {},
+): string {
+	configureJsf();
+
+	const DEFAULT_MAX_ITEMS = 1000;
+	const envMaxItems = process.env.MOCKZILLA_MAX_ITEMS
+		? parseInt(process.env.MOCKZILLA_MAX_ITEMS, 10)
+		: DEFAULT_MAX_ITEMS;
+	const MAX_ITEMS = Number.isNaN(envMaxItems) ? DEFAULT_MAX_ITEMS : envMaxItems;
+
+	// Force options on every call to prevent leaks from other tests
+	jsf.option({
+		alwaysFakeOptionals: true,
+		useDefaultValue: true,
+		useExamplesValue: true,
+		fixedProbabilities: true,
+		minItems: 1,
+		maxItems: MAX_ITEMS,
+		fillProperties: false,
+	});
+
+	try {
+		const generated = jsf.generate(schema) as Record<string, unknown>;
+
+		// Merge generated data with context for template resolution
+		// The context (e.g. request query params) takes precedence if there are naming collisions
+		const rootData = {
+			faker, // Add faker to context for template interpolation
+			...generated,
+			...context,
+		};
+
+		const processed = replaceTemplates(generated, rootData);
+
+		return JSON.stringify(processed, null, 2);
+	} catch (error) {
+		throw new Error(
+			`Failed to generate from schema: ${error instanceof Error ? error.message : 'Unknown error'}`,
+		);
+	}
+}
+
+/**
+ * Pre-processes the schema to handle special cases before generation
+ * Ensures that pattern fields containing template syntax are preserved as-is,
+ * instead of being treated as regular expressions by json-schema-faker.
+ */
+function preprocessSchema(
+	schema: unknown,
+	visited = new WeakSet<object>(),
+): unknown {
 	// Prevent circular reference infinite loops
-	if (currentData && typeof currentData === 'object') {
-		if (visited.has(currentData)) {
-			return currentData;
+	if (schema && typeof schema === 'object') {
+		if (visited.has(schema)) {
+			return schema;
 		}
-		visited.add(currentData);
+		visited.add(schema);
 	}
 
-	if (typeof currentData === 'string') {
-		// Replace template syntax: {$.field} or {{$.field}}
-		return currentData.replace(/\{\{?\$\.([\w.[\]]+)\}?\}/g, (match, path) => {
-			const value = resolvePath('$.' + path, rootData);
+	if (Array.isArray(schema)) {
+		return schema.map((item) => preprocessSchema(item, visited));
+	} else if (schema && typeof schema === 'object') {
+		const processed: Record<string, unknown> = {};
 
-			if (value === undefined) {
-				console.warn(
-					`[schema-generator] Template reference '${match}' could not be resolved`,
-				);
-				return match;
-			}
-
-			return String(value);
-		});
-	} else if (Array.isArray(currentData)) {
-		return currentData.map((item) =>
-			deepReplaceTemplates(rootData, item, visited),
-		);
-	} else if (currentData && typeof currentData === 'object') {
-		const processed: any = {};
-		for (const key in currentData) {
-			if (Object.hasOwn(currentData, key)) {
-				processed[key] = deepReplaceTemplates(
-					rootData,
-					currentData[key],
+		for (const key in schema) {
+			if (Object.hasOwn(schema, key)) {
+				processed[key] = preprocessSchema(
+					(schema as Record<string, unknown>)[key],
 					visited,
 				);
 			}
@@ -69,7 +121,7 @@ function deepReplaceTemplates(
 		return processed;
 	}
 
-	return currentData;
+	return schema;
 }
 
 /**
@@ -101,56 +153,6 @@ export function validateSchema(schemaString: string): {
 }
 
 /**
- * Generates sample JSON data from a JSON Schema with support for:
- * Post-processing templates: {$.field} or {{$.field}} syntax
- *
- * @param schema - JSON Schema object
- * @returns JSON string with generated data
- */
-export function generateFromSchema(schema: object): string {
-	try {
-		const generated = jsf.generate(schema);
-		const processed = deepReplaceTemplates(generated);
-
-		return JSON.stringify(processed, null, 2);
-	} catch (error) {
-		throw new Error(
-			`Failed to generate from schema: ${error instanceof Error ? error.message : 'Unknown error'}`,
-		);
-	}
-}
-
-/**
- * Pre-processes the schema to handle special cases before generation
- * Ensures that pattern fields containing template syntax are preserved as-is,
- * instead of being treated as regular expressions by json-schema-faker.
- */
-function preprocessSchema(schema: any, visited = new WeakSet()): any {
-	// Prevent circular reference infinite loops
-	if (schema && typeof schema === 'object') {
-		if (visited.has(schema)) {
-			return schema;
-		}
-		visited.add(schema);
-	}
-
-	if (Array.isArray(schema)) {
-		return schema.map((item) => preprocessSchema(item, visited));
-	} else if (schema && typeof schema === 'object') {
-		const processed: any = {};
-
-		for (const key in schema) {
-			if (Object.hasOwn(schema, key)) {
-				processed[key] = preprocessSchema(schema[key], visited);
-			}
-		}
-		return processed;
-	}
-
-	return schema;
-}
-
-/**
  * Generates sample JSON data from a JSON Schema string
  */
 export function generateFromSchemaString(schemaString: string): string {
@@ -163,5 +165,5 @@ export function generateFromSchemaString(schemaString: string): string {
 	const schema = JSON.parse(schemaString);
 	const preprocessedSchema = preprocessSchema(schema);
 
-	return generateFromSchema(preprocessedSchema);
+	return generateFromSchema(preprocessedSchema as object);
 }

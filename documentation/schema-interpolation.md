@@ -1,290 +1,121 @@
-# JSON Schema String Interpolation & Field Referencing
+# String Interpolation & Templating Engine
 
-Mockzilla's JSON Schema Faker supports **string interpolation** and **field referencing**, allowing you to reuse generated values across multiple fields and create dynamic template strings.
+Mockzilla uses a **Smart Hybrid Engine** that combines powerful field referencing with standard **Handlebars** templating. This allows you to maintain JSON type integrity while also building complex logic like loops and conditionals.
 
-> [!TIP]
-> This guide focuses on Mockzilla's custom interpolation extensions. For standard JSON Schema data generation features, see the [JSON Schema Faker guide](json-schema-faker.md).
+## The Smart Hybrid Approach
 
+Mockzilla automatically chooses the best engine for your template:
 
-## Quick Start
-
-### Simple Field Reference
-
-Reference any field in your schema using `{$.fieldName}` syntax:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "message": {
-      "const": "Your ticket ID is {$.id}"
-    }
-  }
-}
-```
-
-**Generated Output:**
-```json
-{
-  "id": "967ddc46-a7bd-4f46-bc4c-a105593e321d",
-  "message": "Your ticket ID is 967ddc46-a7bd-4f46-bc4c-a105593e321d"
-}
-```
+1.  **Type-Preserving Engine**: If your response is a valid JSON object or array, Mockzilla traverses it and preserves original types. Numbers stay `number`, and Booleans stay `boolean`.
+2.  **Handlebars Engine**: If your response contains logic blocks (like `{{#each}}`) that break standard JSON parsing, Mockzilla evaluates it as a raw string using Handlebars.
 
 ---
 
-## Template Syntax
+## 🚀 Key Features
 
-You can use two syntaxes for referencing fields:
+### 1. Type Preservation
+Unlike standard template engines that return everything as strings, Mockzilla preserves the original JSON type if the template is the **entire value** of the field.
 
-1. **Single braces**: `{$.fieldName}`
-2. **Double braces**: `{{$.fieldName}}`
+- `{"count": "{{state.count}}"}` → Returns a literal **Number** (e.g., `10`).
+- `{"items": "{{db.users}}"}` → Returns a literal **JSON Array**.
+- `{"msg": "Count is {{state.count}}"}` → Returns a **String** because of the surrounding text.
 
-Both work identically - use whichever you prefer!
+### 2. Logic & Loops (Handlebars)
+Use standard Handlebars syntax for logic blocks. This is perfect for generating lists from your Mini-DB in **Responses** or generating unique IDs in **Effects**.
 
-### JSONPath-Like References
-
-Support for:
-- **Simple fields**: `{$.id}`
-- **Nested objects**: `{$.user.name}`
-- **Array elements**: `{$.items[0].id}`
-- **Nested arrays**: `{$.users[0].addresses[0].city}`
-
----
-
-## Examples
-
-### Example 1: Ticket System with Consistent IDs
-
-```json
+**Example: Dynamic List (Response)**
+```handlebars
 {
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "trackingNumber": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "message": {
-      "const": "Your ticket {$.id} has been assigned tracking number {$.trackingNumber}"
-    },
-    "confirmationId": {
-      "const": "{$.id}"
-    }
-  }
+  "total": "{{db.products.length}}",
+  "items": [
+    {{#each db.products}}
+    {
+      "id": "{{this.id}}",
+      "name": "{{this.name}}"
+    }{{#unless @last}},{{/unless}}
+    {{/each}}
+  ]
 }
 ```
 
-**Output:**
+**Example: Dynamic ID (Effect)**
 ```json
 {
-  "id": "a7c3f821-9b4d-4e8a-bc6f-1234567890ab",
-  "trackingNumber": "f3d9e812-4c5b-4a7d-9e2f-abcdef123456",
-  "message": "Your ticket a7c3f821-9b4d-4e8a-bc6f-1234567890ab has been assigned tracking number f3d9e812-4c5b-4a7d-9e2f-abcdef123456",
-  "confirmationId": "a7c3f821-9b4d-4e8a-bc6f-1234567890ab"
-}
-```
-
-### Example 2: Nested Object References
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "user": {
-      "type": "object",
-      "properties": {
-        "firstName": {
-          "type": "string",
-          "faker": "person.firstName"
-        },
-        "lastName": {
-          "type": "string",
-          "faker": "person.lastName"
-        }
-      }
-    },
-    "greeting": {
-      "const": "Hello, {$.user.firstName} {$.user.lastName}!"
-    },
-    "emailSubject": {
-      "const": "Welcome to our platform, {$.user.firstName}!"
-    }
-  }
-}
-```
-
-**Output:**
-```json
-{
-  "user": {
-    "firstName": "John",
-    "lastName": "Doe"
-  },
-  "greeting": "Hello, John Doe!",
-  "emailSubject": "Welcome to our platform, John!"
-}
-```
-
-### Example 3: Array Element References
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "products": {
-      "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "faker": "commerce.productName"
-          }
-        }
-      }
-    },
-    "featuredProduct": {
-      "const": "{$.products[0].name}"
-    },
-    "summary": {
-      "const": "Featured: {$.products[0].name}, Also available: {$.products[1].name}, {$.products[2].name}"
-    }
-  }
-}
-```
-
-**Output:**
-```json
-{
-  "products": [
-    { "id": "12345", "name": "Ergonomic Keyboard" },
-    { "id": "67890", "name": "Wireless Mouse" },
-    { "id": "11121", "name": "USB-C Cable" }
-  ],
-  "featuredProduct": "Ergonomic Keyboard",
-  "summary": "Featured: Ergonomic Keyboard, Also available: Wireless Mouse, USB-C Cable"
-}
-```
-
-### Example 4: Multiple References in One String
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "orderId": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "customerId": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "statusMessage": {
-      "const": "Order {$.orderId} for customer {$.customerId} is being processed"
-    }
+  "type": "db.push",
+  "table": "tasks",
+  "value": {
+    "id": "task_{{faker 'string.alphanumeric' 8}}",
+    "title": "{{$.body.title}}"
   }
 }
 ```
 
 ---
 
-## Common Use Cases
+## 🛠️ Custom Helpers
 
-### 1. **Consistent IDs Across Fields**
-Use the same randomly generated ID in multiple places:
-```json
-{
-  "orderId": "{$.transactionId}",
-  "receiptId": "{$.transactionId}",
-  "trackingId": "{$.transactionId}"
-}
-```
+Mockzilla provides specialized helpers to make your templates more powerful.
 
-### 2. **Dynamic Status Messages**
-Create messages that reference other generated data:
-```json
-{
-  "status": "shipped",
-  "message": "Your order {$.orderId} has been {$.status}"
-}
-```
-
-### 3. **User Greetings**
-Personalize messages with generated names:
-```json
-{
-  "user": { "name": "Alice" },
-  "greeting": "Hello, {$.user.name}!"
-}
-```
-
-### 4. **Referencing Array Data**
-Pull specific items from arrays:
-```json
-{
-  "items": [{"name": "Apple"}, {"name": "Banana"}],
-  "featured": "Try our {$.items[0].name}!"
-}
-```
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `math` | Perform arithmetic with operators `+ - * / %`. | `{{math state.count "*" 2}}` |
+| `faker` | Generate fake data using any Faker.js path. | `{{faker "internet.email"}}` |
+| `eq` / `neq` / `gt` / `lt` | Compare values. | `{{#if (eq state.role "admin")}}` |
+| `and` / `or` / `not` | Logic gates for complex conditionals. | `{{#if (and $.active (not $.locked))}}` |
+| `default` | Provide a fallback value if a variable is missing or empty. | `{{default $.name "Guest"}}` |
+| `json` | Stringify an object to JSON. | `{{json state.user}}` |
+| `now` | Get current ISO date string. | `{{now}}` |
+| `dateFormat` | Format a date using date-fns patterns. | `{{dateFormat now "yyyy-MM-dd"}}` |
+| `dateAdd` / `dateSub` | Add or subtract time from a date. | `{{dateAdd "now" 5 "days"}}` |
+| `filter` / `sort` | Manipulate arrays from the Mini-DB. | `{{#each (sort db.users "id")}}` |
+| `slice` / `join` | Slice or join array elements. | `{{join $.query.items ", "}}` |
+| `slugify` / `truncate` | Format strings. | `{{slugify $.body.title}}` |
+| `currency` | Format numbers as currency. | `{{currency 1234.56 "USD"}}` |
+| `toFixed` | Format numbers to fixed decimals. | `{{toFixed 12.345 2}}` |
 
 ---
 
-## Important Notes
+## 🚀 Advanced Interpolation (Type-Preserving)
 
-> [!IMPORTANT]
-> - Template references are resolved **after** the entire JSON is generated
-> - References are case-sensitive: `{$.Id}` ≠ `{$.id}`
-> - If a reference cannot be resolved, the template string is left unchanged
+### Basic Arithmetic
+Mockzilla supports simple addition and subtraction directly inside standard JSON templates.
 
-> [!WARNING]
-> - **Circular references are prevented**: If you try to create circular dependencies, the generator will detect and skip them
-> - **Array indices must exist**: Referencing `{$.items[10]}` when the array only has 3 items will fail
+| Syntax | Description |
+|--------|-------------|
+| `{{state.count + 1}}` | Increments a state variable |
+| `{{10 - db.items.length}}` | Calculates remaining items in a table |
 
-> [!TIP]
-> - Use `{$.field}` for simple, readable templates
-> - Prefer JSONPath-style references over custom formats; they work consistently across nested objects and arrays.
+### Relational DB Lookups
+Mockzilla supports advanced predicates for array lookups using the `[key=value]` syntax. This is primarily used for finding records in the **Mini-DB**.
 
----
-
-## Troubleshooting
-
-### Reference Not Found
-
-If you see `[ref:key-not-found]` in your output:
-- Check the field name spelling
-- Ensure the referenced field exists in the schema
-- Verify the field is generated before it's referenced
-
-### Template Not Replaced
-
-If `{$.field}` appears literally in your output:
-- Ensure the path is correct (e.g., `{$.user.name}` not `{$.username}`)
-- Check that the referenced field was successfully generated
-- Look for typos in the JSONPath
-
-### Invalid Template
-
-If you see `[invalid-template]`:
-- Make sure you're using the correct syntax: `{$.field}` or `{{$.field}}`
-- The `$` prefix is required for JSONPath references
+| Syntax | Description |
+|--------|-------------|
+| `{{db.users[id=1]}}` | Find a user in the mini-DB where `id` is `1`. |
+| `{{db.items[id=input.params.id]}}` | **Dynamic**: Match a table row against a URL path parameter. |
 
 ---
 
-## Need Help?
+## Referencing Request Data
 
-Check the [main README](../README.md) for more information about Mockzilla's JSON Schema support.
+You can reference incoming request data directly using the `input.` or `$.` prefixes. Both syntaxes are equivalent.
+
+| Syntax | Alias | Description |
+|--------|-------|-------------|
+| `{{input.query.id}}` | `{{$.query.id}}` | Injects the `?id=...` query parameter |
+| `{{input.params.0}}` | `{{$.params.[0]}}` | Injects a URL path segment (wildcards) |
+| `{{input.headers.user-agent}}` | `{{$.headers.[user-agent]}}` | Injects a request header |
+| `{{input.body.name}}` | `{{$.body.name}}` | Injects a value from the request JSON body |
+
+> **Tip**: When using Handlebars logic with `$.` syntax and numeric keys (like params) or headers with hyphens, use square brackets: `{{$.params.[0]}}` or `{{$.headers.[x-api-key]}}`.
+
+---
+
+## Smart Context
+
+The interpolation context includes:
+- `input`: Standard request data (query, params, headers, body)
+- `state`: Current workflow state
+- `db`: Mini-database tables
+- `$`: Alias for `input`
+- `query`, `params`, `headers`: Shortcuts for `input.query`, etc.
+- `faker`: The full Faker.js instance for complex data generation (e.g. `{{faker.string.uuid}}`)

@@ -19,6 +19,9 @@
 
 # production
 /build
+/desktop-dist/server
+/src-tauri/binaries/mockzilla-node-*
+/src-tauri/target
 
 # misc
 .DS_Store
@@ -33,6 +36,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.landing.example
 
 # vercel
 .vercel
@@ -43,3 +47,6 @@ next-env.d.ts
 data
 .agents
 .gemini
+.*.log
+*.log
+.log

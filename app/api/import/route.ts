@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { folders, mockResponses } from '@/lib/db/schema';
+import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
+import {
+	deriveSubfolderMainPath,
+	orderSubfoldersByHierarchy,
+} from '@/lib/mock-subfolders';
 import type { ExportData, Folder, LegacyImportFormat, Mock } from '@/lib/types';
 
 function generateSlug(name: string): string {
@@ -128,13 +132,15 @@ export async function POST(request: NextRequest) {
 
 		// Create a map to track old IDs to new IDs for folders
 		const folderIdMap = new Map<string, string>();
+		const subfolderIdMap = new Map<string, string>();
+		const subfolderMainPathByOldId = new Map<string, string>();
 
 		// Use a transaction for atomic imports
 		await db.transaction(async (tx) => {
 			// Import folders first
 			for (const folder of exportData.folders) {
 				// Skip folders that are marked as extension sync data
-				const meta = folder.meta as Record<string, any>;
+				const meta = folder.meta as Record<string, unknown>;
 				if (meta?.extensionSyncData) {
 					console.log(`[API] Skipping extension-synced folder: ${folder.name}`);
 					continue;
@@ -163,6 +169,36 @@ export async function POST(request: NextRequest) {
 				results.folders++;
 			}
 
+			const orderedSubfolders = orderSubfoldersByHierarchy(
+				exportData.mockSubfolders ?? [],
+			);
+			for (const subfolder of orderedSubfolders) {
+				const mappedFolderId = folderIdMap.get(subfolder.folderId);
+				if (!mappedFolderId) continue;
+
+				const mappedParentId = subfolder.parentId
+					? subfolderIdMap.get(subfolder.parentId) ?? null
+					: null;
+				const parentMainPath = subfolder.parentId
+					? subfolderMainPathByOldId.get(subfolder.parentId)
+					: null;
+				const mainPath = deriveSubfolderMainPath(parentMainPath, subfolder.slug);
+
+				const [newSubfolder] = await tx
+					.insert(mockSubfolders)
+					.values({
+						folderId: mappedFolderId,
+						parentId: mappedParentId,
+						name: subfolder.name,
+						slug: subfolder.slug,
+						mainPath,
+					})
+					.returning();
+
+				subfolderIdMap.set(subfolder.id, newSubfolder.id);
+				subfolderMainPathByOldId.set(subfolder.id, newSubfolder.mainPath);
+			}
+
 			// Import mocks with updated folder IDs
 			for (const mock of exportData.mocks) {
 				const mappedFolderId = folderIdMap.get(mock.folderId);
@@ -170,7 +206,9 @@ export async function POST(request: NextRequest) {
 				// If the folder was skipped (e.g. extension folder), skip the mock too
 				if (!mappedFolderId) {
 					// Check if it was in the original payload but skipped
-					const originalFolder = exportData.folders.find(f => f.id === mock.folderId);
+					const originalFolder = exportData.folders.find(
+						(f) => f.id === mock.folderId,
+					);
 					if (originalFolder) {
 						// It was an explicitly skipped folder
 						continue;
@@ -186,6 +224,9 @@ export async function POST(request: NextRequest) {
 					statusCode: mock.statusCode,
 					response: mock.response,
 					folderId: mappedFolderId || mock.folderId,
+					mockFolderId: mock.mockFolderId
+						? subfolderIdMap.get(mock.mockFolderId) ?? null
+						: null,
 					matchType: mock.matchType || 'exact',
 					bodyType: mock.bodyType || 'json',
 					enabled: mock.enabled ?? true,
@@ -205,7 +246,9 @@ export async function POST(request: NextRequest) {
 	} catch (error: unknown) {
 		console.error('[API] Import error:', error);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to import data' },
+			{
+				error: error instanceof Error ? error.message : 'Failed to import data',
+			},
 			{ status: 500 },
 		);
 	}

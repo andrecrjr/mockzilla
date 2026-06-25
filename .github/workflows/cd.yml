@@ -1,0 +1,126 @@
+name: CD — Release & Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push:
+    needs: release
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.prd
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/mockzilla:${{ needs.release.outputs.new_release_version }}
+
+  desktop-release:
+    needs: release
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            bundles: appimage,deb
+          - platform: windows-latest
+            bundles: nsis
+          - platform: macos-latest
+            bundles: dmg
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux desktop dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Windows desktop installer
+        if: matrix.platform == 'windows-latest'
+        env:
+          NO_STRIP: "true"
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Build Linux desktop installers
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          NO_STRIP: "true"
+          LD_LIBRARY_PATH: ${{ github.workspace }}/src-tauri/resources/lib
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Build macOS desktop installer
+        if: matrix.platform == 'macos-latest'
+        env:
+          NO_STRIP: "true"
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Upload desktop installers
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.release.outputs.new_release_version }}
+          files: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.dmg
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}

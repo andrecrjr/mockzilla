@@ -11,8 +11,10 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Always use Docker to get all context about server.
 - Makefile is the main entry point for all commands.
 - **Docker Usage**: Always prefer to use Docker (via `Makefile`) to run commands. Never run scripts like `migrate` or `db:generate` locally; execute them inside the container.
+- **Local Checks**: Run `bun run typecheck` and `bun run lint` locally from the repository root, not inside Docker.
 - **Migrations**: Always use `bun run db:generate` inside Docker (or `make db-generate`) to create migrations.
 - **Bun**: Use `bun` as the primary runtime and package manager inside Docker.
+- **Biome** : Lint and prettier default
 - Context Boundary: Each agent entry is self-contained; do not mix details across agents when prompting.
 - Code References: Use `file_path:line_number` to jump precisely.
 - Terminology: "folder" groups mocks; "mock" is an individual endpoint response.
@@ -21,6 +23,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - Must use `z.infer<typeof schema>` to extract types from Zod schemas.
 - **Always** in the end update `documentation/` folder with updated docs.
 - Use **Agent Skills** (`.agent/skills/`) for complex mocking or logic tasks.
+
 
 ## Index
 - Mock Serving Agent
@@ -32,28 +35,105 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - API Client Agent
 - Local Storage Agent
 - Agent Skills Reference
+- UI Component Architecture
+- Observability & Forensic Agent
+
+---
+
+## Observability & Forensic Agent
+Tags: #logging #tracing #forensics #pino #ndjson
+
+- Purpose: Inspect live traffic, debug matching logic, and perform forensic audits on stateful workflows.
+- Implementation: `lib/logger.ts` (Core), `app/api/mock/[...path]/route.ts` (Tracing entry).
+- Capabilities:
+  - Query application logs via `manage_logs` (action: `get`) (search, level, type filters).
+  - Perform end-to-end request reconstruction using `manage_logs` (action: `trace`, reqId: `reqId`).
+  - Analyze workflow matching failures via `workflow_control` (action: `test`)'s `executionTrace`.
+- Entry Points:
+  - MCP: `manage_logs` (actions: `get`, `trace`, `clear`).
+  - Workflow: `workflow_control` (action: `test`) (enhanced output).
+- Related Docs:
+  - `documentation/mcp.md` (Logs section).
+
+---
+
+## UI Component Architecture
+Tags: #components #ui #mock-editor #refactoring
+
+- Purpose: Modular, maintainable UI components for mock creation and editing.
+- Last Updated: 2026-04-12
+
+### Component Hierarchy
+```
+MockEditor (orchestrator)
+├── MockBasicFields (folder, name, method, status, path)
+├── AdvancedOptions (match type, query params)
+├── ResponseConfig (echo toggle, manual JSON, schema tabs)
+└── MockVariantManager (wildcard variants)
+```
+
+### MockEditor Component
+- **File**: `components/mock-editor.tsx`
+- **Purpose**: Main form orchestrator (~200 lines, reduced from 851)
+- **Responsibilities**:
+  - Manages form state and submission
+  - Coordinates child components
+  - Handles validation and API calls
+- **Props**: `mode`, `folders`, `initial`, `onSubmit`, `onCancel`
+
+### AdvancedOptions Component
+- **File**: `components/mock-advanced-options.tsx`
+- **Purpose**: Match type and query parameter configuration
+- **Sections**:
+  - **Match Type Section**: Select dropdown (exact, wildcard, substring) with descriptions
+  - **Query Params Section**: Dynamic key/value pair management
+- **Props**: `matchType`, `onMatchTypeChange`, `queryParams`, `onQueryParamsChange`
+
+### ResponseConfig Component
+- **File**: `components/mock-response-config.tsx`
+- **Purpose**: Response body configuration
+- **Features**:
+  - Echo request body toggle (POST/PUT/PATCH only)
+  - Manual JSON tab
+  - From Schema tab with dynamic response toggle and preview
+- **Props**: `method`, `echoRequestBody`, `response`, `jsonSchema`, `useDynamicResponse`, etc.
+
+### MockVariantManager Component
+- **File**: `components/mock-variant-manager.tsx`
+- **Purpose**: Wildcard variant management
+- **Features**:
+  - Require match toggle (404 vs fallback behavior)
+  - Add/remove/edit variant cards
+  - Each variant: capture key, status code, body, body type
+- **Visibility**: Only shown when `matchType === 'wildcard'`
+- **Props**: `variants`, `onVariantsChange`, `requireMatch`, `onRequireMatchChange`
+
+### Related Docs
+- `documentation/component-architecture.md` — detailed component documentation
 
 ---
 
 ## Mock Serving Agent
-Tags: #routing #mock #schema #echo #nextjs #drizzle
+Tags: #routing #mock #schema #echo #nextjs #drizzle #handlebars
 
 - Purpose: Serve configured mock responses by folder slug and path; supports static JSON/text, request-body echo, and JSON Schema–driven dynamic responses.
 - Entry Point: `app/api/mock/[...path]/route.ts`
   - Path format: `/api/mock/{folderSlug}/{mockPath...}` (app/api/mock/[...path]/route.ts:10)
+  - Root path support: `/api/mock/{folderSlug}/` or `/api/mock/{folderSlug}` treats mockPath as "/"
 - Capabilities
+  - **Hybrid Template Execution**: Correctly handles both object-based type preservation and string-based Handlebars logic (app/api/mock/[...path]/route.ts).
   - Resolve folder by slug, then match mock by `endpoint` and `method` (app/api/mock/[...path]/route.ts:19–37).
   - Echo request body back when `echoRequestBody` is enabled (app/api/mock/[...path]/route.ts:45–68).
   - Generate dynamic JSON from `jsonSchema` when `useDynamicResponse` is true (app/api/mock/[...path]/route.ts:70–91), fallback to static response if generation fails (app/api/mock/[...path]/route.ts:82–90).
   - Content type set by `bodyType` (`json` or `text`) (app/api/mock/[...path]/route.ts:94–114).
 - Inputs
   - HTTP method: `GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS` (lib/db/schema.ts:5–13).
-  - Path segments: `folderSlug`, `mockPath` (app/api/mock/[...path]/route.ts:15–17).
+  - Path segments: `folderSlug` (required), `mockPath` (optional, defaults to "/") (app/api/mock/[...path]/route.ts:15–27).
   - DB tables: `folders`, `mockResponses` (lib/db/schema.ts:20–27, 29–47).
 - Outputs
   - `NextResponse` with configured `statusCode` and body; JSON or text per `bodyType`.
 - Constraints
-  - Requires at least two segments: folder slug + mock path (app/api/mock/[...path]/route.ts:11–13).
+  - Requires at least one segment: folder slug (app/api/mock/[...path]/route.ts:20–25).
   - `jsonSchema` must parse as JSON when dynamic mode is enabled.
 - Error Handling
   - 404 when folder or mock not found (app/api/mock/[...path]/route.ts:22–24, 39–43).
@@ -70,13 +150,14 @@ Tags: #crud #mock #pagination #drizzle #nextjs
 - Purpose: Create, read, update, delete mock definitions; list with pagination.
 - Entry Point: `app/api/mocks/route.ts`
 - Capabilities
-  - GET by `id`, or list paginated with optional `folderId` (app/api/mocks/route.ts:7–106).
-  - POST create new mock (app/api/mocks/route.ts:108–149).
-  - PUT update by `id` (app/api/mocks/route.ts:156–210).
-  - DELETE by `id` (app/api/mocks/route.ts:212–226).
+  - List paginated with optional `folderId` via `manage_mocks` (action: `list`).
+  - Create new mock via `manage_mocks` (action: `create`). Supports standard and schema-driven mocks.
+  - Update by `id` via `manage_mocks` (action: `update`).
+  - Delete by `id` via `manage_mocks` (action: `delete`).
+  - Preview matching logic via `manage_mocks` (action: `preview`).
 - Inputs
   - Query: `id`, `folderId`, `page`, `limit`.
-  - Body: `CreateMockRequest` / `UpdateMockRequest` (lib/types.ts; fields map to `mockResponses`).
+  - Body: `ManageMocksArgs` (lib/mcp/schemas/mocks.ts).
 - Outputs
   - JSON with normalized fields: `id, name, path, method, response, statusCode, folderId, matchType, bodyType, enabled, jsonSchema, useDynamicResponse, echoRequestBody, createdAt, updatedAt`.
 - Constraints
@@ -93,10 +174,11 @@ Tags: #crud #folder #slug #drizzle #nextjs
 - Purpose: Manage folders (groups of mocks) and pagination.
 - Entry Point: `app/api/folders/route.ts`
 - Capabilities
-  - GET by `slug`, list all, or paginated (app/api/folders/route.ts:15–89).
-  - POST create with slug generation (app/api/folders/route.ts:91–121).
-  - PUT update by `id` with slug regeneration (app/api/folders/route.ts:123–160).
-  - DELETE by `id` (app/api/folders/route.ts:162–176).
+  - List all, or paginated via `manage_folders` (action: `list`).
+  - Create with slug generation via `manage_folders` (action: `create`).
+  - Get by `id` or `slug` via `manage_folders` (action: `get`).
+  - Update by `id` with slug regeneration via `manage_folders` (action: `update`).
+  - Delete by `id` via `manage_folders` (action: `delete`).
 - Slug Rules
   - Lowercase, trim, spaces→`-`, non-alphanumerics removed (app/api/folders/route.ts:7–13).
 - Outputs
@@ -133,16 +215,19 @@ Tags: #export #snapshot #drizzle
 ---
 
 ## Schema Generator Agent
-Tags: #jsonschema #faker #templates #llm-context
+Tags: #jsonschema #faker #templates #llm-context #handlebars
 
-- Purpose: Generate sample JSON from JSON Schema with custom formats and template interpolation.
+- Purpose: Generate sample JSON from JSON Schema and handle complex response templating using a Smart Hybrid Engine.
 - Module: `lib/schema-generator.ts`
 - Capabilities
-  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts:106–201, 232–259).
-  - Validation helper `validateSchema` (lib/schema-generator.ts:204–229).
-  - Entry point: `generateFromSchema` (lib/schema-generator.ts:240–259).
+  - **Smart Hybrid Engine**: Automatically switches between **Type-Preserving Interpolation** (for valid JSON) and **Handlebars** (for logic/loops).
+  - **Handlebars-First Workflows**: Both **Responses** and **Database Effects** support full Handlebars power, including loops, conditionals, and Faker.
+  - Custom Helpers: `math` (arithmetic), `faker` (dynamic data), `eq/neq/gt/lt/gte/lte` (comparisons).
+  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts).
+  - Validation helper `validateSchema`.
+  - Entry point: `generateFromSchema`, `replaceTemplates`.
 - Dependencies
-  - `@faker-js/faker`, `json-schema-faker` integration (lib/schema-generator.ts:1–3, 17–28).
+  - `handlebars`, `@faker-js/faker`, `json-schema-faker` integration.
 - Related Docs
   - `documentation/schema-interpolation.md`
   - `documentation/test-schemas.md`
@@ -182,6 +267,8 @@ Tags: #skills #automation #creator #architect
 - Skills:
   - `mockzilla-mock-maker`: Expert for high-quality, high-fidelity data generation.
   - `mockzilla-workflow-architect`: Expert for stateful API workflows and scenarios.
+  - `mockzilla-spec-translator`: Expert for rapid project bootstrapping from OpenAPI/Markdown specs.
+  - `mockzilla-logic-doctor`: Forensic specialist for debugging workflow matching and state.
 - Usage: "Use [skill-name] to [task description]".
 - Related Docs: `documentation/skills.md`.
 
@@ -197,9 +284,15 @@ Tags: #skills #automation #creator #architect
 - Serve a mock
   - "Call Mock Serving Agent with method `GET` at `/api/mock/{folderSlug}/users/42`".
 - Create a mock
-  - "Use Mocks CRUD Agent to POST a JSON mock in folder `{folderId}` with path `/users/{id}` and `statusCode` 200".
+  - "Use Mocks CRUD Agent to call `manage_mocks` with action `create` for a JSON mock in folder `{folderId}` with path `/users/{id}` and `statusCode` 200".
 - Generate dynamic sample
   - "Use Schema Generator Agent with `generateFromSchemaString` and interpolate `{ $.user.id }` into summary field".
+- Perform Forensics
+  - "Use Observability & Forensic Agent to find why the last request to `/api/v1/orders` failed using `manage_logs`."
+  - "Invoke `manage_logs` with action `trace` and `reqId` 'abc-123' to audit state mutations."
+- Manage Workflows
+  - "Use `manage_scenarios` to list existing scenarios."
+  - "Use `workflow_control` with action `inspect` to check state for scenario 'auth-flow'."
 
 ## Additional References
 - Reference Guide: `documentation/index.md`.

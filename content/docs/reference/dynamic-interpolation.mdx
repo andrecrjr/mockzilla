@@ -1,0 +1,139 @@
+---
+title: Dynamic Data Syntax
+description: Master Handlebars logic, temporal manipulation, collection filtering, and faker integration.
+---
+
+# Dynamic Data Syntax
+
+Mockzilla uses **Handlebars** as its primary engine for generating high-fidelity, dynamic responses. This allows you to build complex state machines and business logic directly inside your mocks.
+
+## 1. The Handlebars-First Philosophy
+
+Handlebars is the "Brain" of your mocks. You should use it whenever your response needs to be more than a static file. Mockzilla uses a **Smart Hybrid Engine** that preserves JSON types (numbers, booleans) even when using complex Handlebars logic.
+
+---
+
+## 2. Advanced Logic Helpers
+Control the flow of your data with standard and boolean logic.
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `and` | Returns true if all arguments are truthy. | `{{#if (and $.query.active $.query.admin)}}` |
+| `or` | Returns true if any argument is truthy. | `{{#if (or $.query.id $.query.slug)}}` |
+| `not` | Inverts a boolean value. | `{{#if (not $.query.locked)}}` |
+| `default` | Returns a fallback value if the first is empty. | `{{default $.query.theme "dark"}}` |
+| `eq` / `neq` | Strict equality check. | `{{#if (eq $.query.role "admin")}}` |
+| `gt` / `lt` | Numeric comparisons. | `{{#if (gt state.count 5)}}` |
+
+---
+
+## 3. Temporal (Time) Helpers
+Mocking dates and expirations is easy with built-in time manipulation.
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `now` | Current ISO timestamp. | `{{now}}` |
+| `dateFormat` | Formats a date string. | `{{dateFormat "now" "yyyy-MM-dd"}}` |
+| `dateAdd` | Adds time to a date. | `{{dateAdd "now" 30 "days"}}` |
+| `dateSub` | Subtracts time from a date. | `{{dateSub "now" 1 "hours"}}` |
+
+> **Units supported**: `years`, `months`, `weeks`, `days`, `hours`, `minutes`, `seconds`.
+
+---
+
+## 4. Collection Wizards (Array Manipulation)
+Sculpt your Mini-DB data or request arrays before returning them.
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `filter` | Filters an array by a key/value pair. | `{{filter db.users "status" "active"}}` |
+| `sort` | Sorts an array by a specific key. | `{{sort db.products "price" "desc"}}` |
+| `slice` | Returns a portion of an array. | `{{slice db.items 0 10}}` |
+| `join` | Joins array elements into a string. | `{{join $.query.tags ", "}}` |
+| `json` | Stringifies an object/array. | `{{{json db.users}}}` |
+
+---
+
+## 5. String & Number Stylists
+Format your data to look production-ready.
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `slugify` | URL-friendly strings. | `{{slugify "Hello World!"}}` → `hello-world` |
+| `truncate` | Limits string length with `...`. | `{{truncate long_text 50}}` |
+| `currency` | Formats numbers as money. | `{{currency 123.4 "USD" "en-US"}}` → `$123.40` |
+| `toFixed` | Controls decimal precision. | `{{toFixed 10.555 2}}` → `10.56` |
+| `math` | Basic arithmetic (`+ - * / %`). | `{{math state.val "+" 1}}` |
+
+---
+
+## 6. Power Patterns (Masterclass)
+
+### The "Search & Paginate" Pattern
+Filter a database, sort it, and return a specific page with metadata.
+
+```handlebars
+{
+  "metadata": {
+    "total": {{db.products.length}},
+    "returned": {{$.query.limit}},
+    "next_page": "{{dateAdd (now) 1 'days'}}"
+  },
+  "results": [
+    {{#each (slice (sort (filter db.products "category" $.query.cat) "price" "asc") 0 5)}}
+    {
+      "id": "{{this.id}}",
+      "slug": "{{slugify this.name}}",
+      "price_pretty": "{{currency this.price 'USD'}}",
+      "is_cheap": {{#if (lt this.price 20)}}true{{else}}false{{/if}}
+    }{{#unless @last}},{{/unless}}
+    {{/each}}
+  ]
+}
+```
+
+### The "Dynamic User Role" Pattern
+Return different nested structures based on complex permission logic.
+
+```handlebars
+{
+  "user": "{{faker.person.fullName}}",
+  "permissions": {{#if (or (eq $.headers.[x-role] "admin") (eq state.user_id 1))}}
+    ["read", "write", "delete", "sudo"]
+  {{else}}
+    ["read"]
+  {{/if}},
+  "debug_info": {
+    "requested_at": "{{now}}",
+    "trace_id": "{{faker.string.uuid}}"
+  }
+}
+```
+
+---
+
+## 7. Smart Context Reference
+
+| Goal | Handlebars Syntax |
+|------|-------------------|
+| Query Param | `{{$.query.id}}` |
+| JSON Body | `{{$.body.user.email}}` |
+| Path Segment | `{{$.params.[0]}}` |
+| Headers | `{{$.headers.[user-agent]}}` |
+| State | `{{state.variable_name}}` |
+| Mini-DB | `{{db.table_name}}` |
+
+---
+
+## 8. Type Preservation Mastery
+
+Mockzilla is unique because it preserves JSON types even through Handlebars. If your logic evaluates to a valid JSON primitive (number, boolean, or null) **without surrounding quotes**, Mockzilla will return that actual type.
+
+```json
+{
+  "isAdmin": {{#if $.query.admin}}true{{else}}false{{/if}},
+  "price": {{math $.query.base "*" 1.1}},
+  "raw_data": {{{json db.items}}}
+}
+```
+*(Notice: Use triple braces `{{{json ...}}}` to prevent Handlebars from HTML-escaping JSON characters!)*

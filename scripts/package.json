@@ -1,0 +1,11 @@
+{
+  "name": "mockzilla-migrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.15",
+    "drizzle-orm": "^0.36.4",
+    "pg": "^8.17.1"
+  }
+}

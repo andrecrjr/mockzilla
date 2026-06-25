@@ -1,0 +1,147 @@
+---
+title: Browser Extension Sync
+description: Move your mocks from your browser to your dashboard with one click.
+---
+
+# Browser Extension Sync
+
+The Mockzilla Chrome Extension is your local assistant. It lets you capture real API requests directly from your browser and turn them into permanent mocks in your Mockzilla Dashboard.
+
+## Extension Integration
+
+Seamlessly sync mocks between your local Chrome Extension and the Mockzilla Server.
+
+### High-Fidelity Sync
+
+Mockzilla uses a smart merge strategy to ensure **zero data loss**. Extension-specific features (like variants) are preserved in the server's database even if the server doesn't natively support them yet.
+
+<div className="grid md:grid-cols-2 gap-6 my-8">
+  <Card className="p-4">
+    <CardHeader className="p-0 mb-2">
+      <CardTitle className="text-lg flex items-center gap-2">
+        Sync to Server
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="text-sm text-muted-foreground mb-4">
+        Push your local extension rules to the server. Useful for sharing mocks with teammates or backing up your work.
+      </div>
+      <ul className="space-y-2 text-sm text-muted-foreground">
+        <li className="flex gap-2">✅ Creates generic "Extension" folders.</li>
+        <li className="flex gap-2">✅ Preserves all extension metadata.</li>
+      </ul>
+    </CardContent>
+  </Card>
+
+  <Card className="p-4">
+    <CardHeader className="p-0 mb-2">
+      <CardTitle className="text-lg flex items-center gap-2">
+        Import from Server
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="text-sm text-muted-foreground mb-4">
+        Pull mocks from the server into your browser. Perfect for onboarding or switching environments.
+      </div>
+      <ul className="space-y-2 text-sm text-muted-foreground">
+        <li className="flex gap-2">✅ Imports folders as groups.</li>
+        <li className="flex gap-2">✅ Smart merges server edits + extension data.</li>
+      </ul>
+    </CardContent>
+  </Card>
+</div>
+
+---
+
+## 🤖 AI-First: Agent Instructions
+The browser extension is your AI's "eyes" into real-world traffic. Use an AI agent to analyze captured traffic and automatically generate spec-driven mocks that follow your project's standards.
+
+<Card className="border-blue-500/20 bg-blue-500/5 mt-8">
+  <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+      <Shield className="w-6 h-6 text-blue-500" />
+    </div>
+    <div>
+      <CardTitle className="text-lg">AI Agent Command</CardTitle>
+      <CardDescription>Instruct your AI agent to sync and refine mocks captured by the extension.</CardDescription>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="text-sm">
+      "Use **mockzilla-mock-maker** to import the latest mocks from my browser extension. Find any endpoints related to `user-profile`, convert them into high-fidelity JSON Schema mocks using Faker, and save them into a new folder called `users-prod`."
+    </div>
+    <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
+      // Tip: The AI can even identify "missing" fields in your captured traffic by comparing it to your OpenAPI spec.
+    </div>
+  </CardContent>
+</Card>
+
+---
+
+## How to Sync
+
+1. Open the Mockzilla Chrome Extension in your browser.
+2. Click the **Sync** icon in the header.
+3. Choose **Push** to save your local mocks to the dashboard.
+4. Choose **Import** to bring dashboard mocks into your browser.
+
+> **Pro Tip:** Intercept real-world APIs, save them to Mockzilla, and then edit the response to test edge cases without ever needing the real backend!
+
+---
+
+## Deep Dive: How it Works
+
+<Accordion type="single" collapsible className="space-y-4">
+  <AccordionItem value="sync-flow">
+    <AccordionTrigger>Sync Flow (Extension → Server)</AccordionTrigger>
+    <AccordionContent>
+      <div className="space-y-4 pt-2">
+        <div className="text-sm text-muted-foreground">
+          When you click **Sync** in the extension:
+        </div>
+        <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-2">
+          <li>The extension sends a snapshot of your selected rules.</li>
+          <li>The server checks for existing "Extension" folders.</li>
+          <li>
+            <span className="text-foreground font-medium">Magic Step:</span> The server stores the 
+            <span className="italic"> exact raw JSON payload</span> in a hidden `meta` field.
+          </li>
+          <li>The server also creates standard Mockzilla mocks for generic use (e.g. by other agents).</li>
+        </ol>
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+
+  <AccordionItem value="import-flow">
+    <AccordionTrigger>Import Flow (Server → Extension)</AccordionTrigger>
+    <AccordionContent>
+      <div className="space-y-4 pt-2">
+        <div className="text-sm text-muted-foreground">
+          When you click **Import** in the extension header:
+        </div>
+        <div className="border rounded-lg p-4 bg-muted/20">
+          <CardTitle className="text-sm mb-3 flex items-center gap-2">
+            The Merge Strategy
+          </CardTitle>
+          <div className="text-xs text-muted-foreground mb-3">
+            The server combines two sources of truth to give you the best result:
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div className="p-3 bg-background rounded border">
+              <span className="block font-medium mb-1 text-primary">Source 1: Stored Metadata</span>
+              <p className="text-muted-foreground">
+                Restores extension-only fields like `variants`, `delays`, etc.
+              </p>
+            </div>
+            <div className="p-3 bg-background rounded border">
+              <span className="block font-medium mb-1 text-primary">Source 2: Server State</span>
+              <p className="text-muted-foreground">
+                Applies any recent changes made in the Server UI (e.g. status code, response body).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>

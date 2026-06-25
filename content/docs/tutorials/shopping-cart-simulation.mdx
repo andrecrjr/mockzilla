@@ -1,0 +1,117 @@
+---
+title: "Creating a Dynamic Shopping Cart"
+description: Master the Mockzilla Mini-DB to build stateful list-based simulations with real persistence.
+---
+
+# Tutorial: Creating a Dynamic Shopping Cart
+
+In this tutorial, we move beyond simple variables and use the **Mini-DB**. This is a persistent internal data store that allows your mocks to "remember" items in a list—perfect for shopping carts, to-do lists, or message feeds.
+
+<Card className="my-8 border-purple-500/20 bg-purple-500/5">
+  <CardHeader>
+    <div className="flex items-center gap-2">
+      <Database className="w-5 h-5 text-purple-500" />
+      <CardTitle className="text-lg">The Persistence Engine</CardTitle>
+    </div>
+  </CardHeader>
+  <CardContent className="text-sm">
+    The Mini-DB turns your mock into a real backend prototype. Instead of hardcoding responses for 0, 1, or 5 items, you'll build logic that dynamically adds items to a collection and retrieves them exactly like a production database.
+  </CardContent>
+</Card>
+
+---
+
+## Step 1: Scenario Setup
+
+1. Navigate to the **Workflows** tab.
+2. Click **Create Scenario** and name it `my-store`.
+3. Note your base URL: `http://localhost:36666/api/workflow/exec/my-store/`
+
+---
+
+## Step 2: Add an Item (POST /cart)
+
+We want to "capture" the body of a POST request and save it into a table called `cart_items`.
+
+- **Method**: `POST`
+- **Path**: `/cart`
+- **Effect**: `db.push`
+- **Table**: `cart_items`
+- **Value**: `&#123;&#123;input.body&#125;&#125;`
+
+**Response Body**:
+```json
+{ "items_count": "&#123;&#123;db.cart_items.length&#125;&#125;" }
+```
+
+---
+
+## Step 3: List the Cart (GET /cart)
+
+Retrieve everything stored in the `cart_items` table. Because Mockzilla supports **Type Preservation**, returning `&#123;&#123;db.cart_items&#125;&#125;` will automatically become a JSON array.
+
+- **Method**: `GET`
+- **Path**: `/cart`
+
+**Response Body**:
+```json
+{
+  "cart": &#123;&#123;json db.cart_items&#125;&#125;,
+  "total": &#123;&#123;db.cart_items.length&#125;&#125;
+}
+```
+
+---
+
+## Step 4: Logic-Based Discounts
+
+Let's return a discount code **only** if the user has more than 2 items in their cart.
+
+- **Method**: `GET`
+- **Path**: `/cart/discount`
+- **Condition**: `db.cart_items.length` **gt** `2`
+- **Response**: `{"eligible": true, "code": "LOYALTY_10"}`
+
+---
+
+## Step 5: Verify the Journey
+
+<div className="space-y-6 mt-8">
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 1. Add some coffee beans
+    </div>
+    ```bash
+    curl -X POST http://localhost:36666/api/workflow/exec/my-store/cart \
+      -d '{"id": "p1", "name": "Dark Roast Coffee", "price": 14.99}'
+    ```
+  </div>
+
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 text-sm font-bold">
+      <CheckCircle2 className="w-4 h-4 text-green-500" /> 2. See your cart content
+    </div>
+    ```bash
+    curl http://localhost:36666/api/workflow/exec/my-store/cart
+    ```
+  </div>
+</div>
+
+---
+
+<div className="mt-12 p-8 bg-gradient-to-br from-purple-500/10 to-primary/10 rounded-3xl border border-purple-500/20">
+  <div className="flex flex-col md:flex-row gap-6 items-center text-center md:text-left">
+    <div className="w-16 h-16 rounded-2xl bg-purple-500 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/20 text-white">
+      <Database className="w-8 h-8" />
+    </div>
+    <div className="flex-1">
+      <h3 className="text-xl font-bold mb-1">Mini-DB Mastered!</h3>
+      <p className="text-muted-foreground text-sm">
+        You've built a persistent, list-based simulation. Ready to tackle even more complex system logic?
+      </p>
+    </div>
+    <Link href="/docs/tutorials/advanced-systems-simulation">
+      <Button variant="outline" className="shrink-0 border-purple-500 text-purple-500 hover:bg-purple-500/10">Advanced Simulation <ChevronRight className="w-4 h-4" /></Button>
+    </Link>
+  </div>
+</div>

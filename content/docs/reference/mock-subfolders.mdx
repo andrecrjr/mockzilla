@@ -1,0 +1,171 @@
+---
+title: Mock Subfolders
+description: Organize mocks into nested paths while keeping mock URLs predictable.
+---
+
+# Mock Subfolders
+
+Mock subfolders help you group related mocks inside a top-level folder. They also become part of the served URL, so your mock structure can mirror the API paths your application expects.
+
+A top-level folder owns the first URL segment:
+
+```text
+/api/mock/{folderSlug}
+```
+
+Subfolders add path segments after the folder slug. Mocks inside a subfolder use paths relative to that subfolder.
+
+## URL Examples
+
+| Folder slug | Subfolder path | Mock path | Served URL |
+| --- | --- | --- | --- |
+| `api` | `users` | `/123` | `/api/mock/api/users/123` |
+| `api` | `users/details` | `/123` | `/api/mock/api/users/details/123` |
+| `api` | `users/details` | `/` | `/api/mock/api/users/details` |
+| `billing` | `invoices` | `/latest` | `/api/mock/billing/invoices/latest` |
+
+Example:
+
+1. Create a folder with slug `api`.
+2. Create a subfolder named `Users`.
+3. Create a child subfolder named `Details`.
+4. Create a mock in `Details` with path `/123`.
+
+The mock is served at:
+
+```text
+/api/mock/api/users/details/123
+```
+
+## Folder Page
+
+The app shows one subfolder level at a time:
+
+- Click a subfolder card to enter it.
+- Use the upward arrow button to go back one level. From a top-level subfolder, it returns to the folder root.
+- Create subfolders from the current level.
+- Create mocks in the current level.
+- Edit mock paths relative to the selected subfolder.
+- Use preview, copy, or open actions to get the full served URL.
+
+You can delete a subfolder only when it has no direct child subfolders and no direct mocks.
+
+## Subfolders API
+
+Use `/api/mock-subfolders` to create, list, update, and delete subfolders.
+
+```text
+GET    /api/mock-subfolders?folderId={folderId}&parentId=root
+GET    /api/mock-subfolders?folderId={folderId}&parentId={subfolderId}
+GET    /api/mock-subfolders?folderId={folderId}&all=true
+GET    /api/mock-subfolders?id={subfolderId}
+POST   /api/mock-subfolders
+PUT    /api/mock-subfolders?id={subfolderId}
+DELETE /api/mock-subfolders?id={subfolderId}
+```
+
+### Create a root subfolder
+
+```json
+{
+  "folderId": "folder-uuid",
+  "name": "Users"
+}
+```
+
+### Create a child subfolder
+
+```json
+{
+  "folderId": "folder-uuid",
+  "parentId": "users-subfolder-uuid",
+  "name": "Details"
+}
+```
+
+### Rename or move a subfolder
+
+```json
+{
+  "name": "Profiles",
+  "parentId": "users-subfolder-uuid"
+}
+```
+
+The response includes the subfolder ID, name, slug, parent, and served path.
+
+```json
+{
+  "id": "details-subfolder-uuid",
+  "folderId": "folder-uuid",
+  "parentId": "users-subfolder-uuid",
+  "name": "Details",
+  "slug": "details",
+  "mainPath": "/users/details",
+  "createdAt": "2026-06-20T00:00:00.000Z"
+}
+```
+
+Do not send `mainPath` in create or update requests. Mockzilla builds the served path from the subfolder names.
+
+## Creating Mocks in Subfolders
+
+Use `mockFolderId` when creating or updating a mock.
+
+```json
+{
+  "name": "User details",
+  "folderId": "folder-uuid",
+  "mockFolderId": "details-subfolder-uuid",
+  "method": "GET",
+  "path": "/123",
+  "statusCode": 200,
+  "response": "{\"id\":\"123\"}"
+}
+```
+
+Use `null` or omit `mockFolderId` to create a root-level mock.
+
+The mock response includes:
+
+- `path`: the path you entered for the mock.
+- `relativePath`: same as `path`.
+- `effectivePath`: the path Mockzilla serves inside the top-level folder.
+
+Example response fields:
+
+```json
+{
+  "path": "/123",
+  "relativePath": "/123",
+  "effectivePath": "/users/details/123"
+}
+```
+
+The final URL is:
+
+```text
+/api/mock/{folderSlug}{effectivePath}
+```
+
+## Matching Behavior
+
+Subfolder mocks support the same matching features as root mocks:
+
+- exact paths
+- wildcard paths
+- substring paths
+- query parameter matching
+- wildcard variants
+- response delay
+- dynamic responses
+- proxy and record
+- request-body echo
+
+See [Routing & Matching](/docs/reference/routing-and-matching) for match strategy details.
+
+## Import and Export
+
+Exports include subfolder information so projects can be moved between environments.
+
+On import, Mockzilla uses the folder and subfolder names to rebuild served paths. You only need to provide the parent relationship and names; paths are handled for you.

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { AlertCircle, Loader2, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -13,9 +14,8 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ImportWorkflowDialogProps {
 	onSuccess?: () => void;
@@ -97,8 +97,9 @@ export function ImportWorkflowDialog({ onSuccess }: ImportWorkflowDialogProps) {
 				<DialogHeader>
 					<DialogTitle>Import Workflows</DialogTitle>
 					<DialogDescription>
-						Upload a JSON file or paste the content below to import scenarios and
-						transitions. Existing scenarios with the same ID will be updated.
+						Upload a JSON file or paste the content below to import scenarios
+						and transitions. Existing scenarios with the same ID will be
+						updated.
 					</DialogDescription>
 				</DialogHeader>
 

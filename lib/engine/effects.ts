@@ -1,37 +1,7 @@
-
+import { interpolate, replaceTemplates } from './interpolation';
 import type { Effect, MatchContext } from './match';
-import { resolvePath } from '../utils/path-resolver';
 
-/**
- * Interpolates a string value using context.
- * e.g. "{{input.sku}}" -> "SKU_123"
- * Now supports array access: "{{input.items[0].id}}"
- */
-function interpolate(value: unknown, context: MatchContext): unknown {
-	if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-		let path = value.slice(2, -2).trim();
-		// Support "db" -> "tables" alias
-		if (path.startsWith('db.') || path === 'db') {
-			path = path.replace(/^db/, 'tables');
-		}
-		return resolvePath(path, context);
-	}
-	// Deep interpolation for objects
-	if (typeof value === 'object' && value !== null) {
-		if (Array.isArray(value)) {
-			return value.map((v) => interpolate(v, context));
-		}
-		const result: Record<string, unknown> = {};
-		for (const k in value) {
-			if (Object.prototype.hasOwnProperty.call(value, k)) {
-				result[k] = interpolate((value as Record<string, unknown>)[k], context);
-			}
-		}
-		return result;
-	}
-	return value;
-}
-
+export { interpolate };
 
 export function applyEffects(
 	effects: Record<string, unknown> | Effect[],
@@ -40,19 +10,19 @@ export function applyEffects(
 	const effectsList: Effect[] = Array.isArray(effects)
 		? effects
 		: Object.entries(effects).map(([k, v]): Effect => {
-				// Convert simple map syntax to strictly typed effects if possible
-				// Case: "$db.cartItems.push": { ... }
 				if (k.startsWith('$')) {
 					const parts = k.substring(1).split('.');
 					if (parts[0] === 'state' && parts[1] === 'set') {
-						// "$state.set": { "key": "val" } -> multiple sets
 						return { type: 'state.set', raw: v as Record<string, unknown> };
 					}
 					if (parts[0] === 'db' && parts[2] === 'push') {
 						return { type: 'db.push', table: parts[1], value: v };
 					}
 					if (parts[0] === 'db' && parts[2] === 'update') {
-						const val = v as { match: Record<string, unknown>; set: Record<string, unknown> };
+						const val = v as {
+							match: Record<string, unknown>;
+							set: Record<string, unknown>;
+						};
 						return {
 							type: 'db.update',
 							table: parts[1],
@@ -75,31 +45,32 @@ export function applyEffects(
 		if (effect.type === 'state.set') {
 			if (effect.raw) {
 				for (const [key, val] of Object.entries(effect.raw)) {
-					context.state[key] = interpolate(val, context);
+					context.state[key] = replaceTemplates(val, context as any);
 				}
 			} else if (effect.key) {
-				context.state[effect.key] = interpolate(effect.value, context);
+				context.state[effect.key] = replaceTemplates(effect.value, context as any);
 			}
 		} else if (effect.type === 'db.push') {
-			const table = context.tables[effect.table] || [];
-			const resolvedValue = interpolate(effect.value, context);
+			if (!context.tables[effect.table]) {
+				context.tables[effect.table] = [];
+			}
+			const table = context.tables[effect.table];
+			const resolvedValue = replaceTemplates(effect.value, context as any);
 			table.push(resolvedValue);
-			context.tables[effect.table] = table;
 		} else if (effect.type === 'db.update') {
 			const table = context.tables[effect.table] || [];
 			for (let i = 0; i < table.length; i++) {
+				const row = table[i] as Record<string, unknown>;
 				let matches = true;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					const row = table[i] as Record<string, unknown>;
-					if (row[mk] != interpolate(mv, context)) {
+					if (row[mk] != replaceTemplates(mv, context as any)) {
 						matches = false;
 						break;
 					}
 				}
 				if (matches) {
 					for (const [sk, sv] of Object.entries(effect.set)) {
-						const row = table[i] as Record<string, unknown>;
-						row[sk] = interpolate(sv, context);
+						row[sk] = replaceTemplates(sv, context as any);
 					}
 				}
 			}
@@ -109,7 +80,7 @@ export function applyEffects(
 			table = table.filter((item) => {
 				const row = item as Record<string, unknown>;
 				for (const [mk, mv] of Object.entries(effect.match)) {
-					if (row[mk] == interpolate(mv, context)) {
+					if (row[mk] == replaceTemplates(mv, context as any)) {
 						return false; // remove
 					}
 				}

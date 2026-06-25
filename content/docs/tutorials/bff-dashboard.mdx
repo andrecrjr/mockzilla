@@ -1,0 +1,94 @@
+---
+title: "BFFs: Mocking Complex Dashboards"
+description: Ship your frontend in days by mocking a Backend-for-Frontend (BFF) that aggregates multiple microservices.
+---
+
+# Mocking a BFF (Backend for Frontend)
+
+**The Problem:** Your frontend team is ready to build a new "Financial Dashboard." However, the data needs to come from three different microservices (Users, Transactions, and Notifications) that are currently under development. Waiting for all three to be finished—and for the BFF layer to aggregate them—will block the frontend for weeks.
+
+**The Mock-First Solution:** Mock the entire BFF response in Mockzilla. The frontend team gets a high-fidelity, realistic API contract to build against immediately.
+
+---
+
+## 1. The BFF Contract
+
+Instead of making the frontend make three separate calls, your ideal BFF endpoint might look like this: `GET /api/dashboard/summary`.
+
+It should return a consolidated view:
+```json
+{
+  "user": { "id": "usr_123", "name": "Alex", "tier": "premium" },
+  "stats": {
+    "balance": 15420.50,
+    "monthly_change": "+12.5%",
+    "savings_goal": 85
+  },
+  "recent_transactions": [ ... ],
+  "unread_notifications": 3
+}
+```
+
+## 2. Creating the Mock in Mockzilla
+
+In Mockzilla, create a new mock for `GET /api/dashboard/summary`. Instead of hardcoding the JSON, use **JSON Schema + Faker.js** to generate dynamic, edge-case-ready data.
+
+### The Dynamic Schema
+
+Paste this into the **JSON Schema** tab in Mockzilla and enable **Dynamic Response**:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "user": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "faker": "string.alphanumeric" },
+        "name": { "type": "string", "faker": "person.fullName" },
+        "tier": { "type": "string", "enum": ["free", "pro", "premium"] }
+      },
+      "required": ["id", "name", "tier"]
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "balance": { "type": "number", "minimum": 100, "maximum": 50000, "multipleOf": 0.01 },
+        "monthly_change": { "type": "string", "faker": { "helpers.arrayElement": [["+12.5%", "-3.2%", "+0.5%"]] } },
+        "savings_goal": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "recent_transactions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "faker": "string.uuid" },
+          "amount": { "type": "number", "minimum": -500, "maximum": 2000, "multipleOf": 0.01 },
+          "date": { "type": "string", "format": "date-time", "faker": "date.recent" },
+          "merchant": { "type": "string", "faker": "company.name" },
+          "category": { "type": "string", "enum": ["Food", "Transport", "Shopping", "Entertainment"] }
+        },
+        "required": ["id", "amount", "date", "merchant", "category"]
+      }
+    },
+    "unread_notifications": { "type": "integer", "minimum": 0, "maximum": 15 }
+  },
+  "required": ["user", "stats", "recent_transactions", "unread_notifications"]
+}
+```
+
+## 3. The Result: Instant Unblocking
+
+1. **Realistic UI Testing:** Every refresh yields new names, balances, and categories. Test for text-overflows, empty transaction states, and badge rendering logic.
+2. **Zero Blockers:** The frontend team can finish the entire Dashboard UI/UX and get it approved by stakeholders in 2 days.
+3. **Perfect Contract:** The Backend team now has the exact JSON schema they need to implement. No guessing what the frontend needs.
+
+<div className="mt-8 p-6 bg-primary/10 rounded-xl border border-primary/20">
+  <h3 className="text-xl font-bold mb-2">🤖 Do it with AI</h3>
+  <blockquote className="border-l-4 border-primary pl-4 italic">
+    "Create a Mockzilla endpoint at GET /api/dashboard/summary. Use a dynamic schema for a financial dashboard: user profile, balance stats with percentage changes, and 3-7 transactions with merchant names and categories."
+  </blockquote>
+</div>

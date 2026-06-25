@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"target": "ES2017",
+		"target": "es2024",
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"allowJs": true,
 		"skipLibCheck": true,
@@ -13,6 +13,7 @@
 		"isolatedModules": true,
 		"jsx": "react-jsx",
 		"incremental": true,
+		"skipDefaultLibCheck": true,
 		"plugins": [
 			{
 				"name": "next"
@@ -23,11 +24,19 @@
 		}
 	},
 	"include": [
-		"next-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
+		"app/**/*.ts",
+		"app/**/*.tsx",
+		"components/**/*.ts",
+		"components/**/*.tsx",
+		"scripts/**/*.ts",
+		"tests/**/*.ts",
+		"tests/**/*.tsx",
+		"mdx-components.tsx",
+		"proxy.ts",
+		"next.config.ts",
+		"theme.config.tsx",
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts"
 	],
-	"exclude": ["node_modules"]
+		"exclude": ["node_modules", ".next", "drizzle/migrations", "public", "dist", "build", "lib"]
 }

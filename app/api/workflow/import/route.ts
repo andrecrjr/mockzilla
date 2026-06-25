@@ -1,8 +1,8 @@
+import { eq, inArray } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scenarios, transitions } from '@/lib/db/schema';
 import type { WorkflowExportData } from '@/lib/types';
-import { eq, inArray } from 'drizzle-orm';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
 	try {
@@ -60,10 +60,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 		// Strategy: For each imported scenario, delete existing transitions and re-insert imported ones
 		// This avoids duplicates and handles updates cleanly
 		const scenarioIds = data.scenarios.map((s) => s.id);
-		
+
 		if (scenarioIds.length > 0) {
 			// Delete existing transitions for these scenarios
-			await db.delete(transitions).where(inArray(transitions.scenarioId, scenarioIds));
+			await db
+				.delete(transitions)
+				.where(inArray(transitions.scenarioId, scenarioIds));
 
 			// Insert imported transitions
 			if (data.transitions.length > 0) {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 				// Transitions usually have auto-increment IDs. It's safer to let DB generate new IDs
 				// but we need to ensure references are correct.
 				// Since we are clearing transitions for the scenario, we can just insert them as new.
-				
+
 				const transitionsToInsert = data.transitions.map((t) => ({
 					scenarioId: t.scenarioId,
 					name: t.name,
@@ -96,7 +98,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 	} catch (error: unknown) {
 		console.error('Import error:', error);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : 'Failed to import workflow data' },
+			{
+				error:
+					error instanceof Error
+						? error.message
+						: 'Failed to import workflow data',
+			},
 			{ status: 500 },
 		);
 	}

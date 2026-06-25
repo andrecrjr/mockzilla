@@ -1,0 +1,25 @@
+name: CI — Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-test-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+
+  docker-build:
+    needs: lint-test-typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production Docker image
+        run: make prod-build

@@ -1,0 +1,62 @@
+---
+title: "Installing AI Skills"
+description: Supercharge your AI agent with specialized Mockzilla instruction sets from GitHub.
+---
+
+# Installing AI Skills
+
+Mockzilla is an **AI-first** platform. While the standard MCP tools are powerful, you can supercharge your AI assistant (including specialized agents and compatible CLI tools) by installing **Agent Skills**.
+
+Skills are specialized instruction sets that teach your AI how to build high-fidelity mocks and complex workflows following Mockzilla's best practices.
+
+---
+
+## 1. Universal Installation
+You can use the universal `npx skills` tool to install Mockzilla's expert skills into any compatible agent by pointing to our repository:
+
+```bash
+npx skills add github.com/andrecrjr/mockzilla
+```
+
+When you run this command, you will be able to select one or more of the following specialized experts:
+
+### Official Mock Maker Skill
+Expert for creating high-quality, stateless mocks and dynamic schemas using JSON Schema + Faker.
+
+### Official Workflow Architect Skill
+Specialized skill for designing complex, stateful workflows, logic, and transitions.
+
+### Elite Spec Translator Skill
+Industrial-grade project bootstrapping from OpenAPI, technical specs, or Jira requirements.
+
+### Forensic Logic Doctor Skill
+Elite specialist for diagnosing and surgically repairing complex stateful workflows and state issues.
+
+---
+
+## 2. Verifying Installation
+Once installed, you can verify that the skills are available in your interactive session. For most compatible CLI agents:
+
+1.  Start your AI agent session.
+2.  Run the skills listing command (e.g., `/skills list`).
+3.  Verify that `mockzilla-mock-maker` and `mockzilla-workflow-architect` appear in the list.
+
+---
+
+## 3. How to Use Skills
+Skills are activated automatically when you prompt your agent with relevant tasks. For better results, explicitly mention the skill name:
+
+> **"Use mockzilla-mock-maker to generate a realistic product catalog API."**
+
+> **"Use mockzilla-workflow-architect to design a stateful login flow."**
+
+---
+
+## Why use Skills?
+- **Expert-Guided**: Skills embed our best practices directly into the AI's logic.
+- **Spec-Driven**: They prioritize building from OpenAPI or JSON Schema.
+- **Developer-First**: They follow idiomatic Mockzilla patterns (e.g., "Stateless First").
+- **Reliability**: Ensures the AI doesn't hallucinate non-existent tools or parameters.
+- **Efficiency**: Reduces the number of turns needed to get a working simulation.
+
+> **Pro Tip**: You can also create your own custom skills to share with your team! See the documentation for your specific AI agent for more details on creating and sharing skills.

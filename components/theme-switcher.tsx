@@ -5,7 +5,7 @@ import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 
 export function ThemeSwitcher() {
-	const { theme, setTheme, isDark, mounted } = useTheme();
+	const { setTheme, isDark, mounted } = useTheme();
 
 	if (!mounted) {
 		return (

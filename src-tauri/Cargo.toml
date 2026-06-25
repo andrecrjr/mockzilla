@@ -1,0 +1,23 @@
+[package]
+name = "mockzilla"
+version = "1.0.0"
+description = "Mockzilla desktop app"
+authors = ["Mockzilla"]
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "mockzilla_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = "2"

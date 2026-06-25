@@ -8,6 +8,41 @@
       "when": 1769287412512,
       "tag": "0000_far_husk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775754993833,
+      "tag": "0001_kind_ben_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775769931314,
+      "tag": "0002_same_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777314443827,
+      "tag": "0003_brainy_lifeguard",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780540123792,
+      "tag": "0004_salty_cerebro",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781837111158,
+      "tag": "0005_nested_mock_subfolders",
+      "breakpoints": true
     }
   ]
 }
