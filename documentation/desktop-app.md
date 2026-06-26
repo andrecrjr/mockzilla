@@ -80,13 +80,16 @@ Linux packaging currently produces AppImage and deb installers. Windows packagin
 
 ## Release
 
-GitHub Actions publishes desktop installers after semantic-release creates a version:
+GitHub Actions publishes desktop installers automatically from the release CD
+workflow after semantic-release creates and publishes a GitHub release:
 
 - Linux: AppImage and deb
 - Windows: NSIS exe
 - macOS: DMG
 
-During the semantic-release prepare step, `scripts/sync-release-version.mjs` writes the next semantic version into `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the Mockzilla entry in `src-tauri/Cargo.lock`. The release commit includes those files, and the Docker and desktop packaging jobs explicitly check out `v${version}` before building. That keeps Docker tags, GitHub release tags, and installer metadata aligned.
+During the semantic-release prepare step, `scripts/sync-release-version.mjs` writes the next semantic version into `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the Mockzilla entry in `src-tauri/Cargo.lock`. The release commit includes those files. Docker publishing and automatic desktop packaging both check out `v${version}` inside the release-and-Docker workflow. That keeps Docker tags, GitHub release tags, and installer metadata aligned while release-ignored changes publish no artifacts.
+
+The separate `Desktop Release` workflow remains available for manual retries. Dispatch it with the release tag, for example `v1.0.3`.
 
 CI installs Node 24 before packaging so the bundled sidecar uses the same major runtime as the production Docker image. Local builds can also use Node 22 or Node 20.9+, but Node 25 is intentionally skipped for desktop packaging because Next.js 16 Webpack builds can fail in that runtime.
 

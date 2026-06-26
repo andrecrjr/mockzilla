@@ -40,6 +40,7 @@ export const CreateMockSubfolderArgs = z.object({
 	folderSlug: z.string().optional(),
 	parentId: z.string().nullable().optional(),
 	name: z.string().min(1),
+	slug: z.string().min(1).optional(),
 });
 export type CreateMockSubfolderArgs = z.infer<typeof CreateMockSubfolderArgs>;
 
@@ -49,6 +50,7 @@ export type GetMockSubfolderArgs = z.infer<typeof GetMockSubfolderArgs>;
 export const UpdateMockSubfolderArgs = z.object({
 	id: z.string(),
 	name: z.string().min(1).optional(),
+	slug: z.string().min(1).optional(),
 	parentId: z.string().nullable().optional(),
 });
 export type UpdateMockSubfolderArgs = z.infer<typeof UpdateMockSubfolderArgs>;
@@ -99,6 +101,7 @@ export const ManageMockSubfoldersArgs = z.discriminatedUnion('action', [
 		folderSlug: z.string().optional(),
 		parentId: z.string().nullable().optional(),
 		name: z.string().min(1),
+		slug: z.string().min(1).optional(),
 	}),
 	z.object({
 		action: z.literal('get'),
@@ -108,6 +111,7 @@ export const ManageMockSubfoldersArgs = z.discriminatedUnion('action', [
 		action: z.literal('update'),
 		id: z.string(),
 		name: z.string().min(1).optional(),
+		slug: z.string().min(1).optional(),
 		parentId: z.string().nullable().optional(),
 	}),
 	z.object({

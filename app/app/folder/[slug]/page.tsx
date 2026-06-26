@@ -49,11 +49,13 @@ function FolderContent() {
 	);
 	const [debouncedSearch, setDebouncedSearch] = useState(search);
 	const [newSubfolderName, setNewSubfolderName] = useState('');
+	const [newSubfolderSlug, setNewSubfolderSlug] = useState('');
 	const [isCreateSubfolderOpen, setIsCreateSubfolderOpen] = useState(false);
 	const [editingSubfolder, setEditingSubfolder] = useState<MockSubfolder | null>(
 		null,
 	);
 	const [editSubfolderName, setEditSubfolderName] = useState('');
+	const [editSubfolderSlug, setEditSubfolderSlug] = useState('');
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -105,12 +107,12 @@ function FolderContent() {
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
 	const newSubfolderPreviewPath = joinMockPaths(
 		currentSubfolder?.mainPath ?? '/',
-		`/${generateSlug(newSubfolderName) || 'subfolder'}`,
+		`/${generateSlug(newSubfolderSlug) || 'subfolder'}`,
 	);
 	const editSubfolderPreviewPath = editingSubfolder
 		? joinMockPaths(
 				editingParentSubfolder?.mainPath ?? '/',
-				`/${generateSlug(editSubfolderName) || editingSubfolder.slug}`,
+				`/${generateSlug(editSubfolderSlug) || editingSubfolder.slug}`,
 			)
 		: '/';
 
@@ -140,6 +142,7 @@ function FolderContent() {
 					folderId: folder.id,
 					parentId: currentMockFolderId === 'root' ? null : currentMockFolderId,
 					name: newSubfolderName,
+					slug: newSubfolderSlug,
 				}),
 			});
 			if (!response.ok) {
@@ -147,6 +150,7 @@ function FolderContent() {
 				throw new Error(error.error);
 			}
 			setNewSubfolderName('');
+			setNewSubfolderSlug('');
 			setIsCreateSubfolderOpen(false);
 			toast.success('Subfolder Created');
 			refreshSubfolders();
@@ -180,6 +184,7 @@ function FolderContent() {
 	const openEditSubfolder = (subfolder: MockSubfolder) => {
 		setEditingSubfolder(subfolder);
 		setEditSubfolderName(subfolder.name);
+		setEditSubfolderSlug(subfolder.slug);
 	};
 
 	const handleUpdateSubfolder = async (event: React.FormEvent) => {
@@ -193,6 +198,7 @@ function FolderContent() {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						name: editSubfolderName,
+						slug: editSubfolderSlug,
 					}),
 				},
 			);
@@ -203,6 +209,7 @@ function FolderContent() {
 			toast.success('Subfolder Updated');
 			setEditingSubfolder(null);
 			setEditSubfolderName('');
+			setEditSubfolderSlug('');
 			refreshSubfolders();
 		} catch (error: unknown) {
 			toast.error('Error', {
@@ -408,7 +415,13 @@ function FolderContent() {
 							<div className="flex items-center gap-3">
 								<Dialog
 									open={isCreateSubfolderOpen}
-									onOpenChange={setIsCreateSubfolderOpen}
+									onOpenChange={(open) => {
+										setIsCreateSubfolderOpen(open);
+										if (!open) {
+											setNewSubfolderName('');
+											setNewSubfolderSlug('');
+										}
+									}}
 								>
 									<DialogTrigger asChild>
 										<Button variant="outline">
@@ -420,7 +433,7 @@ function FolderContent() {
 										<DialogHeader>
 											<DialogTitle>Create Subfolder</DialogTitle>
 											<DialogDescription>
-												Create a nested mock group with a path derived from its name.
+												Create a nested mock group with a custom path slug.
 											</DialogDescription>
 										</DialogHeader>
 										<form onSubmit={handleCreateSubfolder} className="space-y-4">
@@ -437,6 +450,23 @@ function FolderContent() {
 													value={newSubfolderName}
 													onChange={(event) =>
 														setNewSubfolderName(event.target.value)
+													}
+													required
+												/>
+											</div>
+											<div className="space-y-2">
+												<label
+													htmlFor="subfolder-slug"
+													className="text-sm font-medium"
+												>
+													Slug
+												</label>
+												<Input
+													id="subfolder-slug"
+													placeholder="api-users"
+													value={newSubfolderSlug}
+													onChange={(event) =>
+														setNewSubfolderSlug(event.target.value)
 													}
 													required
 												/>
@@ -526,14 +556,18 @@ function FolderContent() {
 						<Dialog
 							open={Boolean(editingSubfolder)}
 							onOpenChange={(open) => {
-								if (!open) setEditingSubfolder(null);
+								if (!open) {
+									setEditingSubfolder(null);
+									setEditSubfolderName('');
+									setEditSubfolderSlug('');
+								}
 							}}
 						>
 							<DialogContent>
 								<DialogHeader>
 									<DialogTitle>Edit Subfolder</DialogTitle>
 									<DialogDescription>
-										Update the subfolder name. Its path is derived from the folder hierarchy.
+										Update the subfolder name or path slug independently.
 									</DialogDescription>
 								</DialogHeader>
 								<form onSubmit={handleUpdateSubfolder} className="space-y-4">
@@ -549,6 +583,22 @@ function FolderContent() {
 											value={editSubfolderName}
 											onChange={(event) =>
 												setEditSubfolderName(event.target.value)
+											}
+											required
+										/>
+									</div>
+									<div className="space-y-2">
+										<label
+											htmlFor="edit-subfolder-slug"
+											className="text-sm font-medium"
+										>
+											Slug
+										</label>
+										<Input
+											id="edit-subfolder-slug"
+											value={editSubfolderSlug}
+											onChange={(event) =>
+												setEditSubfolderSlug(event.target.value)
 											}
 											required
 										/>

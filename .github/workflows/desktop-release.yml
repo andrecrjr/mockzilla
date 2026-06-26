@@ -1,0 +1,91 @@
+name: Desktop Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build, for example v1.0.3"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  desktop-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            bundles: appimage,deb
+          - platform: windows-latest
+            bundles: nsis
+          - platform: macos-latest
+            bundles: dmg
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag }}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Expected a release tag like v1.0.3, received: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux desktop dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Windows desktop installer
+        if: matrix.platform == 'windows-latest'
+        env:
+          NO_STRIP: "true"
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Build Linux desktop installers
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          NO_STRIP: "true"
+          LD_LIBRARY_PATH: ${{ github.workspace }}/src-tauri/resources/lib
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Build macOS desktop installer
+        if: matrix.platform == 'macos-latest'
+        env:
+          NO_STRIP: "true"
+        run: bun run desktop:build -- build --bundles "${{ matrix.bundles }}" --ci --verbose
+
+      - name: Upload desktop installers
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          files: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.dmg
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
