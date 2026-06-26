@@ -9,7 +9,8 @@ Mock subfolders organize mocks inside a top-level folder without changing the pu
 - Each subfolder has:
   - `folderId`: parent top-level folder.
   - `parentId`: optional parent subfolder for nesting.
-  - `name` and generated `slug`.
+  - `name`: display title.
+  - `slug`: user-controlled URL segment.
   - `mainPath`: the derived absolute base path used when serving mocks.
 - Mocks store `mockFolderId` and a relative `path`.
 
@@ -43,11 +44,13 @@ Subfolders are managed through `/api/mock-subfolders`.
 - `GET /api/mock-subfolders?folderId={id}&parentId={subfolderId}` lists children.
 - `GET /api/mock-subfolders?folderId={id}&all=true` lists all subfolders in a folder.
 - `GET /api/mock-subfolders?id={id}` returns one subfolder.
-- `POST /api/mock-subfolders` creates a subfolder with `folderId`, optional `parentId`, and `name`.
-- `PUT /api/mock-subfolders?id={id}` updates `name` or `parentId`.
+- `POST /api/mock-subfolders` creates a subfolder with `folderId`, optional `parentId`, `name`, and optional `slug`.
+- `PUT /api/mock-subfolders?id={id}` updates `name`, `slug`, or `parentId`.
 - `DELETE /api/mock-subfolders?id={id}` deletes only empty subfolders.
 
-`mainPath` is returned by the API but is not client-controlled. Renaming or moving a subfolder recomputes its `mainPath` and all descendant `mainPath` values.
+If `slug` is omitted on create, Mockzilla generates it from `name` for backward compatibility. After creation, changing `name` only changes the display title. Changing `slug` or moving a subfolder recomputes its `mainPath` and all descendant `mainPath` values.
+
+`mainPath` is returned by the API but is not client-controlled.
 
 Read paths are also canonicalized from `parentId` plus each subfolder `slug`. If older data contains a stale flat `mainPath`, API responses, mock listing, MCP preview, and live serving still resolve the effective path as the full nested hierarchy, such as `/users/details/history`.
 
@@ -56,15 +59,15 @@ Read paths are also canonicalized from `parentId` plus each subfolder `slug`. If
 Agents can manage the same hierarchy through `manage_mock_subfolders`.
 
 - `list`: Requires `folderId` or `folderSlug`; optional `parentId` lists children; `parentId: null` lists root-level subfolders; `all: true` lists the full tree ordered by `mainPath`.
-- `create`: Requires `folderId` or `folderSlug` and `name`; optional `parentId` creates a nested child.
+- `create`: Requires `folderId` or `folderSlug` and `name`; optional `slug` controls the URL segment; optional `parentId` creates a nested child.
 - `get`: Requires `id`.
-- `update`: Requires `id`; optional `name` renames; optional `parentId` moves the subfolder and recomputes descendant paths.
+- `update`: Requires `id`; optional `name` changes the title; optional `slug` changes the URL segment and recomputes descendant paths; optional `parentId` moves the subfolder and recomputes descendant paths.
 - `delete`: Requires `id`; only succeeds when the subfolder has no child subfolders or mocks.
 
 Example MCP sequence:
 
 ```json
-{ "action": "create", "folderSlug": "api", "name": "Users" }
+{ "action": "create", "folderSlug": "api", "name": "Users", "slug": "people" }
 ```
 
 ```json

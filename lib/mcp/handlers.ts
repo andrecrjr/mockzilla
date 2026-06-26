@@ -298,9 +298,9 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock_subfolder');
 	const folderId = await resolveFolderIdForSubfolders(args);
 	const parentId = args.parentId ?? null;
-	const slug = generateSlug(args.name);
+	const slug = generateSlug(args.slug ?? args.name);
 	if (!slug) {
-		throw new Error('Subfolder name is invalid');
+		throw new Error('Subfolder slug is invalid');
 	}
 
 	const folderSubfolders = await db
@@ -315,7 +315,7 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 		throw new Error('Parent subfolder not found');
 	}
 	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, parentId, slug)) {
-		throw new Error('A subfolder with this name already exists here');
+		throw new Error('A subfolder with this slug already exists here');
 	}
 	const parentMainPath = parent
 		? canonicalPaths.get(parent.id) ?? parent.mainPath
@@ -364,9 +364,9 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 		args.parentId === undefined ? existing.parentId : args.parentId;
 	const nextName = args.name?.trim() ?? existing.name;
 	const nextSlug =
-		args.name === undefined ? existing.slug : generateSlug(nextName);
+		args.slug === undefined ? existing.slug : generateSlug(args.slug);
 	if (!nextSlug) {
-		throw new Error('Subfolder name is invalid');
+		throw new Error('Subfolder slug is invalid');
 	}
 	if (nextParentId === args.id) {
 		throw new Error('Subfolder cannot be its own parent');
@@ -390,7 +390,7 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 		throw new Error('Parent subfolder not found');
 	}
 	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, args.id)) {
-		throw new Error('A subfolder with this name already exists here');
+		throw new Error('A subfolder with this slug already exists here');
 	}
 
 	const nextMainPath = deriveSubfolderMainPath(parent?.mainPath, nextSlug);

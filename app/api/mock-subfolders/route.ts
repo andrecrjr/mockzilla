@@ -17,12 +17,14 @@ const CreateMockSubfolderSchema = z.object({
 	folderId: z.string().uuid(),
 	parentId: z.string().uuid().nullable().optional(),
 	name: z.string().min(1),
+	slug: z.string().min(1).optional(),
 	mainPath: z.string().min(1).optional(),
 });
 type CreateMockSubfolderInput = z.infer<typeof CreateMockSubfolderSchema>;
 
 const UpdateMockSubfolderSchema = z.object({
 	name: z.string().min(1).optional(),
+	slug: z.string().min(1).optional(),
 	mainPath: z.string().min(1).optional(),
 	parentId: z.string().uuid().nullable().optional(),
 });
@@ -130,10 +132,10 @@ export async function POST(request: NextRequest) {
 			await request.json(),
 		);
 		const parentId = body.parentId ?? null;
-		const slug = generateSlug(body.name);
+		const slug = generateSlug(body.slug ?? body.name);
 
 		if (!slug) {
-			return NextResponse.json({ error: 'Subfolder name is invalid' }, { status: 400 });
+			return NextResponse.json({ error: 'Subfolder slug is invalid' }, { status: 400 });
 		}
 		const folderSubfolders = await db
 			.select()
@@ -148,7 +150,7 @@ export async function POST(request: NextRequest) {
 		}
 		if (hasSiblingSlugInRows(folderSubfolders, parentId, slug)) {
 			return NextResponse.json(
-				{ error: 'A subfolder with this name already exists here' },
+				{ error: 'A subfolder with this slug already exists here' },
 				{ status: 409 },
 			);
 		}
@@ -211,10 +213,11 @@ export async function PUT(request: NextRequest) {
 		);
 		const nextParentId = body.parentId === undefined ? existing.parentId : body.parentId;
 		const nextName = body.name?.trim() ?? existing.name;
-		const nextSlug = body.name === undefined ? existing.slug : generateSlug(nextName);
+		const nextSlug =
+			body.slug === undefined ? existing.slug : generateSlug(body.slug);
 
 		if (!nextSlug) {
-			return NextResponse.json({ error: 'Subfolder name is invalid' }, { status: 400 });
+			return NextResponse.json({ error: 'Subfolder slug is invalid' }, { status: 400 });
 		}
 		if (nextParentId === id) {
 			return NextResponse.json({ error: 'Subfolder cannot be its own parent' }, { status: 400 });
@@ -242,7 +245,7 @@ export async function PUT(request: NextRequest) {
 		}
 		if (hasSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, id)) {
 			return NextResponse.json(
-				{ error: 'A subfolder with this name already exists here' },
+				{ error: 'A subfolder with this slug already exists here' },
 				{ status: 409 },
 			);
 		}

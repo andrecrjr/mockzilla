@@ -27,8 +27,8 @@ Subfolders add path segments after the folder slug. Mocks inside a subfolder use
 Example:
 
 1. Create a folder with slug `api`.
-2. Create a subfolder named `Users`.
-3. Create a child subfolder named `Details`.
+2. Create a subfolder named `Users` with slug `users`.
+3. Create a child subfolder named `Details` with slug `details`.
 4. Create a mock in `Details` with path `/123`.
 
 The mock is served at:
@@ -69,7 +69,8 @@ DELETE /api/mock-subfolders?id={subfolderId}
 ```json
 {
   "folderId": "folder-uuid",
-  "name": "Users"
+  "name": "Users",
+  "slug": "people"
 }
 ```
 
@@ -79,18 +80,24 @@ DELETE /api/mock-subfolders?id={subfolderId}
 {
   "folderId": "folder-uuid",
   "parentId": "users-subfolder-uuid",
-  "name": "Details"
+  "name": "Details",
+  "slug": "details"
 }
 ```
 
-### Rename or move a subfolder
+If `slug` is omitted on create, Mockzilla generates it from `name` for compatibility with older clients.
+
+### Rename, change slug, or move a subfolder
 
 ```json
 {
   "name": "Profiles",
+  "slug": "profiles",
   "parentId": "users-subfolder-uuid"
 }
 ```
+
+Changing `name` only changes the display title. Changing `slug` changes the served path and recomputes descendant paths.
 
 The response includes the subfolder ID, name, slug, parent, and served path.
 
@@ -106,7 +113,7 @@ The response includes the subfolder ID, name, slug, parent, and served path.
 }
 ```
 
-Do not send `mainPath` in create or update requests. Mockzilla builds the served path from the subfolder names.
+Do not send `mainPath` in create or update requests. Mockzilla builds the served path from the subfolder slugs.
 
 ## Creating Mocks in Subfolders
 
@@ -168,4 +175,4 @@ See [Routing & Matching](/docs/reference/routing-and-matching) for match strateg
 
 Exports include subfolder information so projects can be moved between environments.
 
-On import, Mockzilla uses the folder and subfolder names to rebuild served paths. You only need to provide the parent relationship and names; paths are handled for you.
+On import, Mockzilla uses the folder and subfolder slugs to rebuild served paths. You only need to provide the parent relationship, names, and slugs; paths are handled for you.

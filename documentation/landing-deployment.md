@@ -51,3 +51,11 @@ make landing-logs    # View logs
 ## Architecture
 
 Single Docker image, different `.env` file. No separate build needed — the Next.js proxy gates routes at runtime based on `DEPLOY_MODE`.
+
+## Release Behavior
+
+Landing-only changes are treated as release-ignored changes in CD. Pushes to
+`main` that only update `app/page.tsx`, `components/landing/**`,
+`lib/constants/faq.ts`, Docker configuration, and documentation skip
+semantic-release, Docker publishing, and desktop packaging. Docker images are
+only published from versioned semantic releases.
