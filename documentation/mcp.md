@@ -74,12 +74,12 @@ Centralized management for mock folders.
 ### 2. Mock Subfolders (`manage_mock_subfolders`)
 Nested organization inside a top-level folder.
 - `list`: List root-level subfolders, children of a `parentId`, or all subfolders with `all: true`.
-- `create`: Create a subfolder with `folderId` or `folderSlug`, optional `parentId`, and `name`.
+- `create`: Create a subfolder with `folderId` or `folderSlug`, `name`, optional `slug`, and optional `parentId`.
 - `get`: Fetch one subfolder by ID.
-- `update`: Rename or move a subfolder by changing `name` or `parentId`.
+- `update`: Change the display title with `name`, change the URL segment with `slug`, or move a subfolder with `parentId`.
 - `delete`: Delete an empty subfolder.
 
-Subfolder `mainPath` is derived by Mockzilla and returned in the result. To place a mock in a subfolder, pass the returned subfolder `id` as `mockFolderId` to `manage_mocks`. Keep the mock `path` relative to that subfolder.
+Subfolder `mainPath` is derived from the slug hierarchy by Mockzilla and returned in the result. If `slug` is omitted on create, it is generated from `name`; later `name` changes do not alter the slug. To place a mock in a subfolder, pass the returned subfolder `id` as `mockFolderId` to `manage_mocks`. Keep the mock `path` relative to that subfolder.
 
 Example:
 
@@ -88,7 +88,8 @@ Example:
   "action": "create",
   "folderSlug": "api",
   "parentId": null,
-  "name": "Users"
+  "name": "Users",
+  "slug": "people"
 }
 ```
 

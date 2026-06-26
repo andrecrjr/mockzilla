@@ -9,22 +9,27 @@ Semantic-release owns the release version. During the prepare step,
 `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the
 Mockzilla entry in `src-tauri/Cargo.lock`.
 
-The CD workflow builds deployable artifacts only when semantic-release publishes
-a new release. Docker publishing checks out `v${version}` and pushes both:
+The `CD - Release & Docker Deploy` workflow owns semantic-release, Docker image
+publishing, and automatic desktop installer packaging. For versioned releases,
+Docker publishing checks out `v${version}` and pushes both:
 
 - `andrecrjr/mockzilla:latest`
 - `andrecrjr/mockzilla:${version}`
 
 The desktop packaging jobs also check out `v${version}` before building
 installers, so Docker tags, GitHub release tags, package metadata, and desktop
-installer metadata stay aligned.
+installer metadata stay aligned. The separate `Desktop Release` workflow remains
+available as a manual retry path; dispatch it with the published release tag,
+for example `v1.0.3`.
 
-## Docker-only changes
+## Release-ignored changes
 
-Pushes to `main` that only change Docker configuration skip semantic-release
-and desktop packaging. Documentation-only files may be included in the same
-push without changing this behavior. The CD workflow detects Docker changes
-limited to:
+Pushes to `main` that only change Docker configuration or landing-page content
+skip semantic-release, Docker publishing, and desktop packaging.
+Documentation-only files may be included in the same push without changing this
+behavior.
+
+The CD workflow detects release-ignored changes limited to:
 
 - `Dockerfile`
 - `Dockerfile.*`
@@ -33,11 +38,12 @@ limited to:
 - `compose.yml`
 - `compose.yaml`
 - `.dockerignore`
+- `app/page.tsx`
+- `components/landing/**`
+- `lib/constants/faq.ts`
 
-For these changes, CD only builds and pushes the Docker image. It updates
-`andrecrjr/mockzilla:latest` and also publishes a commit-SHA image tag. Mixed
-changes, such as Docker plus application code, follow the normal versioned
-release flow.
+For these changes, CD does not publish any artifact. Mixed changes, such as
+landing plus app/runtime code, follow the normal versioned release flow.
 
 ## Docs-only changes
 
