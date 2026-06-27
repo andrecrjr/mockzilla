@@ -9,6 +9,17 @@
 * use PAT in checkout for semantic-release push permissions ([2c8997b](https://github.com/andrecrjr/mockzilla/commit/2c8997b6ace7375c1dc287f423268b8ec91ad077))
 * use PAT token for semantic-release in CD workflow ([7693f57](https://github.com/andrecrjr/mockzilla/commit/7693f57f409957f4de64e8130530c239b89fb268))
 
+## [1.0.4](https://github.com/andrecrjr/mockzilla/compare/v1.0.3...v1.0.4) (2026-06-27)
+
+
+### Bug Fixes
+
+* enable fetch-tags for semantic-release tag detection ([725ca03](https://github.com/andrecrjr/mockzilla/commit/725ca033e9d71f4994715463d1bdbe478754fc3e))
+* restore github token for cd release ([962cfc7](https://github.com/andrecrjr/mockzilla/commit/962cfc7197b6d9807dd2cbf200a1b1c4f610663b))
+* update release flow and mock subfolders ([81806bd](https://github.com/andrecrjr/mockzilla/commit/81806bd10aab57afb03ff674ffffe76a52dc3753))
+* use PAT in checkout for semantic-release push permissions ([2c8997b](https://github.com/andrecrjr/mockzilla/commit/2c8997b6ace7375c1dc287f423268b8ec91ad077))
+* use PAT token for semantic-release in CD workflow ([7693f57](https://github.com/andrecrjr/mockzilla/commit/7693f57f409957f4de64e8130530c239b89fb268))
+
 ## [1.0.3](https://github.com/andrecrjr/mockzilla/compare/v1.0.2...v1.0.3) (2026-06-25)
 
 
