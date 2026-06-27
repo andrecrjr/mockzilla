@@ -22,6 +22,10 @@ installer metadata stay aligned. The separate `Desktop Release` workflow remains
 available as a manual retry path; dispatch it with the published release tag,
 for example `v1.0.3`.
 
+The release job uses the built-in `secrets.GITHUB_TOKEN` for semantic-release.
+Do not replace it with an optional custom PAT secret unless that secret exists
+in the repository and has checkout plus release write access.
+
 ## Release-ignored changes
 
 Pushes to `main` that only change Docker configuration or landing-page content
