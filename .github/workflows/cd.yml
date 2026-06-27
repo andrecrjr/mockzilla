@@ -114,10 +114,17 @@ jobs:
         include:
           - platform: ubuntu-22.04
             bundles: appimage,deb
+            artifacts: |
+              src-tauri/target/release/bundle/**/*.AppImage
+              src-tauri/target/release/bundle/**/*.deb
           - platform: windows-latest
             bundles: nsis
+            artifacts: |
+              src-tauri/target/release/bundle/**/*.exe
           - platform: macos-latest
             bundles: dmg
+            artifacts: |
+              src-tauri/target/release/bundle/**/*.dmg
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -164,11 +171,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.release.outputs.new_release_version }}
-          files: |
-            src-tauri/target/release/bundle/**/*.AppImage
-            src-tauri/target/release/bundle/**/*.deb
-            src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.dmg
+          files: ${{ matrix.artifacts }}
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}

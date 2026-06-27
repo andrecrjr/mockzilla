@@ -105,6 +105,16 @@ function FolderContent() {
 
 	const mocks = data?.data || [];
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
+
+	useEffect(() => {
+		if (!data) return;
+		const maxPage = Math.max(meta.totalPages || 1, 1);
+		const clampedPage = Math.min(Math.max(page, 1), maxPage);
+		if (page !== clampedPage) {
+			setPage(clampedPage);
+		}
+	}, [data, meta.totalPages, page, setPage]);
+
 	const newSubfolderPreviewPath = joinMockPaths(
 		currentSubfolder?.mainPath ?? '/',
 		`/${generateSlug(newSubfolderSlug) || 'subfolder'}`,

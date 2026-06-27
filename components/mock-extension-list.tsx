@@ -2,7 +2,7 @@
 
 import { FolderIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useQueryState, parseAsInteger } from 'nuqs';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -39,6 +39,15 @@ export function MockExtensionList() {
 
 	const folders = data?.data || [];
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
+
+	useEffect(() => {
+		if (!data) return;
+		const maxPage = Math.max(meta.totalPages || 1, 1);
+		const clampedPage = Math.min(Math.max(page, 1), maxPage);
+		if (page !== clampedPage) {
+			setPage(clampedPage);
+		}
+	}, [data, meta.totalPages, page, setPage]);
 
 	const handleDeleteFolder = async (id: string) => {
 		try {
