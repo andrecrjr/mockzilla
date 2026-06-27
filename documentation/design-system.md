@@ -103,6 +103,8 @@ While we use standard Tailwind spacing utilities, certain patterns are prevalent
 *   **Dialog Spacing**: `DialogContent` usually includes `p-6` with `gap-4` for headers and footers.
 *   **Global Footer**: `components/site-footer.tsx` is rendered from the root layout so every page ends with the AC-JR open-source attribution and GitHub link.
 *   **Mock List Overflow**: Mock cards contain user-controlled names, endpoint paths, query parameters, and generated URLs. Keep flex children on these cards shrinkable with `min-w-0`, keep method/status/match badges grouped in the metadata row, place editable endpoint controls on their own row, and truncate long URL fields inside inputs instead of allowing path text to set the page width.
+*   **Query Param Form Rows**: Query parameter key/value rows in mock forms use stable row identity while typing and fixed grid tracks with `minmax(0, 1fr)` input columns, so focused inputs are not remounted and long values stay constrained inside the form.
+*   **Pagination Page Size Changes**: Changing rows per page resets the current page to 1, and paginated views clamp out-of-range `page` query values after data loads so a valid collection cannot render as an empty state because of a stale offset.
 
 ### Custom Utilities
 *   **`.scrollbar-thin`**: A custom utility for Firefox and Webkit to provide a non-obtrusive scrolling experience.

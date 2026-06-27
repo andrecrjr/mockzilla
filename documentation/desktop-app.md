@@ -93,7 +93,7 @@ The separate `Desktop Release` workflow remains available for manual retries. Di
 
 CI installs Node 24 before packaging so the bundled sidecar uses the same major runtime as the production Docker image. Local builds can also use Node 22 or Node 20.9+, but Node 25 is intentionally skipped for desktop packaging because Next.js 16 Webpack builds can fail in that runtime.
 
-The desktop release workflow must call `bun run desktop:build` rather than invoking the Tauri CLI action directly. That keeps CI/CD on the same wrapper path as local builds: supported Node selection, `next build --webpack`, desktop resource staging, Sharp musl pruning on Linux, and installer generation. The workflow uploads the generated files from `src-tauri/target/release/bundle`.
+The desktop release workflow must call `bun run desktop:build` rather than invoking the Tauri CLI action directly. That keeps CI/CD on the same wrapper path as local builds: supported Node selection, `next build --webpack`, desktop resource staging, Sharp musl pruning on Linux, and installer generation. The workflow uploads the generated files from `src-tauri/target/release/bundle`. Artifact upload globs are matrix-specific: Linux requires AppImage and deb outputs, Windows requires the NSIS `.exe`, and macOS requires the `.dmg`. Keep `fail_on_unmatched_files` enabled so a missing expected artifact still fails the producing platform without making other platforms require impossible formats.
 
 ## Install Release Artifacts
 

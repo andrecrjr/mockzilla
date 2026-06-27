@@ -31,6 +31,19 @@ import {
 } from '@/lib/schema-generator';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 
+export type QueryParamField = {
+	id: string;
+	key: string;
+	value: string;
+};
+
+const createQueryParamId = () => {
+	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+		return crypto.randomUUID();
+	}
+	return `query-param-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
 type CollapsibleSectionProps = {
 	title: string;
 	tooltip?: {
@@ -97,8 +110,8 @@ type ResponseConfigProps = {
 	// Advanced Options props
 	matchType: MatchType;
 	onMatchTypeChange: (value: MatchType) => void;
-	queryParams: { key: string; value: string }[];
-	onQueryParamsChange: (params: { key: string; value: string }[]) => void;
+	queryParams: QueryParamField[];
+	onQueryParamsChange: (params: QueryParamField[]) => void;
 	// MockVariantManager props
 	variants: MockVariant[];
 	onVariantsChange: (variants: MockVariant[]) => void;
@@ -188,7 +201,10 @@ export function ResponseConfig({
 
 	// Query Params helpers
 	const addParam = () => {
-		onQueryParamsChange([...queryParams, { key: '', value: '' }]);
+		onQueryParamsChange([
+			...queryParams,
+			{ id: createQueryParamId(), key: '', value: '' },
+		]);
 	};
 
 	const removeParam = (index: number) => {
@@ -389,8 +405,8 @@ export function ResponseConfig({
 									<div className="space-y-2">
 										{queryParams.map((param, index) => (
 											<div
-												key={`${param.key}-${index}`}
-												className="flex items-center gap-2"
+												key={param.id}
+												className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_2.25rem] items-center gap-2"
 											>
 												<Input
 													placeholder="key"
@@ -398,7 +414,7 @@ export function ResponseConfig({
 													onChange={(e) =>
 														updateParam(index, 'key', e.target.value)
 													}
-													className="font-mono text-sm"
+													className="min-w-0 font-mono text-sm"
 												/>
 												<span className="text-muted-foreground">=</span>
 												<Input
@@ -407,7 +423,7 @@ export function ResponseConfig({
 													onChange={(e) =>
 														updateParam(index, 'value', e.target.value)
 													}
-													className="font-mono text-sm"
+													className="min-w-0 font-mono text-sm"
 												/>
 												<Button
 													type="button"

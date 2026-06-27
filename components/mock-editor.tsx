@@ -3,7 +3,10 @@
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ResponseConfig } from '@/components/mock-response-config';
+import {
+	ResponseConfig,
+	type QueryParamField,
+} from '@/components/mock-response-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -81,6 +84,16 @@ const STATUS_CODES = [
 	{ value: '503', label: '503 - Service Unavailable' },
 ];
 
+const createQueryParamField = (
+	key: string,
+	value: string,
+	index: number,
+): QueryParamField => ({
+	id: `query-param-initial-${index}`,
+	key,
+	value,
+});
+
 export function MockEditor({
 	mode,
 	folders = [],
@@ -127,15 +140,15 @@ export function MockEditor({
 	const [matchType, setMatchType] = useState<MatchType>(
 		(initial?.matchType as MatchType) ?? 'exact',
 	);
-	const [queryParams, setQueryParams] = useState<
-		{ key: string; value: string }[]
-	>(() => {
+	const [queryParams, setQueryParams] = useState<QueryParamField[]>(() => {
 		const qp = initial?.queryParams as
 			| Record<string, string>
 			| null
 			| undefined;
 		if (!qp) return [];
-		return Object.entries(qp).map(([key, value]) => ({ key, value }));
+		return Object.entries(qp).map(([key, value], index) =>
+			createQueryParamField(key, value, index),
+		);
 	});
 	const [variants, setVariants] = useState<MockVariant[]>(
 		(initial?.variants as MockVariant[] | null | undefined) ?? [],
@@ -169,7 +182,11 @@ export function MockEditor({
 				| null
 				| undefined;
 			setQueryParams(
-				qp ? Object.entries(qp).map(([key, value]) => ({ key, value })) : [],
+				qp
+					? Object.entries(qp).map(([key, value], index) =>
+							createQueryParamField(key, value, index),
+						)
+					: [],
 			);
 			setVariants(
 				(initial?.variants as MockVariant[] | null | undefined) ?? [],

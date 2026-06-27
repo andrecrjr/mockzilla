@@ -60,6 +60,15 @@ function MockzillaAdminContent() {
 	const folders = data?.data || [];
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
 
+	useEffect(() => {
+		if (!data) return;
+		const maxPage = Math.max(meta.totalPages || 1, 1);
+		const clampedPage = Math.min(Math.max(page, 1), maxPage);
+		if (page !== clampedPage) {
+			setPage(clampedPage);
+		}
+	}, [data, meta.totalPages, page, setPage]);
+
 	// Fetch all folders for QuickMockDialog
 	const { data: allFoldersData } = useSWR<Folder[]>(
 		'/api/folders?all=true',
