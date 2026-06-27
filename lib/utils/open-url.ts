@@ -3,7 +3,9 @@ interface TauriRuntimeWindow extends Window {
 	__TAURI_INTERNALS__?: unknown;
 }
 
-function isTauriRuntime(): boolean {
+type ExternalUrlOpener = (url: string) => Promise<void>;
+
+export function isTauriRuntime(): boolean {
 	if (typeof window === 'undefined') {
 		return false;
 	}
@@ -16,7 +18,15 @@ function openBrowserWindow(url: string): void {
 	window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-export async function openUrlInNewContext(url: string): Promise<void> {
+async function openWithTauriOpener(url: string): Promise<void> {
+	const { openUrl } = await import('@tauri-apps/plugin-opener');
+	await openUrl(url);
+}
+
+export async function openUrlInNewContext(
+	url: string,
+	openExternalUrl: ExternalUrlOpener = openWithTauriOpener,
+): Promise<void> {
 	if (typeof window === 'undefined') {
 		return;
 	}
@@ -27,8 +37,7 @@ export async function openUrlInNewContext(url: string): Promise<void> {
 	}
 
 	try {
-		const { openUrl } = await import('@tauri-apps/plugin-opener');
-		await openUrl(url);
+		await openExternalUrl(url);
 	} catch (_error) {
 		openBrowserWindow(url);
 	}
