@@ -1,3 +1,11 @@
+## [1.0.5](https://github.com/andrecrjr/mockzilla/compare/v1.0.4...v1.0.5) (2026-07-01)
+
+
+### Bug Fixes
+
+* open mock urls from desktop app ([a414598](https://github.com/andrecrjr/mockzilla/commit/a414598012e47b9edcd3bd8aa0bac66069bd8c65))
+* problem with mcp ([5dfd7ea](https://github.com/andrecrjr/mockzilla/commit/5dfd7ea466d197d2daffc5b04b53ca5a547c2816))
+
 ## [1.0.4](https://github.com/andrecrjr/mockzilla/compare/v1.0.3...v1.0.4) (2026-06-27)
 
 
