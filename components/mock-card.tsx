@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Folder, Mock, UpdateMockRequest } from '@/lib/types';
+import { openUrlInNewContext } from '@/lib/utils/open-url';
 
 interface MockCardProps {
 	mock: Mock;
@@ -245,7 +246,7 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={() => window.open(mockUrlFull, '_blank')}
+							onClick={() => void openUrlInNewContext(mockUrlFull)}
 						>
 							<ExternalLink className="h-4 w-4" />
 						</Button>

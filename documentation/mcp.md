@@ -24,6 +24,8 @@ Most MCP-native clients (like Cursor, Windsurf, or custom agents) can connect di
 
 **Endpoint URL**: `http://localhost:36666/api/mcp`
 
+The endpoint is implemented with the official `@modelcontextprotocol/sdk` Streamable HTTP transport in stateless JSON-response mode. Each HTTP request gets a fresh MCP server/transport instance and registers the same manager tools, which keeps the protocol handshake compatible with current MCP SDK clients.
+
 ### Option 2: Stdio Bridge (For Claude Desktop & CLI tools)
 If your client only supports local `stdio` servers, use `mcp-remote` as a bridge:
 
