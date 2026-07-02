@@ -19,8 +19,14 @@ import {
 } from '@/components/ui/select';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { validateSchema } from '@/lib/schema-generator';
-import type { Folder, HttpMethod, MatchType, MockSubfolder, MockVariant } from '@/lib/types';
-import { joinMockPaths } from '@/lib/utils/mock-paths';
+import type {
+	Folder,
+	HttpMethod,
+	MatchType,
+	MockSubfolder,
+	MockVariant,
+} from '@/lib/types';
+import { joinMockPaths, splitPathSearchParams } from '@/lib/utils/mock-paths';
 
 type MockFormValues = {
 	name: string;
@@ -48,6 +54,7 @@ interface MockEditorProps {
 	defaultFolderId?: string;
 	defaultMockFolderId?: string | null;
 	initial?: Partial<MockFormValues>;
+	initialRevision?: string;
 	showFolderSelect?: boolean;
 	submitLabel?: string;
 	previewSlug?: string;
@@ -66,6 +73,8 @@ const HTTP_METHODS: HttpMethod[] = [
 	'HEAD',
 	'OPTIONS',
 ];
+
+const ECHO_REQUEST_BODY_METHODS: HttpMethod[] = ['POST', 'PUT', 'PATCH'];
 
 const STATUS_CODES = [
 	{ value: '200', label: '200 - OK' },
@@ -94,6 +103,57 @@ const createQueryParamField = (
 	value,
 });
 
+const createQueryParamId = () => {
+	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+		return crypto.randomUUID();
+	}
+	return `query-param-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+function mergeQueryParamFields(
+	current: QueryParamField[],
+	incoming: Record<string, string>,
+): QueryParamField[] {
+	const next = current.map((param) => ({ ...param }));
+	const indexByKey = new Map<string, number>();
+
+	next.forEach((param, index) => {
+		const key = param.key.trim();
+		if (key) indexByKey.set(key, index);
+	});
+
+	for (const [key, value] of Object.entries(incoming)) {
+		const trimmedKey = key.trim();
+		if (!trimmedKey) continue;
+		const existingIndex = indexByKey.get(trimmedKey);
+		if (existingIndex === undefined) {
+			indexByKey.set(trimmedKey, next.length);
+			next.push({ id: createQueryParamId(), key: trimmedKey, value });
+		} else {
+			next[existingIndex] = {
+				...next[existingIndex],
+				key: trimmedKey,
+				value,
+			};
+		}
+	}
+
+	return next;
+}
+
+function getEndpointInputParts(value: string) {
+	const trimmed = value.trim();
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+		try {
+			const url = new URL(trimmed);
+			return splitPathSearchParams(`${url.pathname}${url.search}`);
+		} catch {
+			return splitPathSearchParams(value);
+		}
+	}
+	return splitPathSearchParams(value);
+}
+
 export function MockEditor({
 	mode,
 	folders = [],
@@ -101,6 +161,7 @@ export function MockEditor({
 	defaultFolderId,
 	defaultMockFolderId = null,
 	initial,
+	initialRevision,
 	showFolderSelect,
 	submitLabel,
 	previewSlug,
@@ -121,7 +182,9 @@ export function MockEditor({
 	const [mockFolderId, setMockFolderId] = useState<string>(
 		initial?.mockFolderId ?? defaultMockFolderId ?? 'root',
 	);
-	const [delay, setDelay] = useState<string>(initial?.delay ? String(initial.delay) : '0');
+	const [delay, setDelay] = useState<string>(
+		initial?.delay ? String(initial.delay) : '0',
+	);
 	const [proxyTargetUrl, setProxyTargetUrl] = useState<string>(
 		(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ?? '',
 	);
@@ -156,52 +219,47 @@ export function MockEditor({
 	const [wildcardRequireMatch, setWildcardRequireMatch] = useState<boolean>(
 		Boolean(initial?.wildcardRequireMatch),
 	);
-	const hydratedRef = useRef<boolean>(false);
-
-	useEffect(() => {
-		const hasInitial = Boolean(initial);
-		if (mode === 'edit' && hasInitial && !hydratedRef.current) {
-			setName(initial?.name ?? '');
-			setPath(initial?.path ?? '');
-			setMethod((initial?.method ?? 'GET') as HttpMethod);
-			setStatusCode(String(initial?.statusCode ?? '200'));
-			setFolderId(initial?.folderId ?? defaultFolderId ?? '');
-			setMockFolderId(initial?.mockFolderId ?? defaultMockFolderId ?? 'root');
-			setResponse(initial?.response ?? '');
-			setJsonSchema(initial?.jsonSchema ?? '');
-			setUseDynamicResponse(Boolean(initial?.useDynamicResponse));
-			setEchoRequestBody(Boolean(initial?.echoRequestBody));
-			setDelay(initial?.delay ? String(initial.delay) : '0');
-			setProxyTargetUrl(
-				(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ??
-					'',
-			);
-			setMatchType((initial?.matchType as MatchType) ?? 'exact');
-			const qp = initial?.queryParams as
-				| Record<string, string>
-				| null
-				| undefined;
-			setQueryParams(
-				qp
-					? Object.entries(qp).map(([key, value], index) =>
-							createQueryParamField(key, value, index),
-						)
-					: [],
-			);
-			setVariants(
-				(initial?.variants as MockVariant[] | null | undefined) ?? [],
-			);
-			setWildcardRequireMatch(Boolean(initial?.wildcardRequireMatch));
-			setActiveTab(initial?.jsonSchema ? 'schema' : 'manual');
-			hydratedRef.current = true;
-		}
-	}, [initial, mode, defaultFolderId, defaultMockFolderId]);
+	const hydratedRevisionRef = useRef<string | null>(null);
+	const hasHydratedInitialRef = useRef(false);
 
 	useEffect(() => {
 		if (mode !== 'edit' || !initial) return;
-		setMethod((initial.method ?? method) as HttpMethod);
-		setStatusCode(String(initial.statusCode ?? statusCode));
-	}, [initial, mode, method, statusCode]);
+		if (initialRevision) {
+			if (hydratedRevisionRef.current === initialRevision) return;
+			hydratedRevisionRef.current = initialRevision;
+		} else if (hasHydratedInitialRef.current) {
+			return;
+		}
+
+		hasHydratedInitialRef.current = true;
+		setName(initial.name ?? '');
+		setPath(initial.path ?? '');
+		setMethod((initial.method ?? 'GET') as HttpMethod);
+		setStatusCode(String(initial.statusCode ?? '200'));
+		setFolderId(initial.folderId ?? defaultFolderId ?? '');
+		setMockFolderId(initial.mockFolderId ?? defaultMockFolderId ?? 'root');
+		setResponse(initial.response ?? '');
+		setJsonSchema(initial.jsonSchema ?? '');
+		setUseDynamicResponse(Boolean(initial.useDynamicResponse));
+		setEchoRequestBody(Boolean(initial.echoRequestBody));
+		setDelay(initial.delay ? String(initial.delay) : '0');
+		setProxyTargetUrl(
+			(initial.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ??
+				'',
+		);
+		setMatchType((initial.matchType as MatchType) ?? 'exact');
+		const qp = initial.queryParams as Record<string, string> | null | undefined;
+		setQueryParams(
+			qp
+				? Object.entries(qp).map(([key, value], index) =>
+						createQueryParamField(key, value, index),
+					)
+				: [],
+		);
+		setVariants((initial.variants as MockVariant[] | null | undefined) ?? []);
+		setWildcardRequireMatch(Boolean(initial.wildcardRequireMatch));
+		setActiveTab(initial.jsonSchema ? 'schema' : 'manual');
+	}, [initial, initialRevision, mode, defaultFolderId, defaultMockFolderId]);
 
 	const origin = typeof window !== 'undefined' ? window.location.origin : '';
 	const selectedFolder = useMemo(() => {
@@ -209,16 +267,27 @@ export function MockEditor({
 	}, [folders, folderId, defaultFolderId]);
 	const selectedMockSubfolder = useMemo(() => {
 		if (!mockFolderId || mockFolderId === 'root') return null;
-		return mockSubfolders.find((subfolder) => subfolder.id === mockFolderId) ?? null;
+		return (
+			mockSubfolders.find((subfolder) => subfolder.id === mockFolderId) ?? null
+		);
 	}, [mockSubfolders, mockFolderId]);
 
 	const previewUrl = useMemo(() => {
 		const baseSlug = previewSlug ?? selectedFolder?.slug;
 		if (!baseSlug) return null;
 		if (!path.startsWith('/') || path.length <= 1) return null;
-		const effectivePath = joinMockPaths(selectedMockSubfolder?.mainPath ?? '/', path);
+		const effectivePath = joinMockPaths(
+			selectedMockSubfolder?.mainPath ?? '/',
+			path,
+		);
 		return `${origin}/api/mock/${baseSlug}${effectivePath}`;
-	}, [origin, previewSlug, selectedFolder?.slug, selectedMockSubfolder?.mainPath, path]);
+	}, [
+		origin,
+		previewSlug,
+		selectedFolder?.slug,
+		selectedMockSubfolder?.mainPath,
+		path,
+	]);
 
 	const showFolder =
 		showFolderSelect ?? (mode === 'create' && !defaultFolderId);
@@ -226,37 +295,94 @@ export function MockEditor({
 		submitLabel ??
 		(mode === 'create' ? 'Create Mock Endpoint' : 'Save Changes');
 
-	const validateBeforeSubmit = (): boolean => {
+	const buildQueryParams = (): Record<string, string> | null => {
+		return buildQueryParamsFromFields(queryParams);
+	};
+
+	const buildQueryParamsFromFields = (
+		fields: QueryParamField[],
+	): Record<string, string> | null => {
+		const entries = fields
+			.map((param) => [param.key.trim(), param.value] as const)
+			.filter(([key]) => key.length > 0);
+		return entries.length > 0 ? Object.fromEntries(entries) : null;
+	};
+
+	const buildQueryParamsString = (): string => {
+		const qp = buildQueryParams();
+		if (!qp) return '';
+		const params = new URLSearchParams(qp);
+		const serialized = params.toString();
+		return serialized ? `?${serialized}` : '';
+	};
+	const isEchoRequestBodyEnabled =
+		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
+
+	const extractPathQueryParams = () => {
+		if (!path.includes('?')) return;
+		const parsed = getEndpointInputParts(path);
+		setPath(parsed.path);
+		if (Object.keys(parsed.queryParams).length > 0) {
+			setQueryParams((current) =>
+				mergeQueryParamFields(current, parsed.queryParams),
+			);
+			setActiveTab('advanced');
+		}
+	};
+
+	const handlePathPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+		const pasted = event.clipboardData.getData('text');
+		if (!pasted.includes('?')) return;
+
+		event.preventDefault();
+		const parsed = getEndpointInputParts(pasted);
+		setPath(parsed.path);
+		if (Object.keys(parsed.queryParams).length > 0) {
+			setQueryParams((current) =>
+				mergeQueryParamFields(current, parsed.queryParams),
+			);
+			setActiveTab('advanced');
+		}
+	};
+
+	const validateBeforeSubmit = (pathToValidate = path): boolean => {
 		if (showFolder && !folderId) {
 			toast.error('Error', { description: 'Please select a folder' });
 			return false;
 		}
-		if (!path.startsWith('/')) {
+		if (!pathToValidate.startsWith('/')) {
 			toast.error('Error', { description: 'Path must start with /' });
 			return false;
 		}
-		try {
-			if (useDynamicResponse) {
-				const validation = validateSchema(jsonSchema);
-				if (!validation.valid) {
-					throw new Error(validation.error || 'Invalid JSON Schema');
+		if (!isEchoRequestBodyEnabled) {
+			try {
+				if (useDynamicResponse) {
+					const validation = validateSchema(jsonSchema);
+					if (!validation.valid) {
+						throw new Error(validation.error || 'Invalid JSON Schema');
+					}
+					JSON.parse(jsonSchema);
+				} else {
+					JSON.parse(response);
 				}
-				JSON.parse(jsonSchema);
-			} else {
-				JSON.parse(response);
+			} catch {
+				toast.error('Error', { description: 'Please provide valid JSON' });
+				return false;
 			}
-		} catch {
-			toast.error('Error', { description: 'Please provide valid JSON' });
-			return false;
 		}
 		return true;
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!validateBeforeSubmit()) return;
+		const parsedPath = path.includes('?') ? getEndpointInputParts(path) : null;
+		const submitQueryParams = parsedPath
+			? mergeQueryParamFields(queryParams, parsedPath.queryParams)
+			: queryParams;
+		const submitPath = parsedPath?.path ?? path;
+		if (!validateBeforeSubmit(submitPath)) return;
 
-		let formattedPath = path.trim();
+		let formattedPath = submitPath.trim();
 		if (formattedPath.length > 1 && formattedPath.endsWith('/')) {
 			formattedPath = formattedPath.slice(0, -1);
 		}
@@ -270,13 +396,10 @@ export function MockEditor({
 			mockFolderId: mockFolderId === 'root' ? null : mockFolderId,
 			response,
 			matchType,
-			queryParams:
-				queryParams.length > 0
-					? Object.fromEntries(queryParams.map((p) => [p.key, p.value]))
-					: null,
+			queryParams: buildQueryParamsFromFields(submitQueryParams),
 			jsonSchema,
 			useDynamicResponse,
-			echoRequestBody,
+			echoRequestBody: isEchoRequestBodyEnabled,
 			delay,
 			meta: {
 				...initial?.meta,
@@ -285,7 +408,11 @@ export function MockEditor({
 			variants: variants.length > 0 ? variants : null,
 			wildcardRequireMatch,
 		};
-		await onSubmit({ ...values, statusCode: values.statusCode, delay: String(Number.parseInt(delay || '0', 10)) });
+		await onSubmit({
+			...values,
+			statusCode: values.statusCode,
+			delay: String(Number.parseInt(delay || '0', 10)),
+		});
 	};
 
 	return (
@@ -315,7 +442,10 @@ export function MockEditor({
 						{mockSubfolders.length > 0 && (
 							<div className="space-y-2">
 								<Label htmlFor="create-mock-subfolder">Mock Subfolder</Label>
-								<Select value={mockFolderId || 'root'} onValueChange={setMockFolderId}>
+								<Select
+									value={mockFolderId || 'root'}
+									onValueChange={setMockFolderId}
+								>
 									<SelectTrigger id="create-mock-subfolder">
 										<SelectValue />
 									</SelectTrigger>
@@ -385,7 +515,7 @@ export function MockEditor({
 								id="create-delay"
 								type="number"
 								min="0"
-								step="100"
+								step="1"
 								value={delay}
 								onChange={(e) => setDelay(e.target.value)}
 								placeholder="e.g., 500"
@@ -401,6 +531,8 @@ export function MockEditor({
 								id="create-path"
 								value={path}
 								onChange={(e) => setPath(e.target.value)}
+								onBlur={extractPathQueryParams}
+								onPaste={handlePathPaste}
 								placeholder="/users"
 								required
 							/>
@@ -409,6 +541,7 @@ export function MockEditor({
 									Preview:{' '}
 									<span className="text-foreground wrap-break-word">
 										{previewUrl}
+										{buildQueryParamsString()}
 									</span>
 								</p>
 							)}
@@ -424,7 +557,8 @@ export function MockEditor({
 								className="font-mono text-sm"
 							/>
 							<p className="text-[10px] text-muted-foreground">
-								If set, Mockzilla will proxy directly to this full URL (preserving query params).
+								If set, Mockzilla will proxy directly to this full URL
+								(preserving query params).
 							</p>
 						</div>
 					</div>

@@ -120,5 +120,7 @@ The folder page shows the current subfolder level:
 - The mock list shows mocks in the current level only.
 - The mock editor path field is relative to the selected subfolder.
 - Preview and copied URLs use the computed effective path.
+- Mock create, duplicate, delete, inline card edits, and full editor saves revalidate the active paginated mock list cache.
+- The edit form hydrates all inputs from the saved mock revision when SWR receives newer persisted data, so stale cached fields do not overwrite newer mock values.
 
 Deleting a non-empty subfolder returns `409`; move or delete its child mocks/subfolders first.

@@ -31,17 +31,30 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import type { Folder, Mock, MockSubfolder, UpdateMockRequest } from '@/lib/types';
+import type {
+	Folder,
+	Mock,
+	MockSubfolder,
+	UpdateMockRequest,
+} from '@/lib/types';
 import { copyToClipboard } from '@/lib/utils';
 import { generateSlug, joinMockPaths } from '@/lib/utils/mock-paths';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+type MockListResponse = {
+	data: Mock[];
+	meta: { total: number; page: number; limit: number; totalPages: number };
+};
+
 function FolderContent() {
 	const params = useParams();
 	const slug = params.slug as string;
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
-	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
+	const [limit, setLimit] = useQueryState(
+		'limit',
+		parseAsInteger.withDefault(10),
+	);
 	const [search, setSearch] = useQueryState('q', parseAsString.withDefault(''));
 	const [mockFolderId, setMockFolderId] = useQueryState(
 		'mockFolderId',
@@ -51,9 +64,8 @@ function FolderContent() {
 	const [newSubfolderName, setNewSubfolderName] = useState('');
 	const [newSubfolderSlug, setNewSubfolderSlug] = useState('');
 	const [isCreateSubfolderOpen, setIsCreateSubfolderOpen] = useState(false);
-	const [editingSubfolder, setEditingSubfolder] = useState<MockSubfolder | null>(
-		null,
-	);
+	const [editingSubfolder, setEditingSubfolder] =
+		useState<MockSubfolder | null>(null);
 	const [editSubfolderName, setEditSubfolderName] = useState('');
 	const [editSubfolderSlug, setEditSubfolderSlug] = useState('');
 
@@ -85,21 +97,25 @@ function FolderContent() {
 	const currentSubfolder =
 		currentMockFolderId === 'root'
 			? null
-			: allSubfolders.find((subfolder) => subfolder.id === currentMockFolderId) ?? null;
+			: (allSubfolders.find(
+					(subfolder) => subfolder.id === currentMockFolderId,
+				) ?? null);
 	const parentSubfolder = currentSubfolder?.parentId
-		? allSubfolders.find((subfolder) => subfolder.id === currentSubfolder.parentId) ?? null
+		? (allSubfolders.find(
+				(subfolder) => subfolder.id === currentSubfolder.parentId,
+			) ?? null)
 		: null;
 	const editingParentSubfolder = editingSubfolder?.parentId
-		? allSubfolders.find((subfolder) => subfolder.id === editingSubfolder.parentId) ?? null
+		? (allSubfolders.find(
+				(subfolder) => subfolder.id === editingSubfolder.parentId,
+			) ?? null)
 		: null;
 
-	const { data, isLoading: mocksLoading } = useSWR<{
-		data: Mock[];
-		meta: { total: number; page: number; limit: number; totalPages: number };
-	}>(
-		folder
-			? `/api/mocks?folderId=${folder.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`
-			: null,
+	const mocksCacheKey = folder
+		? `/api/mocks?folderId=${folder.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`
+		: null;
+	const { data, isLoading: mocksLoading } = useSWR<MockListResponse>(
+		mocksCacheKey,
 		fetcher,
 	);
 
@@ -130,14 +146,16 @@ function FolderContent() {
 		toast.success('Mock Created', {
 			description: 'Your mock endpoint has been created successfully',
 		});
-		mutate(
-			`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-		);
+		if (mocksCacheKey) {
+			mutate(mocksCacheKey);
+		}
 	};
 
 	const refreshSubfolders = () => {
 		if (!folder) return;
-		mutate(`/api/mock-subfolders?folderId=${folder.id}&parentId=${currentMockFolderId}`);
+		mutate(
+			`/api/mock-subfolders?folderId=${folder.id}&parentId=${currentMockFolderId}`,
+		);
 		mutate(`/api/mock-subfolders?folderId=${folder.id}&all=true`);
 	};
 
@@ -235,9 +253,9 @@ function FolderContent() {
 			toast.success('Mock Deleted', {
 				description: 'Mock endpoint has been removed',
 			});
-			mutate(
-				`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-			);
+			if (mocksCacheKey) {
+				mutate(mocksCacheKey);
+			}
 		} catch {
 			toast.error('Error', {
 				description: 'Failed to delete mock',
@@ -277,9 +295,9 @@ function FolderContent() {
 			toast.success('Mock Duplicated', {
 				description: 'Mock endpoint has been duplicated successfully',
 			});
-			mutate(
-				`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-			);
+			if (mocksCacheKey) {
+				mutate(mocksCacheKey);
+			}
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -301,12 +319,26 @@ function FolderContent() {
 				throw new Error(error.error);
 			}
 
+			const updatedMock = (await response.json()) as Mock;
+
 			toast.success('Mock Updated', {
 				description: 'Mock endpoint has been updated successfully',
 			});
-			mutate(
-				`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-			);
+			if (mocksCacheKey) {
+				mutate(
+					mocksCacheKey,
+					(current: MockListResponse | undefined) =>
+						current
+							? {
+									...current,
+									data: current.data.map((mock) =>
+										mock.id === updatedMock.id ? updatedMock : mock,
+									),
+								}
+							: current,
+					{ revalidate: true },
+				);
+			}
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -446,7 +478,10 @@ function FolderContent() {
 												Create a nested mock group with a custom path slug.
 											</DialogDescription>
 										</DialogHeader>
-										<form onSubmit={handleCreateSubfolder} className="space-y-4">
+										<form
+											onSubmit={handleCreateSubfolder}
+											className="space-y-4"
+										>
 											<div className="space-y-2">
 												<label
 													htmlFor="subfolder-name"

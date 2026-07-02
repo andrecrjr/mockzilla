@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, ExternalLink, Pencil, CopyPlus } from 'lucide-react';
+import { Copy, CopyPlus, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { MockDeleteButton } from '@/components/mock-delete-button';
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Folder, Mock, UpdateMockRequest } from '@/lib/types';
+import { splitPathSearchParams } from '@/lib/utils/mock-paths';
 import { openUrlInNewContext } from '@/lib/utils/open-url';
 
 interface MockCardProps {
@@ -21,7 +22,14 @@ interface MockCardProps {
 	onCopy: (text: string) => void;
 }
 
-export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy }: MockCardProps) {
+export function MockCard({
+	mock,
+	folder,
+	onDelete,
+	onDuplicate,
+	onUpdate,
+	onCopy,
+}: MockCardProps) {
 	const [editedPath, setEditedPath] = useState(mock.path);
 
 	useEffect(() => {
@@ -30,33 +38,39 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 
 	const handleSavePath = async () => {
 		let newPath = editedPath.trim();
-		
+		const parsedPath = newPath.includes('?')
+			? splitPathSearchParams(newPath)
+			: null;
+		const nextQueryParams = parsedPath
+			? {
+					...((mock.queryParams as Record<string, string> | null) ?? {}),
+					...parsedPath.queryParams,
+				}
+			: null;
+
+		if (parsedPath) {
+			newPath = parsedPath.path;
+		}
+
 		// Remove trailing slash if it exists and path is not just "/"
 		if (newPath.length > 1 && newPath.endsWith('/')) {
 			newPath = newPath.slice(0, -1);
 		}
 
-		if (newPath !== mock.path && newPath !== '') {
+		if (newPath !== '') {
+			const shouldUpdatePath = newPath !== mock.path;
+			const shouldUpdateQueryParams =
+				nextQueryParams !== null && Object.keys(parsedPath?.queryParams ?? {}).length > 0;
+			if (!shouldUpdatePath && !shouldUpdateQueryParams) {
+				setEditedPath(mock.path);
+				return;
+			}
 			try {
-				const updateData: UpdateMockRequest = {
-					name: mock.name,
-					path: newPath,
-					method: mock.method,
-					response: mock.response,
-					statusCode: mock.statusCode,
-					matchType: mock.matchType,
-					bodyType: mock.bodyType,
-					enabled: mock.enabled,
-					queryParams: mock.queryParams,
-					variants: mock.variants,
-					wildcardRequireMatch: mock.wildcardRequireMatch,
-					jsonSchema: mock.jsonSchema,
-					useDynamicResponse: mock.useDynamicResponse,
-					echoRequestBody: mock.echoRequestBody,
-					delay: mock.delay,
-					mockFolderId: mock.mockFolderId,
-				};
-				await onUpdate(mock.id, updateData);
+				const update: UpdateMockRequest = {};
+				if (shouldUpdatePath) update.path = newPath;
+				if (shouldUpdateQueryParams) update.queryParams = nextQueryParams;
+				await onUpdate(mock.id, update);
+				setEditedPath(newPath);
 			} catch (_error) {
 				setEditedPath(mock.path);
 			}
@@ -87,9 +101,7 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 		if (!qp || Object.keys(qp).length === 0) return '';
 		return (
 			'?' +
-			Object.entries(qp)
-				.map(([k, v]) => `${k}=${v}`)
-				.join('&')
+			new URLSearchParams(qp).toString()
 		);
 	};
 
@@ -156,9 +168,12 @@ export function MockCard({ mock, folder, onDelete, onDuplicate, onUpdate, onCopy
 								<Badge
 									variant="secondary"
 									className="max-w-full truncate border-blue-500/20 bg-blue-500/10 text-xs text-blue-600 dark:text-blue-400"
-									title={(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
+									title={
+										(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl
+									}
 								>
-									Proxy: {(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
+									Proxy:{' '}
+									{(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
 								</Badge>
 							)}
 							{mock.matchType === 'wildcard' &&

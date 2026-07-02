@@ -100,9 +100,12 @@ Unified tool for defining and testing API responses.
 - `list`: Paginated list of mocks, optionally filtered by folder.
 - `create`: Create a mock. If `jsonSchema` is provided without a `response`, a dynamic response is auto-generated.
 - `get`: Get full mock definition.
-- `update`: Update path, status, or any configuration field.
+- `update`: Merge path, status, or any configuration field into the stored mock. Omitted fields keep their current persisted values, which prevents narrow UI saves such as inline mock-card path edits from rolling back the rest of the mock.
+- `delay`: Response delay is stored in milliseconds and may be any non-negative whole number.
 - `delete`: Delete a mock.
 - `preview`: Test what a mock would return given a path, method, and request context.
+
+Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, pasting or typing a URL-style endpoint such as `/users?status=active` moves `status=active` into Advanced Options query params before saving.
 
 ### 4. Workflow Scenarios (`manage_scenarios`)
 Manage stateful, multi-step scenario containers.

@@ -101,11 +101,11 @@ export interface UpdateFolderRequest {
 }
 
 export interface UpdateMockRequest {
-	name: string;
-	path: string;
-	method: HttpMethod;
-	response: string;
-	statusCode: number;
+	name?: string;
+	path?: string;
+	method?: HttpMethod;
+	response?: string;
+	statusCode?: number;
 	mockFolderId?: string | null;
 	matchType?: MatchType;
 	bodyType?: BodyType;
@@ -176,4 +176,9 @@ export interface WorkflowExportData {
 	transitions: Transition[];
 }
 
-export type { Condition, Effect, MatchContext, ConditionTrace } from './workflow-types';
+export type {
+	Condition,
+	Effect,
+	MatchContext,
+	ConditionTrace,
+} from './workflow-types';

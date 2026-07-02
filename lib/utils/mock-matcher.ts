@@ -1,4 +1,5 @@
 import type { MatchType } from '@/lib/types';
+import { splitPathSearchParams } from './mock-paths';
 
 export interface MockVariant {
 	key: string;
@@ -95,24 +96,39 @@ function scoreCandidate(
 	requestPath: string,
 	urlQueryParams: Record<string, string>,
 ): number {
+	const parsedRequest = splitPathSearchParams(requestPath);
+	const parsedEndpoint = splitPathSearchParams(candidate.endpoint);
+	const actualQueryParams = {
+		...parsedRequest.queryParams,
+		...urlQueryParams,
+	};
+	const requiredQueryParams = {
+		...parsedEndpoint.queryParams,
+		...(candidate.queryParams ?? {}),
+	};
+
 	if (
-		!pathMatchesPattern(requestPath, candidate.endpoint, candidate.matchType)
+		!pathMatchesPattern(
+			parsedRequest.path,
+			parsedEndpoint.path,
+			candidate.matchType,
+		)
 	) {
 		return 0;
 	}
-	if (!queryParamsMatch(candidate.queryParams, urlQueryParams)) {
+	if (!queryParamsMatch(requiredQueryParams, actualQueryParams)) {
 		return 0;
 	}
 
 	let score = MATCH_TYPE_SCORE[candidate.matchType];
 
 	// Bonus for having query params requirement met (more specific)
-	if (candidate.queryParams && Object.keys(candidate.queryParams).length > 0) {
-		score += Object.keys(candidate.queryParams).length * 10;
+	if (Object.keys(requiredQueryParams).length > 0) {
+		score += Object.keys(requiredQueryParams).length * 10;
 	}
 
 	// Tie-breaker: longer endpoint is more specific
-	score += candidate.endpoint.length;
+	score += parsedEndpoint.path.length;
 
 	return score;
 }
@@ -148,7 +164,9 @@ export function findBestMatch(
  * Example: pattern "/api/users/WILDCARD/status/WILDCARD" matching "/api/users/alice/status/active" returns "alice|active"
  */
 export function extractCaptureKey(url: string, pattern: string): string | null {
-	const result = matchWildcard(url, pattern);
+	const parsedUrl = splitPathSearchParams(url);
+	const parsedPattern = splitPathSearchParams(pattern);
+	const result = matchWildcard(parsedUrl.path, parsedPattern.path);
 	if (!result.ok || result.captures.length === 0) return null;
 	return result.captures.join('|');
 }

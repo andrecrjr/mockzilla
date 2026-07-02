@@ -198,6 +198,7 @@ export function ResponseConfig({
 	};
 
 	const isEchoMethod = ['POST', 'PUT', 'PATCH'].includes(method);
+	const isEchoEnabled = isEchoMethod && echoRequestBody;
 
 	// Query Params helpers
 	const addParam = () => {
@@ -261,7 +262,7 @@ export function ResponseConfig({
 
 			<div
 				className={
-					echoRequestBody
+					isEchoEnabled
 						? 'opacity-40 pointer-events-none select-none transition-opacity'
 						: 'transition-opacity'
 				}
@@ -300,7 +301,7 @@ export function ResponseConfig({
 							onChange={(e) => onResponseChange(e.target.value)}
 							placeholder='{"message": "Hello World"}'
 							className="font-mono text-sm h-[500px]"
-							required={activeTab === 'manual'}
+							required={activeTab === 'manual' && !isEchoEnabled}
 						/>
 					</TabsContent>
 
@@ -320,7 +321,7 @@ export function ResponseConfig({
 							onChange={(e) => onJsonSchemaChange(e.target.value)}
 							className="font-mono text-sm h-[300px]"
 							placeholder="Paste JSON Schema here..."
-							required={activeTab === 'schema'}
+							required={activeTab === 'schema' && !isEchoEnabled}
 						/>
 
 						<div className="flex items-center space-x-2">

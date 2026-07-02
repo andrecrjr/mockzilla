@@ -17,6 +17,9 @@ const mockMockData = {
 	updatedAt: new Date('2024-01-01'),
 };
 
+let latestSetValue: unknown;
+let latestInsertValue: unknown;
+
 // Chainable mock builder
 const createMockBuilder = (resolvedValue: unknown) => {
 	const builder = {
@@ -25,8 +28,14 @@ const createMockBuilder = (resolvedValue: unknown) => {
 		orderBy: mock(() => builder),
 		limit: mock(() => builder),
 		offset: mock(() => builder),
-		values: mock(() => builder),
-		set: mock(() => builder),
+		values: mock((value: unknown) => {
+			latestInsertValue = value;
+			return builder;
+		}),
+		set: mock((value: unknown) => {
+			latestSetValue = value;
+			return builder;
+		}),
 		returning: mock(() => builder),
 		then: (resolve: (val: unknown) => void) => resolve(resolvedValue),
 	} as unknown as {
@@ -64,6 +73,8 @@ import { DELETE, GET, POST, PUT } from '../../app/api/mocks/route';
 describe('API /api/mocks', () => {
 	beforeEach(() => {
 		mockResolvedValue = [mockMockData];
+		latestSetValue = undefined;
+		latestInsertValue = undefined;
 	});
 
 	it('GET (by folderId) returns mocks', async () => {
@@ -111,6 +122,38 @@ describe('API /api/mocks', () => {
 		expect(res.status).toBe(201);
 		expect(mockDb.insert).toHaveBeenCalled();
 		expect(body.delay).toBeDefined();
+		expect(latestInsertValue).toMatchObject({
+			name: payload.name,
+			endpoint: payload.path,
+			method: payload.method,
+			statusCode: payload.statusCode,
+			response: payload.response,
+			folderId: payload.folderId,
+			delay: payload.delay,
+		});
+	});
+
+	it('POST rejects endpoint paths that include search params', async () => {
+		const payload = {
+			name: 'Invalid Mock',
+			path: '/new?status=active',
+			method: 'GET',
+			statusCode: 200,
+			response: '{}',
+			folderId: 'folder-123',
+			queryParams: { status: 'active' },
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(400);
+		expect(body.error).toContain('Endpoint path cannot include search params');
+		expect(latestInsertValue).toBeUndefined();
 	});
 
 	it('POST rejects a mock subfolder outside the folder', async () => {
@@ -137,7 +180,14 @@ describe('API /api/mocks', () => {
 	});
 
 	it('PUT updates a mock', async () => {
-		const payload = { name: 'Updated Mock', delay: 2000 };
+		const payload = {
+			name: 'Updated Mock',
+			path: '/api/updated',
+			method: 'PUT',
+			response: '{"updated":true}',
+			statusCode: 202,
+			delay: 2000,
+		};
 		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
 			method: 'PUT',
 			body: JSON.stringify(payload),
@@ -148,6 +198,51 @@ describe('API /api/mocks', () => {
 		expect(res.status).toBe(200);
 		expect(mockDb.update).toHaveBeenCalled();
 		expect(body.delay).toBeDefined();
+		expect(latestSetValue).toMatchObject({
+			name: payload.name,
+			endpoint: payload.path,
+			method: payload.method,
+			statusCode: payload.statusCode,
+			response: payload.response,
+			delay: payload.delay,
+		});
+	});
+
+	it('PUT rejects endpoint paths that include search params', async () => {
+		const payload = {
+			path: '/updated?status=active',
+			queryParams: { status: 'active' },
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await PUT(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(400);
+		expect(body.error).toContain('Endpoint path cannot include search params');
+		expect(latestSetValue).toBeUndefined();
+	});
+
+	it('PUT merges partial mock updates with the stored mock', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ path: '/api/new-path' }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(200);
+		expect(latestSetValue).toMatchObject({
+			name: mockMockData.name,
+			endpoint: '/api/new-path',
+			method: mockMockData.method,
+			statusCode: mockMockData.statusCode,
+			response: mockMockData.response,
+			delay: mockMockData.delay,
+		});
 	});
 
 	it('PUT rejects a mock subfolder outside the existing mock folder', async () => {
@@ -224,29 +319,55 @@ describe('API /api/mocks', () => {
 	});
 
 	it('GET returns 500 on error', async () => {
-		mockDb.select = mock(() => { throw new Error('fail'); });
+		mockDb.select = mock(() => {
+			throw new Error('fail');
+		});
 		const res = await GET(new NextRequest('http://localhost:3000/api/mocks'));
 		expect(res.status).toBe(500);
-		mockDb.select = mock((args) => args?.count ? createMockBuilder([{ count: 5 }]) : createMockBuilder(mockResolvedValue));
+		mockDb.select = mock((args) =>
+			args?.count
+				? createMockBuilder([{ count: 5 }])
+				: createMockBuilder(mockResolvedValue),
+		);
 	});
 
 	it('POST returns 500 on error', async () => {
-		mockDb.insert = mock(() => { throw new Error('fail'); });
-		const res = await POST(new NextRequest('http://localhost:3000/api/mocks', { method: 'POST', body: '{}' }));
+		mockDb.insert = mock(() => {
+			throw new Error('fail');
+		});
+		const res = await POST(
+			new NextRequest('http://localhost:3000/api/mocks', {
+				method: 'POST',
+				body: '{}',
+			}),
+		);
 		expect(res.status).toBe(500);
 		mockDb.insert = mock(() => createMockBuilder([mockMockData]));
 	});
 
 	it('PUT returns 500 on error', async () => {
-		mockDb.update = mock(() => { throw new Error('fail'); });
-		const res = await PUT(new NextRequest('http://localhost:3000/api/mocks?id=1', { method: 'PUT', body: '{}' }));
+		mockDb.update = mock(() => {
+			throw new Error('fail');
+		});
+		const res = await PUT(
+			new NextRequest('http://localhost:3000/api/mocks?id=1', {
+				method: 'PUT',
+				body: '{}',
+			}),
+		);
 		expect(res.status).toBe(500);
 		mockDb.update = mock(() => createMockBuilder([mockMockData]));
 	});
 
 	it('DELETE returns 500 on error', async () => {
-		mockDb.delete = mock(() => { throw new Error('fail'); });
-		const res = await DELETE(new NextRequest('http://localhost:3000/api/mocks?id=1', { method: 'DELETE' }));
+		mockDb.delete = mock(() => {
+			throw new Error('fail');
+		});
+		const res = await DELETE(
+			new NextRequest('http://localhost:3000/api/mocks?id=1', {
+				method: 'DELETE',
+			}),
+		);
 		expect(res.status).toBe(500);
 		mockDb.delete = mock(() => createMockBuilder([]));
 	});

@@ -57,6 +57,12 @@ The route fetches all enabled mocks for the folder and method, then evaluates th
 
 For mocks in subfolders, the matcher uses `subfolder.mainPath + mock.path`. The subfolder `mainPath` is derived from the nested subfolder slug hierarchy, and the stored mock path remains relative to that subfolder.
 
+### Endpoint Paths and Search Params
+
+Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. The web UI normalizes URL-style endpoint input by moving search params from the path field into Advanced Options query params before saving. Create and update APIs reject mock paths that include `?`, such as `/users?status=active`, because persisted paths must stay separate from the query-param matcher.
+
+Wildcard captures are extracted from the normalized path only. For example, `/users/123?status=active` matched against `/users/*` exposes `input.params.0 = "123"` and `input.query.status = "active"`; the query string is not included in the wildcard capture.
+
 #### Variant Selection for Wildcards
 
 For mocks using `matchType: 'wildcard'`, Mockzilla supports multiple response variants based on the captured wildcard value:

@@ -32,7 +32,11 @@ import {
 	findBestMatch,
 	selectVariant,
 } from '@/lib/utils/mock-matcher';
-import { joinMockPaths } from '@/lib/utils/mock-paths';
+import {
+	joinMockPaths,
+	splitPathSearchParams,
+	validateEndpointPathSearchParams,
+} from '@/lib/utils/mock-paths';
 import type {
 	ListFoldersArgs,
 	CreateFolderArgs,
@@ -484,6 +488,14 @@ export async function callManageMockSubfolders(args: ManageMockSubfoldersArgs) {
 // MOCK HANDLERS
 export async function callCreateMock(args: CreateMockArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock');
+	const pathValidation = validateEndpointPathSearchParams(
+		args.path,
+		args.queryParams,
+	);
+	if (!pathValidation.valid) {
+		throw new Error(pathValidation.error);
+	}
+
 	const folderSlug = args.folderSlug ?? null;
 	const folderIdArg = args.folderId ?? null;
 	let targetFolderId: string | null = folderIdArg;
@@ -683,25 +695,54 @@ export async function callGetMock(args: GetMockArgs) {
 
 export async function callUpdateMock(args: UpdateMockArgs) {
 	logger.info({ args }, 'MCP Tool: update_mock');
+	const [existingMock] = await db
+		.select()
+		.from(mockResponses)
+		.where(eq(mockResponses.id, args.id))
+		.limit(1);
+	if (!existingMock) return null;
+
+	const nextPath = args.path ?? existingMock.endpoint;
+	const nextQueryParams =
+		args.queryParams === undefined
+			? (existingMock.queryParams as Record<string, string> | null)
+			: args.queryParams;
+	const pathValidation = validateEndpointPathSearchParams(
+		nextPath,
+		nextQueryParams,
+	);
+	if (!pathValidation.valid) {
+		throw new Error(pathValidation.error);
+	}
+
 	const [row] = await db
 		.update(mockResponses)
 		.set({
-			name: args.name,
-			endpoint: args.path,
-			method: args.method,
-			statusCode: args.statusCode,
-			response: args.response,
-			mockFolderId: args.mockFolderId ?? undefined,
-			matchType: args.matchType || 'exact',
-			bodyType: args.bodyType || 'json',
-			enabled: args.enabled ?? true,
-			queryParams: args.queryParams || null,
-			variants: args.variants || null,
-			wildcardRequireMatch: args.wildcardRequireMatch ?? false,
-			jsonSchema: args.jsonSchema ?? null,
-			useDynamicResponse: args.useDynamicResponse ?? false,
-			echoRequestBody: args.echoRequestBody ?? false,
-			delay: args.delay ?? 0,
+			name: args.name ?? existingMock.name,
+			endpoint: nextPath,
+			method: args.method ?? existingMock.method,
+			statusCode: args.statusCode ?? existingMock.statusCode,
+			response: args.response ?? existingMock.response,
+			mockFolderId:
+				args.mockFolderId === undefined
+					? existingMock.mockFolderId
+					: args.mockFolderId,
+			matchType: args.matchType ?? existingMock.matchType ?? 'exact',
+			bodyType: args.bodyType ?? existingMock.bodyType ?? 'json',
+			enabled: args.enabled ?? existingMock.enabled,
+			queryParams: nextQueryParams,
+			variants:
+				args.variants === undefined
+					? (existingMock.variants as MockVariant[] | null)
+					: args.variants,
+			wildcardRequireMatch:
+				args.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
+			jsonSchema:
+				args.jsonSchema === undefined ? existingMock.jsonSchema : args.jsonSchema,
+			useDynamicResponse:
+				args.useDynamicResponse ?? existingMock.useDynamicResponse,
+			echoRequestBody: args.echoRequestBody ?? existingMock.echoRequestBody,
+			delay: args.delay ?? existingMock.delay,
 			updatedAt: new Date(),
 		})
 		.where(eq(mockResponses.id, args.id))
@@ -785,6 +826,14 @@ export async function callCreateSchemaMock(args: {
 	delay?: number;
 }) {
 	logger.info({ args }, 'MCP Tool: create_schema_mock');
+	const pathValidation = validateEndpointPathSearchParams(
+		args.path,
+		args.queryParams,
+	);
+	if (!pathValidation.valid) {
+		throw new Error(pathValidation.error);
+	}
+
 	const folderSlug = args.folderSlug ?? null;
 	const folderIdArg = args.folderId ?? null;
 	let targetFolderId: string | null = folderIdArg;
@@ -862,9 +911,13 @@ export async function callCreateSchemaMock(args: {
 export async function callPreviewMock(args: PreviewMockArgs) {
 	logger.info({ args }, 'MCP Tool: preview_mock');
 	const folderSlug = args.folderSlug;
-	const mockPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
+	const parsedPath = splitPathSearchParams(args.path);
+	const mockPath = parsedPath.path;
 	const method = args.method;
-	const urlQueryParams = args.queryParams || {};
+	const urlQueryParams = {
+		...parsedPath.queryParams,
+		...(args.queryParams || {}),
+	};
 
 	const [folder] = await db
 		.select()

@@ -15,6 +15,11 @@ import type { Folder, Mock, MockSubfolder } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+type MockListResponse = {
+	data: Mock[];
+	meta: { total: number; page: number; limit: number; totalPages: number };
+};
+
 export default function EditMockPage() {
 	const params = useParams();
 	const router = useRouter();
@@ -107,11 +112,26 @@ export default function EditMockPage() {
 				const error = await res.json();
 				throw new Error(error.error);
 			}
+			const updatedMock = (await res.json()) as Mock;
 			toast.success('Mock Updated', {
 				description: 'Mock endpoint has been updated successfully',
 			});
-			mutate(`/api/mocks?folderId=${folder.id}`);
-			mutate(`/api/mocks?id=${mock.id}`);
+			mutate(`/api/mocks?id=${mock.id}`, updatedMock, { revalidate: false });
+			mutate(
+				(key) =>
+					typeof key === 'string' &&
+					key.startsWith(`/api/mocks?folderId=${folder.id}`),
+				(current: MockListResponse | undefined) =>
+					current
+						? {
+								...current,
+								data: current.data.map((cachedMock) =>
+									cachedMock.id === updatedMock.id ? updatedMock : cachedMock,
+								),
+							}
+						: current,
+				{ revalidate: true },
+			);
 			router.push(`/app/folder/${slug}`);
 		} catch (error: unknown) {
 			toast.error('Error', {
@@ -206,6 +226,7 @@ export default function EditMockPage() {
 					<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 overflow-y-auto">
 						<MockEditor
 							mode="edit"
+							initialRevision={`${mock.id}:${mock.updatedAt ?? mock.createdAt}`}
 							initial={
 								mock
 									? {
