@@ -102,4 +102,34 @@ describe('MockCard', () => {
 			},
 		);
 	});
+
+	it('renders subfolder mock URLs without duplicating the folder slug', () => {
+		const subfolderMockWithFullPath: Mock = {
+			...baseMock,
+			path: '/ticket-management/app/ticket-type',
+			relativePath: '/ticket-management/app/ticket-type',
+			effectivePath: '/app/ticket-management/app/ticket-type',
+			folderId: folder.id,
+		};
+
+		render(
+			<MockCard
+				mock={subfolderMockWithFullPath}
+				folder={{ ...folder, slug: 'ticket-management' }}
+				onDelete={mock(() => undefined)}
+				onDuplicate={mock(() => undefined)}
+				onUpdate={mock(async () => undefined)}
+				onCopy={mock(() => undefined)}
+			/>,
+		);
+
+		expect(
+			screen.getByDisplayValue(/\/api\/mock\/ticket-management\/app\/ticket-type$/),
+		).toBeDefined();
+		expect(
+			screen.queryByDisplayValue(
+				/\/api\/mock\/ticket-management\/app\/ticket-management/,
+			),
+		).toBeNull();
+	});
 });

@@ -5,6 +5,7 @@ import type React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
+import { MOCKZILLA_VERSION_LABEL } from '@/lib/version';
 
 export default function AppLayout({
 	children,
@@ -29,7 +30,12 @@ export default function AppLayout({
 											className="h-12 w-full invert dark:filter-none"
 										/>
 									</div>
-									<span className="text-foreground">Mockzilla</span>
+									<div className="flex items-center gap-3">
+										<span className="text-foreground">Mockzilla</span>
+										<span className="rounded-full border border-border px-2 py-0.5 font-medium text-[0.7rem] text-muted-foreground">
+											{MOCKZILLA_VERSION_LABEL}
+										</span>
+									</div>
 								</Link>
 								<div className="hidden md:block">
 									<div className="flex items-baseline space-x-2">

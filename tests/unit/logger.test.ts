@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import { logger, logInterceptedRequest, getLogs, getRequestTrace, clearLogs } from '../../lib/logger';
 import fs from 'node:fs';
 import path from 'node:path';
+import { MOCKZILLA_VERSION } from '../../lib/version';
 
 const LOG_DIR = path.join(process.cwd(), '.logs');
 const LOG_FILE = path.join(LOG_DIR, 'mockzilla.log');
@@ -36,7 +37,9 @@ describe('lib/logger', () => {
             type: 'intercept',
             method: 'GET',
             path: '/test',
-            reqId: 'test-req-id'
+            reqId: 'test-req-id',
+            service: 'mockzilla',
+            version: MOCKZILLA_VERSION
         });
     });
 

@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { mockResponses, mockSubfolders } from '@/lib/db/schema';
+import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import {
 	collectDescendantSubfolders,
 	computeCanonicalSubfolderMainPaths,
@@ -11,7 +11,9 @@ import {
 	findMainPathConflict,
 	withCanonicalSubfolderMainPaths,
 } from '@/lib/mock-subfolders';
-import { generateSlug } from '@/lib/utils/mock-paths';
+import {
+	normalizeSubfolderSlugInput,
+} from '@/lib/utils/mock-paths';
 
 const CreateMockSubfolderSchema = z.object({
 	folderId: z.string().uuid(),
@@ -132,21 +134,36 @@ export async function POST(request: NextRequest) {
 			await request.json(),
 		);
 		const parentId = body.parentId ?? null;
-		const slug = generateSlug(body.slug ?? body.name);
-
-		if (!slug) {
-			return NextResponse.json({ error: 'Subfolder slug is invalid' }, { status: 400 });
-		}
 		const folderSubfolders = await db
 			.select()
 			.from(mockSubfolders)
 			.where(eq(mockSubfolders.folderId, body.folderId));
+		const [folder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.id, body.folderId))
+			.limit(1);
+		if (!folder) {
+			return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+		}
 		const canonicalPaths = computeCanonicalSubfolderMainPaths(folderSubfolders);
 		const parent = parentId
 			? folderSubfolders.find((row) => row.id === parentId) ?? null
 			: null;
 		if (parentId && !parent) {
 			return NextResponse.json({ error: 'Parent subfolder not found' }, { status: 404 });
+		}
+		const parentMainPath = parent
+			? canonicalPaths.get(parent.id) ?? parent.mainPath
+			: null;
+		const slug = normalizeSubfolderSlugInput(
+			body.slug ?? body.name,
+			parentMainPath,
+			folder.slug,
+		);
+
+		if (!slug) {
+			return NextResponse.json({ error: 'Subfolder slug is invalid' }, { status: 400 });
 		}
 		if (hasSiblingSlugInRows(folderSubfolders, parentId, slug)) {
 			return NextResponse.json(
@@ -155,9 +172,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const parentMainPath = parent
-			? canonicalPaths.get(parent.id) ?? parent.mainPath
-			: null;
 		const mainPath = deriveSubfolderMainPath(parentMainPath, slug);
 
 		const [row] = await db
@@ -189,7 +203,7 @@ export async function POST(request: NextRequest) {
 	}
 }
 
-export async function PUT(request: NextRequest) {
+async function updateMockSubfolder(request: NextRequest) {
 	try {
 		const id = request.nextUrl.searchParams.get('id');
 		if (!id) {
@@ -213,14 +227,17 @@ export async function PUT(request: NextRequest) {
 		);
 		const nextParentId = body.parentId === undefined ? existing.parentId : body.parentId;
 		const nextName = body.name?.trim() ?? existing.name;
-		const nextSlug =
-			body.slug === undefined ? existing.slug : generateSlug(body.slug);
-
-		if (!nextSlug) {
-			return NextResponse.json({ error: 'Subfolder slug is invalid' }, { status: 400 });
-		}
 		if (nextParentId === id) {
 			return NextResponse.json({ error: 'Subfolder cannot be its own parent' }, { status: 400 });
+		}
+
+		const [folder] = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.id, existing.folderId))
+			.limit(1);
+		if (!folder) {
+			return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
 		}
 
 		const storedFolderSubfolders = await db
@@ -242,6 +259,14 @@ export async function PUT(request: NextRequest) {
 			: null;
 		if (nextParentId && !parent) {
 			return NextResponse.json({ error: 'Parent subfolder not found' }, { status: 404 });
+		}
+		const nextSlug =
+			body.slug === undefined
+				? existing.slug
+				: normalizeSubfolderSlugInput(body.slug, parent?.mainPath, folder.slug);
+
+		if (!nextSlug) {
+			return NextResponse.json({ error: 'Subfolder slug is invalid' }, { status: 400 });
 		}
 		if (hasSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, id)) {
 			return NextResponse.json(
@@ -314,6 +339,14 @@ export async function PUT(request: NextRequest) {
 			{ status: 500 },
 		);
 	}
+}
+
+export async function PUT(request: NextRequest) {
+	return updateMockSubfolder(request);
+}
+
+export async function PATCH(request: NextRequest) {
+	return updateMockSubfolder(request);
 }
 
 export async function DELETE(request: NextRequest) {

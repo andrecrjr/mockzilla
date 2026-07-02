@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import pretty from 'pino-pretty';
+import { MOCKZILLA_VERSION } from '@/lib/version';
 
 function getEnvPath(name: string) {
 	const value = process.env[name];
@@ -58,7 +59,7 @@ function getLogFile() {
 export const logger = pino(
 	{
 		level: process.env.LOG_LEVEL || 'info',
-		base: { pid: process.pid },
+		base: { pid: process.pid, service: 'mockzilla', version: MOCKZILLA_VERSION },
 		timestamp: pino.stdTimeFunctions.isoTime,
 	},
 	pino.multistream(streams)

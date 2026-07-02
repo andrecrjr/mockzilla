@@ -21,6 +21,7 @@ High-performance mocking server for JSON and stateful API workflows.
 ## 🛠️ Observability
 
 - **Structured Logging**: Production-grade logs via Pino in `.logs/mockzilla.log` for web/dev runs, or the configured desktop log directory for packaged desktop builds.
+- **Version Stamping**: The frontend shows the running Mockzilla version, and each structured log entry includes the same `version` field for release traceability.
 - **Request Tracing**: Every mock request is tracked via a unique `reqId`.
 - **Workflow Tracing**: Inspect why transitions did or didn't match with `executionTrace`.
 

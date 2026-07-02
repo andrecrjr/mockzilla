@@ -3,6 +3,15 @@ import { NextRequest } from 'next/server';
 
 const folderId = '11111111-1111-4111-8111-111111111111';
 const subfolderId = '22222222-2222-4222-8222-222222222222';
+const folder = {
+	id: folderId,
+	name: 'Ticket Management',
+	slug: 'ticket-management',
+	description: null,
+	meta: {},
+	createdAt: new Date('2024-01-01'),
+	updatedAt: null,
+};
 
 const mockSubfolder = {
 	id: subfolderId,
@@ -73,7 +82,13 @@ const mockDb = {
 
 mock.module('@/lib/db', () => ({ db: mockDb }));
 
-import { DELETE, GET, POST, PUT } from '../../app/api/mock-subfolders/route';
+import {
+	DELETE,
+	GET,
+	PATCH,
+	POST,
+	PUT,
+} from '../../app/api/mock-subfolders/route';
 
 describe('API /api/mock-subfolders', () => {
 	beforeEach(() => {
@@ -129,7 +144,7 @@ describe('API /api/mock-subfolders', () => {
 			slug: 'people',
 			mainPath: '/people',
 		};
-		selectResults = [[]];
+		selectResults = [[], [folder]];
 		mockDb.insert = mock(() => createMockBuilder([customSlugSubfolder]));
 		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
 			method: 'POST',
@@ -149,7 +164,7 @@ describe('API /api/mock-subfolders', () => {
 	});
 
 	it('creates a child subfolder under the parent main path', async () => {
-		selectResults = [[mockSubfolder]];
+		selectResults = [[mockSubfolder], [folder]];
 		mockDb.insert = mock(() => createMockBuilder([childSubfolder]));
 		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
 			method: 'POST',
@@ -168,7 +183,7 @@ describe('API /api/mock-subfolders', () => {
 	});
 
 	it('rejects duplicate sibling slugs', async () => {
-		selectResults = [[mockSubfolder]];
+		selectResults = [[mockSubfolder], [folder]];
 		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
 			method: 'POST',
 			body: JSON.stringify({
@@ -188,7 +203,7 @@ describe('API /api/mock-subfolders', () => {
 			...mockSubfolder,
 			name: 'Accounts',
 		};
-		selectResults = [[mockSubfolder], [mockSubfolder]];
+		selectResults = [[mockSubfolder], [folder], [mockSubfolder]];
 		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
@@ -213,7 +228,7 @@ describe('API /api/mock-subfolders', () => {
 			slug: 'accounts',
 			mainPath: '/accounts',
 		};
-		selectResults = [[mockSubfolder], [mockSubfolder]];
+		selectResults = [[mockSubfolder], [folder], [mockSubfolder]];
 		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
@@ -238,7 +253,7 @@ describe('API /api/mock-subfolders', () => {
 			slug: 'accounts',
 			mainPath: '/accounts',
 		};
-		selectResults = [[mockSubfolder], [mockSubfolder, childSubfolder]];
+		selectResults = [[mockSubfolder], [folder], [mockSubfolder, childSubfolder]];
 		mockDb.update = mock(() => createMockBuilder([updatedSubfolder]));
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
@@ -256,7 +271,7 @@ describe('API /api/mock-subfolders', () => {
 	});
 
 	it('rejects moving a subfolder under its descendant', async () => {
-		selectResults = [[mockSubfolder], [mockSubfolder, childSubfolder]];
+		selectResults = [[mockSubfolder], [folder], [mockSubfolder, childSubfolder]];
 		const req = new NextRequest(
 			`http://localhost:3000/api/mock-subfolders?id=${subfolderId}`,
 			{
@@ -268,6 +283,108 @@ describe('API /api/mock-subfolders', () => {
 		const res = await PUT(req);
 
 		expect(res.status).toBe(400);
+	});
+
+	it('creates a root subfolder from a full public path slug', async () => {
+		const createdSubfolder = {
+			...mockSubfolder,
+			name: 'App',
+			slug: 'app',
+			mainPath: '/app',
+		};
+		selectResults = [[], [folder]];
+		mockDb.insert = mock(() => createMockBuilder([createdSubfolder]));
+		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
+			method: 'POST',
+			body: JSON.stringify({
+				folderId,
+				name: 'App',
+				slug: '/api/mock/ticket-management/app',
+			}),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(201);
+		expect(body.slug).toBe('app');
+		expect(body.mainPath).toBe('/app');
+	});
+
+	it('updates a child subfolder from a full public path slug', async () => {
+		const parentSubfolder = {
+			...mockSubfolder,
+			name: 'App',
+			slug: 'app',
+			mainPath: '/app',
+		};
+		const existingChild = {
+			...childSubfolder,
+			name: 'Ticket Type',
+			slug: 'ticket-type',
+			mainPath: '/app/ticket-type',
+		};
+		const updatedChild = {
+			...existingChild,
+			slug: 'ticket-type-updated',
+			mainPath: '/app/ticket-type-updated',
+		};
+		selectResults = [[existingChild], [folder], [parentSubfolder, existingChild]];
+		mockDb.update = mock(() => createMockBuilder([updatedChild]));
+		const req = new NextRequest(
+			`http://localhost:3000/api/mock-subfolders?id=${existingChild.id}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({
+					slug: '/api/mock/ticket-management/app/ticket-type-updated',
+				}),
+			},
+		);
+
+		const res = await PUT(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.slug).toBe('ticket-type-updated');
+		expect(body.mainPath).toBe('/app/ticket-type-updated');
+	});
+
+	it('patches a child subfolder from a full public path slug', async () => {
+		const parentSubfolder = {
+			...mockSubfolder,
+			name: 'App',
+			slug: 'app',
+			mainPath: '/app',
+		};
+		const existingChild = {
+			...childSubfolder,
+			name: 'Ticket Type',
+			slug: 'ticket-type',
+			mainPath: '/app/ticket-type',
+		};
+		const updatedChild = {
+			...existingChild,
+			slug: 'ticket-type-patched',
+			mainPath: '/app/ticket-type-patched',
+		};
+		selectResults = [[existingChild], [folder], [parentSubfolder, existingChild]];
+		mockDb.update = mock(() => createMockBuilder([updatedChild]));
+		const req = new NextRequest(
+			`http://localhost:3000/api/mock-subfolders?id=${existingChild.id}`,
+			{
+				method: 'PATCH',
+				body: JSON.stringify({
+					slug: '/api/mock/ticket-management/app/ticket-type-patched',
+				}),
+			},
+		);
+
+		const res = await PATCH(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.slug).toBe('ticket-type-patched');
+		expect(body.mainPath).toBe('/app/ticket-type-patched');
 	});
 
 	it('blocks deleting non-empty subfolders', async () => {

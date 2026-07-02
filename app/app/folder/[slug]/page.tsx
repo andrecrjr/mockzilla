@@ -38,7 +38,7 @@ import type {
 	UpdateMockRequest,
 } from '@/lib/types';
 import { copyToClipboard } from '@/lib/utils';
-import { generateSlug, joinMockPaths } from '@/lib/utils/mock-paths';
+import { joinMockPaths, normalizeSubfolderSlugInput } from '@/lib/utils/mock-paths';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -133,12 +133,24 @@ function FolderContent() {
 
 	const newSubfolderPreviewPath = joinMockPaths(
 		currentSubfolder?.mainPath ?? '/',
-		`/${generateSlug(newSubfolderSlug) || 'subfolder'}`,
+		`/${
+			normalizeSubfolderSlugInput(
+				newSubfolderSlug,
+				currentSubfolder?.mainPath ?? '/',
+				folder?.slug,
+			) || 'subfolder'
+		}`,
 	);
 	const editSubfolderPreviewPath = editingSubfolder
 		? joinMockPaths(
 				editingParentSubfolder?.mainPath ?? '/',
-				`/${generateSlug(editSubfolderSlug) || editingSubfolder.slug}`,
+				`/${
+					normalizeSubfolderSlugInput(
+						editSubfolderSlug,
+						editingParentSubfolder?.mainPath ?? '/',
+						folder?.slug,
+					) || editingSubfolder.slug
+				}`,
 			)
 		: '/';
 
@@ -170,7 +182,11 @@ function FolderContent() {
 					folderId: folder.id,
 					parentId: currentMockFolderId === 'root' ? null : currentMockFolderId,
 					name: newSubfolderName,
-					slug: newSubfolderSlug,
+					slug: normalizeSubfolderSlugInput(
+						newSubfolderSlug,
+						currentSubfolder?.mainPath ?? '/',
+						folder.slug,
+					),
 				}),
 			});
 			if (!response.ok) {
@@ -226,7 +242,11 @@ function FolderContent() {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						name: editSubfolderName,
-						slug: editSubfolderSlug,
+						slug: normalizeSubfolderSlugInput(
+							editSubfolderSlug,
+							editingParentSubfolder?.mainPath ?? '/',
+							folder?.slug,
+						),
 					}),
 				},
 			);
@@ -245,6 +265,27 @@ function FolderContent() {
 					error instanceof Error ? error.message : 'Failed to update subfolder',
 			});
 		}
+	};
+
+	const normalizeNewSubfolderSlugField = () => {
+		setNewSubfolderSlug(
+			normalizeSubfolderSlugInput(
+				newSubfolderSlug,
+				currentSubfolder?.mainPath ?? '/',
+				folder?.slug,
+			),
+		);
+	};
+
+	const normalizeEditSubfolderSlugField = () => {
+		if (!editingSubfolder) return;
+		setEditSubfolderSlug(
+			normalizeSubfolderSlugInput(
+				editSubfolderSlug,
+				editingParentSubfolder?.mainPath ?? '/',
+				folder?.slug,
+			) || editingSubfolder.slug,
+		);
 	};
 
 	const handleDeleteMock = async (id: string) => {
@@ -513,6 +554,7 @@ function FolderContent() {
 													onChange={(event) =>
 														setNewSubfolderSlug(event.target.value)
 													}
+													onBlur={normalizeNewSubfolderSlugField}
 													required
 												/>
 											</div>
@@ -645,6 +687,7 @@ function FolderContent() {
 											onChange={(event) =>
 												setEditSubfolderSlug(event.target.value)
 											}
+											onBlur={normalizeEditSubfolderSlugField}
 											required
 										/>
 									</div>

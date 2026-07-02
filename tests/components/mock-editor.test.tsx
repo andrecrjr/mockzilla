@@ -18,6 +18,101 @@ mock.module('sonner', () => ({
 describe('MockEditor', () => {
 	afterEach(cleanup);
 
+	it('previews subfolder mocks without duplicating folder slug in the endpoint path', () => {
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				defaultMockFolderId="subfolder-1"
+				previewSlug="ticket-management"
+				folders={[
+					{
+						id: 'folder-1',
+						name: 'Ticket Management',
+						slug: 'ticket-management',
+						createdAt: '2024-01-01T00:00:00.000Z',
+					},
+				]}
+				mockSubfolders={[
+					{
+						id: 'subfolder-1',
+						folderId: 'folder-1',
+						parentId: null,
+						name: 'App',
+						slug: 'app',
+						mainPath: '/app',
+						createdAt: '2024-01-01T00:00:00.000Z',
+					},
+				]}
+				initial={{
+					name: 'Ticket Type',
+					path: '/ticket-management/app/ticket-type',
+					response: '{}',
+					statusCode: '200',
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(
+			screen.getByText(/\/api\/mock\/ticket-management\/app\/ticket-type$/),
+		).toBeDefined();
+		expect(
+			screen.queryByText(/\/api\/mock\/ticket-management\/app\/ticket-management/),
+		).toBeNull();
+	});
+
+	it('submits subfolder mock paths relative to the selected subfolder', async () => {
+		const onSubmit = mock(async () => undefined);
+
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				defaultMockFolderId="subfolder-1"
+				previewSlug="ticket-management"
+				folders={[
+					{
+						id: 'folder-1',
+						name: 'Ticket Management',
+						slug: 'ticket-management',
+						createdAt: '2024-01-01T00:00:00.000Z',
+					},
+				]}
+				mockSubfolders={[
+					{
+						id: 'subfolder-1',
+						folderId: 'folder-1',
+						parentId: null,
+						name: 'App',
+						slug: 'app',
+						mainPath: '/app',
+						createdAt: '2024-01-01T00:00:00.000Z',
+					},
+				]}
+				initial={{
+					name: 'Ticket Type',
+					path: '/ticket-management/app/ticket-type',
+					response: '{}',
+					statusCode: '200',
+				}}
+				onSubmit={onSubmit}
+			/>,
+		);
+
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Create Mock Endpoint' }),
+		);
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				path: '/ticket-type',
+				mockFolderId: 'subfolder-1',
+			}),
+		);
+	});
+
 	it('moves endpoint path search params into submitted queryParams', async () => {
 		const onSubmit = mock(async () => undefined);
 

@@ -36,6 +36,12 @@ Example:
 /api/mock/api/users/details/123
 ```
 
+When editing mocks in the web UI, the endpoint path is kept relative to the selected subfolder. For example, in folder `ticket-management` and subfolder `/app`, the mock path should be `/ticket-type`; the preview renders `/api/mock/ticket-management/app/ticket-type`. If a user pastes `/api/mock/ticket-management/app/ticket-type` or `/ticket-management/app/ticket-type`, the editor strips the public folder and subfolder prefixes before saving.
+
+Subfolder slug fields apply the same normalization. When creating or editing a child under `/app`, pasting `/api/mock/ticket-management/app/ticket-type` stores the child slug as `ticket-type` and previews `/app/ticket-type`, not `/app/ticket-management-app-ticket-type`.
+
+The API now enforces the same normalization on `POST /api/mock-subfolders`, `PUT /api/mock-subfolders?id=...`, and `PATCH /api/mock-subfolders?id=...`. Direct clients can send either a single-segment slug like `ticket-type` or a pasted full path like `/api/mock/ticket-management/app/ticket-type`; Mockzilla stores the final slug as `ticket-type` and derives `mainPath` from the parent hierarchy.
+
 ## API
 
 Subfolders are managed through `/api/mock-subfolders`.
@@ -46,6 +52,7 @@ Subfolders are managed through `/api/mock-subfolders`.
 - `GET /api/mock-subfolders?id={id}` returns one subfolder.
 - `POST /api/mock-subfolders` creates a subfolder with `folderId`, optional `parentId`, `name`, and optional `slug`.
 - `PUT /api/mock-subfolders?id={id}` updates `name`, `slug`, or `parentId`.
+- `PATCH /api/mock-subfolders?id={id}` applies the same partial update behavior as `PUT`.
 - `DELETE /api/mock-subfolders?id={id}` deletes only empty subfolders.
 
 If `slug` is omitted on create, Mockzilla generates it from `name` for backward compatibility. After creation, changing `name` only changes the display title. Changing `slug` or moving a subfolder recomputes its `mainPath` and all descendant `mainPath` values.

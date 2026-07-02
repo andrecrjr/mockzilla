@@ -26,7 +26,12 @@ import type {
 	MockSubfolder,
 	MockVariant,
 } from '@/lib/types';
-import { joinMockPaths, splitPathSearchParams } from '@/lib/utils/mock-paths';
+import {
+	getMockFolderRelativePath,
+	getServedMockPath,
+	normalizeAbsolutePath,
+	splitPathSearchParams,
+} from '@/lib/utils/mock-paths';
 
 type MockFormValues = {
 	name: string;
@@ -154,6 +159,19 @@ function getEndpointInputParts(value: string) {
 	return splitPathSearchParams(value);
 }
 
+function formatEndpointPathForStorage(
+	path: string,
+	mockFolderMainPath: string | null | undefined,
+	folderSlug?: string | null,
+) {
+	const relativePath = getMockFolderRelativePath(
+		path,
+		mockFolderMainPath,
+		folderSlug,
+	);
+	return normalizeAbsolutePath(relativePath);
+}
+
 export function MockEditor({
 	mode,
 	folders = [],
@@ -276,9 +294,10 @@ export function MockEditor({
 		const baseSlug = previewSlug ?? selectedFolder?.slug;
 		if (!baseSlug) return null;
 		if (!path.startsWith('/') || path.length <= 1) return null;
-		const effectivePath = joinMockPaths(
+		const effectivePath = getServedMockPath(
 			selectedMockSubfolder?.mainPath ?? '/',
 			path,
+			baseSlug,
 		);
 		return `${origin}/api/mock/${baseSlug}${effectivePath}`;
 	}, [
@@ -319,9 +338,18 @@ export function MockEditor({
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
 
 	const extractPathQueryParams = () => {
-		if (!path.includes('?')) return;
+		if (!path.trim()) return;
 		const parsed = getEndpointInputParts(path);
-		setPath(parsed.path);
+		const nextPath = formatEndpointPathForStorage(
+			parsed.path,
+			selectedMockSubfolder?.mainPath ?? '/',
+			previewSlug ?? selectedFolder?.slug,
+		);
+		if (!path.includes('?')) {
+			setPath(nextPath);
+			return;
+		}
+		setPath(nextPath);
 		if (Object.keys(parsed.queryParams).length > 0) {
 			setQueryParams((current) =>
 				mergeQueryParamFields(current, parsed.queryParams),
@@ -336,7 +364,13 @@ export function MockEditor({
 
 		event.preventDefault();
 		const parsed = getEndpointInputParts(pasted);
-		setPath(parsed.path);
+		setPath(
+			formatEndpointPathForStorage(
+				parsed.path,
+				selectedMockSubfolder?.mainPath ?? '/',
+				previewSlug ?? selectedFolder?.slug,
+			),
+		);
 		if (Object.keys(parsed.queryParams).length > 0) {
 			setQueryParams((current) =>
 				mergeQueryParamFields(current, parsed.queryParams),
@@ -382,7 +416,11 @@ export function MockEditor({
 		const submitPath = parsedPath?.path ?? path;
 		if (!validateBeforeSubmit(submitPath)) return;
 
-		let formattedPath = submitPath.trim();
+		let formattedPath = formatEndpointPathForStorage(
+			submitPath,
+			selectedMockSubfolder?.mainPath ?? '/',
+			previewSlug ?? selectedFolder?.slug,
+		);
 		if (formattedPath.length > 1 && formattedPath.endsWith('/')) {
 			formattedPath = formattedPath.slice(0, -1);
 		}

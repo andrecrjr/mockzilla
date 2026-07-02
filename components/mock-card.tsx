@@ -10,7 +10,11 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Folder, Mock, UpdateMockRequest } from '@/lib/types';
-import { splitPathSearchParams } from '@/lib/utils/mock-paths';
+import {
+	getMockFolderRelativePath,
+	getServedMockPath,
+	splitPathSearchParams,
+} from '@/lib/utils/mock-paths';
 import { openUrlInNewContext } from '@/lib/utils/open-url';
 
 interface MockCardProps {
@@ -136,7 +140,17 @@ export function MockCard({
 		effectivePath !== relativePath && effectivePath.endsWith(relativePath)
 			? effectivePath.slice(0, -relativePath.length) || '/'
 			: '';
-	const mockUrl = getMockUrl(folder?.slug || '', effectivePath);
+	const displayPath = getMockFolderRelativePath(
+		relativePath,
+		subfolderPrefix || '/',
+		folder?.slug,
+	);
+	const servedPath = getServedMockPath(
+		subfolderPrefix || '/',
+		displayPath,
+		folder?.slug,
+	);
+	const mockUrl = getMockUrl(folder?.slug || '', servedPath);
 	const queryParamsString = getQueryParamsString();
 	const mockUrlFull = queryParamsString
 		? `${mockUrl}${queryParamsString}`

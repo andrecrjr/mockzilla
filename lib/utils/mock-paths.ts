@@ -23,6 +23,101 @@ export function joinMockPaths(
 	return normalizeAbsolutePath(`${normalizedBase}/${normalizedMock.slice(1)}`);
 }
 
+export function stripMockPathPrefix(
+	path: string,
+	prefix: string | null | undefined,
+): string {
+	const normalizedPath = normalizeAbsolutePath(path);
+	const normalizedPrefix = normalizeAbsolutePath(prefix || '/');
+	if (normalizedPrefix === '/') return normalizedPath;
+	if (normalizedPath === normalizedPrefix) return '/';
+	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) return normalizedPath;
+	return normalizeAbsolutePath(normalizedPath.slice(normalizedPrefix.length));
+}
+
+export function getMockFolderRelativePath(
+	path: string,
+	mockFolderMainPath: string | null | undefined,
+	folderSlug?: string | null,
+): string {
+	const normalizedPath = normalizeAbsolutePath(path);
+	const normalizedMockFolderPath = normalizeAbsolutePath(
+		mockFolderMainPath || '/',
+	);
+	const withoutPublicMockPrefix = folderSlug
+		? stripMockPathPrefix(normalizedPath, `/api/mock/${folderSlug}`)
+		: normalizedPath;
+	let withoutFolderSlug = withoutPublicMockPrefix;
+
+	if (folderSlug && normalizedMockFolderPath !== '/') {
+		const candidatePath = stripMockPathPrefix(
+			withoutPublicMockPrefix,
+			`/${folderSlug}`,
+		);
+		const candidateIncludesMockFolder =
+			candidatePath === normalizedMockFolderPath ||
+			candidatePath.startsWith(`${normalizedMockFolderPath}/`);
+		if (candidateIncludesMockFolder) {
+			withoutFolderSlug = candidatePath;
+		}
+	}
+
+	return stripMockPathPrefix(withoutFolderSlug, normalizedMockFolderPath);
+}
+
+export function getServedMockPath(
+	mockFolderMainPath: string | null | undefined,
+	mockPath: string,
+	folderSlug?: string | null,
+): string {
+	return joinMockPaths(
+		mockFolderMainPath,
+		getMockFolderRelativePath(mockPath, mockFolderMainPath, folderSlug),
+	);
+}
+
+function getPathnameFromInput(value: string): string {
+	const trimmed = value.trim();
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+		try {
+			return new URL(trimmed).pathname;
+		} catch {
+			return trimmed;
+		}
+	}
+	return trimmed;
+}
+
+export function normalizeSubfolderSlugInput(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+): string {
+	const pathname = getPathnameFromInput(value);
+	const normalizedParent = normalizeAbsolutePath(parentMainPath || '/');
+	const absolutePath = normalizeAbsolutePath(pathname);
+	const pathLikeInput = pathname.includes('/');
+	let relativeInput = pathname;
+
+	if (pathLikeInput) {
+		const withoutPublicMockPrefix = folderSlug
+			? stripMockPathPrefix(absolutePath, `/api/mock/${folderSlug}`)
+			: absolutePath;
+		const withoutFolderSlug =
+			folderSlug && normalizedParent !== '/'
+				? stripMockPathPrefix(withoutPublicMockPrefix, `/${folderSlug}`)
+				: withoutPublicMockPrefix;
+		const withoutParent = stripMockPathPrefix(
+			withoutFolderSlug,
+			normalizedParent,
+		);
+		const segments = withoutParent.split('/').filter(Boolean);
+		relativeInput = segments.at(-1) ?? withoutParent;
+	}
+
+	return generateSlug(relativeInput);
+}
+
 export interface SplitPathSearchParamsResult {
 	path: string;
 	queryParams: Record<string, string>;

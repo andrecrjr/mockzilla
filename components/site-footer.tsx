@@ -1,3 +1,5 @@
+import { MOCKZILLA_VERSION_LABEL } from '@/lib/version';
+
 export function SiteFooter() {
 	return (
 		<footer className="border-t border-border bg-background">
@@ -24,6 +26,10 @@ export function SiteFooter() {
 				>
 					Github
 				</a>
+				<span className="hidden text-border sm:inline" aria-hidden="true">
+					|
+				</span>
+				<span>Version {MOCKZILLA_VERSION_LABEL}</span>
 			</div>
 		</footer>
 	);
