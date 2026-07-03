@@ -11,6 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Folder, Mock, UpdateMockRequest } from '@/lib/types';
 import {
+	buildMockApiBasePath,
+	buildMockEditorHref,
+} from '@/lib/utils/folder-paths';
+import {
 	getMockFolderRelativePath,
 	getServedMockPath,
 	splitPathSearchParams,
@@ -26,6 +30,22 @@ interface MockCardProps {
 	onCopy: (text: string) => void;
 }
 
+function serializeQueryParams(
+	queryParams: Record<string, string> | null | undefined,
+): string {
+	if (!queryParams || Object.keys(queryParams).length === 0) return '';
+	const serialized = new URLSearchParams(queryParams).toString();
+	return serialized ? `?${serialized}` : '';
+}
+
+function appendQueryParamsToPath(
+	path: string,
+	queryParams: Record<string, string> | null | undefined,
+): string {
+	if (path.includes('?')) return path;
+	return `${path}${serializeQueryParams(queryParams)}`;
+}
+
 export function MockCard({
 	mock,
 	folder,
@@ -34,11 +54,21 @@ export function MockCard({
 	onUpdate,
 	onCopy,
 }: MockCardProps) {
-	const [editedPath, setEditedPath] = useState(mock.path);
+	const [editedPath, setEditedPath] = useState(() =>
+		appendQueryParamsToPath(
+			mock.path,
+			mock.queryParams as Record<string, string> | null,
+		),
+	);
 
 	useEffect(() => {
-		setEditedPath(mock.path);
-	}, [mock.path]);
+		setEditedPath(
+			appendQueryParamsToPath(
+				mock.path,
+				mock.queryParams as Record<string, string> | null,
+			),
+		);
+	}, [mock.path, mock.queryParams]);
 
 	const handleSavePath = async () => {
 		let newPath = editedPath.trim();
@@ -65,8 +95,9 @@ export function MockCard({
 			const shouldUpdatePath = newPath !== mock.path;
 			const shouldUpdateQueryParams =
 				nextQueryParams !== null && Object.keys(parsedPath?.queryParams ?? {}).length > 0;
+			const nextDisplayPath = appendQueryParamsToPath(newPath, nextQueryParams);
 			if (!shouldUpdatePath && !shouldUpdateQueryParams) {
-				setEditedPath(mock.path);
+				setEditedPath(nextDisplayPath);
 				return;
 			}
 			try {
@@ -74,12 +105,22 @@ export function MockCard({
 				if (shouldUpdatePath) update.path = newPath;
 				if (shouldUpdateQueryParams) update.queryParams = nextQueryParams;
 				await onUpdate(mock.id, update);
-				setEditedPath(newPath);
+				setEditedPath(nextDisplayPath);
 			} catch (_error) {
-				setEditedPath(mock.path);
+				setEditedPath(
+					appendQueryParamsToPath(
+						mock.path,
+						mock.queryParams as Record<string, string> | null,
+					),
+				);
 			}
 		} else {
-			setEditedPath(mock.path);
+			setEditedPath(
+				appendQueryParamsToPath(
+					mock.path,
+					mock.queryParams as Record<string, string> | null,
+				),
+			);
 		}
 	};
 
@@ -88,24 +129,27 @@ export function MockCard({
 			e.preventDefault();
 			e.currentTarget.blur();
 		} else if (e.key === 'Escape') {
-			setEditedPath(mock.path);
+			setEditedPath(
+				appendQueryParamsToPath(
+					mock.path,
+					mock.queryParams as Record<string, string> | null,
+				),
+			);
 			e.currentTarget.blur();
 		}
 	};
 
 	const getMockUrl = (folderSlug: string, path: string) => {
+		const basePath = buildMockApiBasePath(folderSlug);
 		if (typeof window !== 'undefined') {
-			return `${window.location.origin}/api/mock/${folderSlug}${path}`;
+			return `${window.location.origin}${basePath}${path}`;
 		}
-		return `/api/mock/${folderSlug}${path}`;
+		return `${basePath}${path}`;
 	};
 
 	const getQueryParamsString = () => {
-		const qp = mock.queryParams as Record<string, string> | null | undefined;
-		if (!qp || Object.keys(qp).length === 0) return '';
-		return (
-			'?' +
-			new URLSearchParams(qp).toString()
+		return serializeQueryParams(
+			mock.queryParams as Record<string, string> | null | undefined,
 		);
 	};
 
@@ -201,7 +245,7 @@ export function MockCard({
 						</div>
 						<div className="mt-2 flex h-7 min-w-0 max-w-full items-center rounded border border-transparent bg-muted px-2 focus-within:border-ring/50 focus-within:ring-1 focus-within:ring-ring/50">
 							<span className="min-w-0 shrink truncate text-sm font-mono text-muted-foreground/60 select-none">
-								/{folder?.slug}
+								{folder?.slug}
 								{subfolderPrefix}
 							</span>
 							<Input
@@ -245,7 +289,7 @@ export function MockCard({
 							</Button>
 						)}
 						<Button variant="ghost" size="icon" asChild>
-							<Link href={`/app/folder/${folder?.slug}/mock/${mock.id}`}>
+							<Link href={buildMockEditorHref(mock.id, folder?.slug || '/')}>
 								<Pencil className="h-4 w-4" />
 							</Link>
 						</Button>

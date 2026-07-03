@@ -5,6 +5,7 @@ import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { type Logger, logger } from '@/lib/logger';
 import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
+import { matchFolderByPathSegments } from '@/lib/utils/folder-paths';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
 	extractCaptureKey,
@@ -51,22 +52,11 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const pathSegments = params.path;
 	const method = (request.method as HttpMethod) || 'GET';
 
-	// Expected format: /mock/{folderSlug}/{mockPath...}
-	// If only folderSlug provided (1 segment), treat as root path "/"
 	if (pathSegments.length < 1) {
 		return NextResponse.json(
 			{ error: 'Invalid mock URL format' },
 			{ status: 400 },
 		);
-	}
-
-	const folderSlug = pathSegments[0];
-	let mockPath =
-		pathSegments.length === 1 ? '/' : `/${pathSegments.slice(1).join('/')}`;
-
-	// Normalize: remove trailing slash for consistency
-	if (mockPath.endsWith('/') && mockPath.length > 1) {
-		mockPath = mockPath.slice(0, -1);
 	}
 
 	// Extract query params from request URL
@@ -76,26 +66,32 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	// Create a scoped logger for this request
 	const log = logger.child({
 		reqId,
-		path: mockPath,
+		path: `/${pathSegments.join('/')}`,
 		method,
 		type: 'intercept',
 	});
 	log.info('Incoming request');
 
 	try {
-		// Find the folder by slug
-		const [folder] = await db
-			.select()
-			.from(folders)
-			.where(eq(folders.slug, folderSlug))
-			.limit(1);
+		const folderRows = await db.select().from(folders);
+		const folderMatch = matchFolderByPathSegments(folderRows, pathSegments);
+		const folder = folderMatch?.folder;
 
 		if (!folder) {
-			log.warn({ folderSlug }, 'Folder not found');
+			log.warn({ pathSegments }, 'Folder not found');
 			return NextResponse.json(
-				{ error: 'Folder not found', folderSlug },
+				{ error: 'Folder not found', folderPath: `/${pathSegments.join('/')}` },
 				{ status: 404 },
 			);
+		}
+		const matchedSegments = folderMatch.matchedSegments;
+		const folderSlug = folderMatch.folderPath;
+		let mockPath =
+			pathSegments.length === matchedSegments
+				? '/'
+				: `/${pathSegments.slice(matchedSegments).join('/')}`;
+		if (mockPath.endsWith('/') && mockPath.length > 1) {
+			mockPath = mockPath.slice(0, -1);
 		}
 
 		const allMocks = await db

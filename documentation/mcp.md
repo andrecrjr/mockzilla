@@ -19,15 +19,17 @@ The Model Context Protocol (MCP) is an open-standard connector that enables LLMs
 
 Mockzilla supports the MCP Streamable HTTP protocol, making it compatible with any modern MCP client.
 
-### Option 1: Direct URL (Preferred for AI IDEs)
-Most MCP-native clients (like Cursor, Windsurf, or custom agents) can connect directly to the HTTP endpoint.
+### Option 1: Direct Streamable HTTP URL (Preferred)
+MCP-native clients can connect directly to the Streamable HTTP endpoint. Use this form for clients that accept a remote MCP server URL.
 
 **Endpoint URL**: `http://localhost:36666/api/mcp`
 
-The endpoint is implemented with the official `@modelcontextprotocol/sdk` Streamable HTTP transport in stateless JSON-response mode. Each HTTP request gets a fresh MCP server/transport instance and registers the same manager tools, which keeps the protocol handshake compatible with current MCP SDK clients.
+The endpoint is implemented with the official `@modelcontextprotocol/sdk` Streamable HTTP transport in stateless JSON-response mode. Each HTTP request gets a fresh MCP server/transport instance and registers the same manager tools, which keeps the protocol handshake compatible with current MCP SDK clients. The endpoint accepts MCP JSON-RPC over HTTP POST and requires MCP clients to send `Accept: application/json, text/event-stream`.
 
-### Option 2: Stdio Bridge (For Claude Desktop & CLI tools)
-If your client only supports local `stdio` servers, use `mcp-remote` as a bridge:
+### Option 2: Stdio Bridge (Only for stdio-only clients)
+If your client only supports local `stdio` servers, use `mcp-remote` as a bridge. Because the local Mockzilla server is served over `http://`, pass `--allow-http`. Do not force `sse-only`: Mockzilla uses the newer single-endpoint Streamable HTTP transport, not the deprecated two-endpoint HTTP+SSE transport.
+
+Local HTTP example:
 
 ```json
 {
@@ -37,12 +39,32 @@ If your client only supports local `stdio` servers, use `mcp-remote` as a bridge
       "args": [
         "-y",
         "mcp-remote",
-        "http://localhost:36666/api/mcp"
+        "http://localhost:36666/api/mcp",
+        "--allow-http"
       ]
     }
   }
 }
 ```
+
+HTTPS example, without `--allow-http`:
+
+```json
+{
+  "mcpServers": {
+    "mockzilla": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mockzilla.example.com/api/mcp"
+      ]
+    }
+  }
+}
+```
+
+Use `localhost`, not a LAN IP, for local development unless the MCP client runs on a different machine and the Docker/host firewall allows that traffic.
 
 ---
 
@@ -68,30 +90,32 @@ Mockzilla uses 7 consolidated manager tools to provide a clean, high-performance
 ### 1. Folders (`manage_folders`)
 Centralized management for mock folders.
 - `list`: List all folders with pagination.
-- `create`: Create a new folder (name, description).
+- `create`: Create a new folder (name, description, optional path slug).
 - `get`: Fetch detail by ID or slug.
 - `update`: Modify folder metadata.
 - `delete`: Remove a folder and all its contents.
 
+Folder `slug` values are now canonical top-level paths such as `/users` or `/app/test`. They must stay URL-safe, may include `/` for nested path segments, and become the public namespace under `/api/mock`.
+
 ### 2. Mock Subfolders (`manage_mock_subfolders`)
 Nested organization inside a top-level folder.
 - `list`: List root-level subfolders, children of a `parentId`, or all subfolders with `all: true`.
-- `create`: Create a subfolder with `folderId` or `folderSlug`, `name`, optional `slug`, and optional `parentId`.
+- `create`: Create a subfolder with `folderId` or `folderSlug`, `name`, optional `path` or compatibility `slug`, and optional `parentId`.
 - `get`: Fetch one subfolder by ID.
-- `update`: Change the display title with `name`, change the URL segment with `slug`, or move a subfolder with `parentId`.
+- `update`: Change the display title with `name`, change the user-facing path with `path` or compatibility `slug`, or move a subfolder with `parentId`.
 - `delete`: Delete an empty subfolder.
 
-Subfolder `mainPath` is derived from the slug hierarchy by Mockzilla and returned in the result. If `slug` is omitted on create, it is generated from `name`; later `name` changes do not alter the slug. To place a mock in a subfolder, pass the returned subfolder `id` as `mockFolderId` to `manage_mocks`. Keep the mock `path` relative to that subfolder.
+Subfolder `path` is derived from the internal segment hierarchy by Mockzilla and returned in the result. If `path` is omitted on create, the internal segment is generated from `name`; later `name` changes do not alter that segment. On create, a multi-segment `path` is resolved against the existing hierarchy and any missing intermediate segments are created before the final subfolder is returned. To place a mock in a subfolder, pass the returned subfolder `id` as `mockFolderId` to `manage_mocks`. Keep the mock `path` relative to that subfolder.
 
 Example:
 
 ```json
 {
   "action": "create",
-  "folderSlug": "api",
+  "folderSlug": "/api",
   "parentId": null,
   "name": "Users",
-  "slug": "people"
+  "path": "/people"
 }
 ```
 
@@ -105,7 +129,7 @@ Unified tool for defining and testing API responses.
 - `delete`: Delete a mock.
 - `preview`: Test what a mock would return given a path, method, and request context.
 
-Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, pasting or typing a URL-style endpoint such as `/users?status=active` moves `status=active` into Advanced Options query params before saving.
+Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, URL-style endpoint input such as `/users?status=active` remains visible in the Endpoint Path field while `status=active` is synchronized with Advanced Options; saved API payloads still submit `path` and `queryParams` separately.
 
 ### 4. Workflow Scenarios (`manage_scenarios`)
 Manage stateful, multi-step scenario containers.

@@ -11,15 +11,15 @@ The mock serving route is the core endpoint that delivers configured mock respon
 The route uses Next.js catch-all segments to match mock requests:
 
 ```
-/api/mock/{folderSlug}/{mockPath...}
+/api/mock/{folderPath...}/{mockPath...}
 ```
 
 ### Examples
 
-- `/api/mock/users/` - Root endpoint for the "users" folder (path: "/")
-- `/api/mock/users/list` - Matches mock with path "/list" in "users" folder
-- `/api/mock/users/123/profile` - Matches mock with path "/123/profile" in "users" folder
-- `/api/mock/users/v1/accounts/123` - Can match a mock stored as `/123` inside a subfolder whose main path is `/v1/accounts`
+- `/api/mock/users/` - Root endpoint for the `/users` folder (path: "/")
+- `/api/mock/app/test/list` - Matches mock with path "/list" in the `/app/test` folder
+- `/api/mock/users/123/profile` - Matches mock with path "/123/profile" in the `/users` folder
+- `/api/mock/users/v1/accounts/123` - Can match a mock stored as `/123` inside a subfolder whose path is `/v1/accounts`
 
 ## Path Resolution
 
@@ -27,24 +27,21 @@ The route uses Next.js catch-all segments to match mock requests:
 
 The route extracts path segments from the URL:
 
-1. **First segment**: Folder slug (required)
+1. **Longest matching folder path prefix**: Required
 2. **Remaining segments**: Mock path (optional, defaults to "/" if not provided)
 
 ```typescript
-const folderSlug = pathSegments[0];
-const mockPath = pathSegments.length === 1
-  ? '/'
-  : `/${pathSegments.slice(1).join('/')}`;
+Mockzilla resolves the incoming path against all known top-level folder paths and uses the longest matching prefix as the folder namespace. The remaining suffix becomes the mock path.
 ```
 
 ### Root Path Support
 
-When only the folder slug is provided (e.g., `/api/mock/users/`), the route treats it as a root path `/`. This allows creating root-level endpoints for folders.
+When only the folder path is provided (e.g., `/api/mock/users/` or `/api/mock/app/test/`), the route treats it as a root path `/`. This allows creating root-level endpoints for folders.
 
 **Valid URL patterns:**
-- `/api/mock/users/` → folder: "users", path: "/"
-- `/api/mock/users` → folder: "users", path: "/" (trailing slash optional)
-- `/api/mock/users/list` → folder: "users", path: "/list"
+- `/api/mock/users/` → folder: `/users`, path: "/"
+- `/api/mock/users` → folder: `/users`, path: "/" (trailing slash optional)
+- `/api/mock/app/test/list` → folder: `/app/test`, path: "/list"
 
 ## Matching Logic
 
@@ -55,11 +52,11 @@ The route fetches all enabled mocks for the folder and method, then evaluates th
 3. **Find best match**: Uses `findBestMatch()` to score and rank candidates.
 4. **Select variant**: For wildcard mocks, selects the appropriate variant if configured.
 
-For mocks in subfolders, the matcher uses `subfolder.mainPath + mock.path`. The subfolder `mainPath` is derived from the nested subfolder slug hierarchy, and the stored mock path remains relative to that subfolder.
+For mocks in subfolders, the matcher uses the subfolder's canonical `path` plus the mock's relative path. The subfolder path is derived from the nested internal segment hierarchy, with `mainPath` kept as a compatibility field.
 
 ### Endpoint Paths and Search Params
 
-Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. The web UI normalizes URL-style endpoint input by moving search params from the path field into Advanced Options query params before saving. Create and update APIs reject mock paths that include `?`, such as `/users?status=active`, because persisted paths must stay separate from the query-param matcher.
+Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. The web UI keeps URL-style endpoint input visible in the path field, such as `/users?status=active`, while also copying those search params into Advanced Options. Advanced Options query-param edits also update the visible endpoint path and preview. On save, the frontend submits the API-safe path and structured `queryParams` separately. Create and update APIs reject persisted mock paths that include `?` because storage keeps endpoint paths separate from the query-param matcher.
 
 Wildcard captures are extracted from the normalized path only. For example, `/users/123?status=active` matched against `/users/*` exposes `input.params.0 = "123"` and `input.query.status = "active"`; the query string is not included in the wildcard capture.
 
@@ -130,14 +127,14 @@ OPTIONS requests receive a 204 response for CORS preflight handling.
 ```json
 {
   "error": "Folder not found",
-  "folderSlug": "users"
+  "folderPath": "/users"
 }
 ```
 
 ```json
 {
   "error": "Mock endpoint not found",
-  "folder": "users",
+  "folder": "/users",
   "path": "/list",
   "method": "GET"
 }

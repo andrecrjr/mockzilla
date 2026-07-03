@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	generateSlug,
+	getCanonicalSubfolderPathInput,
 	getMockFolderRelativePath,
+	getSubfolderPathSegments,
+	getSubfolderParentMainPath,
 	getServedMockPath,
 	hasConfiguredQueryParams,
 	hasSearchParamsInEndpointPath,
@@ -125,6 +128,77 @@ describe('mock path helpers', () => {
 				'ticket-management',
 			),
 		).toBe('ticket-type');
+	});
+
+	it('extracts full subfolder hierarchy segments from pasted paths', () => {
+		expect(
+			getSubfolderPathSegments(
+				'/app/ticket-management/gamma',
+				'/',
+				'ticket-management',
+			),
+		).toEqual(['app', 'ticket-management', 'gamma']);
+		expect(
+			getSubfolderPathSegments(
+				'/api/mock/ticket-management/app/ticket-type',
+				'/app',
+				'ticket-management',
+			),
+		).toEqual(['ticket-type']);
+		expect(
+			getSubfolderPathSegments(
+				'/app/ticket-management/alpha/beta',
+				'/app/ticket-management',
+				'ticket-management',
+			),
+		).toEqual(['alpha', 'beta']);
+	});
+
+	it('derives a nested subfolder parent path from its saved main path', () => {
+		expect(getSubfolderParentMainPath('/app/ticket-management', 'ticket-management')).toBe(
+			'/app',
+		);
+		expect(getSubfolderParentMainPath('/app', 'app')).toBe('/');
+		expect(getSubfolderParentMainPath('/broken-path', 'ticket-management')).toBe('/');
+	});
+
+	it('canonicalizes subfolder path input for front-end display', () => {
+		expect(
+			getCanonicalSubfolderPathInput(
+				'/api/mock/ticket-management/app/ticket-type',
+				'/app',
+				'ticket-management',
+			),
+		).toBe('/app/ticket-type');
+		expect(
+			getCanonicalSubfolderPathInput(
+				'ticket-type',
+				'/app',
+				'ticket-management',
+			),
+		).toBe('/app/ticket-type');
+		expect(
+			getCanonicalSubfolderPathInput(
+				'',
+				'/app',
+				'ticket-management',
+				'ticket-type',
+			),
+		).toBe('/app/ticket-type');
+		expect(
+			getCanonicalSubfolderPathInput(
+				'/app/ticket-type',
+				'/',
+				'ticket-management',
+			),
+		).toBe('/app/ticket-type');
+		expect(
+			getCanonicalSubfolderPathInput(
+				'/api/mock/ticket-management/app/ticket-type',
+				'/',
+				'ticket-management',
+			),
+		).toBe('/app/ticket-type');
 	});
 
 	it('detects search params embedded in endpoint paths', () => {

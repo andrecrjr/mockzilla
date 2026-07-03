@@ -130,7 +130,7 @@ export function ExtensionMockTable({
 			toast.success('Mock updated successfully');
 
 			// Refresh folder data to keep everything in sync
-			mutate(`/api/folders?slug=${folderSlug}`);
+			mutate(`/api/folders?slug=${encodeURIComponent(folderSlug)}`);
 		} catch (error) {
 			console.error('Update error:', error);
 			toast.error(

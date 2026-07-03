@@ -12,7 +12,7 @@ Mockzilla can ingest any **OpenAPI 3.x** specification (YAML or JSON) and automa
 When you import a specification, Mockzilla automatically configures your environment:
 
 - **Automatic Folder Creation**: Uses the spec title to group your mocks. Re-importing updates existing routes, keeping your environment in sync with the latest contract.
-- **Smart Path Mapping**: Converts standard OpenAPI parameters (e.g., `/users/{id}`) into functional **Wildcards** (`/users/*`) immediately.
+- **Smart Path Mapping**: Converts standard OpenAPI parameters (e.g., `/users/{id}`) into functional **Wildcards** (`/users/*`) immediately, and uses static nested prefixes as mock subfolders.
 - **High-Fidelity Data**: Automatically generates realistic JSON payloads using your defined schemas, formats, and `x-faker` extensions.
 - **Write Method Support**: Methods like `POST`, `PUT`, and `PATCH` are configured to **echo the request body** by default if no response schema is provided.
 
@@ -22,6 +22,7 @@ When you import a specification, Mockzilla automatically configures your environ
 
 | OpenAPI Feature | Mockzilla Implementation |
 | :--- | :--- |
+| **Nested Paths** | Static prefixes become dashboard subfolders so imported APIs stay easy to browse |
 | **Path Parameters** | `{id}` → `*` (Wildcard match) |
 | **JSON Schema** | Pre-generated realistic body + Dynamic Schema reference |
 | **Query Parameters** | Default values extracted for match matching |

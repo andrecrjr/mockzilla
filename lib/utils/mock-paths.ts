@@ -1,3 +1,8 @@
+import {
+	buildMockApiBasePath,
+	formatStoredFolderPath,
+} from '@/lib/utils/folder-paths';
+
 export function normalizeAbsolutePath(path: string): string {
 	const trimmed = path.trim();
 	if (!trimmed || trimmed === '/') return '/';
@@ -45,14 +50,14 @@ export function getMockFolderRelativePath(
 		mockFolderMainPath || '/',
 	);
 	const withoutPublicMockPrefix = folderSlug
-		? stripMockPathPrefix(normalizedPath, `/api/mock/${folderSlug}`)
+		? stripMockPathPrefix(normalizedPath, buildMockApiBasePath(folderSlug))
 		: normalizedPath;
 	let withoutFolderSlug = withoutPublicMockPrefix;
 
 	if (folderSlug && normalizedMockFolderPath !== '/') {
 		const candidatePath = stripMockPathPrefix(
 			withoutPublicMockPrefix,
-			`/${folderSlug}`,
+			formatStoredFolderPath(folderSlug),
 		);
 		const candidateIncludesMockFolder =
 			candidatePath === normalizedMockFolderPath ||
@@ -93,29 +98,123 @@ export function normalizeSubfolderSlugInput(
 	parentMainPath: string | null | undefined,
 	folderSlug?: string | null,
 ): string {
+	return (
+		getSubfolderPathSegments(value, parentMainPath, folderSlug).at(-1) ?? ''
+	);
+}
+
+export function getSubfolderPathSegments(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+): string[] {
 	const pathname = getPathnameFromInput(value);
 	const normalizedParent = normalizeAbsolutePath(parentMainPath || '/');
 	const absolutePath = normalizeAbsolutePath(pathname);
 	const pathLikeInput = pathname.includes('/');
-	let relativeInput = pathname;
 
-	if (pathLikeInput) {
-		const withoutPublicMockPrefix = folderSlug
-			? stripMockPathPrefix(absolutePath, `/api/mock/${folderSlug}`)
-			: absolutePath;
-		const withoutFolderSlug =
-			folderSlug && normalizedParent !== '/'
-				? stripMockPathPrefix(withoutPublicMockPrefix, `/${folderSlug}`)
-				: withoutPublicMockPrefix;
-		const withoutParent = stripMockPathPrefix(
-			withoutFolderSlug,
-			normalizedParent,
-		);
-		const segments = withoutParent.split('/').filter(Boolean);
-		relativeInput = segments.at(-1) ?? withoutParent;
+	if (!pathLikeInput) {
+		const segment = generateSlug(pathname);
+		return segment ? [segment] : [];
 	}
 
-	return generateSlug(relativeInput);
+	const withoutPublicMockPrefix = folderSlug
+		? stripMockPathPrefix(absolutePath, buildMockApiBasePath(folderSlug))
+		: absolutePath;
+	const withoutFolderSlug = folderSlug
+		? stripMockPathPrefix(withoutPublicMockPrefix, formatStoredFolderPath(folderSlug))
+		: withoutPublicMockPrefix;
+	const withoutParent = stripMockPathPrefix(withoutFolderSlug, normalizedParent);
+
+	return withoutParent
+		.split('/')
+		.filter(Boolean)
+		.map((segment) => generateSlug(segment))
+		.filter(Boolean);
+}
+
+export function getSubfolderParentMainPath(
+	mainPath: string | null | undefined,
+	slug: string,
+): string {
+	const normalizedMainPath = normalizeAbsolutePath(mainPath || '/');
+	const normalizedSlug = generateSlug(slug);
+	if (!normalizedSlug || normalizedMainPath === '/') return '/';
+
+	const suffix = `/${normalizedSlug}`;
+	if (normalizedMainPath === suffix) return '/';
+	if (!normalizedMainPath.endsWith(suffix)) return '/';
+
+	const parentPath = normalizedMainPath.slice(0, -suffix.length);
+	return normalizeAbsolutePath(parentPath || '/');
+}
+
+export function getCanonicalSubfolderPathInput(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+	fallbackSlug?: string,
+): string {
+	const pathname = getPathnameFromInput(value);
+	const normalizedParent = normalizeAbsolutePath(parentMainPath || '/');
+	const pathLikeInput = pathname.includes('/');
+
+		if (pathLikeInput && normalizedParent === '/') {
+			const absolutePath = normalizeAbsolutePath(pathname);
+			const withoutPublicMockPrefix = folderSlug
+				? stripMockPathPrefix(absolutePath, buildMockApiBasePath(folderSlug))
+				: absolutePath;
+			const withoutFolderSlug = folderSlug
+				? stripMockPathPrefix(
+						withoutPublicMockPrefix,
+						formatStoredFolderPath(folderSlug),
+					)
+				: withoutPublicMockPrefix;
+		if (withoutFolderSlug !== '/') {
+			return withoutFolderSlug;
+		}
+	}
+
+	const slug = normalizeSubfolderSlugInput(value, parentMainPath, folderSlug);
+	if (!slug) {
+		return fallbackSlug
+			? joinMockPaths(parentMainPath ?? '/', `/${fallbackSlug}`)
+			: '';
+	}
+
+	return joinMockPaths(parentMainPath ?? '/', `/${slug}`);
+}
+
+export interface ResolvedSubfolderPathInput {
+	displayPath: string;
+	previewPath: string;
+	slug: string;
+}
+
+export function resolveSubfolderPathInput(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+	fallbackSlug?: string,
+): ResolvedSubfolderPathInput {
+	const slug = normalizeSubfolderSlugInput(value, parentMainPath, folderSlug);
+	const displayPath = getCanonicalSubfolderPathInput(
+		value,
+		parentMainPath,
+		folderSlug,
+		fallbackSlug,
+	);
+	const previewPath =
+		displayPath ||
+		(fallbackSlug
+			? joinMockPaths(parentMainPath ?? '/', `/${fallbackSlug}`)
+			: '/');
+
+	return {
+		displayPath,
+		previewPath: normalizeAbsolutePath(previewPath),
+		slug,
+	};
 }
 
 export interface SplitPathSearchParamsResult {

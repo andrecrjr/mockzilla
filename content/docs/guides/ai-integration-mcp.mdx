@@ -84,17 +84,43 @@ http://localhost:36666/api/mcp
 ```
 
 ### Local Configuration
-For desktop-based agents that require a local configuration file, add Mockzilla as an MCP server:
+For desktop-based agents that require a local `stdio` server entry, add Mockzilla through `mcp-remote`. The local endpoint uses `http://`, so include `--allow-http`. Do not force `sse-only`: Mockzilla uses the newer single-endpoint Streamable HTTP transport, not the deprecated two-endpoint HTTP+SSE transport.
+
+Local HTTP example:
 
 ```json
 {
   "mcpServers": {
     "mockzilla": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:36666/api/mcp"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:36666/api/mcp",
+        "--allow-http"
+      ]
     }
   }
 }
 ```
+
+HTTPS example, without `--allow-http`:
+
+```json
+{
+  "mcpServers": {
+    "mockzilla": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mockzilla.example.com/api/mcp"
+      ]
+    }
+  }
+}
+```
+
+Use `localhost` for local development. A LAN IP such as `192.168.x.x` only works when the MCP client runs on another machine and the Mockzilla host permits inbound traffic to port `36666`.
 
 > **Pro Tip:** Ask your AI assistant to design the perfect API response while you focus on building the UI. It's like having a backend engineer built into your editor!

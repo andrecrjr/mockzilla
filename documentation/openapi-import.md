@@ -30,7 +30,7 @@ Mockzilla is resilient to circular references in specifications:
   - `/v1/users` → subfolder `/v1`, mock path `/users`
   - `/v1/users/{id}` → subfolder `/v1/users`, mock path `/*`
   - `/v1/users/{id}/orders` → subfolder `/v1/users`, mock path `/*/orders`
-- Only path segments that are already valid subfolder slugs are used for subfolders. If a segment contains case-sensitive or symbolic characters, Mockzilla keeps that segment in the relative mock path so the served URL does not change.
+- Only path segments that are already valid URL-safe subfolder segments are used for subfolders. If a segment contains case-sensitive or symbolic characters, Mockzilla keeps that segment in the relative mock path so the served URL does not change.
 - Converts OpenAPI path parameters into Mockzilla wildcards:
   - `/users/{id}` → `/users/*`
   - Sets `matchType: 'wildcard'`.

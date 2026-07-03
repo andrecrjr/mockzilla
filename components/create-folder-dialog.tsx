@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { normalizeFolderPath } from '@/lib/utils/folder-paths';
 
 interface CreateFolderDialogProps {
 	trigger?: React.ReactNode;
@@ -26,11 +27,7 @@ interface CreateFolderDialogProps {
 }
 
 function generateSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
+	return normalizeFolderPath(name);
 }
 
 export function CreateFolderDialog({
@@ -167,27 +164,38 @@ export function CreateFolderDialog({
 
 						<div className="grid gap-2">
 							<div className="flex items-center gap-2">
-								<Label htmlFor="folder-slug">URL Slug</Label>
+								<Label htmlFor="folder-slug">URL Path</Label>
 								<FieldTooltip
-									label="The URL-friendly identifier used in mock endpoint paths."
-									description="Auto-generated from the folder name, but you can customize it. Only lowercase letters, numbers, and hyphens are allowed."
-									example="/api/mock/user-apis/..."
+									label="The URL-friendly base path used in mock endpoint paths."
+									description="Auto-generated from the folder name, but you can customize it. Slashes are allowed to create nested paths. Only lowercase letters, numbers, hyphens, and slashes are kept."
+									example="/api/mock/app/test-things/..."
 								/>
+							</div>
+							<div className="flex justify-end">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+									onClick={() => setUseCustomSlug((current) => !current)}
+								>
+									{useCustomSlug ? 'Auto-generate' : 'Customize'}
+								</Button>
 							</div>
 							<Input
 								id="folder-slug"
-								placeholder="e.g., user-apis"
+								placeholder="e.g., /app/test-things"
 								value={slug}
 								onChange={(e) =>
 									setSlug(
-										e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+										e.target.value.toLowerCase().replace(/[^a-z0-9/-]/g, ''),
 									)
 								}
 								disabled={!useCustomSlug}
 							/>
 							{slug && (
 								<p className="text-xs text-muted-foreground">
-									URL: /api/mock/<span className="font-mono">{slug}</span>/...
+									URL: /api/mock<span className="font-mono">{slug}</span>/...
 								</p>
 							)}
 						</div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import type { ExportData } from '@/lib/types';
+import { formatStoredFolderPath } from '@/lib/utils/folder-paths';
 
 export async function GET() {
 	try {
@@ -31,7 +32,7 @@ export async function GET() {
 			folders: regularFolders.map((folder) => ({
 				id: folder.id,
 				name: folder.name,
-				slug: folder.slug,
+				slug: formatStoredFolderPath(folder.slug),
 				description: folder.description || undefined,
 				meta: (folder.meta as Record<string, unknown>) || undefined,
 				createdAt: folder.createdAt.toISOString(),
@@ -42,6 +43,8 @@ export async function GET() {
 				folderId: subfolder.folderId,
 				parentId: subfolder.parentId,
 				name: subfolder.name,
+				segment: subfolder.slug,
+				path: subfolder.mainPath,
 				slug: subfolder.slug,
 				mainPath: subfolder.mainPath,
 				createdAt: subfolder.createdAt.toISOString(),

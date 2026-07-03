@@ -39,8 +39,8 @@ describe('MockEditor', () => {
 						folderId: 'folder-1',
 						parentId: null,
 						name: 'App',
-						slug: 'app',
-						mainPath: '/app',
+						segment: 'app',
+						path: '/app',
 						createdAt: '2024-01-01T00:00:00.000Z',
 					},
 				]}
@@ -85,8 +85,8 @@ describe('MockEditor', () => {
 						folderId: 'folder-1',
 						parentId: null,
 						name: 'App',
-						slug: 'app',
-						mainPath: '/app',
+						segment: 'app',
+						path: '/app',
 						createdAt: '2024-01-01T00:00:00.000Z',
 					},
 				]}
@@ -160,7 +160,7 @@ describe('MockEditor', () => {
 		expect(screen.queryByDisplayValue('status')).toBeNull();
 	});
 
-	it('moves endpoint path search params into Advanced Options on blur', async () => {
+	it('copies endpoint path search params into Advanced Options on blur without removing them from the path', async () => {
 		render(
 			<MockEditor
 				mode="create"
@@ -177,12 +177,76 @@ describe('MockEditor', () => {
 		fireEvent.blur(pathInput);
 
 		await waitFor(() =>
-			expect((pathInput as HTMLInputElement).value).toBe('/users/*'),
+			expect((pathInput as HTMLInputElement).value).toBe(
+				'/users/*?status=active&page=1',
+			),
 		);
 		expect(screen.getByDisplayValue('status')).toBeDefined();
 		expect(screen.getByDisplayValue('active')).toBeDefined();
 		expect(screen.getByDisplayValue('page')).toBeDefined();
 		expect(screen.getByDisplayValue('1')).toBeDefined();
+	});
+
+	it('hydrates the endpoint path with configured query params in the frontend', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '{}',
+					statusCode: '200',
+					queryParams: { status: 'active' },
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(
+			(screen.getByLabelText('Endpoint Path') as HTMLInputElement).value,
+		).toBe('/users/*?status=active');
+	});
+
+	it('syncs Advanced Options query param edits into the endpoint path input and preview', async () => {
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				folders={[
+					{
+						id: 'folder-1',
+						name: 'API',
+						slug: '/api',
+						createdAt: '2024-01-01T00:00:00.000Z',
+					},
+				]}
+				initial={{
+					name: 'Users',
+					folderId: 'folder-1',
+					response: '{}',
+					statusCode: '200',
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		const pathInput = screen.getByLabelText('Endpoint Path') as HTMLInputElement;
+		fireEvent.change(pathInput, {
+			target: { value: '/users/*?status=active' },
+		});
+		fireEvent.blur(pathInput);
+		await waitFor(() => expect(screen.getByDisplayValue('active')).toBeDefined());
+		fireEvent.change(screen.getByDisplayValue('active'), {
+			target: { value: 'inactive' },
+		});
+
+		await waitFor(() =>
+			expect(pathInput.value).toBe('/users/*?status=inactive'),
+		);
+		expect(
+			screen.getByText(/\/api\/mock\/api\/users\/\*\?status=inactive$/),
+		).toBeDefined();
 	});
 
 	for (const method of ['POST', 'PUT', 'PATCH'] as const) {

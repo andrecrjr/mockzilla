@@ -311,6 +311,51 @@ describe('API /api/mock-subfolders', () => {
 		expect(body.mainPath).toBe('/app');
 	});
 
+	it('creates a root subfolder by resolving the full hierarchy path', async () => {
+		const existingApp = {
+			...mockSubfolder,
+			name: 'App',
+			slug: 'app',
+			mainPath: '/app',
+		};
+		const existingTicketManagement = {
+			...childSubfolder,
+			name: 'Ticket Management',
+			parentId: existingApp.id,
+			slug: 'ticket-management',
+			mainPath: '/app/ticket-management',
+		};
+		const createdGamma = {
+			id: '44444444-4444-4444-8444-444444444444',
+			folderId,
+			parentId: existingTicketManagement.id,
+			name: 'Gamma',
+			slug: 'gamma',
+			mainPath: '/app/ticket-management/gamma',
+			createdAt: new Date('2024-01-01'),
+			updatedAt: null,
+		};
+
+		selectResults = [[existingApp, existingTicketManagement], [folder]];
+		mockDb.insert = mock(() => createMockBuilder([createdGamma]));
+		const req = new NextRequest('http://localhost:3000/api/mock-subfolders', {
+			method: 'POST',
+			body: JSON.stringify({
+				folderId,
+				name: 'Gamma',
+				slug: '/app/ticket-management/gamma',
+			}),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(201);
+		expect(mockDb.insert).toHaveBeenCalledTimes(1);
+		expect(body.slug).toBe('gamma');
+		expect(body.mainPath).toBe('/app/ticket-management/gamma');
+	});
+
 	it('updates a child subfolder from a full public path slug', async () => {
 		const parentSubfolder = {
 			...mockSubfolder,

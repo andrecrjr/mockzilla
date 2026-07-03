@@ -69,7 +69,7 @@ describe('MockCard', () => {
 		expect(onUpdate).toHaveBeenCalledWith('mock-1', { path: '/users/2' });
 	});
 
-	it('moves inline path search params into queryParams updates', async () => {
+	it('copies inline path search params into queryParams updates without removing them from the field', async () => {
 		const onUpdate = mock(async () => undefined);
 		const mockWithQueryParams: Mock = {
 			...baseMock,
@@ -100,6 +100,24 @@ describe('MockCard', () => {
 				path: '/users/2',
 				queryParams: { status: 'active' },
 			},
+		);
+		expect((pathInput as HTMLInputElement).value).toBe('/users/2?status=active');
+	});
+
+	it('renders inline editable paths with configured query params', () => {
+		render(
+			<MockCard
+				mock={{ ...baseMock, queryParams: { status: 'active' } }}
+				folder={folder}
+				onDelete={mock(() => undefined)}
+				onDuplicate={mock(() => undefined)}
+				onUpdate={mock(async () => undefined)}
+				onCopy={mock(() => undefined)}
+			/>,
+		);
+
+		expect((screen.getByTitle('Edit path directly') as HTMLInputElement).value).toBe(
+			'/users/1?status=active',
 		);
 	});
 

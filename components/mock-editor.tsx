@@ -26,6 +26,7 @@ import type {
 	MockSubfolder,
 	MockVariant,
 } from '@/lib/types';
+import { buildMockApiBasePath } from '@/lib/utils/folder-paths';
 import {
 	getMockFolderRelativePath,
 	getServedMockPath,
@@ -146,6 +147,44 @@ function mergeQueryParamFields(
 	return next;
 }
 
+function serializeQueryParams(
+	queryParams: Record<string, string> | null | undefined,
+): string {
+	if (!queryParams || Object.keys(queryParams).length === 0) return '';
+	const serialized = new URLSearchParams(queryParams).toString();
+	return serialized ? `?${serialized}` : '';
+}
+
+function appendQueryParamsToUrl(url: string, queryString: string): string {
+	if (!queryString) return url;
+	return `${url}${url.includes('?') ? '&' : '?'}${queryString.slice(1)}`;
+}
+
+function appendQueryParamsToPath(
+	path: string,
+	queryParams: Record<string, string> | null | undefined,
+): string {
+	if (path.includes('?')) return path;
+	return `${path}${serializeQueryParams(queryParams)}`;
+}
+
+function buildQueryParamsFromFields(
+	fields: QueryParamField[],
+): Record<string, string> | null {
+	const entries = fields
+		.map((param) => [param.key.trim(), param.value] as const)
+		.filter(([key]) => key.length > 0);
+	return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function replacePathQueryParams(
+	path: string,
+	queryParams: Record<string, string> | null | undefined,
+): string {
+	const parsed = getEndpointInputParts(path);
+	return `${parsed.path}${serializeQueryParams(queryParams)}`;
+}
+
 function getEndpointInputParts(value: string) {
 	const trimmed = value.trim();
 	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
@@ -189,7 +228,12 @@ export function MockEditor({
 	onSubmit,
 }: MockEditorProps) {
 	const [name, setName] = useState(initial?.name ?? '');
-	const [path, setPath] = useState(initial?.path ?? '');
+	const [path, setPath] = useState(() =>
+		appendQueryParamsToPath(
+			initial?.path ?? '',
+			initial?.queryParams as Record<string, string> | null | undefined,
+		),
+	);
 	const [method, setMethod] = useState<HttpMethod>(initial?.method ?? 'GET');
 	const [statusCode, setStatusCode] = useState<string>(
 		initial?.statusCode ?? '200',
@@ -251,7 +295,6 @@ export function MockEditor({
 
 		hasHydratedInitialRef.current = true;
 		setName(initial.name ?? '');
-		setPath(initial.path ?? '');
 		setMethod((initial.method ?? 'GET') as HttpMethod);
 		setStatusCode(String(initial.statusCode ?? '200'));
 		setFolderId(initial.folderId ?? defaultFolderId ?? '');
@@ -267,6 +310,7 @@ export function MockEditor({
 		);
 		setMatchType((initial.matchType as MatchType) ?? 'exact');
 		const qp = initial.queryParams as Record<string, string> | null | undefined;
+		setPath(appendQueryParamsToPath(initial.path ?? '', qp));
 		setQueryParams(
 			qp
 				? Object.entries(qp).map(([key, value], index) =>
@@ -294,17 +338,20 @@ export function MockEditor({
 		const baseSlug = previewSlug ?? selectedFolder?.slug;
 		if (!baseSlug) return null;
 		if (!path.startsWith('/') || path.length <= 1) return null;
+		const endpointPath = path.includes('?')
+			? getEndpointInputParts(path).path
+			: path;
 		const effectivePath = getServedMockPath(
-			selectedMockSubfolder?.mainPath ?? '/',
-			path,
+			selectedMockSubfolder?.path ?? '/',
+			endpointPath,
 			baseSlug,
 		);
-		return `${origin}/api/mock/${baseSlug}${effectivePath}`;
+		return `${origin}${buildMockApiBasePath(baseSlug)}${effectivePath}`;
 	}, [
 		origin,
 		previewSlug,
 		selectedFolder?.slug,
-		selectedMockSubfolder?.mainPath,
+		selectedMockSubfolder?.path,
 		path,
 	]);
 
@@ -318,38 +365,36 @@ export function MockEditor({
 		return buildQueryParamsFromFields(queryParams);
 	};
 
-	const buildQueryParamsFromFields = (
-		fields: QueryParamField[],
-	): Record<string, string> | null => {
-		const entries = fields
-			.map((param) => [param.key.trim(), param.value] as const)
-			.filter(([key]) => key.length > 0);
-		return entries.length > 0 ? Object.fromEntries(entries) : null;
-	};
-
 	const buildQueryParamsString = (): string => {
-		const qp = buildQueryParams();
-		if (!qp) return '';
-		const params = new URLSearchParams(qp);
-		const serialized = params.toString();
-		return serialized ? `?${serialized}` : '';
+		return serializeQueryParams(buildQueryParams());
 	};
 	const isEchoRequestBodyEnabled =
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
+
+	useEffect(() => {
+		setPath((currentPath) => {
+			if (!currentPath.trim()) return currentPath;
+			const nextPath = replacePathQueryParams(
+				currentPath,
+				buildQueryParamsFromFields(queryParams),
+			);
+			return nextPath === currentPath ? currentPath : nextPath;
+		});
+	}, [queryParams]);
 
 	const extractPathQueryParams = () => {
 		if (!path.trim()) return;
 		const parsed = getEndpointInputParts(path);
 		const nextPath = formatEndpointPathForStorage(
 			parsed.path,
-			selectedMockSubfolder?.mainPath ?? '/',
+			selectedMockSubfolder?.path ?? '/',
 			previewSlug ?? selectedFolder?.slug,
 		);
 		if (!path.includes('?')) {
 			setPath(nextPath);
 			return;
 		}
-		setPath(nextPath);
+		setPath(`${nextPath}${serializeQueryParams(parsed.queryParams)}`);
 		if (Object.keys(parsed.queryParams).length > 0) {
 			setQueryParams((current) =>
 				mergeQueryParamFields(current, parsed.queryParams),
@@ -365,11 +410,11 @@ export function MockEditor({
 		event.preventDefault();
 		const parsed = getEndpointInputParts(pasted);
 		setPath(
-			formatEndpointPathForStorage(
+			`${formatEndpointPathForStorage(
 				parsed.path,
-				selectedMockSubfolder?.mainPath ?? '/',
+				selectedMockSubfolder?.path ?? '/',
 				previewSlug ?? selectedFolder?.slug,
-			),
+			)}${serializeQueryParams(parsed.queryParams)}`,
 		);
 		if (Object.keys(parsed.queryParams).length > 0) {
 			setQueryParams((current) =>
@@ -418,7 +463,7 @@ export function MockEditor({
 
 		let formattedPath = formatEndpointPathForStorage(
 			submitPath,
-			selectedMockSubfolder?.mainPath ?? '/',
+			selectedMockSubfolder?.path ?? '/',
 			previewSlug ?? selectedFolder?.slug,
 		);
 		if (formattedPath.length > 1 && formattedPath.endsWith('/')) {
@@ -491,7 +536,7 @@ export function MockEditor({
 										<SelectItem value="root">Root</SelectItem>
 										{mockSubfolders.map((subfolder) => (
 											<SelectItem key={subfolder.id} value={subfolder.id}>
-												{subfolder.name} ({subfolder.mainPath})
+												{subfolder.name} ({subfolder.path})
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -578,8 +623,7 @@ export function MockEditor({
 								<p className="text-xs text-muted-foreground font-mono">
 									Preview:{' '}
 									<span className="text-foreground wrap-break-word">
-										{previewUrl}
-										{buildQueryParamsString()}
+										{appendQueryParamsToUrl(previewUrl, buildQueryParamsString())}
 									</span>
 								</p>
 							)}

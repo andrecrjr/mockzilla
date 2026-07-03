@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -12,6 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { validateSchema } from '@/lib/schema-generator';
 import type { Folder, Mock, MockSubfolder } from '@/lib/types';
+import {
+	buildFolderHref,
+	buildMockEditorHref,
+	formatStoredFolderPath,
+} from '@/lib/utils/folder-paths';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -23,11 +28,12 @@ type MockListResponse = {
 export default function EditMockPage() {
 	const params = useParams();
 	const router = useRouter();
-	const slug = params.slug as string;
+	const searchParams = useSearchParams();
+	const folderPath = formatStoredFolderPath(searchParams.get('folder') ?? '');
 	const mockId = params.mockId as string;
 
 	const { data: folder } = useSWR<Folder>(
-		slug ? `/api/folders?slug=${slug}` : null,
+		folderPath ? `/api/folders?slug=${encodeURIComponent(folderPath)}` : null,
 		fetcher,
 	);
 
@@ -132,7 +138,7 @@ export default function EditMockPage() {
 						: current,
 				{ revalidate: true },
 			);
-			router.push(`/app/folder/${slug}`);
+			router.push(buildFolderHref(folder.slug));
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -179,9 +185,9 @@ export default function EditMockPage() {
 			toast.success('Mock Duplicated', {
 				description: 'Mock endpoint has been duplicated successfully',
 			});
-			mutate(`/api/folders?slug=${slug}`);
+			mutate(`/api/folders?slug=${encodeURIComponent(folder.slug)}`);
 			mutate(`/api/mocks?folderId=${folder.id}`);
-			router.push(`/app/folder/${slug}/mock/${newMock.id}`);
+			router.push(buildMockEditorHref(newMock.id, folder.slug));
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -210,7 +216,7 @@ export default function EditMockPage() {
 				<div className="mb-8 flex items-center justify-between">
 					<div className="flex items-center gap-4">
 						<Button variant="ghost" asChild>
-							<Link href={`/app/folder/${slug}`}>
+							<Link href={buildFolderHref(folder.slug)}>
 								<ArrowLeft className="mr-2 h-4 w-4" />
 								Back to {folder?.name}
 							</Link>
@@ -249,7 +255,7 @@ export default function EditMockPage() {
 									: undefined
 							}
 							submitLabel="Save Changes"
-							previewSlug={slug as string}
+							previewSlug={folder.slug}
 							folders={[folder]}
 							mockSubfolders={mockSubfolders}
 							defaultFolderId={folder.id}

@@ -9,6 +9,7 @@ import { ExtensionMockTable } from '@/components/extension-mock-table';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatStoredFolderPath } from '@/lib/utils/folder-paths';
 
 interface ExtensionMock {
 	id: string;
@@ -31,14 +32,16 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function ExtensionFolderPage() {
 	const params = useParams();
-	const slug = params.slug as string;
+	const slug = formatStoredFolderPath(
+		Array.isArray(params.slug) ? params.slug.join('/') : (params.slug as string),
+	);
 
 	const { data, isLoading } = useSWR<{
 		id: string;
 		name: string;
 		slug: string;
 		meta?: Record<string, unknown>;
-	}>(slug ? `/api/folders?slug=${slug}` : null, fetcher);
+	}>(slug ? `/api/folders?slug=${encodeURIComponent(slug)}` : null, fetcher);
 
 	if (isLoading) {
 		return (
@@ -91,7 +94,7 @@ export default function ExtensionFolderPage() {
 							Browser Extension Sync
 						</span>
 					</div>
-					<p className="mt-1 text-muted-foreground">/{data.slug}</p>
+					<p className="mt-1 text-muted-foreground">{data.slug}</p>
 
 					{/* Metadata Summary Card could go here */}
 				</div>

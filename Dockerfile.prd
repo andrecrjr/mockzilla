@@ -49,6 +49,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/mig
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
+
 # Ensure the data directory is created and owned by nextjs
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 

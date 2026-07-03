@@ -34,8 +34,10 @@ export interface MockSubfolder {
 	folderId: string;
 	parentId?: string | null;
 	name: string;
-	slug: string;
-	mainPath: string;
+	segment?: string;
+	path: string;
+	slug?: string;
+	mainPath?: string;
 	createdAt: string;
 	updatedAt?: string;
 }

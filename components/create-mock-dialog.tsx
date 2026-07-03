@@ -17,6 +17,7 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import type { CreateMockRequest, Folder, MockSubfolder } from '@/lib/types';
+import { buildFolderHref } from '@/lib/utils/folder-paths';
 
 interface CreateMockDialogProps {
 	folders: Folder[];
@@ -102,7 +103,7 @@ export function CreateMockDialog({
 				);
 				if (selectedFolder) {
 					mutate(`/api/mocks?folderId=${selectedFolder.id}`);
-					router.push(`/app/folder/${selectedFolder.slug}`);
+					router.push(buildFolderHref(selectedFolder.slug));
 				}
 			}
 			setOpen(false);

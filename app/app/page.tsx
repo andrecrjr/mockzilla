@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { Folder } from '@/lib/types';
+import { buildFolderHref } from '@/lib/utils/folder-paths';
 
 const fetcher = (url: string) =>
 	fetch(url)
@@ -311,7 +312,7 @@ function MockzillaAdminContent() {
 											<div className="p-6">
 												<div className="flex items-start justify-between">
 													<Link
-														href={`/app/folder/${folder.slug}`}
+														href={buildFolderHref(folder.slug)}
 														className="w-full"
 													>
 														<div className="flex items-center gap-3 flex-1">
@@ -323,7 +324,7 @@ function MockzillaAdminContent() {
 																	{folder.name}
 																</h3>
 																<p className="text-sm text-muted-foreground">
-																	/{folder.slug}
+																	{folder.slug}
 																</p>
 																{folder.description && (
 																	<p className="text-sm text-muted-foreground mt-1 line-clamp-2">

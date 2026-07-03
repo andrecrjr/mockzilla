@@ -34,9 +34,15 @@ import {
 } from '@/lib/utils/mock-matcher';
 import {
 	joinMockPaths,
+	normalizeSubfolderSlugInput,
 	splitPathSearchParams,
 	validateEndpointPathSearchParams,
 } from '@/lib/utils/mock-paths';
+import {
+	formatStoredFolderPath,
+	getFolderLookupCandidates,
+	normalizeFolderPath,
+} from '@/lib/utils/folder-paths';
 import type {
 	ListFoldersArgs,
 	CreateFolderArgs,
@@ -117,7 +123,7 @@ export async function callListFolders(args: ListFoldersArgs) {
 	const data = rows.map((folder) => ({
 		id: folder.id,
 		name: folder.name,
-		slug: folder.slug,
+		slug: formatStoredFolderPath(folder.slug),
 		description: folder.description || null,
 		meta: folder.meta || {},
 		createdAt: folder.createdAt.toISOString(),
@@ -128,7 +134,7 @@ export async function callListFolders(args: ListFoldersArgs) {
 
 export async function callCreateFolder(args: CreateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_folder');
-	const slug = generateSlug(args.name);
+	const slug = normalizeFolderPath(args.slug ?? args.name);
 	const [row] = await db
 		.insert(folders)
 		.values({
@@ -140,7 +146,7 @@ export async function callCreateFolder(args: CreateFolderArgs) {
 	return {
 		id: row.id,
 		name: row.name,
-		slug: row.slug,
+		slug: formatStoredFolderPath(row.slug),
 		description: row.description ?? null,
 		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
@@ -154,13 +160,35 @@ export async function callGetFolder(args: GetFolderArgs) {
 	if (args.id) {
 		[row] = await db.select().from(folders).where(eq(folders.id, args.id));
 	} else if (args.slug) {
-		[row] = await db.select().from(folders).where(eq(folders.slug, args.slug));
+		const rows = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.slug, args.slug))
+			.then((direct) => direct);
+		row =
+			rows.find(
+				(folder) =>
+					formatStoredFolderPath(folder.slug) === formatStoredFolderPath(args.slug || ''),
+			) ?? null;
+		if (!row) {
+			const candidates = getFolderLookupCandidates(args.slug);
+			const candidateRows = await db
+				.select()
+				.from(folders)
+				.where(inArray(folders.slug, candidates));
+			row =
+				candidateRows.find(
+					(folder) =>
+						formatStoredFolderPath(folder.slug) ===
+						formatStoredFolderPath(args.slug || ''),
+				) ?? null;
+		}
 	}
 	if (!row) return null;
 	return {
 		id: row.id,
 		name: row.name,
-		slug: row.slug,
+		slug: formatStoredFolderPath(row.slug),
 		description: row.description || null,
 		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
@@ -170,7 +198,7 @@ export async function callGetFolder(args: GetFolderArgs) {
 
 export async function callUpdateFolder(args: UpdateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: update_folder');
-	const slug = generateSlug(args.name);
+	const slug = normalizeFolderPath(args.slug ?? args.name);
 	const [row] = await db
 		.update(folders)
 		.set({
@@ -185,7 +213,7 @@ export async function callUpdateFolder(args: UpdateFolderArgs) {
 	return {
 		id: row.id,
 		name: row.name,
-		slug: row.slug,
+		slug: formatStoredFolderPath(row.slug),
 		description: row.description || null,
 		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
@@ -219,13 +247,16 @@ export async function callManageFolders(args: ManageFoldersArgs) {
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
 
 function formatMockSubfolder(row: MockSubfolderRow, canonicalMainPath?: string) {
+	const path = canonicalMainPath ?? row.mainPath;
 	return {
 		id: row.id,
 		folderId: row.folderId,
 		parentId: row.parentId,
 		name: row.name,
+		segment: row.slug,
 		slug: row.slug,
-		mainPath: canonicalMainPath ?? row.mainPath,
+		path,
+		mainPath: path,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() ?? null,
 	};
@@ -302,10 +333,6 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock_subfolder');
 	const folderId = await resolveFolderIdForSubfolders(args);
 	const parentId = args.parentId ?? null;
-	const slug = generateSlug(args.slug ?? args.name);
-	if (!slug) {
-		throw new Error('Subfolder slug is invalid');
-	}
 
 	const folderSubfolders = await db
 		.select()
@@ -318,12 +345,20 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 	if (parentId && !parent) {
 		throw new Error('Parent subfolder not found');
 	}
-	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, parentId, slug)) {
-		throw new Error('A subfolder with this slug already exists here');
-	}
 	const parentMainPath = parent
 		? canonicalPaths.get(parent.id) ?? parent.mainPath
 		: null;
+	const slug = normalizeSubfolderSlugInput(
+		args.path ?? args.slug ?? args.name,
+		parentMainPath,
+		args.folderSlug,
+	);
+	if (!slug) {
+		throw new Error('Subfolder slug is invalid');
+	}
+	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, parentId, slug)) {
+		throw new Error('A subfolder with this slug already exists here');
+	}
 
 	const [row] = await db
 		.insert(mockSubfolders)
@@ -367,11 +402,6 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 	const nextParentId =
 		args.parentId === undefined ? existing.parentId : args.parentId;
 	const nextName = args.name?.trim() ?? existing.name;
-	const nextSlug =
-		args.slug === undefined ? existing.slug : generateSlug(args.slug);
-	if (!nextSlug) {
-		throw new Error('Subfolder slug is invalid');
-	}
 	if (nextParentId === args.id) {
 		throw new Error('Subfolder cannot be its own parent');
 	}
@@ -392,6 +422,17 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 		: null;
 	if (nextParentId && !parent) {
 		throw new Error('Parent subfolder not found');
+	}
+	const nextSlug =
+		args.path === undefined && args.slug === undefined
+			? existing.slug
+			: normalizeSubfolderSlugInput(
+					args.path ?? args.slug ?? existing.slug,
+					parent?.mainPath,
+					null,
+				);
+	if (!nextSlug) {
+		throw new Error('Subfolder slug is invalid');
 	}
 	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, args.id)) {
 		throw new Error('A subfolder with this slug already exists here');
