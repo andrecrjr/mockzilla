@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, CopyPlus, ExternalLink, Pencil } from 'lucide-react';
+import { Copy, CopyPlus, ExternalLink, LoaderCircle, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { MockDeleteButton } from '@/components/mock-delete-button';
@@ -60,6 +60,7 @@ export function MockCard({
 			mock.queryParams as Record<string, string> | null,
 		),
 	);
+	const [isOpeningUrl, setIsOpeningUrl] = useState(false);
 
 	useEffect(() => {
 		setEditedPath(
@@ -136,6 +137,19 @@ export function MockCard({
 				),
 			);
 			e.currentTarget.blur();
+		}
+	};
+
+	const handleOpenMockUrl = async () => {
+		if (isOpeningUrl) {
+			return;
+		}
+
+		setIsOpeningUrl(true);
+		try {
+			await openUrlInNewContext(mockUrlFull);
+		} finally {
+			setIsOpeningUrl(false);
 		}
 	};
 
@@ -319,9 +333,15 @@ export function MockCard({
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={() => void openUrlInNewContext(mockUrlFull)}
+							disabled={isOpeningUrl}
+							aria-busy={isOpeningUrl}
+							onClick={() => void handleOpenMockUrl()}
 						>
-							<ExternalLink className="h-4 w-4" />
+							{isOpeningUrl ? (
+								<LoaderCircle className="h-4 w-4 animate-spin" />
+							) : (
+								<ExternalLink className="h-4 w-4" />
+							)}
 						</Button>
 					</div>
 				</div>
