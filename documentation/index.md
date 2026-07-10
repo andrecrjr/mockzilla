@@ -16,6 +16,7 @@ High-performance mocking server for JSON and stateful API workflows.
 - [Release Process](/documentation/release-process.md) - Commit and branch rules for releases and docs-only changes.
 - [AGENTS.md](/AGENTS.md) - Capability catalog.
 - [Technical Setup](/documentation/technical-index.md) - Docker, Makefiles, and config.
+- [TypeScript](/documentation/typescript.md) - Version and type-checking workflow.
 - [Desktop App](/documentation/desktop-app.md) - Tauri packaging for Windows, macOS, and Linux.
 
 ## 🛠️ Observability

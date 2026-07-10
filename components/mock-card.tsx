@@ -1,8 +1,8 @@
 'use client';
 
-import { Copy, CopyPlus, ExternalLink, LoaderCircle, Pencil } from 'lucide-react';
+import { Copy, CopyPlus, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MockDeleteButton } from '@/components/mock-delete-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,11 @@ function appendQueryParamsToPath(
 	return `${path}${serializeQueryParams(queryParams)}`;
 }
 
+function getProxyTargetUrl(meta: Mock['meta']): string | undefined {
+	const proxyTargetUrl = meta?.proxyTargetUrl;
+	return typeof proxyTargetUrl === 'string' ? proxyTargetUrl : undefined;
+}
+
 export function MockCard({
 	mock,
 	folder,
@@ -60,8 +65,6 @@ export function MockCard({
 			mock.queryParams as Record<string, string> | null,
 		),
 	);
-	const [isOpeningUrl, setIsOpeningUrl] = useState(false);
-
 	useEffect(() => {
 		setEditedPath(
 			appendQueryParamsToPath(
@@ -78,7 +81,7 @@ export function MockCard({
 			: null;
 		const nextQueryParams = parsedPath
 			? {
-					...((mock.queryParams as Record<string, string> | null) ?? {}),
+					...((mock.queryParams as Record<string, string>) ?? {}),
 					...parsedPath.queryParams,
 				}
 			: null;
@@ -95,7 +98,8 @@ export function MockCard({
 		if (newPath !== '') {
 			const shouldUpdatePath = newPath !== mock.path;
 			const shouldUpdateQueryParams =
-				nextQueryParams !== null && Object.keys(parsedPath?.queryParams ?? {}).length > 0;
+				nextQueryParams !== null &&
+				Object.keys(parsedPath?.queryParams ?? {}).length > 0;
 			const nextDisplayPath = appendQueryParamsToPath(newPath, nextQueryParams);
 			if (!shouldUpdatePath && !shouldUpdateQueryParams) {
 				setEditedPath(nextDisplayPath);
@@ -137,19 +141,6 @@ export function MockCard({
 				),
 			);
 			e.currentTarget.blur();
-		}
-	};
-
-	const handleOpenMockUrl = async () => {
-		if (isOpeningUrl) {
-			return;
-		}
-
-		setIsOpeningUrl(true);
-		try {
-			await openUrlInNewContext(mockUrlFull);
-		} finally {
-			setIsOpeningUrl(false);
 		}
 	};
 
@@ -213,6 +204,8 @@ export function MockCard({
 	const mockUrlFull = queryParamsString
 		? `${mockUrl}${queryParamsString}`
 		: mockUrl;
+	const proxyTargetUrl = getProxyTargetUrl(mock.meta);
+	const handleOpenMockUrl = () => void openUrlInNewContext(mockUrlFull);
 
 	return (
 		<Card className="border-border bg-card p-6 transition-colors hover:bg-accent/5">
@@ -236,16 +229,13 @@ export function MockCard({
 							<Badge variant="outline" className="text-xs">
 								{mock.matchType || 'exact'}
 							</Badge>
-							{(mock.meta as { proxyTargetUrl?: string })?.proxyTargetUrl && (
+							{proxyTargetUrl && (
 								<Badge
 									variant="secondary"
 									className="max-w-full truncate border-blue-500/20 bg-blue-500/10 text-xs text-blue-600 dark:text-blue-400"
-									title={
-										(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl
-									}
+									title={proxyTargetUrl}
 								>
-									Proxy:{' '}
-									{(mock.meta as { proxyTargetUrl?: string }).proxyTargetUrl}
+									Proxy: {proxyTargetUrl}
 								</Badge>
 							)}
 							{mock.matchType === 'wildcard' &&
@@ -276,18 +266,16 @@ export function MockCard({
 								<span className="text-xs text-muted-foreground">
 									Required params:
 								</span>
-								{Object.entries(mock.queryParams as Record<string, string>).map(
-									([key, value]) => (
-										<Badge
-											key={key}
-											variant="secondary"
-											className="max-w-full truncate text-xs"
-											title={`${key}=${value}`}
-										>
-											{key}={value}
-										</Badge>
-									),
-								)}
+								{Object.entries(mock.queryParams ?? {}).map(([key, value]) => (
+									<Badge
+										key={key}
+										variant="secondary"
+										className="max-w-full truncate text-xs"
+										title={`${key}=${value}`}
+									>
+										{key}={value}
+									</Badge>
+								))}
 							</div>
 						)}
 					</div>
@@ -333,15 +321,10 @@ export function MockCard({
 						<Button
 							variant="outline"
 							size="icon"
-							disabled={isOpeningUrl}
-							aria-busy={isOpeningUrl}
-							onClick={() => void handleOpenMockUrl()}
+							onClick={handleOpenMockUrl}
+							title="Open mock URL"
 						>
-							{isOpeningUrl ? (
-								<LoaderCircle className="h-4 w-4 animate-spin" />
-							) : (
-								<ExternalLink className="h-4 w-4" />
-							)}
+							<ExternalLink className="h-4 w-4" />
 						</Button>
 					</div>
 				</div>
