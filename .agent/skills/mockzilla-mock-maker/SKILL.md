@@ -13,7 +13,7 @@ description: Use when creating stateless Mockzilla mocks, JSON Schema Faker resp
 
 ## 📜 External References
 
-- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools, actions, and deprecated names to avoid.
+- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools and actions.
 - [JSON Faker Mock References](./resources/json-faker-mock-references.md): Unified guide for keywords, Faker syntax, and high-fidelity templates (Frontend, Backend, Industry).
 
 ## Available MCP Tools & Signatures
@@ -34,6 +34,13 @@ description: Use when creating stateless Mockzilla mocks, JSON Schema Faker resp
 | `manage_mocks` | `update` | `id` | `name`, `path`, `method`, `statusCode`, `mockFolderId`, `jsonSchema`, `matchType`, `useDynamicResponse` |
 | `manage_mocks` | `preview`| `folderSlug`, `path` (the exact URL path to test), `method` | `contentType`, `queryParams`, `headers`, `bodyText`, `bodyJson` |
 
+## Current operating rules
+
+- Resolve the parent folder first with `manage_folders` (`get` by slug, or `list`), then use the returned `folderSlug` for mock operations.
+- Create requires `name`, `path`, `method`, `statusCode`, and a parent (`folderSlug` or `folderId`). Supply `response` for static mocks; supply a JSON-string `jsonSchema` and set `useDynamicResponse: true` for generated responses.
+- Use `get`/`list` before `update` or `delete`. Preview with the exact served path and include query, header, or body context when matching depends on it.
+- Use `mockFolderId` only for an existing nested mock subfolder. A mock path is relative to that subfolder when one is selected.
+
 > [!WARNING] WILDCARD PATH RULE
 > When creating paths with path parameters for static mocks, Mockzilla uses `*` instead of `:id`.
 > ❌ WRONG: `/users/:id`
@@ -53,11 +60,11 @@ When using multiple `*` characters in a path, Mockzilla forms a **Composite Key*
 ## 🛡️ Constraints & Boundaries
 
 - **Always** use `manage_mocks` (action: `create`) with `jsonSchema` for dynamic/realistic data.
-- **Always** set `minItems` and `maxItems` to keep responses manageable.
+- Set `minItems` and `maxItems` deliberately to keep responses manageable; the server default is configurable through `MOCKZILLA_MAX_ITEMS`.
 - **Never** include state-changing logic (e.g., `db.push`) when using this skill.
 - **Strict Schemas**: Always set `additionalProperties: false` on objects to prevent unwanted random data.
 - **Never** use hardcoded data for more than 3 fields; use Faker instead.
-- **Always** call `manage_mocks` (action: `preview`) after creating a mock to verify the response looks correct before finishing.
+- Call `manage_mocks` (action: `preview`) after creating or changing a mock to verify matching and output.
 - **Syntax Check**: Use `{$.path}` for JSON Schema/Mock interpolation (this skill). Use `{{path}}` ONLY for workflows (Workflow Architect skill).
 
 ## Core Principles
@@ -67,7 +74,7 @@ When using multiple `*` characters in a path, Mockzilla forms a **Composite Key*
 3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
 4.  **Evaluate before Build**: Use `workflow_control` (action: `evaluate_template`) only for Handlebars templates. For JSON Schema interpolation, use `manage_mocks` (action: `preview`) against a real request context.
 5.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
-6.  **Verify Always**: Call `manage_mocks` (action: `preview`) to validate every mock immediately after creation.
+6.  **Verify**: Preview every new or changed mock before handing it off.
 
 ---
 
@@ -121,7 +128,7 @@ Reference generated fields within the same object to ensure data consistency. Us
 
 ## 💡 Best Practices
 
-- **Set Limits**: Always use `minItems` and `maxItems` for arrays. Note: Global limit is `5`.
+- **Set Limits**: Use `minItems` and `maxItems` for arrays; respect the configured `MOCKZILLA_MAX_ITEMS` ceiling.
 - **Specific Types**: Use `integer`, `number`, `boolean`, `string`, `object`, and `array` correctly.
 - **Faker Arguments**: Use **object notation** for named parameters: `{"faker": {"finance.amount": {"min": 10, "max": 100}}}`.
 - **Array Content**: Always provide an `items` subschema for arrays, fixed or dynamic.
@@ -170,5 +177,5 @@ If you need:
 - Create or update mocks only through `manage_mocks`.
 - Preview every new or changed mock with `manage_mocks` (action: `preview`).
 - Use `folderSlug` when possible and `mockFolderId` only for subfolder placement.
-- Avoid deprecated granular tool names listed in [Manager Tools Contract](../shared/mcp-manager-tools.md).
+- Use only the consolidated manager tools listed in [Manager Tools Contract](../shared/mcp-manager-tools.md).
 - Update `documentation/` when behavior, examples, or conventions change.

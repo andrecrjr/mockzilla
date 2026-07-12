@@ -10,6 +10,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatStoredFolderPath } from '@/lib/utils/folder-paths';
+import { swrFetcher } from '@/lib/swr-fetcher';
 
 interface ExtensionMock {
 	id: string;
@@ -28,8 +29,6 @@ interface ExtensionMock {
 	}>;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export default function ExtensionFolderPage() {
 	const params = useParams();
 	const slug = formatStoredFolderPath(
@@ -41,7 +40,7 @@ export default function ExtensionFolderPage() {
 		name: string;
 		slug: string;
 		meta?: Record<string, unknown>;
-	}>(slug ? `/api/folders?slug=${encodeURIComponent(slug)}` : null, fetcher);
+	}>(slug ? `/api/folders?slug=${encodeURIComponent(slug)}` : null, swrFetcher);
 
 	if (isLoading) {
 		return (

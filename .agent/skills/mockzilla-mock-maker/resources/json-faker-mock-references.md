@@ -20,7 +20,7 @@ Use these keywords to control structure, validation, and data generation.
 
 ### 💡 Key Caveats
 - **Mandatory `items`**: For `type: "array"`, an `items` subschema MUST be provided if you use validation keywords like `minItems`.
-- **Global `maxItems`**: Mockzilla has a global limit of `5Items` by default. Requests for `minItems > 5` will be capped at 5 unless the schema generator config is updated.
+- **Global `maxItems`**: Mockzilla defaults to 1000 generated items. The `MOCKZILLA_MAX_ITEMS` environment variable can lower or raise that ceiling.
 - **Always provide `type`**: Ensure every property has a defined `type` (string, integer, etc.) to ensure reliable generation.
 
 ---
@@ -220,6 +220,6 @@ Ready-to-use schemas for specific domains.
 ## 🤖 Tips for AI Agents & MCP Users
 
 1.  **Context Injection**: When generating a new mock, search this document for the category (Frontend/Backend/Industry) to find the best baseline.
-2.  **Constraint Enforcement**: Always check for `minItems` and `maxItems`. If you need a larger list, explicitly notify the user about the global `5Items` cap.
+2.  **Constraint Enforcement**: Check `minItems` and `maxItems`; if a requested list exceeds the configured ceiling, explain the limit or adjust `MOCKZILLA_MAX_ITEMS` in the deployment environment.
 3.  **Naming Consistency**: If the user provides a design or image, map the field names exactly as they appear in the UI, then use this guide to find the matching Faker method.
 4.  **Schema Reusability**: Use JSON Schema `definitions` and `$ref` for shared entities (like `User` or `Address`) within the same mock to keep the code DRY.

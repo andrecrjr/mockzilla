@@ -16,7 +16,16 @@ description: Use when translating OpenAPI, Swagger, technical specs, Jira requir
 
 ## References
 
-- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools, actions, and deprecated names to avoid.
+- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools and actions.
+
+## Current operating rules
+
+- Inspect existing folders and mocks before creating anything. Reuse a matching folder rather than creating duplicates.
+- Create the folder first, then optional mock subfolders, then mocks. Preserve the source operation, path, parameters, response status, and content type.
+- Use `folderSlug` for mock creation when available; use `mockFolderId` only for an existing nested mock subfolder.
+- Create requires `name`, `path`, `method`, `statusCode`, and `response` or a JSON-string `jsonSchema`.
+- Preview representative endpoints with the exact request path and relevant query/body/header context. List the final resources for an audit.
+- Build stateless endpoints with `manage_mocks`; use scenarios and transitions only when the specification requires persistence or stateful branching.
 
 ## 🛠️ Available MCP Tools
 
@@ -48,11 +57,11 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 | `phone` | `string` | `phone.number` |
 
 ### 3. Structural Patterns
-- **Pagination**: For `GET /list` style endpoints, always wrap the array in a `data` key and include a `meta` object with `total`, `page`, and `limit`.
+- **Pagination**: Preserve the response envelope from the source spec. If unspecified, use a consistent `data` array plus `meta` (`total`, `page`, `limit`) and document that choice.
 - **Polymorphism**: If a spec uses `oneOf` or `anyOf`, represent this using a complex JSON Schema with `anyOf` sub-objects.
 - **Path Params**: For `/users/:id`, set `path: "/users/*"`, `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
 - **Nested Resource Groups**: When a spec is naturally grouped by tag or prefix, create subfolders with `manage_mock_subfolders`, then pass the returned `id` as `mockFolderId` and keep each mock path relative to that subfolder.
-- **One-Shot State**: If the spec defines a complex CRUD flow, use `manage_transitions` (action: `create_full`) instead of many `manage_transitions` (action: `create`) calls to reduce latency.
+- **Stateful flows**: If the spec defines a complex CRUD flow, create a scenario and use `manage_transitions` (`create_full` for a new atomic scenario, or `create` for incremental changes).
 
 ## 🔄 Orchestration Flow
 

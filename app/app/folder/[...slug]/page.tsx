@@ -37,14 +37,13 @@ import type {
 	MockSubfolder,
 	UpdateMockRequest,
 } from '@/lib/types';
+import { swrFetcher } from '@/lib/swr-fetcher';
 import { copyToClipboard } from '@/lib/utils';
 import {
 	getSubfolderParentMainPath,
 	resolveSubfolderPathInput,
 } from '@/lib/utils/mock-paths';
 import { formatStoredFolderPath } from '@/lib/utils/folder-paths';
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type MockListResponse = {
 	data: Mock[];
@@ -85,7 +84,7 @@ function FolderContent() {
 
 	const { data: folders = [] } = useSWR<Folder[]>(
 		'/api/folders?all=true',
-		fetcher,
+		swrFetcher,
 	);
 	const folder = folders.find((f) => f.slug === slug);
 	const currentMockFolderId = mockFolderId || 'root';
@@ -94,11 +93,11 @@ function FolderContent() {
 		folder
 			? `/api/mock-subfolders?folderId=${folder.id}&parentId=${currentMockFolderId}`
 			: null,
-		fetcher,
+		swrFetcher,
 	);
 	const { data: allSubfolders = [] } = useSWR<MockSubfolder[]>(
 		folder ? `/api/mock-subfolders?folderId=${folder.id}&all=true` : null,
-		fetcher,
+		swrFetcher,
 	);
 	const currentSubfolder =
 		currentMockFolderId === 'root'
@@ -123,7 +122,7 @@ function FolderContent() {
 		: null;
 	const { data, isLoading: mocksLoading } = useSWR<MockListResponse>(
 		mocksCacheKey,
-		fetcher,
+		swrFetcher,
 	);
 
 	const mocks = data?.data || [];
@@ -153,12 +152,20 @@ function FolderContent() {
 			)
 		: null;
 
-	const handleMockSuccess = () => {
-		toast.success('Mock Created', {
-			description: 'Your mock endpoint has been created successfully',
-		});
+	const handleMockSuccess = (createdMock: Mock) => {
 		if (mocksCacheKey) {
-			mutate(mocksCacheKey);
+			mutate(
+				mocksCacheKey,
+				(current: MockListResponse | undefined) =>
+					current
+						? {
+								...current,
+								data: [createdMock, ...current.data].slice(0, limit),
+								meta: { ...current.meta, total: current.meta.total + 1 },
+							}
+						: current,
+				{ revalidate: true },
+			);
 		}
 	};
 
@@ -272,7 +279,11 @@ function FolderContent() {
 
 	const handleDeleteMock = async (id: string) => {
 		try {
-			await fetch(`/api/mocks?id=${id}`, { method: 'DELETE' });
+			const response = await fetch(`/api/mocks?id=${id}`, { method: 'DELETE' });
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete mock');
+			}
 			toast.success('Mock Deleted', {
 				description: 'Mock endpoint has been removed',
 			});

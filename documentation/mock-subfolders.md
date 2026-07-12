@@ -135,6 +135,9 @@ The folder page shows the current subfolder level:
 - Preview and copied URLs use the computed effective path.
 - Mock create, duplicate, delete, inline card edits, and full editor saves revalidate the active paginated mock list cache.
 - The edit form hydrates all inputs from the saved mock revision when SWR receives newer persisted data, so stale cached fields do not overwrite newer mock values.
+- SWR fetchers use `cache: 'no-store'` and throw on non-2xx responses, preventing failed requests from being treated as valid cached data.
+- Mock creation and duplication invalidate every paginated `/api/mocks?folderId=...` cache variant, including subfolder, page, limit, and search parameters.
+- Folder and mock creation optimistically insert the server-created record into the active SWR list before background revalidation completes, so the previous list is not shown as the immediate result.
 - The subfolder edit dialog derives the parent path from the saved subfolder path, so nested paths like `/app/ticket-management` preview correctly even before the full subfolder tree finishes loading.
 
 Deleting a non-empty subfolder returns `409`; move or delete its child mocks/subfolders first.

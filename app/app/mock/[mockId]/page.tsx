@@ -12,13 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { validateSchema } from '@/lib/schema-generator';
 import type { Folder, Mock, MockSubfolder } from '@/lib/types';
+import { swrFetcher } from '@/lib/swr-fetcher';
 import {
 	buildFolderHref,
 	buildMockEditorHref,
 	formatStoredFolderPath,
 } from '@/lib/utils/folder-paths';
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type MockListResponse = {
 	data: Mock[];
@@ -34,16 +33,16 @@ export default function EditMockPage() {
 
 	const { data: folder } = useSWR<Folder>(
 		folderPath ? `/api/folders?slug=${encodeURIComponent(folderPath)}` : null,
-		fetcher,
+		swrFetcher,
 	);
 
 	const { data: mock } = useSWR<Mock>(
 		mockId ? `/api/mocks?id=${mockId}` : null,
-		fetcher,
+		swrFetcher,
 	);
 	const { data: mockSubfolders = [] } = useSWR<MockSubfolder[]>(
 		folder ? `/api/mock-subfolders?folderId=${folder.id}&all=true` : null,
-		fetcher,
+		swrFetcher,
 	);
 
 	const [isLoading, setIsLoading] = useState(false);
@@ -186,7 +185,11 @@ export default function EditMockPage() {
 				description: 'Mock endpoint has been duplicated successfully',
 			});
 			mutate(`/api/folders?slug=${encodeURIComponent(folder.slug)}`);
-			mutate(`/api/mocks?folderId=${folder.id}`);
+			mutate(
+				(key) =>
+					typeof key === 'string' &&
+					key.startsWith(`/api/mocks?folderId=${folder.id}`),
+			);
 			router.push(buildMockEditorHref(newMock.id, folder.slug));
 		} catch (error: unknown) {
 			toast.error('Error', {

@@ -13,7 +13,7 @@ description: Use when designing Mockzilla stateful scenarios, workflow transitio
 
 ## 📜 External References
 
-- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools, actions, and deprecated names to avoid.
+- [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools and actions.
 - [Logic Operators Guide](./resources/logic-operators.md): Syntax and use cases for `eq`, `neq`, `exists`, etc.
 - [Complex Flow Recipes](./examples/complex-scenarios.md): Templates for OAuth2, Checkout, and multi-step forms.
 
@@ -27,13 +27,22 @@ description: Use when designing Mockzilla stateful scenarios, workflow transitio
 | `workflow_control` | `test` | `scenarioId`, `path`, `method` | `body`, `query`, `headers` |
 | `workflow_control` | `inspect` | `scenarioId` | None |
 
+## Current operating rules
+
+- Create or locate the scenario with `manage_scenarios`; scenario IDs/slugs are strings.
+- List transitions before edits. Transition IDs returned by Mockzilla are integers.
+- Use `manage_transitions` (`create_full`) for a new self-contained scenario and `create`/`update` for incremental work.
+- Every transition needs a path, method, and response object (`status` plus optional `body`/`headers`). Conditions and effects are arrays when present.
+- Use `workflow_control` (`test`) for isolated requests, then `inspect` when the request should mutate state. Use `seed` for deterministic setup and `reset` only when a clean scenario is explicitly needed.
+- Export before bulk edits and re-test representative success, failure, and fallback paths afterward.
+
 > [!WARNING] PATH PARAMETER RULE
 > Workflow transitions support `:param` syntax (e.g., `/users/:id`). This is different from the stateless Mock Maker which uses `*`.
 
 ## 🛡️ Constraints & Boundaries
 
-- **Always** verify state changes using `workflow_control` (action: 'inspect') after each `test` call.
-- **Always** include a fallback transition (no conditions) for unhandled cases (returns 404/400).
+- Verify state changes using `workflow_control` (action: 'inspect') after tests that should mutate state; inspection is optional for read-only tests.
+- Include an explicit fallback transition when unhandled requests need a controlled error response; choose its status/body rather than assuming 404/400.
 - **Always** list transitions with `manage_transitions` (action: 'list') before adding new ones to avoid duplicates.
 - **Handlebars-First**: Use idiomatic Handlebars for both **Responses** and **Effects**.
 - **Faker in Effects**: Use `{{faker}}` in `db.push` or `state.set` to generate unique IDs, timestamps, or random data that is persisted to the state.

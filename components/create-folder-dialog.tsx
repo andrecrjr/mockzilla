@@ -4,7 +4,6 @@ import { FolderPlus, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { mutate } from 'swr';
 import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,11 +18,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import type { Folder } from '@/lib/types';
 import { normalizeFolderPath } from '@/lib/utils/folder-paths';
 
 interface CreateFolderDialogProps {
 	trigger?: React.ReactNode;
-	onSuccess?: () => void;
+	onSuccess?: (folder: Folder) => void;
 }
 
 function generateSlug(name: string): string {
@@ -67,21 +67,15 @@ export function CreateFolderDialog({
 				const error = await response.json();
 				throw new Error(error.error);
 			}
+			const createdFolder = (await response.json()) as Folder;
 
 			toast.success('Folder Created', {
 				description: 'Your folder has been created successfully',
 			});
 
 			if (onSuccess) {
-				onSuccess();
+				onSuccess(createdFolder);
 			}
-
-			// Mutate relevant SWR keys to refresh data
-			mutate(
-				(key) => typeof key === 'string' && key.startsWith('/api/folders'),
-				undefined,
-				{ revalidate: true },
-			);
 
 			setOpen(false);
 			setName('');
