@@ -3,5 +3,8 @@
 	"identifier": "default",
 	"description": "Default permissions for the Mockzilla desktop window",
 	"windows": ["main"],
-	"permissions": ["core:default", "opener:default", "opener:allow-default-urls"]
+	"remote": {
+		"urls": ["http://127.0.0.1:*/*"]
+	},
+	"permissions": ["core:default", "opener:default"]
 }

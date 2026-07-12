@@ -3,6 +3,7 @@
 import { Copy, CopyPlus, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { MockDeleteButton } from '@/components/mock-delete-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ export function MockCard({
 			mock.queryParams as Record<string, string> | null,
 		),
 	);
+	const [isOpeningMockUrl, setIsOpeningMockUrl] = useState(false);
 	useEffect(() => {
 		setEditedPath(
 			appendQueryParamsToPath(
@@ -205,7 +207,23 @@ export function MockCard({
 		? `${mockUrl}${queryParamsString}`
 		: mockUrl;
 	const proxyTargetUrl = getProxyTargetUrl(mock.meta);
-	const handleOpenMockUrl = () => void openUrlInNewContext(mockUrlFull);
+	const handleOpenMockUrl = async () => {
+		if (isOpeningMockUrl) return;
+
+		setIsOpeningMockUrl(true);
+		try {
+			await openUrlInNewContext(mockUrlFull);
+		} catch (error: unknown) {
+			toast.error('Unable to open mock URL', {
+				description:
+					error instanceof Error
+						? error.message
+						: 'Copy the URL and open it in your browser.',
+			});
+		} finally {
+			setIsOpeningMockUrl(false);
+		}
+	};
 
 	return (
 		<Card className="border-border bg-card p-6 transition-colors hover:bg-accent/5">
@@ -321,7 +339,9 @@ export function MockCard({
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={handleOpenMockUrl}
+							onClick={() => void handleOpenMockUrl()}
+							disabled={isOpeningMockUrl}
+							aria-busy={isOpeningMockUrl}
 							title="Open mock URL"
 						>
 							<ExternalLink className="h-4 w-4" />

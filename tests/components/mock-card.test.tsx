@@ -9,11 +9,21 @@ import {
 import { MockCard } from '../../components/mock-card';
 import type { Folder, Mock } from '../../lib/types';
 
+const toastError = mock(() => undefined);
+
 mock.module('sonner', () => ({
 	toast: {
-		error: mock(() => undefined),
+		error: toastError,
 	},
 }));
+
+interface TestTauriInternals {
+	invoke: (command: string, args: Record<string, unknown>) => Promise<void>;
+}
+
+interface TestTauriWindow extends Window {
+	__TAURI_INTERNALS__?: TestTauriInternals;
+}
 
 const folder: Folder = {
 	id: 'folder-1',
@@ -45,7 +55,11 @@ const baseMock: Mock = {
 };
 
 describe('MockCard', () => {
-	afterEach(cleanup);
+	afterEach(() => {
+		cleanup();
+		toastError.mockClear();
+		delete (window as TestTauriWindow).__TAURI_INTERNALS__;
+	});
 
 	it('saves inline path edits without replaying stale mock fields', async () => {
 		const onUpdate = mock(async () => undefined);
@@ -94,14 +108,13 @@ describe('MockCard', () => {
 		fireEvent.blur(pathInput);
 
 		await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
-		expect(onUpdate).toHaveBeenCalledWith(
-			'mock-1',
-			{
-				path: '/users/2',
-				queryParams: { status: 'active' },
-			},
+		expect(onUpdate).toHaveBeenCalledWith('mock-1', {
+			path: '/users/2',
+			queryParams: { status: 'active' },
+		});
+		expect((pathInput as HTMLInputElement).value).toBe(
+			'/users/2?status=active',
 		);
-		expect((pathInput as HTMLInputElement).value).toBe('/users/2?status=active');
 	});
 
 	it('renders inline editable paths with configured query params', () => {
@@ -116,9 +129,9 @@ describe('MockCard', () => {
 			/>,
 		);
 
-		expect((screen.getByTitle('Edit path directly') as HTMLInputElement).value).toBe(
-			'/users/1?status=active',
-		);
+		expect(
+			(screen.getByTitle('Edit path directly') as HTMLInputElement).value,
+		).toBe('/users/1?status=active');
 	});
 
 	it('renders subfolder mock URLs without duplicating the folder slug', () => {
@@ -142,12 +155,83 @@ describe('MockCard', () => {
 		);
 
 		expect(
-			screen.getByDisplayValue(/\/api\/mock\/ticket-management\/app\/ticket-type$/),
+			screen.getByDisplayValue(
+				/\/api\/mock\/ticket-management\/app\/ticket-type$/,
+			),
 		).toBeDefined();
 		expect(
 			screen.queryByDisplayValue(
 				/\/api\/mock\/ticket-management\/app\/ticket-management/,
 			),
 		).toBeNull();
+	});
+
+	it('opens the mock URL in a browser outside Tauri', async () => {
+		const originalOpen = window.open;
+		const open = mock(() => null);
+		window.open = open as typeof window.open;
+
+		try {
+			render(
+				<MockCard
+					mock={baseMock}
+					folder={folder}
+					onDelete={mock(() => undefined)}
+					onUpdate={mock(async () => undefined)}
+					onCopy={mock(() => undefined)}
+				/>,
+			);
+
+			fireEvent.click(screen.getByTitle('Open mock URL'));
+
+			await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+			expect(open).toHaveBeenCalledWith(
+				expect.stringContaining('/api/mock/api/users/1'),
+				'_blank',
+				'noopener,noreferrer',
+			);
+		} finally {
+			window.open = originalOpen;
+		}
+	});
+
+	it('reports Tauri opener failures and blocks duplicate pending clicks', async () => {
+		let rejectInvoke: ((reason: Error) => void) | undefined;
+		const invoke = mock(
+			() =>
+				new Promise<void>((_resolve, reject) => {
+					rejectInvoke = reject;
+				}),
+		);
+		Object.defineProperty(window, '__TAURI_INTERNALS__', {
+			configurable: true,
+			value: { invoke },
+		});
+
+		render(
+			<MockCard
+				mock={baseMock}
+				folder={folder}
+				onDelete={mock(() => undefined)}
+				onUpdate={mock(async () => undefined)}
+				onCopy={mock(() => undefined)}
+			/>,
+		);
+
+		const openButton = screen.getByTitle('Open mock URL');
+		fireEvent.click(openButton);
+		fireEvent.click(openButton);
+
+		await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
+		expect(openButton.getAttribute('aria-busy')).toBe('true');
+		rejectInvoke?.(new Error('opener denied'));
+
+		await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+		expect(toastError).toHaveBeenCalledWith('Unable to open mock URL', {
+			description: 'opener denied',
+		});
+		await waitFor(() =>
+			expect(openButton.getAttribute('aria-busy')).toBe('false'),
+		);
 	});
 });

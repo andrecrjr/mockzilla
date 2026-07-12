@@ -20,7 +20,13 @@ export async function openUrlInNewContext(url: string): Promise<void> {
 	}
 
 	if (isTauriRuntime()) {
-		await openUrl(url);
+		try {
+			await openUrl(url);
+		} catch (error: unknown) {
+			throw error instanceof Error
+				? error
+				: new Error(`Unable to open URL: ${String(error)}`);
+		}
 		return;
 	}
 

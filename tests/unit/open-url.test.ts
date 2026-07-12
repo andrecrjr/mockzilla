@@ -73,4 +73,21 @@ describe('openUrlInNewContext', () => {
 		);
 		expect(openedUrls).toEqual([]);
 	});
+
+	it('preserves Error rejections from the Tauri opener', async () => {
+		const openerError = new Error('opener denied');
+		invoke.mockRejectedValueOnce(openerError);
+		setTauriInternals();
+
+		await expect(openUrlInNewContext(testUrl)).rejects.toBe(openerError);
+	});
+
+	it('normalizes non-Error rejections from the Tauri opener', async () => {
+		invoke.mockRejectedValueOnce('opener denied');
+		setTauriInternals();
+
+		await expect(openUrlInNewContext(testUrl)).rejects.toThrow(
+			'Unable to open URL: opener denied',
+		);
+	});
 });
