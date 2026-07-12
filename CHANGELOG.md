@@ -1,3 +1,15 @@
+## [1.0.6](https://github.com/andrecrjr/mockzilla/compare/v1.0.5...v1.0.6) (2026-07-12)
+
+
+### Bug Fixes
+
+* destkop url ([5e6ef05](https://github.com/andrecrjr/mockzilla/commit/5e6ef0556483418381149fae527d289887f63e08))
+* docs ([b244e0c](https://github.com/andrecrjr/mockzilla/commit/b244e0c8645ec59a05367d36f922212ea698c17c))
+* prevent double-click race condition and add loading state to external link ([866484b](https://github.com/andrecrjr/mockzilla/commit/866484b10d217fb953789d138311f58cdb7002a1))
+* swr stale problem ([3a4ea15](https://github.com/andrecrjr/mockzilla/commit/3a4ea1577039a4e07abaad72ed0edbad81480d97))
+* update TypeScript to 6.0.3 and improve URL opening behavior in desktop builds ([d1b5d61](https://github.com/andrecrjr/mockzilla/commit/d1b5d61da96f33e4716987e4bd2eae3363050488))
+* version mode ([69c0130](https://github.com/andrecrjr/mockzilla/commit/69c01300094fb52892d41941aeab8674adeea62e))
+
 ## [1.0.5](https://github.com/andrecrjr/mockzilla/compare/v1.0.4...v1.0.5) (2026-07-01)
 
 
