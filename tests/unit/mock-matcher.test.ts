@@ -173,6 +173,23 @@ describe('findBestMatch', () => {
 		expect(result).toBe(candidates[1]);
 	});
 
+	test('wildcard query params can be supplied in the request path string', () => {
+		const candidates: MockCandidate[] = [
+			makeCandidate('/api/users/*', 'wildcard'),
+			makeCandidate('/api/users/*', 'wildcard', { status: 'active' }),
+		];
+		const result = findBestMatch('/api/users/123?status=active', {}, candidates);
+		expect(result).toBe(candidates[1]);
+	});
+
+	test('legacy endpoint search params participate in query matching', () => {
+		const candidates: MockCandidate[] = [
+			makeCandidate('/api/users/*?status=active', 'wildcard'),
+		];
+		const result = findBestMatch('/api/users/123?status=active', {}, candidates);
+		expect(result).toBe(candidates[0]);
+	});
+
 	test('substring match as fallback', () => {
 		const candidates: MockCandidate[] = [makeCandidate('/api', 'substring')];
 		const result = findBestMatch('/api/users/123', {}, candidates);
@@ -200,6 +217,22 @@ describe('findBestMatch', () => {
 describe('extractCaptureKey', () => {
 	test('extracts single capture key', () => {
 		const key = extractCaptureKey('/api/users/123', '/api/users/*');
+		expect(key).toBe('123');
+	});
+
+	test('extracts wildcard captures without request search params', () => {
+		const key = extractCaptureKey(
+			'/api/users/123?status=active',
+			'/api/users/*',
+		);
+		expect(key).toBe('123');
+	});
+
+	test('extracts wildcard captures without legacy endpoint search params', () => {
+		const key = extractCaptureKey(
+			'/api/users/123?status=active',
+			'/api/users/*?status=active',
+		);
 		expect(key).toBe('123');
 	});
 

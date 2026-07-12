@@ -1,17 +1,24 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { isTauriRuntime, openUrlInNewContext } from '../../lib/utils/open-url';
 
 interface TestTauriWindow extends Window {
 	__TAURI__?: unknown;
-	__TAURI_INTERNALS__?: unknown;
+	__TAURI_INTERNALS__?: TestTauriInternals;
+}
+
+interface TestTauriInternals {
+	invoke: (command: string, args: Record<string, unknown>) => Promise<void>;
 }
 
 const testUrl = 'http://127.0.0.1:36666/api/mock/demo/users';
+const invoke = mock(
+	async (_command: string, _args: Record<string, unknown>) => undefined,
+);
 
-function setTauriMarker(value: unknown): void {
-	Object.defineProperty(window, '__TAURI__', {
+function setTauriInternals(): void {
+	Object.defineProperty(window, '__TAURI_INTERNALS__', {
 		configurable: true,
-		value,
+		value: { invoke },
 	});
 }
 
@@ -27,6 +34,7 @@ describe('openUrlInNewContext', () => {
 
 	beforeEach(() => {
 		openedUrls = [];
+		invoke.mockClear();
 		originalOpen = window.open;
 		window.open = ((url?: string | URL) => {
 			if (url) {
@@ -43,36 +51,43 @@ describe('openUrlInNewContext', () => {
 	});
 
 	it('opens a normal browser window outside Tauri', async () => {
-		let openerCalled = false;
+		await openUrlInNewContext(testUrl);
 
-		await openUrlInNewContext(testUrl, async () => {
-			openerCalled = true;
-		});
-
-		expect(openerCalled).toBe(false);
+		expect(invoke).not.toHaveBeenCalled();
 		expect(openedUrls).toEqual([testUrl]);
 	});
 
 	it('uses the Tauri opener when running in desktop', async () => {
-		const openedWithTauri: string[] = [];
-		setTauriMarker({});
+		setTauriInternals();
 
-		await openUrlInNewContext(testUrl, async (url) => {
-			openedWithTauri.push(url);
-		});
+		await openUrlInNewContext(testUrl);
 
 		expect(isTauriRuntime()).toBe(true);
-		expect(openedWithTauri).toEqual([testUrl]);
+		expect(invoke).toHaveBeenCalledWith(
+			'plugin:opener|open_url',
+			{
+				url: testUrl,
+				with: undefined,
+			},
+			undefined,
+		);
 		expect(openedUrls).toEqual([]);
 	});
 
-	it('falls back to browser window opening if the Tauri opener fails', async () => {
-		setTauriMarker({});
+	it('preserves Error rejections from the Tauri opener', async () => {
+		const openerError = new Error('opener denied');
+		invoke.mockRejectedValueOnce(openerError);
+		setTauriInternals();
 
-		await openUrlInNewContext(testUrl, async () => {
-			throw new Error('opener failed');
-		});
+		await expect(openUrlInNewContext(testUrl)).rejects.toBe(openerError);
+	});
 
-		expect(openedUrls).toEqual([testUrl]);
+	it('normalizes non-Error rejections from the Tauri opener', async () => {
+		invoke.mockRejectedValueOnce('opener denied');
+		setTauriInternals();
+
+		await expect(openUrlInNewContext(testUrl)).rejects.toThrow(
+			'Unable to open URL: opener denied',
+		);
 	});
 });

@@ -346,6 +346,93 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(body).toEqual({ nested: true });
 	});
 
+	it('serves a subfolder wildcard mock with query params and clean captures', async () => {
+		const subfolderWildcardMock = {
+			...mockResponse,
+			id: 'mock-subfolder-wildcard-query',
+			endpoint: '/*',
+			mockFolderId: 'mock-folder-1',
+			matchType: 'wildcard',
+			queryParams: { status: 'active' },
+			response: JSON.stringify({
+				id: '{{$.params.[0]}}',
+				status: '{{$.query.status}}',
+			}),
+		};
+		const mockSubfolder = {
+			id: 'mock-folder-1',
+			folderId: 'folder-1',
+			parentId: null,
+			name: 'User Details',
+			slug: 'users/details',
+			mainPath: '/users/details',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([subfolderWildcardMock]);
+			if (callCount === 3) return createMockBuilder([mockSubfolder]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest(
+			'http://localhost:3000/api/mock/api/users/details/123?status=active',
+		);
+		const params = Promise.resolve({
+			path: ['api', 'users', 'details', '123'],
+		});
+
+		const res = await GET(req, { params });
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body).toEqual({ id: '123', status: 'active' });
+	});
+
+	it('does not match a subfolder wildcard mock when query params differ', async () => {
+		const subfolderWildcardMock = {
+			...mockResponse,
+			id: 'mock-subfolder-wildcard-query',
+			endpoint: '/*',
+			mockFolderId: 'mock-folder-1',
+			matchType: 'wildcard',
+			queryParams: { status: 'active' },
+			response: JSON.stringify({ shouldNotMatch: true }),
+		};
+		const mockSubfolder = {
+			id: 'mock-folder-1',
+			folderId: 'folder-1',
+			parentId: null,
+			name: 'User Details',
+			slug: 'users/details',
+			mainPath: '/users/details',
+		};
+
+		let callCount = 0;
+		mockDb.select = mock(() => {
+			callCount++;
+			if (callCount === 1) return createMockBuilder([mockFolder]);
+			if (callCount === 2) return createMockBuilder([subfolderWildcardMock]);
+			if (callCount === 3) return createMockBuilder([mockSubfolder]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest(
+			'http://localhost:3000/api/mock/api/users/details/123?status=banned',
+		);
+		const params = Promise.resolve({
+			path: ['api', 'users', 'details', '123'],
+		});
+
+		const res = await GET(req, { params });
+		const body = await res.json();
+
+		expect(res.status).toBe(404);
+		expect(body.error).toBe('Mock endpoint not found');
+	});
+
 	it('responds to OPTIONS with 204', async () => {
 		const _req = new NextRequest('http://localhost:3000/api/mock/api', { method: 'OPTIONS' });
 		const res = await OPTIONS();

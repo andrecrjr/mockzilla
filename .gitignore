@@ -50,3 +50,5 @@ data
 .*.log
 *.log
 .log
+.aider*
+.opencode

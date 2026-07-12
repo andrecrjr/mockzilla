@@ -1,3 +1,8 @@
+import {
+	buildMockApiBasePath,
+	formatStoredFolderPath,
+} from '@/lib/utils/folder-paths';
+
 export function normalizeAbsolutePath(path: string): string {
 	const trimmed = path.trim();
 	if (!trimmed || trimmed === '/') return '/';
@@ -12,12 +17,259 @@ export function normalizeRelativeMockPath(path: string): string {
 	return normalizeAbsolutePath(path);
 }
 
-export function joinMockPaths(basePath: string | null | undefined, mockPath: string): string {
+export function joinMockPaths(
+	basePath: string | null | undefined,
+	mockPath: string,
+): string {
 	const normalizedBase = normalizeAbsolutePath(basePath || '/');
 	const normalizedMock = normalizeRelativeMockPath(mockPath);
 	if (normalizedBase === '/') return normalizedMock;
 	if (normalizedMock === '/') return normalizedBase;
 	return normalizeAbsolutePath(`${normalizedBase}/${normalizedMock.slice(1)}`);
+}
+
+export function stripMockPathPrefix(
+	path: string,
+	prefix: string | null | undefined,
+): string {
+	const normalizedPath = normalizeAbsolutePath(path);
+	const normalizedPrefix = normalizeAbsolutePath(prefix || '/');
+	if (normalizedPrefix === '/') return normalizedPath;
+	if (normalizedPath === normalizedPrefix) return '/';
+	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) return normalizedPath;
+	return normalizeAbsolutePath(normalizedPath.slice(normalizedPrefix.length));
+}
+
+export function getMockFolderRelativePath(
+	path: string,
+	mockFolderMainPath: string | null | undefined,
+	folderSlug?: string | null,
+): string {
+	const normalizedPath = normalizeAbsolutePath(path);
+	const normalizedMockFolderPath = normalizeAbsolutePath(
+		mockFolderMainPath || '/',
+	);
+	const withoutPublicMockPrefix = folderSlug
+		? stripMockPathPrefix(normalizedPath, buildMockApiBasePath(folderSlug))
+		: normalizedPath;
+	let withoutFolderSlug = withoutPublicMockPrefix;
+
+	if (folderSlug && normalizedMockFolderPath !== '/') {
+		const candidatePath = stripMockPathPrefix(
+			withoutPublicMockPrefix,
+			formatStoredFolderPath(folderSlug),
+		);
+		const candidateIncludesMockFolder =
+			candidatePath === normalizedMockFolderPath ||
+			candidatePath.startsWith(`${normalizedMockFolderPath}/`);
+		if (candidateIncludesMockFolder) {
+			withoutFolderSlug = candidatePath;
+		}
+	}
+
+	return stripMockPathPrefix(withoutFolderSlug, normalizedMockFolderPath);
+}
+
+export function getServedMockPath(
+	mockFolderMainPath: string | null | undefined,
+	mockPath: string,
+	folderSlug?: string | null,
+): string {
+	return joinMockPaths(
+		mockFolderMainPath,
+		getMockFolderRelativePath(mockPath, mockFolderMainPath, folderSlug),
+	);
+}
+
+function getPathnameFromInput(value: string): string {
+	const trimmed = value.trim();
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+		try {
+			return new URL(trimmed).pathname;
+		} catch {
+			return trimmed;
+		}
+	}
+	return trimmed;
+}
+
+export function normalizeSubfolderSlugInput(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+): string {
+	return (
+		getSubfolderPathSegments(value, parentMainPath, folderSlug).at(-1) ?? ''
+	);
+}
+
+export function getSubfolderPathSegments(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+): string[] {
+	const pathname = getPathnameFromInput(value);
+	const normalizedParent = normalizeAbsolutePath(parentMainPath || '/');
+	const absolutePath = normalizeAbsolutePath(pathname);
+	const pathLikeInput = pathname.includes('/');
+
+	if (!pathLikeInput) {
+		const segment = generateSlug(pathname);
+		return segment ? [segment] : [];
+	}
+
+	const withoutPublicMockPrefix = folderSlug
+		? stripMockPathPrefix(absolutePath, buildMockApiBasePath(folderSlug))
+		: absolutePath;
+	const withoutFolderSlug = folderSlug
+		? stripMockPathPrefix(withoutPublicMockPrefix, formatStoredFolderPath(folderSlug))
+		: withoutPublicMockPrefix;
+	const withoutParent = stripMockPathPrefix(withoutFolderSlug, normalizedParent);
+
+	return withoutParent
+		.split('/')
+		.filter(Boolean)
+		.map((segment) => generateSlug(segment))
+		.filter(Boolean);
+}
+
+export function getSubfolderParentMainPath(
+	mainPath: string | null | undefined,
+	slug: string,
+): string {
+	const normalizedMainPath = normalizeAbsolutePath(mainPath || '/');
+	const normalizedSlug = generateSlug(slug);
+	if (!normalizedSlug || normalizedMainPath === '/') return '/';
+
+	const suffix = `/${normalizedSlug}`;
+	if (normalizedMainPath === suffix) return '/';
+	if (!normalizedMainPath.endsWith(suffix)) return '/';
+
+	const parentPath = normalizedMainPath.slice(0, -suffix.length);
+	return normalizeAbsolutePath(parentPath || '/');
+}
+
+export function getCanonicalSubfolderPathInput(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+	fallbackSlug?: string,
+): string {
+	const pathname = getPathnameFromInput(value);
+	const normalizedParent = normalizeAbsolutePath(parentMainPath || '/');
+	const pathLikeInput = pathname.includes('/');
+
+		if (pathLikeInput && normalizedParent === '/') {
+			const absolutePath = normalizeAbsolutePath(pathname);
+			const withoutPublicMockPrefix = folderSlug
+				? stripMockPathPrefix(absolutePath, buildMockApiBasePath(folderSlug))
+				: absolutePath;
+			const withoutFolderSlug = folderSlug
+				? stripMockPathPrefix(
+						withoutPublicMockPrefix,
+						formatStoredFolderPath(folderSlug),
+					)
+				: withoutPublicMockPrefix;
+		if (withoutFolderSlug !== '/') {
+			return withoutFolderSlug;
+		}
+	}
+
+	const slug = normalizeSubfolderSlugInput(value, parentMainPath, folderSlug);
+	if (!slug) {
+		return fallbackSlug
+			? joinMockPaths(parentMainPath ?? '/', `/${fallbackSlug}`)
+			: '';
+	}
+
+	return joinMockPaths(parentMainPath ?? '/', `/${slug}`);
+}
+
+export interface ResolvedSubfolderPathInput {
+	displayPath: string;
+	previewPath: string;
+	slug: string;
+}
+
+export function resolveSubfolderPathInput(
+	value: string,
+	parentMainPath: string | null | undefined,
+	folderSlug?: string | null,
+	fallbackSlug?: string,
+): ResolvedSubfolderPathInput {
+	const slug = normalizeSubfolderSlugInput(value, parentMainPath, folderSlug);
+	const displayPath = getCanonicalSubfolderPathInput(
+		value,
+		parentMainPath,
+		folderSlug,
+		fallbackSlug,
+	);
+	const previewPath =
+		displayPath ||
+		(fallbackSlug
+			? joinMockPaths(parentMainPath ?? '/', `/${fallbackSlug}`)
+			: '/');
+
+	return {
+		displayPath,
+		previewPath: normalizeAbsolutePath(previewPath),
+		slug,
+	};
+}
+
+export interface SplitPathSearchParamsResult {
+	path: string;
+	queryParams: Record<string, string>;
+}
+
+function normalizePathPart(path: string): string {
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) return path;
+	return normalizeAbsolutePath(path);
+}
+
+export function splitPathSearchParams(
+	path: string,
+): SplitPathSearchParamsResult {
+	const trimmed = path.trim();
+	const queryStart = trimmed.indexOf('?');
+	if (queryStart === -1) {
+		return { path: normalizePathPart(trimmed), queryParams: {} };
+	}
+
+	const pathPart = trimmed.slice(0, queryStart);
+	const searchWithHash = trimmed.slice(queryStart + 1);
+	const hashStart = searchWithHash.indexOf('#');
+	const search =
+		hashStart === -1 ? searchWithHash : searchWithHash.slice(0, hashStart);
+
+	return {
+		path: normalizePathPart(pathPart),
+		queryParams: Object.fromEntries(new URLSearchParams(search).entries()),
+	};
+}
+
+export function hasSearchParamsInEndpointPath(path: string): boolean {
+	return path.trim().includes('?');
+}
+
+export function hasConfiguredQueryParams(
+	queryParams: Record<string, string> | null | undefined,
+): boolean {
+	if (!queryParams) return false;
+	return Object.keys(queryParams).some((key) => key.trim().length > 0);
+}
+
+export function validateEndpointPathSearchParams(
+	path: string,
+	queryParams?: Record<string, string> | null,
+): { valid: true } | { valid: false; error: string } {
+	if (!hasSearchParamsInEndpointPath(path)) return { valid: true };
+
+	const error = hasConfiguredQueryParams(queryParams)
+		? 'Endpoint path cannot include search params when queryParams are configured. Remove the ?... portion from the path and keep those values in queryParams.'
+		: 'Endpoint path cannot include search params. Remove the ?... portion from the path and configure query params separately when matching query strings.';
+
+	return { valid: false, error };
 }
 
 export function generateSlug(value: string): string {

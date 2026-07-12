@@ -11,7 +11,9 @@ Mockzilla can be packaged as an installable Tauri desktop app for Windows, macOS
 
 ## Opening Mock URLs
 
-Mock list actions that open a served mock URL use the Tauri opener plugin in desktop builds. This sends the `http://127.0.0.1:<port>/api/mock/...` URL to the user's default browser because Tauri WebViews do not behave like a browser tab strip for `window.open(..., "_blank")`. Browser and Docker runs keep using the normal new-window behavior.
+Mock list URL actions use one shared opening behavior: desktop builds call the statically bundled Tauri opener plugin, while web and Docker builds use `window.open`. The static import ensures the opener client is included in the staged desktop bundle. This sends the `http://127.0.0.1:<port>/api/mock/...` URL to the user's default browser in desktop builds and to a new browser tab otherwise.
+
+Because the desktop WebView loads the Next.js UI from `http://127.0.0.1:<port>`, Tauri treats it as remote content. The `default` desktop capability explicitly grants opener access to `http://127.0.0.1:*/*`; no non-loopback origin receives native IPC access. The port wildcard is required because startup selects the first available port beginning at `36666`. If the native opener rejects a request, the mock card reports the error and leaves the URL available to copy manually.
 
 ## Build Paths
 

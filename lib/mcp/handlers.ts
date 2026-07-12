@@ -32,7 +32,17 @@ import {
 	findBestMatch,
 	selectVariant,
 } from '@/lib/utils/mock-matcher';
-import { joinMockPaths } from '@/lib/utils/mock-paths';
+import {
+	joinMockPaths,
+	normalizeSubfolderSlugInput,
+	splitPathSearchParams,
+	validateEndpointPathSearchParams,
+} from '@/lib/utils/mock-paths';
+import {
+	formatStoredFolderPath,
+	getFolderLookupCandidates,
+	normalizeFolderPath,
+} from '@/lib/utils/folder-paths';
 import type {
 	ListFoldersArgs,
 	CreateFolderArgs,
@@ -113,7 +123,7 @@ export async function callListFolders(args: ListFoldersArgs) {
 	const data = rows.map((folder) => ({
 		id: folder.id,
 		name: folder.name,
-		slug: folder.slug,
+		slug: formatStoredFolderPath(folder.slug),
 		description: folder.description || null,
 		meta: folder.meta || {},
 		createdAt: folder.createdAt.toISOString(),
@@ -124,7 +134,7 @@ export async function callListFolders(args: ListFoldersArgs) {
 
 export async function callCreateFolder(args: CreateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_folder');
-	const slug = generateSlug(args.name);
+	const slug = normalizeFolderPath(args.slug ?? args.name);
 	const [row] = await db
 		.insert(folders)
 		.values({
@@ -136,7 +146,7 @@ export async function callCreateFolder(args: CreateFolderArgs) {
 	return {
 		id: row.id,
 		name: row.name,
-		slug: row.slug,
+		slug: formatStoredFolderPath(row.slug),
 		description: row.description ?? null,
 		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
@@ -150,13 +160,35 @@ export async function callGetFolder(args: GetFolderArgs) {
 	if (args.id) {
 		[row] = await db.select().from(folders).where(eq(folders.id, args.id));
 	} else if (args.slug) {
-		[row] = await db.select().from(folders).where(eq(folders.slug, args.slug));
+		const rows = await db
+			.select()
+			.from(folders)
+			.where(eq(folders.slug, args.slug))
+			.then((direct) => direct);
+		row =
+			rows.find(
+				(folder) =>
+					formatStoredFolderPath(folder.slug) === formatStoredFolderPath(args.slug || ''),
+			) ?? null;
+		if (!row) {
+			const candidates = getFolderLookupCandidates(args.slug);
+			const candidateRows = await db
+				.select()
+				.from(folders)
+				.where(inArray(folders.slug, candidates));
+			row =
+				candidateRows.find(
+					(folder) =>
+						formatStoredFolderPath(folder.slug) ===
+						formatStoredFolderPath(args.slug || ''),
+				) ?? null;
+		}
 	}
 	if (!row) return null;
 	return {
 		id: row.id,
 		name: row.name,
-		slug: row.slug,
+		slug: formatStoredFolderPath(row.slug),
 		description: row.description || null,
 		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
@@ -166,7 +198,7 @@ export async function callGetFolder(args: GetFolderArgs) {
 
 export async function callUpdateFolder(args: UpdateFolderArgs) {
 	logger.info({ args }, 'MCP Tool: update_folder');
-	const slug = generateSlug(args.name);
+	const slug = normalizeFolderPath(args.slug ?? args.name);
 	const [row] = await db
 		.update(folders)
 		.set({
@@ -181,7 +213,7 @@ export async function callUpdateFolder(args: UpdateFolderArgs) {
 	return {
 		id: row.id,
 		name: row.name,
-		slug: row.slug,
+		slug: formatStoredFolderPath(row.slug),
 		description: row.description || null,
 		meta: row.meta || {},
 		createdAt: row.createdAt.toISOString(),
@@ -215,13 +247,16 @@ export async function callManageFolders(args: ManageFoldersArgs) {
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
 
 function formatMockSubfolder(row: MockSubfolderRow, canonicalMainPath?: string) {
+	const path = canonicalMainPath ?? row.mainPath;
 	return {
 		id: row.id,
 		folderId: row.folderId,
 		parentId: row.parentId,
 		name: row.name,
+		segment: row.slug,
 		slug: row.slug,
-		mainPath: canonicalMainPath ?? row.mainPath,
+		path,
+		mainPath: path,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() ?? null,
 	};
@@ -298,10 +333,6 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock_subfolder');
 	const folderId = await resolveFolderIdForSubfolders(args);
 	const parentId = args.parentId ?? null;
-	const slug = generateSlug(args.slug ?? args.name);
-	if (!slug) {
-		throw new Error('Subfolder slug is invalid');
-	}
 
 	const folderSubfolders = await db
 		.select()
@@ -314,12 +345,20 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 	if (parentId && !parent) {
 		throw new Error('Parent subfolder not found');
 	}
-	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, parentId, slug)) {
-		throw new Error('A subfolder with this slug already exists here');
-	}
 	const parentMainPath = parent
 		? canonicalPaths.get(parent.id) ?? parent.mainPath
 		: null;
+	const slug = normalizeSubfolderSlugInput(
+		args.path ?? args.slug ?? args.name,
+		parentMainPath,
+		args.folderSlug,
+	);
+	if (!slug) {
+		throw new Error('Subfolder slug is invalid');
+	}
+	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, parentId, slug)) {
+		throw new Error('A subfolder with this slug already exists here');
+	}
 
 	const [row] = await db
 		.insert(mockSubfolders)
@@ -363,11 +402,6 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 	const nextParentId =
 		args.parentId === undefined ? existing.parentId : args.parentId;
 	const nextName = args.name?.trim() ?? existing.name;
-	const nextSlug =
-		args.slug === undefined ? existing.slug : generateSlug(args.slug);
-	if (!nextSlug) {
-		throw new Error('Subfolder slug is invalid');
-	}
 	if (nextParentId === args.id) {
 		throw new Error('Subfolder cannot be its own parent');
 	}
@@ -388,6 +422,17 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 		: null;
 	if (nextParentId && !parent) {
 		throw new Error('Parent subfolder not found');
+	}
+	const nextSlug =
+		args.path === undefined && args.slug === undefined
+			? existing.slug
+			: normalizeSubfolderSlugInput(
+					args.path ?? args.slug ?? existing.slug,
+					parent?.mainPath,
+					null,
+				);
+	if (!nextSlug) {
+		throw new Error('Subfolder slug is invalid');
 	}
 	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, args.id)) {
 		throw new Error('A subfolder with this slug already exists here');
@@ -484,6 +529,14 @@ export async function callManageMockSubfolders(args: ManageMockSubfoldersArgs) {
 // MOCK HANDLERS
 export async function callCreateMock(args: CreateMockArgs) {
 	logger.info({ args }, 'MCP Tool: create_mock');
+	const pathValidation = validateEndpointPathSearchParams(
+		args.path,
+		args.queryParams,
+	);
+	if (!pathValidation.valid) {
+		throw new Error(pathValidation.error);
+	}
+
 	const folderSlug = args.folderSlug ?? null;
 	const folderIdArg = args.folderId ?? null;
 	let targetFolderId: string | null = folderIdArg;
@@ -683,25 +736,54 @@ export async function callGetMock(args: GetMockArgs) {
 
 export async function callUpdateMock(args: UpdateMockArgs) {
 	logger.info({ args }, 'MCP Tool: update_mock');
+	const [existingMock] = await db
+		.select()
+		.from(mockResponses)
+		.where(eq(mockResponses.id, args.id))
+		.limit(1);
+	if (!existingMock) return null;
+
+	const nextPath = args.path ?? existingMock.endpoint;
+	const nextQueryParams =
+		args.queryParams === undefined
+			? (existingMock.queryParams as Record<string, string> | null)
+			: args.queryParams;
+	const pathValidation = validateEndpointPathSearchParams(
+		nextPath,
+		nextQueryParams,
+	);
+	if (!pathValidation.valid) {
+		throw new Error(pathValidation.error);
+	}
+
 	const [row] = await db
 		.update(mockResponses)
 		.set({
-			name: args.name,
-			endpoint: args.path,
-			method: args.method,
-			statusCode: args.statusCode,
-			response: args.response,
-			mockFolderId: args.mockFolderId ?? undefined,
-			matchType: args.matchType || 'exact',
-			bodyType: args.bodyType || 'json',
-			enabled: args.enabled ?? true,
-			queryParams: args.queryParams || null,
-			variants: args.variants || null,
-			wildcardRequireMatch: args.wildcardRequireMatch ?? false,
-			jsonSchema: args.jsonSchema ?? null,
-			useDynamicResponse: args.useDynamicResponse ?? false,
-			echoRequestBody: args.echoRequestBody ?? false,
-			delay: args.delay ?? 0,
+			name: args.name ?? existingMock.name,
+			endpoint: nextPath,
+			method: args.method ?? existingMock.method,
+			statusCode: args.statusCode ?? existingMock.statusCode,
+			response: args.response ?? existingMock.response,
+			mockFolderId:
+				args.mockFolderId === undefined
+					? existingMock.mockFolderId
+					: args.mockFolderId,
+			matchType: args.matchType ?? existingMock.matchType ?? 'exact',
+			bodyType: args.bodyType ?? existingMock.bodyType ?? 'json',
+			enabled: args.enabled ?? existingMock.enabled,
+			queryParams: nextQueryParams,
+			variants:
+				args.variants === undefined
+					? (existingMock.variants as MockVariant[] | null)
+					: args.variants,
+			wildcardRequireMatch:
+				args.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
+			jsonSchema:
+				args.jsonSchema === undefined ? existingMock.jsonSchema : args.jsonSchema,
+			useDynamicResponse:
+				args.useDynamicResponse ?? existingMock.useDynamicResponse,
+			echoRequestBody: args.echoRequestBody ?? existingMock.echoRequestBody,
+			delay: args.delay ?? existingMock.delay,
 			updatedAt: new Date(),
 		})
 		.where(eq(mockResponses.id, args.id))
@@ -785,6 +867,14 @@ export async function callCreateSchemaMock(args: {
 	delay?: number;
 }) {
 	logger.info({ args }, 'MCP Tool: create_schema_mock');
+	const pathValidation = validateEndpointPathSearchParams(
+		args.path,
+		args.queryParams,
+	);
+	if (!pathValidation.valid) {
+		throw new Error(pathValidation.error);
+	}
+
 	const folderSlug = args.folderSlug ?? null;
 	const folderIdArg = args.folderId ?? null;
 	let targetFolderId: string | null = folderIdArg;
@@ -862,9 +952,13 @@ export async function callCreateSchemaMock(args: {
 export async function callPreviewMock(args: PreviewMockArgs) {
 	logger.info({ args }, 'MCP Tool: preview_mock');
 	const folderSlug = args.folderSlug;
-	const mockPath = args.path.startsWith('/') ? args.path : `/${args.path}`;
+	const parsedPath = splitPathSearchParams(args.path);
+	const mockPath = parsedPath.path;
 	const method = args.method;
-	const urlQueryParams = args.queryParams || {};
+	const urlQueryParams = {
+		...parsedPath.queryParams,
+		...(args.queryParams || {}),
+	};
 
 	const [folder] = await db
 		.select()

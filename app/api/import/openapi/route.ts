@@ -6,6 +6,7 @@ import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { generateFromSchema } from '@/lib/schema-generator';
 import type { HttpMethod, MatchType } from '@/lib/types';
 import { deriveSubfolderMainPath } from '@/lib/mock-subfolders';
+import { normalizeFolderPath } from '@/lib/utils/folder-paths';
 
 /**
  * Basic OpenAPI types for dereferenced spec
@@ -463,7 +464,7 @@ export async function POST(request: NextRequest) {
 
 		const info = dereferencedSpec.info || {};
 		const folderName = info.title || 'Imported OpenAPI';
-		const folderSlug = generateSlug(folderName);
+		const folderSlug = normalizeFolderPath(folderName);
 		const folderDescription =
 			info.description || `Imported from OpenAPI spec: ${folderName}`;
 

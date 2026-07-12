@@ -4,7 +4,10 @@ import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
 import type { CreateMockRequest, UpdateMockRequest } from '@/lib/types';
-import { joinMockPaths } from '@/lib/utils/mock-paths';
+import {
+	joinMockPaths,
+	validateEndpointPathSearchParams,
+} from '@/lib/utils/mock-paths';
 
 type MockResponseRow = typeof mockResponses.$inferSelect;
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
@@ -16,7 +19,10 @@ function formatMock(
 	const subfolder = mock.mockFolderId
 		? subfoldersById.get(mock.mockFolderId)
 		: undefined;
-	const effectivePath = joinMockPaths(subfolder?.mainPath ?? '/', mock.endpoint);
+	const effectivePath = joinMockPaths(
+		subfolder?.mainPath ?? '/',
+		mock.endpoint,
+	);
 	return {
 		id: mock.id,
 		name: mock.name,
@@ -132,37 +138,59 @@ export async function GET(request: NextRequest) {
 				ilike(mockResponses.endpoint, `%${q}%`),
 			);
 			const whereClause = mockFolderClause
-				? and(eq(mockResponses.folderId, folderId), mockFolderClause, searchClause)
+				? and(
+						eq(mockResponses.folderId, folderId),
+						mockFolderClause,
+						searchClause,
+					)
 				: and(eq(mockResponses.folderId, folderId), searchClause);
-			finalMocksQuery = finalMocksQuery.where(whereClause) as typeof finalMocksQuery;
-			finalCountQuery = finalCountQuery.where(whereClause) as typeof finalCountQuery;
+			finalMocksQuery = finalMocksQuery.where(
+				whereClause,
+			) as typeof finalMocksQuery;
+			finalCountQuery = finalCountQuery.where(
+				whereClause,
+			) as typeof finalCountQuery;
 		} else if (folderId) {
 			const whereClause = mockFolderClause
 				? and(eq(mockResponses.folderId, folderId), mockFolderClause)
 				: eq(mockResponses.folderId, folderId);
-			finalMocksQuery = finalMocksQuery.where(whereClause) as typeof finalMocksQuery;
-			finalCountQuery = finalCountQuery.where(whereClause) as typeof finalCountQuery;
+			finalMocksQuery = finalMocksQuery.where(
+				whereClause,
+			) as typeof finalMocksQuery;
+			finalCountQuery = finalCountQuery.where(
+				whereClause,
+			) as typeof finalCountQuery;
 		} else if (q) {
 			const whereClause = or(
 				ilike(mockResponses.name, `%${q}%`),
 				ilike(mockResponses.endpoint, `%${q}%`),
 			);
-			finalMocksQuery = finalMocksQuery.where(whereClause) as typeof finalMocksQuery;
-			finalCountQuery = finalCountQuery.where(whereClause) as typeof finalCountQuery;
+			finalMocksQuery = finalMocksQuery.where(
+				whereClause,
+			) as typeof finalMocksQuery;
+			finalCountQuery = finalCountQuery.where(
+				whereClause,
+			) as typeof finalCountQuery;
 		}
 
 		const [totalResult] = await finalCountQuery;
 		total = Number(totalResult.count);
 
 		mocks = await finalMocksQuery
-			.orderBy(desc(sql`COALESCE(${mockResponses.updatedAt}, ${mockResponses.createdAt})`))
+			.orderBy(
+				desc(
+					sql`COALESCE(${mockResponses.updatedAt}, ${mockResponses.createdAt})`,
+				),
+			)
 			.limit(limit)
 			.offset(offset);
 
 		const totalPages = Math.ceil(total / limit);
 
 		const subfoldersById = await getSubfoldersByIdForMocks(mocks);
-		const formattedMocks = mocks.map((mock) => formatMock(mock, subfoldersById));
+		const formattedMocks = mocks.map((mock) =>
+			formatMock(mock, subfoldersById),
+		);
 
 		return NextResponse.json({
 			data: formattedMocks,
@@ -190,6 +218,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body: CreateMockRequest = await request.json();
+		const pathValidation = validateEndpointPathSearchParams(
+			body.path,
+			body.queryParams,
+		);
+		if (!pathValidation.valid) {
+			return NextResponse.json(
+				{ error: pathValidation.error },
+				{ status: 400 },
+			);
+		}
+
 		const ownershipError = await validateMockFolderOwnership(
 			body.folderId,
 			body.mockFolderId,
@@ -221,7 +260,9 @@ export async function POST(request: NextRequest) {
 			.returning();
 
 		const subfoldersById = await getSubfoldersByIdForMocks([newMock]);
-		return NextResponse.json(formatMock(newMock, subfoldersById), { status: 201 });
+		return NextResponse.json(formatMock(newMock, subfoldersById), {
+			status: 201,
+		});
 	} catch (error: unknown) {
 		console.error(
 			'[API] Error creating mock:',
@@ -257,32 +298,58 @@ export async function PUT(request: NextRequest) {
 			return NextResponse.json({ error: 'Mock not found' }, { status: 404 });
 		}
 
+		const nextMockFolderId = Object.hasOwn(body, 'mockFolderId')
+			? (body.mockFolderId ?? null)
+			: existingMock.mockFolderId;
+		const nextPath = body.path ?? existingMock.endpoint;
+		const nextQueryParams = Object.hasOwn(body, 'queryParams')
+			? body.queryParams
+			: (existingMock.queryParams as Record<string, string> | null);
+		const pathValidation = validateEndpointPathSearchParams(
+			nextPath,
+			nextQueryParams,
+		);
+		if (!pathValidation.valid) {
+			return NextResponse.json(
+				{ error: pathValidation.error },
+				{ status: 400 },
+			);
+		}
+
 		const ownershipError = await validateMockFolderOwnership(
 			existingMock.folderId,
-			body.mockFolderId,
+			nextMockFolderId,
 		);
 		if (ownershipError) return ownershipError;
 
 		const [updatedMock] = await db
 			.update(mockResponses)
 			.set({
-				name: body.name,
-				endpoint: body.path,
-				method: body.method,
-				statusCode: body.statusCode,
-				response: body.response,
-				mockFolderId: body.mockFolderId || null,
-				matchType: body.matchType || 'exact',
-				queryParams: body.queryParams,
-				variants: body.variants,
-				wildcardRequireMatch: body.wildcardRequireMatch,
-				jsonSchema: body.jsonSchema,
-				useDynamicResponse: body.useDynamicResponse,
-				echoRequestBody: body.echoRequestBody,
-				delay: body.delay ?? 0,
-				meta: body.meta,
-				bodyType: body.bodyType || 'json',
-				enabled: body.enabled ?? true,
+				name: body.name ?? existingMock.name,
+				endpoint: nextPath,
+				method: body.method ?? existingMock.method,
+				statusCode: body.statusCode ?? existingMock.statusCode,
+				response: body.response ?? existingMock.response,
+				mockFolderId: nextMockFolderId,
+				matchType: body.matchType ?? existingMock.matchType ?? 'exact',
+				queryParams: Object.hasOwn(body, 'queryParams')
+					? nextQueryParams
+					: existingMock.queryParams,
+				variants: Object.hasOwn(body, 'variants')
+					? body.variants
+					: existingMock.variants,
+				wildcardRequireMatch:
+					body.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
+				jsonSchema: Object.hasOwn(body, 'jsonSchema')
+					? body.jsonSchema
+					: existingMock.jsonSchema,
+				useDynamicResponse:
+					body.useDynamicResponse ?? existingMock.useDynamicResponse,
+				echoRequestBody: body.echoRequestBody ?? existingMock.echoRequestBody,
+				delay: body.delay ?? existingMock.delay,
+				meta: Object.hasOwn(body, 'meta') ? body.meta : existingMock.meta,
+				bodyType: body.bodyType ?? existingMock.bodyType ?? 'json',
+				enabled: body.enabled ?? existingMock.enabled,
 				updatedAt: new Date(),
 			})
 			.where(eq(mockResponses.id, id))

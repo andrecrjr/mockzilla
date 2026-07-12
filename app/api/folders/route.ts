@@ -1,49 +1,52 @@
-import { desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders } from '@/lib/db/schema';
 import type { CreateFolderRequest, UpdateFolderRequest } from '@/lib/types';
+import {
+	formatStoredFolderPath,
+	getFolderLookupCandidates,
+	hasFolderPathConflict,
+	normalizeFolderPath,
+	validateFolderPath,
+} from '@/lib/utils/folder-paths';
 
-function generateSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
+function formatFolderResponse(folder: typeof folders.$inferSelect) {
+	const path = formatStoredFolderPath(folder.slug);
+	const isExtension = Boolean(
+		(folder.meta as Record<string, unknown>)?.extensionSyncData,
+	);
+	return {
+		id: folder.id,
+		name: folder.name,
+		slug: path,
+		description: folder.description || undefined,
+		isExtension,
+		meta: (folder.meta as Record<string, unknown>) || undefined,
+		createdAt: folder.createdAt.toISOString(),
+		updatedAt: folder.updatedAt?.toISOString(),
+	};
 }
 
-function validateSlug(slug: string): { valid: boolean; error?: string } {
-	if (!slug || slug.length === 0) {
-		return { valid: false, error: 'Slug cannot be empty' };
-	}
-	if (slug.length > 100) {
-		return { valid: false, error: 'Slug must be 100 characters or less' };
-	}
-	if (!/^[a-z0-9-]+$/.test(slug)) {
-		return {
-			valid: false,
-			error: 'Slug can only contain lowercase letters, numbers, and hyphens',
-		};
-	}
-	if (slug.startsWith('-') || slug.endsWith('-')) {
-		return { valid: false, error: 'Slug cannot start or end with a hyphen' };
-	}
-	return { valid: true };
+async function findFolderByPath(path: string) {
+	const candidates = getFolderLookupCandidates(path);
+	const rows = await db.select().from(folders).where(inArray(folders.slug, candidates));
+	return (
+		rows.find((row) => formatStoredFolderPath(row.slug) === formatStoredFolderPath(path)) ??
+		null
+	);
 }
 
-async function isSlugUnique(
-	slug: string,
-	excludeId?: string,
-): Promise<boolean> {
-	const query = db.select().from(folders).where(eq(folders.slug, slug));
-	const existing = await query;
-	if (existing.length === 0) {
-		return true;
+async function validateUniqueFolderPath(nextPath: string, excludeId?: string) {
+	const rows = await db.select().from(folders);
+	const existingPaths = rows
+		.filter((row) => row.id !== excludeId)
+		.map((row) => formatStoredFolderPath(row.slug));
+
+	if (hasFolderPathConflict(existingPaths, nextPath)) {
+		return false;
 	}
-	if (excludeId && existing[0]) {
-		return existing[0].id === excludeId;
-	}
-	return false;
+	return true;
 }
 
 export async function GET(request: NextRequest) {
@@ -53,13 +56,10 @@ export async function GET(request: NextRequest) {
 		const filterType = searchParams.get('type'); // 'extension' | 'standard' | undefined
 		const q = searchParams.get('q');
 
-		const slug = searchParams.get('slug');
+		const slug = searchParams.get('slug') ?? searchParams.get('path');
 
 		if (slug) {
-			const [folder] = await db
-				.select()
-				.from(folders)
-				.where(eq(folders.slug, slug));
+			const folder = await findFolderByPath(slug);
 
 			if (!folder) {
 				return NextResponse.json(
@@ -68,20 +68,7 @@ export async function GET(request: NextRequest) {
 				);
 			}
 
-			const isExtension = Boolean(
-				(folder.meta as Record<string, unknown>)?.extensionSyncData,
-			);
-
-			return NextResponse.json({
-				id: folder.id,
-				name: folder.name,
-				slug: folder.slug,
-				description: folder.description || undefined,
-				isExtension,
-				meta: (folder.meta as Record<string, unknown>) || undefined,
-				createdAt: folder.createdAt.toISOString(),
-				updatedAt: folder.updatedAt?.toISOString(),
-			});
+			return NextResponse.json(formatFolderResponse(folder));
 		}
 
 		if (all) {
@@ -97,20 +84,7 @@ export async function GET(request: NextRequest) {
 				desc(sql`COALESCE(${folders.updatedAt}, ${folders.createdAt})`),
 			);
 
-			const mappedFolders = allFolders.map((folder) => {
-				const isExtension = Boolean(
-					(folder.meta as Record<string, unknown>)?.extensionSyncData,
-				);
-				return {
-					id: folder.id,
-					name: folder.name,
-					slug: folder.slug,
-					description: folder.description || undefined,
-					isExtension,
-					createdAt: folder.createdAt.toISOString(),
-					updatedAt: folder.updatedAt?.toISOString(),
-				};
-			});
+			const mappedFolders = allFolders.map(formatFolderResponse);
 
 			// Filter if type param is present
 			const filteredFolders = mappedFolders.filter((f) => {
@@ -152,21 +126,7 @@ export async function GET(request: NextRequest) {
 		const totalPages = Math.ceil(total / limit);
 
 		// Map database fields to API format
-		const formattedFolders = paginatedFolders.map((folder) => {
-			const isExtension = Boolean(
-				(folder.meta as Record<string, unknown>)?.extensionSyncData,
-			);
-			return {
-				id: folder.id,
-				name: folder.name,
-				slug: folder.slug,
-				description: folder.description || undefined,
-				isExtension,
-				meta: (folder.meta as Record<string, unknown>) || undefined,
-				createdAt: folder.createdAt.toISOString(),
-				updatedAt: folder.updatedAt?.toISOString(),
-			};
-		});
+		const formattedFolders = paginatedFolders.map(formatFolderResponse);
 
 		// Apply filter if requested
 		const finalFolders = formattedFolders.filter((f) => {
@@ -199,20 +159,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body: CreateFolderRequest = await request.json();
+		if (body.slug && /[?#\s]/.test(body.slug)) {
+			return NextResponse.json(
+				{ error: 'Folder path cannot contain spaces, "?", or "#"' },
+				{ status: 400 },
+			);
+		}
 
-		// Use custom slug if provided, otherwise generate from name
-		let slug = body.slug ? generateSlug(body.slug) : generateSlug(body.name);
+		const slug = normalizeFolderPath(body.slug ?? body.name);
 
-		// Validate slug
-		const validation = validateSlug(slug);
+		const validation = validateFolderPath(slug);
 		if (!validation.valid) {
 			return NextResponse.json({ error: validation.error }, { status: 400 });
 		}
 
-		// Check slug uniqueness
-		if (!(await isSlugUnique(slug))) {
+		if (!(await validateUniqueFolderPath(slug))) {
 			return NextResponse.json(
-				{ error: 'A folder with this slug already exists' },
+				{ error: 'A folder with this path already exists or overlaps another folder path' },
 				{ status: 409 },
 			);
 		}
@@ -226,17 +189,7 @@ export async function POST(request: NextRequest) {
 			})
 			.returning();
 
-		return NextResponse.json(
-			{
-				id: newFolder.id,
-				name: newFolder.name,
-				slug: newFolder.slug,
-				description: newFolder.description || undefined,
-				createdAt: newFolder.createdAt.toISOString(),
-				updatedAt: newFolder.updatedAt?.toISOString(),
-			},
-			{ status: 201 },
-		);
+		return NextResponse.json(formatFolderResponse(newFolder), { status: 201 });
 	} catch (error: unknown) {
 		console.error(
 			'[API] Error creating folder:',
@@ -278,31 +231,51 @@ export async function PUT(request: NextRequest) {
 		// Otherwise, only regenerate slug if name changed
 		let slug: string;
 		if (body.slug !== undefined) {
-			slug = generateSlug(body.slug);
+			if (/[?#\s]/.test(body.slug)) {
+				return NextResponse.json(
+					{ error: 'Folder path cannot contain spaces, "?", or "#"' },
+					{ status: 400 },
+				);
+			}
+			slug = normalizeFolderPath(body.slug);
 
-			// Validate custom slug
-			const validation = validateSlug(slug);
+			const validation = validateFolderPath(slug);
 			if (!validation.valid) {
 				return NextResponse.json({ error: validation.error }, { status: 400 });
 			}
 
-			// Check uniqueness (excluding current folder)
-			if (!(await isSlugUnique(slug, id))) {
+			if (!(await validateUniqueFolderPath(slug, id))) {
 				return NextResponse.json(
-					{ error: 'A folder with this slug already exists' },
+					{ error: 'A folder with this path already exists or overlaps another folder path' },
 					{ status: 409 },
 				);
 			}
 		} else {
-			// Auto-generate slug only if name changed
 			const nameChanged = body.name !== existingFolder.name;
-			slug = nameChanged ? generateSlug(body.name) : existingFolder.slug;
+			slug = nameChanged
+				? normalizeFolderPath(body.name)
+				: formatStoredFolderPath(existingFolder.slug);
+			if (nameChanged) {
+				const validation = validateFolderPath(slug);
+				if (!validation.valid) {
+					return NextResponse.json({ error: validation.error }, { status: 400 });
+				}
+				if (!(await validateUniqueFolderPath(slug, id))) {
+					return NextResponse.json(
+						{
+							error:
+								'A folder with this path already exists or overlaps another folder path',
+						},
+						{ status: 409 },
+					);
+				}
+			}
 		}
 
 		const [updatedFolder] = await db
 			.update(folders)
 			.set({
-				name: body.name,
+				name: body.name ?? existingFolder.name,
 				slug,
 				description: body.description ?? existingFolder.description,
 				meta: body.meta !== undefined ? body.meta : existingFolder.meta,
@@ -315,15 +288,7 @@ export async function PUT(request: NextRequest) {
 			return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
 		}
 
-		return NextResponse.json({
-			id: updatedFolder.id,
-			name: updatedFolder.name,
-			slug: updatedFolder.slug,
-			description: updatedFolder.description || undefined,
-			meta: (updatedFolder.meta as Record<string, unknown>) || undefined,
-			createdAt: updatedFolder.createdAt.toISOString(),
-			updatedAt: updatedFolder.updatedAt?.toISOString(),
-		});
+		return NextResponse.json(formatFolderResponse(updatedFolder));
 	} catch (error: unknown) {
 		console.error(
 			'[API] Error updating folder:',

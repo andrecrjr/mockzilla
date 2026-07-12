@@ -11,15 +11,9 @@ import { EditFolderDialog } from '@/components/edit-folder-dialog';
 import { FolderDeleteButton } from '@/components/folder-delete-button';
 import { PaginationControls } from '@/components/pagination-controls';
 import { Card } from '@/components/ui/card';
+import { buildExtensionFolderHref } from '@/lib/utils/folder-paths';
 import type { Folder } from '@/lib/types';
-
-const fetcher = (url: string) =>
-	fetch(url)
-		.then((res) => res.json())
-		.catch((err) => {
-			console.log('[ExtensionList] Fetch error:', err);
-			return [];
-		});
+import { swrFetcher } from '@/lib/swr-fetcher';
 
 export function MockExtensionList() {
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
@@ -28,7 +22,7 @@ export function MockExtensionList() {
 	const { data, isLoading } = useSWR<{
 		data: Folder[];
 		meta: { total: number; page: number; limit: number; totalPages: number };
-	}>(`/api/folders?page=${page}&limit=${limit}&type=extension`, fetcher, {
+	}>(`/api/folders?page=${page}&limit=${limit}&type=extension`, swrFetcher, {
 		onError: (error) => {
 			console.log('[ExtensionList] SWR error:', error);
 			toast.error('Failed to load extension folders', {
@@ -51,7 +45,8 @@ export function MockExtensionList() {
 
 	const handleDeleteFolder = async (id: string) => {
 		try {
-			await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
+			const response = await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
+			if (!response.ok) throw new Error('Failed to delete folder');
 			toast.success('Folder Deleted', {
 				description:
 					'Folder and its synced mocks have been removed (only in server)',
@@ -131,7 +126,7 @@ export function MockExtensionList() {
 						<div className="p-6">
 							<div className="flex items-start justify-between">
 								<Link
-									href={`/app/extension-data/${folder.slug}`}
+									href={buildExtensionFolderHref(folder.slug)}
 									key={folder.id}
 								>
 									<div className="flex items-center gap-3 flex-1">
@@ -143,7 +138,7 @@ export function MockExtensionList() {
 												{folder.name}
 											</h3>
 											<p className="text-sm text-muted-foreground truncate">
-												/{folder.slug}
+												{folder.slug}
 											</p>
 											{(() => {
 												const meta = folder.meta as Record<string, unknown>;

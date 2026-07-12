@@ -17,14 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { Folder } from '@/lib/types';
-
-const fetcher = (url: string) =>
-	fetch(url)
-		.then((res) => res.json())
-		.catch((err) => {
-			console.log('[v0] Fetch error:', err);
-			return [];
-		});
+import { swrFetcher } from '@/lib/swr-fetcher';
+import { buildFolderHref } from '@/lib/utils/folder-paths';
 
 function MockzillaAdminContent() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,7 +40,7 @@ function MockzillaAdminContent() {
 		meta: { total: number; page: number; limit: number; totalPages: number };
 	}>(
 		`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
-		fetcher,
+		swrFetcher,
 		{
 			onError: (error) => {
 				console.log('[v0] SWR error:', error);
@@ -72,23 +66,47 @@ function MockzillaAdminContent() {
 	// Fetch all folders for QuickMockDialog
 	const { data: allFoldersData } = useSWR<Folder[]>(
 		'/api/folders?all=true',
-		fetcher,
+		swrFetcher,
 	);
 	const allFolders = allFoldersData || [];
 
-	const handleFolderSuccess = () => {
-		toast.success('Folder Created', {
-			description: 'Your folder has been created successfully',
-		});
+	const handleFolderSuccess = (createdFolder: Folder) => {
 		mutate(
 			`/api/folders?page=${page}&limit=${limit}&type=standard&q=${debouncedSearch}`,
+			(current) => {
+				if (!current) return current;
+				const matchesSearch =
+					!debouncedSearch ||
+					createdFolder.name
+						.toLowerCase()
+						.includes(debouncedSearch.toLowerCase()) ||
+					createdFolder.slug
+						.toLowerCase()
+						.includes(debouncedSearch.toLowerCase());
+				if (!matchesSearch) return current;
+				return {
+					...current,
+					data:
+						page === 1
+							? [createdFolder, ...current.data].slice(0, limit)
+							: current.data,
+					meta: { ...current.meta, total: current.meta.total + 1 },
+				};
+			},
+			{ revalidate: true },
 		);
-		mutate('/api/folders?all=true');
+		mutate(
+			'/api/folders?all=true',
+			(current: Folder[] | undefined) =>
+				current ? [createdFolder, ...current] : current,
+			{ revalidate: true },
+		);
 	};
 
 	const handleDeleteFolder = async (id: string) => {
 		try {
-			await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
+			const response = await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
+			if (!response.ok) throw new Error('Failed to delete folder');
 			toast.success('Folder Deleted', {
 				description: 'Folder and all its mocks have been removed',
 			});
@@ -311,7 +329,7 @@ function MockzillaAdminContent() {
 											<div className="p-6">
 												<div className="flex items-start justify-between">
 													<Link
-														href={`/app/folder/${folder.slug}`}
+														href={buildFolderHref(folder.slug)}
 														className="w-full"
 													>
 														<div className="flex items-center gap-3 flex-1">
@@ -323,7 +341,7 @@ function MockzillaAdminContent() {
 																	{folder.name}
 																</h3>
 																<p className="text-sm text-muted-foreground">
-																	/{folder.slug}
+																	{folder.slug}
 																</p>
 																{folder.description && (
 																	<p className="text-sm text-muted-foreground mt-1 line-clamp-2">

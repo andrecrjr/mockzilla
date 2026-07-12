@@ -16,7 +16,8 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from '@/components/ui/dialog';
-import type { CreateMockRequest, Folder, MockSubfolder } from '@/lib/types';
+import type { CreateMockRequest, Folder, Mock, MockSubfolder } from '@/lib/types';
+import { buildFolderHref } from '@/lib/utils/folder-paths';
 
 interface CreateMockDialogProps {
 	folders: Folder[];
@@ -24,7 +25,7 @@ interface CreateMockDialogProps {
 	defaultFolderId?: string;
 	defaultMockFolderId?: string | null;
 	trigger?: React.ReactNode;
-	onSuccess?: () => void;
+	onSuccess?: (mock: Mock) => void;
 }
 
 export function CreateMockDialog({
@@ -91,18 +92,23 @@ export function CreateMockDialog({
 				const error = await response.json();
 				throw new Error(error.error);
 			}
+			const createdMock = (await response.json()) as Mock;
 			toast.success('Mock Created', {
 				description: 'Your mock endpoint has been created successfully',
 			});
 			if (onSuccess) {
-				onSuccess();
+				onSuccess(createdMock);
 			} else {
 				const selectedFolder = folders.find(
 					(f) => f.id === (values.folderId || defaultFolderId),
 				);
 				if (selectedFolder) {
-					mutate(`/api/mocks?folderId=${selectedFolder.id}`);
-					router.push(`/app/folder/${selectedFolder.slug}`);
+					mutate(
+						(key) =>
+							typeof key === 'string' &&
+							key.startsWith(`/api/mocks?folderId=${selectedFolder.id}`),
+						);
+					router.push(buildFolderHref(selectedFolder.slug));
 				}
 			}
 			setOpen(false);
