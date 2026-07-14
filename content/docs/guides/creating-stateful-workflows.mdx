@@ -83,25 +83,34 @@ Let's build a simple **Counter** API that increments a value every time it's cal
       <div className="flex gap-4">
         <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">1</div>
         <div>
-          <h4 className="font-bold">Create a Scenario</h4>
-          <p className="text-muted-foreground">Go to **Workflows** and create a new scenario named `Counter Demo`.</p>
+<div className="flex gap-4">
+  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">1</div>
+  <div>
+    <h4 className="font-bold">Create a Scenario</h4>
+    <div className="text-muted-foreground">Go to **Workflows** and create a new scenario named `Counter Demo`.</div>
+  </div>
+</div>
         </div>
       </div>
 
-      <div className="flex gap-4">
-        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">2</div>
-        <div>
-          <h4 className="font-bold">Initialize State</h4>
-          <p className="text-muted-foreground">Open the **State Inspector** and set a variable `count` to `0`.</p>
-        </div>
+<div className="flex gap-4">
+  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">2</div>
+  <div>
+    <h4 className="font-bold">Initialize State</h4>
+    <div className="text-muted-foreground">Open the **State Inspector** and set a variable `count` to `0`.</div>
+  </div>
+</div>
       </div>
 
       <div className="flex gap-4">
         <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">3</div>
         <div>
-          <h4 className="font-bold">Add the Increment Transition</h4>
-          <p className="text-muted-foreground">Create a new transition:</p>
-          <ul className="list-disc ml-6 mt-2 text-sm space-y-1">
+<div className="flex gap-4">
+  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">3</div>
+  <div>
+    <h4 className="font-bold">Add the Increment Transition</h4>
+    <div className="text-muted-foreground">Create a new transition:</div>
+    <ul className="list-disc ml-6 mt-2 text-sm space-y-1">
             <li>**Path**: `/increment`</li>
             <li>**Method**: `POST`</li>
             <li>**Effect**: `state.set` → `{"count": "{{math state.count "+" 1}}"}`</li>
@@ -124,9 +133,9 @@ Let's build a simple **Counter** API that increments a value every time it's cal
     <div className="mt-4 p-4 bg-muted rounded-lg font-mono text-sm border border-dashed">
       "Create a counter workflow scenario with a POST /increment endpoint that increments a state variable called count and returns the new value."
     </div>
-    <p className="mt-4 text-sm text-muted-foreground">
-      The AI will autonomously create the scenario, initialize the state, and configure the transition for you.
-    </p>
+<div className="text-sm text-muted-foreground">
+  The AI will autonomously create the scenario, initialize the state, and configure the transition for you.
+</div>
   </TabsContent>
 </Tabs>
 
@@ -149,10 +158,16 @@ While `state` is great for simple variables, `db` allows you to manage collectio
 }
 ```
 
-### Relational Lookups
-You can query your database directly in your responses or effects using predicates:
-- `{{db.users[id=1].name}}` -> Finds user with ID 1.
-- `{{db.cart.[0].id}}` -> Gets the ID of the first item in the cart.
+<div>
+  <h4>Relational Lookups</h4>
+  <div>
+    <div>You can query your database directly in your responses or effects using predicates:</div>
+    <ul className="list-disc ml-6 space-y-1">
+      <li><code>{{db.users[id=1].name}}</code> - Finds user with ID 1.</li>
+      <li><code>{{db.cart.[0].id}}</code> - Gets the ID of the first item in the cart.</li>
+    </ul>
+  </div>
+</div>
 
 ---
 
@@ -182,9 +197,9 @@ Once your transition is created, you can test it immediately:
 
 <div className="mt-12 p-8 bg-primary/5 rounded-3xl border border-primary/20 text-center">
   <h3 className="text-2xl font-bold mb-4">Ready for more?</h3>
-  <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-    Now that you know the basics, dive into one of our full-scale tutorials to see how these concepts build real-world systems.
-  </p>
+<div className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+  Now that you know the basics, dive into one of our full-scale tutorial to see how these concepts build real-world systems.
+</div>
   <div className="flex flex-wrap justify-center gap-4">
     <Link href="/docs/tutorials/stateful-authentication">
       <Button variant="default">Auth Tutorial</Button>
