@@ -623,7 +623,10 @@ export function MockEditor({
 								<p className="text-xs text-muted-foreground font-mono">
 									Preview:{' '}
 									<span className="text-foreground wrap-break-word">
-										{appendQueryParamsToUrl(previewUrl, buildQueryParamsString())}
+										{appendQueryParamsToUrl(
+											previewUrl,
+											buildQueryParamsString(),
+										)}
 									</span>
 								</p>
 							)}

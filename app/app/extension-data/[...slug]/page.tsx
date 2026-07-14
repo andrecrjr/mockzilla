@@ -32,7 +32,9 @@ interface ExtensionMock {
 export default function ExtensionFolderPage() {
 	const params = useParams();
 	const slug = formatStoredFolderPath(
-		Array.isArray(params.slug) ? params.slug.join('/') : (params.slug as string),
+		Array.isArray(params.slug)
+			? params.slug.join('/')
+			: (params.slug as string),
 	);
 
 	const { data, isLoading } = useSWR<{

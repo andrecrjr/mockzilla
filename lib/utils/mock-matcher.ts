@@ -55,7 +55,7 @@ export function queryParamsMatch(
 	if (!required || Object.keys(required).length === 0) return true;
 	for (const [key, value] of Object.entries(required)) {
 		// Compare as strings to handle numeric defaults in database
-		if (String(actual[key] ?? "") !== String(value ?? "")) return false;
+		if (String(actual[key] ?? '') !== String(value ?? '')) return false;
 	}
 	return true;
 }

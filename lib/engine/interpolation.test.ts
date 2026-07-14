@@ -45,20 +45,24 @@ describe('Engine Interpolation', () => {
 			...context,
 			input: {
 				...context.input,
-				params: { userId: '1' }
-			}
+				params: { userId: '1' },
+			},
 		};
 		// Should resolve input.params.userId to '1', then find user with id=1
-		expect(resolvePath('state.users[id=input.params.userId].name', dynamicContext)).toBe('Alice');
+		expect(
+			resolvePath('state.users[id=input.params.userId].name', dynamicContext),
+		).toBe('Alice');
 	});
 
 	test('resolvePath: dots inside brackets should not break splitting', () => {
 		const complexContext = {
 			tables: {
-				data: [{ 'key.with.dots': 'value' }]
-			}
+				data: [{ 'key.with.dots': 'value' }],
+			},
 		};
-		expect(resolvePath('tables.data[key.with.dots=value]', complexContext)).toBeDefined();
+		expect(
+			resolvePath('tables.data[key.with.dots=value]', complexContext),
+		).toBeDefined();
 	});
 
 	// Test alias logic handled in matches/resolveOp?
@@ -92,8 +96,8 @@ describe('Engine Interpolation', () => {
 			msg: 'Hello {{state.deep.nested.val}}',
 			list: ['{{input.body.tags[0]}}', 42],
 			nested: {
-				id: '{{input.body.complex.id}}'
-			}
+				id: '{{input.body.complex.id}}',
+			},
 		};
 		const resolved = interpolate(template, context) as Record<string, unknown>;
 		expect(resolved.msg).toBe('Hello ok');
@@ -119,11 +123,13 @@ describe('Engine Interpolation', () => {
 			...context,
 			faker: {
 				number: {
-					int: (args: Record<string, unknown>) => (args?.max as number) || 42
-				}
-			}
+					int: (args: Record<string, unknown>) => (args?.max as number) || 42,
+				},
+			},
 		};
-		expect(interpolate('{{faker.number.int({"max": 100})}}', fakerContext)).toBe(100);
+		expect(
+			interpolate('{{faker.number.int({"max": 100})}}', fakerContext),
+		).toBe(100);
 		expect(interpolate('{{faker.number.int}}', fakerContext)).toBeDefined();
 	});
 
@@ -131,8 +137,8 @@ describe('Engine Interpolation', () => {
 		const fakerContext = {
 			...context,
 			faker: {
-				echo: (arg: unknown) => arg
-			}
+				echo: (arg: unknown) => arg,
+			},
 		};
 		// JSON valid number
 		expect(interpolate('{{faker.echo(123)}}', fakerContext)).toBe(123);
@@ -140,7 +146,9 @@ describe('Engine Interpolation', () => {
 		expect(interpolate('{{faker.echo(01)}}', fakerContext)).toBe(1);
 		// String fallback (not JSON)
 		expect(interpolate('{{faker.echo(hello)}}', fakerContext)).toBe('hello');
-		expect(interpolate("{{faker.echo('quoted')}}", fakerContext)).toBe('quoted');
+		expect(interpolate("{{faker.echo('quoted')}}", fakerContext)).toBe(
+			'quoted',
+		);
 	});
 
 	test('interpolate: $. prefix normalization', () => {
@@ -148,21 +156,49 @@ describe('Engine Interpolation', () => {
 	});
 
 	test('interpolate: arithmetic edge cases', () => {
-		expect(interpolate('{{ state.count + NaN }}', context)).toBe('{{ state.count + NaN }}');
+		expect(interpolate('{{ state.count + NaN }}', context)).toBe(
+			'{{ state.count + NaN }}',
+		);
 	});
 
 	test('evaluateCondition: all types', () => {
 		const ctx = {
-			state: { age: 25, name: 'Alice', tags: ['dev', 'admin'] }
+			state: { age: 25, name: 'Alice', tags: ['dev', 'admin'] },
 		} as unknown as MatchContext;
 
-		expect(evaluateCondition({ type: 'neq', field: 'state.name', value: 'Bob' }, ctx)).toBe(true);
-		expect(evaluateCondition({ type: 'exists', field: 'state.age', value: '' }, ctx)).toBe(true);
-		expect(evaluateCondition({ type: 'exists', field: 'state.missing', value: '' }, ctx)).toBe(false);
-		expect(evaluateCondition({ type: 'gt', field: 'state.age', value: 20 }, ctx)).toBe(true);
-		expect(evaluateCondition({ type: 'lt', field: 'state.age', value: 30 }, ctx)).toBe(true);
-		expect(evaluateCondition({ type: 'contains', field: 'state.tags', value: 'dev' }, ctx)).toBe(true);
-		expect(evaluateCondition({ type: 'contains', field: 'state.name', value: 'Ali' }, ctx)).toBe(true);
+		expect(
+			evaluateCondition(
+				{ type: 'neq', field: 'state.name', value: 'Bob' },
+				ctx,
+			),
+		).toBe(true);
+		expect(
+			evaluateCondition({ type: 'exists', field: 'state.age', value: '' }, ctx),
+		).toBe(true);
+		expect(
+			evaluateCondition(
+				{ type: 'exists', field: 'state.missing', value: '' },
+				ctx,
+			),
+		).toBe(false);
+		expect(
+			evaluateCondition({ type: 'gt', field: 'state.age', value: 20 }, ctx),
+		).toBe(true);
+		expect(
+			evaluateCondition({ type: 'lt', field: 'state.age', value: 30 }, ctx),
+		).toBe(true);
+		expect(
+			evaluateCondition(
+				{ type: 'contains', field: 'state.tags', value: 'dev' },
+				ctx,
+			),
+		).toBe(true);
+		expect(
+			evaluateCondition(
+				{ type: 'contains', field: 'state.name', value: 'Ali' },
+				ctx,
+			),
+		).toBe(true);
 	});
 });
 

@@ -53,7 +53,9 @@ type MockListResponse = {
 function FolderContent() {
 	const params = useParams();
 	const slug = formatStoredFolderPath(
-		Array.isArray(params.slug) ? params.slug.join('/') : (params.slug as string),
+		Array.isArray(params.slug)
+			? params.slug.join('/')
+			: (params.slug as string),
 	);
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
 	const [limit, setLimit] = useQueryState(
@@ -635,13 +637,13 @@ function FolderContent() {
 
 						<Dialog
 							open={Boolean(editingSubfolder)}
-								onOpenChange={(open) => {
-									if (!open) {
-										setEditingSubfolder(null);
-										setEditSubfolderName('');
-										setEditSubfolderPath('');
-									}
-								}}
+							onOpenChange={(open) => {
+								if (!open) {
+									setEditingSubfolder(null);
+									setEditSubfolderName('');
+									setEditSubfolderPath('');
+								}
+							}}
 						>
 							<DialogContent>
 								<DialogHeader>

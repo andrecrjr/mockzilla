@@ -45,10 +45,11 @@ export default function ScenarioDetailPage() {
 		swrFetcher,
 	);
 
-	const { data: stateResponse, mutate: mutateState } = useSWR<WorkflowStateResponse>(
-		`/api/workflow/state/${scenarioId}`,
-		swrFetcher,
-	);
+	const { data: stateResponse, mutate: mutateState } =
+		useSWR<WorkflowStateResponse>(
+			`/api/workflow/state/${scenarioId}`,
+			swrFetcher,
+		);
 
 	const stateData: MatchContext = stateResponse?.data || {
 		state: {},

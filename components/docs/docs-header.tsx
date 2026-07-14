@@ -79,17 +79,20 @@ export function DocsHeader({ sidebar }: DocsHeaderProps) {
 							}
 
 							const href = `/docs/${item.slug === 'index' ? '' : item.slug}`;
-							const isActive = mounted && (pathname === href || (item.slug === 'index' && pathname === '/docs'));
+							const isActive =
+								mounted &&
+								(pathname === href ||
+									(item.slug === 'index' && pathname === '/docs'));
 
 							return (
 								<Link
 									key={item.slug}
 									href={href}
 									className={cn(
-										"block px-3 py-2 text-base font-medium rounded-md transition-colors",
+										'block px-3 py-2 text-base font-medium rounded-md transition-colors',
 										isActive
-											? "bg-primary/10 text-primary"
-											: "text-foreground/70 hover:text-foreground hover:bg-muted"
+											? 'bg-primary/10 text-primary'
+											: 'text-foreground/70 hover:text-foreground hover:bg-muted',
 									)}
 									onClick={() => setMobileMenuOpen(false)}
 								>

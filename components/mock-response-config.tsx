@@ -391,7 +391,8 @@ export function ResponseConfig({
 								description:
 									'Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string.',
 								example: '?page=1&limit=10',
-								docsLink: '/docs/reference/routing-and-matching#query-parameters',
+								docsLink:
+									'/docs/reference/routing-and-matching#query-parameters',
 							}}
 							isExpanded={queryExpanded}
 							onToggle={() => setQueryExpanded(!queryExpanded)}
@@ -460,7 +461,8 @@ export function ResponseConfig({
 									'Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint.',
 								example:
 									'exact: /users/123 | wildcard: /users/* | substring: /api/users',
-								docsLink: '/docs/reference/routing-and-matching#wildcard-matching',
+								docsLink:
+									'/docs/reference/routing-and-matching#wildcard-matching',
 							}}
 							isExpanded={matchExpanded}
 							onToggle={() => setMatchExpanded(!matchExpanded)}
@@ -525,7 +527,8 @@ export function ResponseConfig({
 									description:
 										'Define different response variants based on captured URL segments. Each variant has a unique key that matches URL segments captured by * in your endpoint.',
 									example: '123 for /users/123, alice|42 for /users/*/posts/*',
-									docsLink: '/docs/reference/routing-and-matching#wildcard-matching',
+									docsLink:
+										'/docs/reference/routing-and-matching#wildcard-matching',
 								}}
 								isExpanded={variantsExpanded}
 								onToggle={() => setVariantsExpanded(!variantsExpanded)}

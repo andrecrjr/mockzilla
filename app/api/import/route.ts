@@ -170,15 +170,20 @@ export async function POST(request: NextRequest) {
 				if (!mappedFolderId) continue;
 
 				const mappedParentId = subfolder.parentId
-					? subfolderIdMap.get(subfolder.parentId) ?? null
+					? (subfolderIdMap.get(subfolder.parentId) ?? null)
 					: null;
 				const parentMainPath = subfolder.parentId
 					? subfolderMainPathByOldId.get(subfolder.parentId)
 					: null;
 				const subfolderSegment =
-					subfolder.segment ?? subfolder.slug ?? subfolder.path.split('/').filter(Boolean).at(-1);
+					subfolder.segment ??
+					subfolder.slug ??
+					subfolder.path.split('/').filter(Boolean).at(-1);
 				if (!subfolderSegment) continue;
-				const mainPath = deriveSubfolderMainPath(parentMainPath, subfolderSegment);
+				const mainPath = deriveSubfolderMainPath(
+					parentMainPath,
+					subfolderSegment,
+				);
 
 				const [newSubfolder] = await tx
 					.insert(mockSubfolders)
@@ -221,7 +226,7 @@ export async function POST(request: NextRequest) {
 					response: mock.response,
 					folderId: mappedFolderId || mock.folderId,
 					mockFolderId: mock.mockFolderId
-						? subfolderIdMap.get(mock.mockFolderId) ?? null
+						? (subfolderIdMap.get(mock.mockFolderId) ?? null)
 						: null,
 					matchType: mock.matchType || 'exact',
 					bodyType: mock.bodyType || 'json',
