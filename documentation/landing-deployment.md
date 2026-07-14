@@ -1,13 +1,15 @@
 # Landing-Only Deployment
 
-Deploy Mockzilla as a landing page only, hiding the main app (`/app/*`) and API routes (`/api/*`).
+Deploy Mockzilla as a static landing page and documentation site only. The image
+contains no dashboard, API routes, database runtime, or migrations.
 
 ## How It Works
 
-The `DEPLOY_MODE` environment variable controls route access at runtime via the Next.js `proxy.ts` file:
+`DEPLOY_MODE=landing` makes the build use Next.js static export. The Docker image
+copies only the exported root document, its browser assets, and public files.
 
-- **`full`** (default): All routes accessible — landing, app, and API
-- **`landing`**: Blocks `/app/*` and `/api/*` routes with a 404 response
+- **`full`** (default): Builds the full application.
+- **`landing`**: Builds only the static landing-site artifact.
 
 ## Quick Start
 
@@ -17,22 +19,19 @@ The `DEPLOY_MODE` environment variable controls route access at runtime via the 
 cp .env.landing.example .env.landing
 ```
 
-### 2. Build the production image (if not already built)
-
-```bash
-make prod-build
-```
-
-### 3. Start landing-only mode
+### 2. Build and start landing-only mode
 
 ```bash
 make landing-run
 ```
 
+The landing page is available at `http://localhost:36666`.
+
 ### Other Commands
 
 ```bash
 make landing-up      # Start (requires built image)
+make landing-build   # Build the landing image without starting it
 make landing-down    # Stop
 make landing-logs    # View logs
 ```
@@ -43,14 +42,16 @@ make landing-logs    # View logs
 |-------------|------------|
 | `/`         | ✅ Yes     |
 | `/docs/*`   | ✅ Yes     |
-| `/docsv2/*` | ✅ Yes     |
+| `/docsv2/*` | ❌ 404     |
 | `/_next/*`  | ✅ Yes     |
 | `/app/*`    | ❌ 404     |
 | `/api/*`    | ❌ 404     |
 
 ## Architecture
 
-Single Docker image, different `.env` file. No separate build needed — the Next.js proxy gates routes at runtime based on `DEPLOY_MODE`.
+The landing image is served by Nginx. It has no Node or Bun application runtime,
+database client, API routes, or migration scripts. Requests for paths that are
+not packaged static assets return `404`.
 
 ## Release Behavior
 

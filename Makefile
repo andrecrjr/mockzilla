@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio desktop-build desktop-dev desktop-smoke clean
+.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build landing-build landing-run landing-up landing-down landing-clean landing-logs db-studio desktop-build desktop-dev desktop-smoke clean
 
 # Default target
 help:
@@ -86,6 +86,12 @@ prod-run: prod-build prod-up
 	@echo "✅ Production deployment complete"
 
 # Landing-only deploy
+landing-build:
+	docker compose -f docker-compose.landing.yaml build
+
+landing-run: landing-build
+	docker compose -f docker-compose.landing.yaml up -d
+
 landing-up:
 	docker compose -f docker-compose.landing.yaml up -d
 

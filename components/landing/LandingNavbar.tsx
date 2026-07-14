@@ -62,11 +62,15 @@ export function LandingNavbar() {
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
-						<Link href="/app">
+						<a
+							href="https://github.com/andrecrjr/mockzilla/releases"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
 							<Button variant="default" size="sm" className="gap-2">
-								Open App
+								Install now
 							</Button>
-						</Link>
+						</a>
 						<a
 							href="https://github.com/andrecrjr/mockzilla"
 							target="_blank"
@@ -141,13 +145,15 @@ export function LandingNavbar() {
 						>
 							Docs
 						</Link>
-						<Link
-							href="/app"
+						<a
+							href="https://github.com/andrecrjr/mockzilla/releases"
+							target="_blank"
+							rel="noopener noreferrer"
 							className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-accent"
 							onClick={() => setMobileMenuOpen(false)}
 						>
-							Open App
-						</Link>
+							Install now
+						</a>
 						<a
 							href="https://github.com/andrecrjr/mockzilla"
 							target="_blank"
