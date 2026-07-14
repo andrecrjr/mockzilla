@@ -1,0 +1,37 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.landing
+    container_name: mockzilla-landing
+    ports:
+      - "36666:3000"
+    env_file:
+      - .env.landing
+    volumes:
+      # Mount source code for potential updates (optional for pure landing)
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./public:/app/public
+      # Mount only the specific files needed at runtime
+      - ./llms-full.txt:/app/llms-full.txt
+      - ./llms.txt:/app/llms.txt
+      - ./documentation:/app/documentation
+      - ./content:/app/content
+      - ./proxy.ts:/app/proxy.ts
+      - ./next.config.ts:/app/next.config.ts
+      - ./components.json:/app/components.json
+      - ./mdx-components.tsx:/app/mdx-components.tsx
+      # Exclude unnecessary files for landing-only build
+      - /app/node_modules
+      - /app/.next
+      - /app/drizzle
+      - /app/scripts
+      - /app/docker-entrypoint.sh
+      - /app/tests
+    networks:
+      - mockzilla-dev-network
+
+networks:
+  mockzilla-dev-network:
+    driver: bridge

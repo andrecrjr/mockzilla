@@ -1,0 +1,47 @@
+# syntax = docker/dockerfile:1
+# Landing-only Next.js static build
+
+# Base image: use oven/bun for consistent dependency installation
+FROM oven/bun:1-alpine AS base
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build stage: Install all dependencies and build
+FROM base AS builder
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
+COPY . .
+ENV NEXT_DISABLE_ESLINT=true
+ENV DEPLOY_MODE=landing
+RUN bun run build
+
+# Production runtime stage (Bun)
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
+ENV DEPLOY_MODE=landing
+
+# Copy standalone output and runtime files
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/llms-full.txt ./llms-full.txt
+COPY --from=builder /app/llms.txt ./llms.txt
+COPY --from=builder /app/documentation ./documentation
+COPY --from=builder /app/content ./content
+COPY --from=builder /app/proxy.ts ./proxy.ts
+COPY --from=builder /app/next.config.ts ./next.config.ts
+COPY --from=builder /app/components.json ./components.json
+COPY --from=builder /app/mdx-components.tsx ./mdx-components.tsx
+
+# Create data directory (empty - landing doesn't need database)
+RUN mkdir -p /app/data
+
+# Start Bun server
+USER bun
+EXPOSE 3000
+
+CMD ["bun", "start"]
