@@ -18,7 +18,7 @@ Skills should instruct agents to use the consolidated MCP manager tools:
 | Workflow state/testing | `workflow_control` |
 | Logs and traces | `manage_logs` |
 
-Avoid deprecated granular names such as `preview_mock`, `create_schema_mock`, `inspect_workflow_state`, `test_workflow`, and `create_workflow_transition` in skill instructions. The canonical mapping lives in `.agent/skills/shared/mcp-manager-tools.md`.
+Use only the current manager tools and actions listed above. The canonical contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
 
 Each skill also has `agents/openai.yaml` metadata for UI display and default prompts. Keep that metadata aligned with the corresponding `SKILL.md` frontmatter.
 
@@ -41,7 +41,7 @@ Expert for stateful, interactive API scenarios and business logic.
 
 ### 3. Mockzilla Spec Translator (`mockzilla-spec-translator`)
 High-velocity architect for project bootstrapping from external specs.
-- **Best for**: Migrating from OpenAPI, Jira requirements, or legacy documentation.
+- **Best for**: Translating OpenAPI, Jira requirements, or endpoint documentation into a current Mockzilla setup.
 - **Workflow**: Automated creation of folders and high-fidelity schema mocks.
 - **Verify with**: `manage_mocks` (action: `preview`) for stateless endpoints and `workflow_control` (action: `test`) for stateful flows.
 

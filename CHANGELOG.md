@@ -1,3 +1,67 @@
+## [1.0.6](https://github.com/andrecrjr/mockzilla/compare/v1.0.5...v1.0.6) (2026-07-12)
+
+
+### Bug Fixes
+
+* destkop url ([5e6ef05](https://github.com/andrecrjr/mockzilla/commit/5e6ef0556483418381149fae527d289887f63e08))
+* docs ([b244e0c](https://github.com/andrecrjr/mockzilla/commit/b244e0c8645ec59a05367d36f922212ea698c17c))
+* prevent double-click race condition and add loading state to external link ([866484b](https://github.com/andrecrjr/mockzilla/commit/866484b10d217fb953789d138311f58cdb7002a1))
+* swr stale problem ([3a4ea15](https://github.com/andrecrjr/mockzilla/commit/3a4ea1577039a4e07abaad72ed0edbad81480d97))
+* update TypeScript to 6.0.3 and improve URL opening behavior in desktop builds ([d1b5d61](https://github.com/andrecrjr/mockzilla/commit/d1b5d61da96f33e4716987e4bd2eae3363050488))
+* version mode ([69c0130](https://github.com/andrecrjr/mockzilla/commit/69c01300094fb52892d41941aeab8674adeea62e))
+
+## [1.0.5](https://github.com/andrecrjr/mockzilla/compare/v1.0.4...v1.0.5) (2026-07-01)
+
+
+### Bug Fixes
+
+* open mock urls from desktop app ([a414598](https://github.com/andrecrjr/mockzilla/commit/a414598012e47b9edcd3bd8aa0bac66069bd8c65))
+* problem with mcp ([5dfd7ea](https://github.com/andrecrjr/mockzilla/commit/5dfd7ea466d197d2daffc5b04b53ca5a547c2816))
+
+## [1.0.4](https://github.com/andrecrjr/mockzilla/compare/v1.0.3...v1.0.4) (2026-06-27)
+
+
+### Bug Fixes
+
+* enable fetch-tags for semantic-release tag detection ([725ca03](https://github.com/andrecrjr/mockzilla/commit/725ca033e9d71f4994715463d1bdbe478754fc3e))
+* restore github token for cd release ([962cfc7](https://github.com/andrecrjr/mockzilla/commit/962cfc7197b6d9807dd2cbf200a1b1c4f610663b))
+* update release flow and mock subfolders ([81806bd](https://github.com/andrecrjr/mockzilla/commit/81806bd10aab57afb03ff674ffffe76a52dc3753))
+* use PAT in checkout for semantic-release push permissions ([2c8997b](https://github.com/andrecrjr/mockzilla/commit/2c8997b6ace7375c1dc287f423268b8ec91ad077))
+* use PAT token for semantic-release in CD workflow ([7693f57](https://github.com/andrecrjr/mockzilla/commit/7693f57f409957f4de64e8130530c239b89fb268))
+
+## [1.0.4](https://github.com/andrecrjr/mockzilla/compare/v1.0.3...v1.0.4) (2026-06-27)
+
+
+### Bug Fixes
+
+* enable fetch-tags for semantic-release tag detection ([725ca03](https://github.com/andrecrjr/mockzilla/commit/725ca033e9d71f4994715463d1bdbe478754fc3e))
+* restore github token for cd release ([962cfc7](https://github.com/andrecrjr/mockzilla/commit/962cfc7197b6d9807dd2cbf200a1b1c4f610663b))
+* update release flow and mock subfolders ([81806bd](https://github.com/andrecrjr/mockzilla/commit/81806bd10aab57afb03ff674ffffe76a52dc3753))
+* use PAT in checkout for semantic-release push permissions ([2c8997b](https://github.com/andrecrjr/mockzilla/commit/2c8997b6ace7375c1dc287f423268b8ec91ad077))
+* use PAT token for semantic-release in CD workflow ([7693f57](https://github.com/andrecrjr/mockzilla/commit/7693f57f409957f4de64e8130530c239b89fb268))
+
+## [1.0.3](https://github.com/andrecrjr/mockzilla/compare/v1.0.2...v1.0.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* update process for docker and desktop ([7e6cb25](https://github.com/andrecrjr/mockzilla/commit/7e6cb25ae21c6c949eaa7f20a764efaa790cc279))
+
+## [1.0.2](https://github.com/andrecrjr/mockzilla/compare/v1.0.1...v1.0.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* update docker builds ([dae1a1b](https://github.com/andrecrjr/mockzilla/commit/dae1a1b5ea8e69ed3d4ff6a96307565a8a2d1ea6))
+
+## [1.0.1](https://github.com/andrecrjr/mockzilla/compare/v1.0.0...v1.0.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* bootstrap desktop server entrypoint ([9a2ddd9](https://github.com/andrecrjr/mockzilla/commit/9a2ddd961ff1b94f68c15c204ba25098ff6365bf))
+* update release workflow versioning ([dfbdcae](https://github.com/andrecrjr/mockzilla/commit/dfbdcae492025703fdac5f2ec008e5e71c356fc2))
+
 # 1.0.0 (2026-06-25)
 
 

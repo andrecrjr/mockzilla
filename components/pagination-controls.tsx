@@ -33,7 +33,10 @@ export function PaginationControls({
 				<span>Rows per page</span>
 				<Select
 					value={limit.toString()}
-					onValueChange={(value) => onLimitChange(Number(value))}
+					onValueChange={(value) => {
+						onPageChange(1);
+						onLimitChange(Number(value));
+					}}
 				>
 					<SelectTrigger className="h-8 w-[70px]">
 						<SelectValue placeholder={limit} />

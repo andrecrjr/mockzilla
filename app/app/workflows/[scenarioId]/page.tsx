@@ -22,9 +22,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TransitionDialog } from '@/components/workflow/create-transition-dialog';
 import { StateInspector } from '@/components/workflow/state-inspector';
 import { TransitionCard } from '@/components/workflow/transition-card';
-import type { Transition } from '@/lib/types';
+import type { MatchContext, Transition } from '@/lib/types';
+import { swrFetcher } from '@/lib/swr-fetcher';
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+type WorkflowStateResponse = { data: MatchContext };
 
 export default function ScenarioDetailPage() {
 	const params = useParams();
@@ -41,15 +42,20 @@ export default function ScenarioDetailPage() {
 		mutate: mutateTransitions,
 	} = useSWR<Transition[]>(
 		`/api/workflow/transitions?scenarioId=${scenarioId}`,
-		fetcher,
+		swrFetcher,
 	);
 
-	const { data: stateResponse, mutate: mutateState } = useSWR(
-		`/api/workflow/state/${scenarioId}`,
-		fetcher,
-	);
+	const { data: stateResponse, mutate: mutateState } =
+		useSWR<WorkflowStateResponse>(
+			`/api/workflow/state/${scenarioId}`,
+			swrFetcher,
+		);
 
-	const stateData = stateResponse?.data || { state: {}, tables: {} };
+	const stateData: MatchContext = stateResponse?.data || {
+		state: {},
+		tables: {},
+		input: {},
+	};
 
 	const { trigger: triggerDelete, isMutating: isDeleting } = useSWRMutation(
 		'/api/workflow/transitions',
@@ -86,7 +92,12 @@ export default function ScenarioDetailPage() {
 
 	const resetState = async () => {
 		try {
-			await fetch(`/api/workflow/state/${scenarioId}`, { method: 'DELETE' });
+			const response = await fetch(`/api/workflow/state/${scenarioId}`, {
+				method: 'DELETE',
+			});
+			if (!response.ok) {
+				throw new Error('Failed to reset state');
+			}
 			toast.success('State Reset');
 			mutateState();
 		} catch {

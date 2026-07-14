@@ -162,11 +162,11 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 							<div className="space-y-2">
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<Label htmlFor="slug">URL Slug</Label>
+										<Label htmlFor="slug">URL Path</Label>
 										<FieldTooltip
-											label="The URL-friendly identifier used in mock endpoint paths."
+											label="The URL-friendly base path used in mock endpoint paths."
 											description="Changing this will update the URL for all mocks in this folder. Existing URLs using the old slug will return 404."
-											example="/api/mock/user-apis/..."
+											example="/api/mock/app/test-things/..."
 										/>
 									</div>
 									<Button
@@ -184,17 +184,16 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 									value={slug}
 									onChange={(e) =>
 										setSlug(
-											e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+											e.target.value.toLowerCase().replace(/[^a-z0-9/-]/g, ''),
 										)
 									}
 									disabled={!useCustomSlug}
-									placeholder="e.g., user-apis"
+									placeholder="e.g., /app/test-things"
 								/>
 								<p className="text-xs text-muted-foreground">
-									URL: /api/mock/<span className="font-mono">{slug}</span>/...
+									URL: /api/mock<span className="font-mono">{slug}</span>/...
 								</p>
 							</div>
-
 						</div>
 						<DialogFooter>
 							<Button

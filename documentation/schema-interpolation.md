@@ -107,6 +107,7 @@ You can reference incoming request data directly using the `input.` or `$.` pref
 | `{{input.body.name}}` | `{{$.body.name}}` | Injects a value from the request JSON body |
 
 > **Tip**: When using Handlebars logic with `$.` syntax and numeric keys (like params) or headers with hyphens, use square brackets: `{{$.params.[0]}}` or `{{$.headers.[x-api-key]}}`.
+> **Query/wildcard split**: For a request like `/users/123?status=active` matched by `/users/*`, `input.params.0` is `123` and `input.query.status` is `active`.
 
 ---
 

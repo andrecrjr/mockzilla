@@ -23,7 +23,7 @@ Skills must prefer the consolidated MCP manager tools documented in `documentati
 - `workflow_control`
 - `manage_logs`
 
-Do not add new skill instructions that rely on deprecated granular tool names. The canonical deprecated-name mapping lives in `.agent/skills/shared/mcp-manager-tools.md`.
+Use only the current consolidated manager tools and actions. Their contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
 
 ## Metadata Rule
 
@@ -50,7 +50,7 @@ Move long examples, domain templates, and detailed reference material into files
 
 After changing skills:
 
-- Search `.agent/skills` for deprecated tool names, allowing only `.agent/skills/shared/mcp-manager-tools.md`.
+- Search `.agent/skills` for stale tool names or unsupported actions.
 - Confirm every skill still links to the shared manager tools contract.
 - Confirm `agents/openai.yaml` descriptions match `SKILL.md`.
 - Update `documentation/skills.md` when user-facing skill behavior changes.

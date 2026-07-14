@@ -10,10 +10,13 @@ export interface DocSection {
 	items?: DocSection[];
 }
 
-export function getDocsHierarchy(dir: string, baseDir: string = dir): DocSection[] {
+export function getDocsHierarchy(
+	dir: string,
+	baseDir: string = dir,
+): DocSection[] {
 	const hierarchy: DocSection[] = [];
 	const metaPath = path.join(dir, '_meta.js');
-	
+
 	let meta: Record<string, string> = {};
 	if (fs.existsSync(metaPath)) {
 		try {
@@ -30,7 +33,9 @@ export function getDocsHierarchy(dir: string, baseDir: string = dir): DocSection
 				const entries = match[1].match(/'?([\w-]+)'?:\s*'(.+?)'/g);
 				if (entries) {
 					for (const entry of entries) {
-						const [key, value] = entry.split(':').map(s => s.trim().replace(/^'|'$/g, ''));
+						const [key, value] = entry
+							.split(':')
+							.map((s) => s.trim().replace(/^'|'$/g, ''));
 						meta[key] = value;
 					}
 				}
@@ -44,28 +49,33 @@ export function getDocsHierarchy(dir: string, baseDir: string = dir): DocSection
 	const items = fs.readdirSync(dir);
 
 	// If we have meta, follow its order
-	const orderedKeys = Object.keys(meta).length > 0 ? Object.keys(meta) : items.map(i => i.replace(/\.mdx$/, ''));
+	const orderedKeys =
+		Object.keys(meta).length > 0
+			? Object.keys(meta)
+			: items.map((i) => i.replace(/\.mdx$/, ''));
 
 	for (const key of orderedKeys) {
 		const mdxPath = path.join(dir, `${key}.mdx`);
 		const subDir = path.join(dir, key);
-		
+
 		if (fs.existsSync(mdxPath)) {
 			const fileContent = fs.readFileSync(mdxPath, 'utf-8');
 			const { content, data } = matter(fileContent);
-			const relativePath = path.relative(baseDir, mdxPath).replace(/\.mdx$/, '');
-			
+			const relativePath = path
+				.relative(baseDir, mdxPath)
+				.replace(/\.mdx$/, '');
+
 			hierarchy.push({
 				title: meta[key] || data.title || key,
 				path: `/docs/${relativePath === 'index' ? '' : relativePath}`,
 				description: data.description,
-				content: content.trim()
+				content: content.trim(),
 			});
 		} else if (fs.existsSync(subDir) && fs.statSync(subDir).isDirectory()) {
 			hierarchy.push({
 				title: meta[key] || key,
 				path: `/docs/${path.relative(baseDir, subDir)}`,
-				items: getDocsHierarchy(subDir, baseDir)
+				items: getDocsHierarchy(subDir, baseDir),
 			});
 		}
 	}
@@ -73,23 +83,28 @@ export function getDocsHierarchy(dir: string, baseDir: string = dir): DocSection
 	return hierarchy;
 }
 
-export function findSectionByPath(hierarchy: DocSection[], targetPath: string): DocSection | undefined {
+export function findSectionByPath(
+	hierarchy: DocSection[],
+	targetPath: string,
+): DocSection | undefined {
 	// Normalize target path (remove trailing slash, ensure leading /docs/)
-	const normalizedTarget = targetPath.startsWith('/docs') ? targetPath : `/docs/${targetPath}`;
+	const normalizedTarget = targetPath.startsWith('/docs')
+		? targetPath
+		: `/docs/${targetPath}`;
 	const cleanTarget = normalizedTarget.replace(/\/$/, '') || '/docs';
 
 	for (const section of hierarchy) {
 		const cleanSectionPath = section.path.replace(/\/$/, '');
-		
+
 		if (cleanSectionPath === cleanTarget) {
 			return section;
 		}
-		
+
 		if (section.items) {
 			const found = findSectionByPath(section.items, targetPath);
 			if (found) return found;
 		}
 	}
-	
+
 	return undefined;
 }

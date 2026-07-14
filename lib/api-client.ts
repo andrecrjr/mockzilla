@@ -9,6 +9,10 @@ import type {
 	UpdateFolderRequest,
 	UpdateMockRequest,
 } from './types';
+import {
+	formatStoredFolderPath,
+	normalizeFolderPath,
+} from './utils/folder-paths';
 
 // Allow configuring the external Mockzilla API base URL via environment variables.
 // Falls back to a sensible default if not provided.
@@ -50,19 +54,13 @@ interface ServerMock {
 	updated_at?: string;
 }
 
-function slugify(name: string) {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
-}
-
 function mapServerFolderToFolder(server: ServerFolder): Folder {
 	return {
 		id: server.id,
 		name: server.name,
-		slug: server.slug || slugify(server.name || ''),
+		slug: server.slug
+			? formatStoredFolderPath(server.slug)
+			: normalizeFolderPath(server.name || ''),
 		description: server.description,
 		createdAt: server.created_at ?? new Date().toISOString(),
 		updatedAt: server.updated_at ?? undefined,

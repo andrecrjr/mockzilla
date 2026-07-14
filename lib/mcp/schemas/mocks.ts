@@ -11,7 +11,9 @@ export const CreateMockArgs = z.object({
 	folderId: z
 		.string()
 		.optional()
-		.describe('The ID of the parent folder (required if folderSlug not provided)'),
+		.describe(
+			'The ID of the parent folder (required if folderSlug not provided)',
+		),
 	folderSlug: z
 		.string()
 		.optional()
@@ -22,7 +24,9 @@ export const CreateMockArgs = z.object({
 		.string()
 		.nullable()
 		.optional()
-		.describe('Optional mock subfolder ID. Null means root of the parent folder.'),
+		.describe(
+			'Optional mock subfolder ID. Null means root of the parent folder.',
+		),
 	response: z.string().describe('The response body (JSON string or text)'),
 	matchType: z
 		.enum(['exact', 'substring', 'wildcard'])
@@ -62,11 +66,7 @@ export const CreateMockArgs = z.object({
 		.nullable()
 		.optional()
 		.describe('Echo the request body back to the client'),
-	delay: z
-		.number()
-		.int()
-		.optional()
-		.describe('Response delay in milliseconds'),
+	delay: z.number().int().optional().describe('Response delay in milliseconds'),
 });
 export type CreateMockArgs = z.infer<typeof CreateMockArgs>;
 
@@ -149,11 +149,7 @@ export const UpdateMockArgs = z.object({
 		.nullable()
 		.optional()
 		.describe('Echo the request body back to the client'),
-	delay: z
-		.number()
-		.int()
-		.optional()
-		.describe('Response delay in milliseconds'),
+	delay: z.number().int().optional().describe('Response delay in milliseconds'),
 });
 export type UpdateMockArgs = z.infer<typeof UpdateMockArgs>;
 
@@ -172,12 +168,23 @@ export const ManageMocksArgs = z.discriminatedUnion('action', [
 		action: z.literal('create'),
 		name: z.string(),
 		path: z.string(),
-		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+		method: z.enum([
+			'GET',
+			'POST',
+			'PUT',
+			'PATCH',
+			'DELETE',
+			'HEAD',
+			'OPTIONS',
+		]),
 		statusCode: z.number().int(),
 		folderId: z.string().optional(),
 		folderSlug: z.string().optional(),
 		mockFolderId: z.string().nullable().optional(),
-		response: z.string().optional().describe('Response body (required if jsonSchema not provided)'),
+		response: z
+			.string()
+			.optional()
+			.describe('Response body (required if jsonSchema not provided)'),
 		matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),
 		bodyType: z.enum(['json', 'text']).optional(),
 		enabled: z.boolean().optional(),
@@ -198,7 +205,9 @@ export const ManageMocksArgs = z.discriminatedUnion('action', [
 		id: z.string(),
 		name: z.string().optional(),
 		path: z.string().optional(),
-		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
+		method: z
+			.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+			.optional(),
 		statusCode: z.number().int().optional(),
 		response: z.string().optional(),
 		mockFolderId: z.string().nullable().optional(),
@@ -221,7 +230,15 @@ export const ManageMocksArgs = z.discriminatedUnion('action', [
 		action: z.literal('preview'),
 		folderSlug: z.string(),
 		path: z.string(),
-		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+		method: z.enum([
+			'GET',
+			'POST',
+			'PUT',
+			'PATCH',
+			'DELETE',
+			'HEAD',
+			'OPTIONS',
+		]),
 		contentType: z.string().nullable().optional(),
 		queryParams: z.record(z.string()).nullable().optional(),
 		headers: z.record(z.string()).nullable().optional(),
@@ -234,15 +251,7 @@ export type ManageMocksArgs = z.infer<typeof ManageMocksArgs>;
 export const CreateSchemaMockArgs = z.object({
 	name: z.string(),
 	path: z.string(),
-	method: z.enum([
-		'GET',
-		'POST',
-		'PUT',
-		'PATCH',
-		'DELETE',
-		'HEAD',
-		'OPTIONS',
-	]),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
 	statusCode: z.number().int(),
 	folderSlug: z.string().nullable().optional(),
 	folderId: z.string().nullable().optional(),

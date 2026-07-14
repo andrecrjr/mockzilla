@@ -5,6 +5,7 @@ import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { type Logger, logger } from '@/lib/logger';
 import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
+import { matchFolderByPathSegments } from '@/lib/utils/folder-paths';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
 	extractCaptureKey,
@@ -51,22 +52,11 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	const pathSegments = params.path;
 	const method = (request.method as HttpMethod) || 'GET';
 
-	// Expected format: /mock/{folderSlug}/{mockPath...}
-	// If only folderSlug provided (1 segment), treat as root path "/"
 	if (pathSegments.length < 1) {
 		return NextResponse.json(
 			{ error: 'Invalid mock URL format' },
 			{ status: 400 },
 		);
-	}
-
-	const folderSlug = pathSegments[0];
-	let mockPath =
-		pathSegments.length === 1 ? '/' : `/${pathSegments.slice(1).join('/')}`;
-
-	// Normalize: remove trailing slash for consistency
-	if (mockPath.endsWith('/') && mockPath.length > 1) {
-		mockPath = mockPath.slice(0, -1);
 	}
 
 	// Extract query params from request URL
@@ -76,26 +66,32 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 	// Create a scoped logger for this request
 	const log = logger.child({
 		reqId,
-		path: mockPath,
+		path: `/${pathSegments.join('/')}`,
 		method,
 		type: 'intercept',
 	});
 	log.info('Incoming request');
 
 	try {
-		// Find the folder by slug
-		const [folder] = await db
-			.select()
-			.from(folders)
-			.where(eq(folders.slug, folderSlug))
-			.limit(1);
+		const folderRows = await db.select().from(folders);
+		const folderMatch = matchFolderByPathSegments(folderRows, pathSegments);
+		const folder = folderMatch?.folder;
 
 		if (!folder) {
-			log.warn({ folderSlug }, 'Folder not found');
+			log.warn({ pathSegments }, 'Folder not found');
 			return NextResponse.json(
-				{ error: 'Folder not found', folderSlug },
+				{ error: 'Folder not found', folderPath: `/${pathSegments.join('/')}` },
 				{ status: 404 },
 			);
+		}
+		const matchedSegments = folderMatch.matchedSegments;
+		const folderSlug = folderMatch.folderPath;
+		let mockPath =
+			pathSegments.length === matchedSegments
+				? '/'
+				: `/${pathSegments.slice(matchedSegments).join('/')}`;
+		if (mockPath.endsWith('/') && mockPath.length > 1) {
+			mockPath = mockPath.slice(0, -1);
 		}
 
 		const allMocks = await db
@@ -197,7 +193,13 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
 					}
-					return await buildResponse(variantMock, request, paramsMap, log, mockPath);
+					return await buildResponse(
+						variantMock,
+						request,
+						paramsMap,
+						log,
+						mockPath,
+					);
 				}
 
 				// No variant matched
@@ -247,7 +249,9 @@ async function buildResponse(
 	log.debug({ mockId: mock.id }, 'Building response');
 	const meta = mock.meta as { proxyTargetUrl?: string } | null;
 	if (meta?.proxyTargetUrl) {
-		const urlQueryParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+		const urlQueryParams = Object.fromEntries(
+			request.nextUrl.searchParams.entries(),
+		);
 		const method = (request.method as HttpMethod) || 'GET';
 
 		return await handleProxyAndRecord(
@@ -354,7 +358,7 @@ async function handleProxyAndRecord(
 	});
 	try {
 		// Disable SSL verification for proxy calls in dev environments
-		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 		const requestClone = request.clone();
 		const headers = Object.fromEntries(request.headers.entries());
@@ -364,16 +368,16 @@ async function handleProxyAndRecord(
 		const response = await fetch(targetUrl.toString(), {
 			method,
 			headers,
-			body: ["GET", "HEAD"].includes(method) ? null : await requestClone.text(),
+			body: ['GET', 'HEAD'].includes(method) ? null : await requestClone.text(),
 		});
 
 		const responseText = await response.text();
-		const contentType = response.headers.get("content-type") || "text/plain";
-		const bodyType = contentType.includes("application/json") ? "json" : "text";
+		const contentType = response.headers.get('content-type') || 'text/plain';
+		const bodyType = contentType.includes('application/json') ? 'json' : 'text';
 
 		log.info(
 			{ statusCode: response.status, bodyType },
-			"Received proxy response, recording mock",
+			'Received proxy response, recording mock',
 		);
 
 		// Save the recorded mock
@@ -384,7 +388,7 @@ async function handleProxyAndRecord(
 			statusCode: response.status,
 			response: responseText,
 			folderId,
-			matchType: "exact",
+			matchType: 'exact',
 			bodyType,
 			enabled: true,
 			queryParams,
@@ -394,16 +398,16 @@ async function handleProxyAndRecord(
 		return new NextResponse(responseText, {
 			status: response.status,
 			headers: {
-				"Content-Type": contentType,
+				'Content-Type': contentType,
 			},
 		});
 	} catch (error) {
 		log.error(
 			{ err: error, targetUrl: targetUrl.toString() },
-			"Proxy request failed",
+			'Proxy request failed',
 		);
 		return NextResponse.json(
-			{ error: "Proxy request failed", details: String(error) },
+			{ error: 'Proxy request failed', details: String(error) },
 			{ status: 502 },
 		);
 	}

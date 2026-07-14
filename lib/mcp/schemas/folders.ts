@@ -9,6 +9,7 @@ export type ListFoldersArgs = z.infer<typeof ListFoldersArgs>;
 export const CreateFolderArgs = z.object({
 	name: z.string(),
 	description: z.string().optional(),
+	slug: z.string().optional(),
 });
 export type CreateFolderArgs = z.infer<typeof CreateFolderArgs>;
 
@@ -21,6 +22,7 @@ export const UpdateFolderArgs = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().optional(),
+	slug: z.string().optional(),
 });
 export type UpdateFolderArgs = z.infer<typeof UpdateFolderArgs>;
 
@@ -40,6 +42,8 @@ export const CreateMockSubfolderArgs = z.object({
 	folderSlug: z.string().optional(),
 	parentId: z.string().nullable().optional(),
 	name: z.string().min(1),
+	slug: z.string().min(1).optional(),
+	path: z.string().min(1).optional(),
 });
 export type CreateMockSubfolderArgs = z.infer<typeof CreateMockSubfolderArgs>;
 
@@ -49,6 +53,8 @@ export type GetMockSubfolderArgs = z.infer<typeof GetMockSubfolderArgs>;
 export const UpdateMockSubfolderArgs = z.object({
 	id: z.string(),
 	name: z.string().min(1).optional(),
+	slug: z.string().min(1).optional(),
+	path: z.string().min(1).optional(),
 	parentId: z.string().nullable().optional(),
 });
 export type UpdateMockSubfolderArgs = z.infer<typeof UpdateMockSubfolderArgs>;
@@ -66,6 +72,7 @@ export const ManageFoldersArgs = z.discriminatedUnion('action', [
 		action: z.literal('create'),
 		name: z.string(),
 		description: z.string().optional(),
+		slug: z.string().optional(),
 	}),
 	z.object({
 		action: z.literal('get'),
@@ -77,6 +84,7 @@ export const ManageFoldersArgs = z.discriminatedUnion('action', [
 		id: z.string(),
 		name: z.string(),
 		description: z.string().optional(),
+		slug: z.string().optional(),
 	}),
 	z.object({
 		action: z.literal('delete'),
@@ -99,6 +107,8 @@ export const ManageMockSubfoldersArgs = z.discriminatedUnion('action', [
 		folderSlug: z.string().optional(),
 		parentId: z.string().nullable().optional(),
 		name: z.string().min(1),
+		slug: z.string().min(1).optional(),
+		path: z.string().min(1).optional(),
 	}),
 	z.object({
 		action: z.literal('get'),
@@ -108,6 +118,8 @@ export const ManageMockSubfoldersArgs = z.discriminatedUnion('action', [
 		action: z.literal('update'),
 		id: z.string(),
 		name: z.string().min(1).optional(),
+		slug: z.string().min(1).optional(),
+		path: z.string().min(1).optional(),
 		parentId: z.string().nullable().optional(),
 	}),
 	z.object({

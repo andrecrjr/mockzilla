@@ -39,6 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { ImportWorkflowDialog } from '@/components/workflow/import-dialog';
+import { swrFetcher } from '@/lib/swr-fetcher';
 
 interface Scenario {
 	id: string;
@@ -47,8 +48,6 @@ interface Scenario {
 	count: number;
 	createdAt: string;
 }
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 async function createScenario(
 	url: string,
@@ -91,7 +90,7 @@ function WorkflowsContent() {
 		mutate,
 	} = useSWR<Scenario[]>(
 		`/api/workflow/scenarios?q=${debouncedSearch}`,
-		fetcher,
+		swrFetcher,
 	);
 
 	const { trigger: triggerCreate, isMutating: isCreating } = useSWRMutation(
@@ -372,7 +371,9 @@ function WorkflowsContent() {
 				<div className="text-center py-16 border-2 border-dashed rounded-lg bg-muted/10">
 					<GitBranch className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
 					<h3 className="text-lg font-medium mb-2">
-						{debouncedSearch ? 'No scenarios match your search' : 'No scenarios yet'}
+						{debouncedSearch
+							? 'No scenarios match your search'
+							: 'No scenarios yet'}
 					</h3>
 					<p className="text-muted-foreground mb-6">
 						{debouncedSearch

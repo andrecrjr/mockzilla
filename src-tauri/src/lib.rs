@@ -53,6 +53,14 @@ fn desktop_server_entry(app: &AppHandle) -> Result<PathBuf, String> {
         .join("desktop-server.mjs"))
 }
 
+fn desktop_server_bootstrap_args() -> [&'static str; 3] {
+    [
+        "--input-type=module",
+        "--eval",
+        "import { pathToFileURL } from 'node:url'; await import(pathToFileURL(process.env.MOCKZILLA_DESKTOP_ENTRY).href);",
+    ]
+}
+
 fn desktop_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let data_dir = match std::env::var("MOCKZILLA_DATA_DIR") {
         Ok(path) if !path.trim().is_empty() => PathBuf::from(path),
@@ -80,9 +88,13 @@ fn start_server(app: &AppHandle, state: Arc<ServerState>) -> Result<u16, String>
         .map_err(|error| format!("Unable to create Node sidecar command: {error}"))?;
 
     command = command
-        .args([server_entry.to_string_lossy().to_string()])
+        .args(desktop_server_bootstrap_args())
         .env("HOSTNAME", "127.0.0.1")
         .env("MOCKZILLA_DESKTOP", "1")
+        .env(
+            "MOCKZILLA_DESKTOP_ENTRY",
+            server_entry.to_string_lossy().to_string(),
+        )
         .env("MOCKZILLA_DATA_DIR", data_dir.to_string_lossy().to_string())
         .env("DATABASE_URL", "")
         .env("NODE_ENV", "production")

@@ -6,14 +6,7 @@ import {
 	orderSubfoldersByHierarchy,
 } from '@/lib/mock-subfolders';
 import type { ExportData, Folder, LegacyImportFormat, Mock } from '@/lib/types';
-
-function generateSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
-}
+import { normalizeFolderPath } from '@/lib/utils/folder-paths';
 
 function isLegacyFormat(data: unknown): data is LegacyImportFormat {
 	return (
@@ -51,7 +44,7 @@ function convertLegacyFormat(data: LegacyImportFormat): ExportData {
 			const folder: Folder = {
 				id: group.id,
 				name: group.name,
-				slug: generateSlug(group.name),
+				slug: normalizeFolderPath(group.name),
 				description: group.description,
 				createdAt: new Date().toISOString(),
 			};
@@ -64,7 +57,7 @@ function convertLegacyFormat(data: LegacyImportFormat): ExportData {
 			const folder: Folder = {
 				id: groupId,
 				name: `Group ${groupId}`,
-				slug: generateSlug(`Group ${groupId}`),
+				slug: normalizeFolderPath(`Group ${groupId}`),
 				createdAt: new Date().toISOString(),
 			};
 			folderMap.set(groupId, folder);
@@ -80,7 +73,7 @@ function convertLegacyFormat(data: LegacyImportFormat): ExportData {
 				folderMap.set(folderId, {
 					id: folderId,
 					name: 'Imported Mocks',
-					slug: 'imported-mocks',
+					slug: '/imported-mocks',
 					createdAt: new Date().toISOString(),
 				});
 			}
@@ -150,7 +143,7 @@ export async function POST(request: NextRequest) {
 					.insert(folders)
 					.values({
 						name: folder.name,
-						slug: folder.slug,
+						slug: normalizeFolderPath(folder.slug),
 						description: folder.description || null,
 						meta: folder.meta || {},
 					})
@@ -177,12 +170,20 @@ export async function POST(request: NextRequest) {
 				if (!mappedFolderId) continue;
 
 				const mappedParentId = subfolder.parentId
-					? subfolderIdMap.get(subfolder.parentId) ?? null
+					? (subfolderIdMap.get(subfolder.parentId) ?? null)
 					: null;
 				const parentMainPath = subfolder.parentId
 					? subfolderMainPathByOldId.get(subfolder.parentId)
 					: null;
-				const mainPath = deriveSubfolderMainPath(parentMainPath, subfolder.slug);
+				const subfolderSegment =
+					subfolder.segment ??
+					subfolder.slug ??
+					subfolder.path.split('/').filter(Boolean).at(-1);
+				if (!subfolderSegment) continue;
+				const mainPath = deriveSubfolderMainPath(
+					parentMainPath,
+					subfolderSegment,
+				);
 
 				const [newSubfolder] = await tx
 					.insert(mockSubfolders)
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
 						folderId: mappedFolderId,
 						parentId: mappedParentId,
 						name: subfolder.name,
-						slug: subfolder.slug,
+						slug: subfolderSegment,
 						mainPath,
 					})
 					.returning();
@@ -225,7 +226,7 @@ export async function POST(request: NextRequest) {
 					response: mock.response,
 					folderId: mappedFolderId || mock.folderId,
 					mockFolderId: mock.mockFolderId
-						? subfolderIdMap.get(mock.mockFolderId) ?? null
+						? (subfolderIdMap.get(mock.mockFolderId) ?? null)
 						: null,
 					matchType: mock.matchType || 'exact',
 					bodyType: mock.bodyType || 'json',

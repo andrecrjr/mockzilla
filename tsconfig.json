@@ -14,6 +14,7 @@
 		"jsx": "react-jsx",
 		"incremental": true,
 		"skipDefaultLibCheck": true,
+		"types": ["node", "bun"],
 		"plugins": [
 			{
 				"name": "next"

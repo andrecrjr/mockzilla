@@ -14,7 +14,9 @@ function getMdxPaths(dir: string, baseDir: string = dir): string[] {
 			if (statSync(fullPath).isDirectory()) {
 				results = [...results, ...getMdxPaths(fullPath, baseDir)];
 			} else if (item.endsWith('.mdx') && !item.startsWith('_meta')) {
-				const relativePath = path.relative(baseDir, fullPath).replace(/\.mdx$/, '');
+				const relativePath = path
+					.relative(baseDir, fullPath)
+					.replace(/\.mdx$/, '');
 				results.push(relativePath);
 			}
 		}
@@ -56,7 +58,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
 	// Deduplicate in case of index vs directory conflicts
 	const allRoutes = [...routes, ...docRoutes];
-	const uniqueRoutes = Array.from(new Map(allRoutes.map(item => [item.url.replace(/\/$/, ''), item])).values());
+	const uniqueRoutes = Array.from(
+		new Map(
+			allRoutes.map((item) => [item.url.replace(/\/$/, ''), item]),
+		).values(),
+	);
 
 	return uniqueRoutes;
 }

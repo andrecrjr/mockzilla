@@ -31,6 +31,19 @@ import {
 } from '@/lib/schema-generator';
 import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 
+export type QueryParamField = {
+	id: string;
+	key: string;
+	value: string;
+};
+
+const createQueryParamId = () => {
+	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+		return crypto.randomUUID();
+	}
+	return `query-param-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
 type CollapsibleSectionProps = {
 	title: string;
 	tooltip?: {
@@ -97,8 +110,8 @@ type ResponseConfigProps = {
 	// Advanced Options props
 	matchType: MatchType;
 	onMatchTypeChange: (value: MatchType) => void;
-	queryParams: { key: string; value: string }[];
-	onQueryParamsChange: (params: { key: string; value: string }[]) => void;
+	queryParams: QueryParamField[];
+	onQueryParamsChange: (params: QueryParamField[]) => void;
 	// MockVariantManager props
 	variants: MockVariant[];
 	onVariantsChange: (variants: MockVariant[]) => void;
@@ -185,10 +198,14 @@ export function ResponseConfig({
 	};
 
 	const isEchoMethod = ['POST', 'PUT', 'PATCH'].includes(method);
+	const isEchoEnabled = isEchoMethod && echoRequestBody;
 
 	// Query Params helpers
 	const addParam = () => {
-		onQueryParamsChange([...queryParams, { key: '', value: '' }]);
+		onQueryParamsChange([
+			...queryParams,
+			{ id: createQueryParamId(), key: '', value: '' },
+		]);
 	};
 
 	const removeParam = (index: number) => {
@@ -245,7 +262,7 @@ export function ResponseConfig({
 
 			<div
 				className={
-					echoRequestBody
+					isEchoEnabled
 						? 'opacity-40 pointer-events-none select-none transition-opacity'
 						: 'transition-opacity'
 				}
@@ -284,7 +301,7 @@ export function ResponseConfig({
 							onChange={(e) => onResponseChange(e.target.value)}
 							placeholder='{"message": "Hello World"}'
 							className="font-mono text-sm h-[500px]"
-							required={activeTab === 'manual'}
+							required={activeTab === 'manual' && !isEchoEnabled}
 						/>
 					</TabsContent>
 
@@ -304,7 +321,7 @@ export function ResponseConfig({
 							onChange={(e) => onJsonSchemaChange(e.target.value)}
 							className="font-mono text-sm h-[300px]"
 							placeholder="Paste JSON Schema here..."
-							required={activeTab === 'schema'}
+							required={activeTab === 'schema' && !isEchoEnabled}
 						/>
 
 						<div className="flex items-center space-x-2">
@@ -374,7 +391,8 @@ export function ResponseConfig({
 								description:
 									'Mock will only match if ALL specified query params are present with matching values. Leave empty to match regardless of query string.',
 								example: '?page=1&limit=10',
-								docsLink: '/docs/reference/routing-and-matching#query-parameters',
+								docsLink:
+									'/docs/reference/routing-and-matching#query-parameters',
 							}}
 							isExpanded={queryExpanded}
 							onToggle={() => setQueryExpanded(!queryExpanded)}
@@ -389,8 +407,8 @@ export function ResponseConfig({
 									<div className="space-y-2">
 										{queryParams.map((param, index) => (
 											<div
-												key={`${param.key}-${index}`}
-												className="flex items-center gap-2"
+												key={param.id}
+												className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_2.25rem] items-center gap-2"
 											>
 												<Input
 													placeholder="key"
@@ -398,7 +416,7 @@ export function ResponseConfig({
 													onChange={(e) =>
 														updateParam(index, 'key', e.target.value)
 													}
-													className="font-mono text-sm"
+													className="min-w-0 font-mono text-sm"
 												/>
 												<span className="text-muted-foreground">=</span>
 												<Input
@@ -407,7 +425,7 @@ export function ResponseConfig({
 													onChange={(e) =>
 														updateParam(index, 'value', e.target.value)
 													}
-													className="font-mono text-sm"
+													className="min-w-0 font-mono text-sm"
 												/>
 												<Button
 													type="button"
@@ -443,7 +461,8 @@ export function ResponseConfig({
 									'Controls how the endpoint path is matched against incoming requests. Exact requires full match. Wildcard captures URL segments. Substring checks if path contains the endpoint.',
 								example:
 									'exact: /users/123 | wildcard: /users/* | substring: /api/users',
-								docsLink: '/docs/reference/routing-and-matching#wildcard-matching',
+								docsLink:
+									'/docs/reference/routing-and-matching#wildcard-matching',
 							}}
 							isExpanded={matchExpanded}
 							onToggle={() => setMatchExpanded(!matchExpanded)}
@@ -508,7 +527,8 @@ export function ResponseConfig({
 									description:
 										'Define different response variants based on captured URL segments. Each variant has a unique key that matches URL segments captured by * in your endpoint.',
 									example: '123 for /users/123, alice|42 for /users/*/posts/*',
-									docsLink: '/docs/reference/routing-and-matching#wildcard-matching',
+									docsLink:
+										'/docs/reference/routing-and-matching#wildcard-matching',
 								}}
 								isExpanded={variantsExpanded}
 								onToggle={() => setVariantsExpanded(!variantsExpanded)}

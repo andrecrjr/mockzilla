@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server';
 const mockFolder = {
 	id: '123',
 	name: 'Test Folder',
-	slug: 'test-folder',
+	slug: '/test-folder',
 	description: 'Description',
 	createdAt: new Date('2024-01-01'),
 	updatedAt: new Date('2024-01-01'),
@@ -77,7 +77,7 @@ describe('API /api/folders', () => {
 
 		expect(res.status).toBe(200);
 		expect(body).toBeArray();
-		expect(body[0].slug).toBe('test-folder');
+		expect(body[0].slug).toBe('/test-folder');
 		expect(mockDb.select).toHaveBeenCalled();
 	});
 
@@ -95,17 +95,17 @@ describe('API /api/folders', () => {
 
 	it('GET (slug) returns specific folder', async () => {
 		const req = new NextRequest(
-			'http://localhost:3000/api/folders?slug=test-folder',
+			'http://localhost:3000/api/folders?slug=%2Ftest-folder',
 		);
 
 		// Mock returning found folder
-		mockResolvedValue = [{ ...mockFolder, slug: 'test-folder' }];
+		mockResolvedValue = [{ ...mockFolder, slug: '/test-folder' }];
 
 		const res = await GET(req);
 		const body = await res.json();
 
 		expect(res.status).toBe(200);
-		expect(body.slug).toBe('test-folder');
+		expect(body.slug).toBe('/test-folder');
 	});
 
 	it('GET (slug) returns 404 if not found', async () => {
@@ -136,6 +136,23 @@ describe('API /api/folders', () => {
 		expect(res.status).toBe(201);
 		expect(body.name).toBe('Test Folder'); // Note: mockDb.insert returns mockFolder in setup
 		expect(mockDb.insert).toHaveBeenCalled();
+	});
+
+	it('POST creates a folder with a nested path slug', async () => {
+		mockResolvedValue = [];
+		mockDb.insert = mock(() =>
+			createMockBuilder([{ ...mockFolder, slug: '/app/test-things' }]),
+		);
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: 'Nested', slug: '/app/test-things' }),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(201);
+		expect(body.slug).toBe('/app/test-things');
 	});
 
 	it('PUT updates a folder', async () => {
@@ -179,7 +196,17 @@ describe('API /api/folders', () => {
 		mockResolvedValue = [mockFolder]; // Slug exists
 		const req = new NextRequest('http://localhost:3000/api/folders', {
 			method: 'POST',
-			body: JSON.stringify({ name: 'New', slug: 'test-folder' }),
+			body: JSON.stringify({ name: 'New', slug: '/test-folder' }),
+		});
+		const res = await POST(req);
+		expect(res.status).toBe(409);
+	});
+
+	it('POST returns 409 if path overlaps an existing folder path', async () => {
+		mockResolvedValue = [{ ...mockFolder, slug: '/app/test' }];
+		const req = new NextRequest('http://localhost:3000/api/folders', {
+			method: 'POST',
+			body: JSON.stringify({ name: 'New', slug: '/app/test/things' }),
 		});
 		const res = await POST(req);
 		expect(res.status).toBe(409);
@@ -204,19 +231,19 @@ describe('API /api/folders', () => {
 		expect(res.status).toBe(400);
 	});
 
-	it('POST returns 400 for too long slug', async () => {
+	it('POST returns 400 for invalid folder path characters', async () => {
 		const req = new NextRequest('http://localhost:3000/api/folders', {
 			method: 'POST',
-			body: JSON.stringify({ name: 'Long', slug: 'a'.repeat(101) }),
+			body: JSON.stringify({ name: 'Long', slug: '/long?path' }),
 		});
 		const res = await POST(req);
 		expect(res.status).toBe(400);
 	});
 
-	it('POST returns 400 for slug starting/ending with hyphen', async () => {
+	it('POST returns 400 for path segments starting/ending with hyphen', async () => {
 		const req = new NextRequest('http://localhost:3000/api/folders', {
 			method: 'POST',
-			body: JSON.stringify({ name: 'Hyphen', slug: '-invalid-' }),
+			body: JSON.stringify({ name: 'Hyphen', slug: '/-invalid-' }),
 		});
 		const res = await POST(req);
 		expect(res.status).toBe(400);
@@ -226,7 +253,7 @@ describe('API /api/folders', () => {
 		mockResolvedValue = [mockFolder]; // Simulate another folder has this slug
 		const req = new NextRequest('http://localhost:3000/api/folders?id=other-id', {
 			method: 'PUT',
-			body: JSON.stringify({ name: 'New Name', slug: 'test-folder' }),
+			body: JSON.stringify({ name: 'New Name', slug: '/test-folder' }),
 		});
 		const res = await PUT(req);
 		expect(res.status).toBe(409);
@@ -302,28 +329,16 @@ describe('API /api/folders', () => {
 	});
 
 	it('PUT returns 409 if custom slug already exists (excluding self)', async () => {
-		// Mock existingFolder lookup (first select) returns mockFolder with id 123
-		// Mock isSlugUnique lookup (second select) returns existing other folder
-		let callCount = 0;
-		mockDb.select = mock(() => {
-			callCount++;
-			if (callCount === 1) return createMockBuilder([{ ...mockFolder, id: '123' }]);
-			if (callCount === 2) return createMockBuilder([{ ...mockFolder, id: '456' }]); // Another folder exists
-			return createMockBuilder([]);
-		});
-		
+		mockResolvedValue = [
+			{ ...mockFolder, id: '123', slug: '/test-folder' },
+			{ ...mockFolder, id: '456', slug: '/existing-other' },
+		];
 		const req = new NextRequest('http://localhost:3000/api/folders?id=123', {
 			method: 'PUT',
 			body: JSON.stringify({ slug: 'existing-other' }),
 		});
 		const res = await PUT(req);
 		expect(res.status).toBe(409);
-		
-		// Restore
-		mockDb.select = mock((args: { count: unknown } | null) => {
-			if (args?.count) return createMockBuilder([{ count: 10 }]);
-			return createMockBuilder(mockResolvedValue);
-		});
 	});
 
 	it('DELETE returns 500 on error', async () => {

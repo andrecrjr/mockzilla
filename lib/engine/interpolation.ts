@@ -285,13 +285,12 @@ function resolveSinglePath(
 			} catch {
 				// Fallback for simple values
 				if (/^-?\d+\.?\d*$/.test(argsString)) {
-				        args = Number(argsString);
+					args = Number(argsString);
 				} else if (/^(true|false)$/.test(argsString)) {
-				        args = argsString === 'true';
+					args = argsString === 'true';
 				} else {
-				        args = argsString.replace(/^["']|["']$/g, '');
+					args = argsString.replace(/^["']|["']$/g, '');
 				}
-
 			}
 		}
 	}

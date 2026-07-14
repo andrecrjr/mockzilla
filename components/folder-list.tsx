@@ -3,6 +3,7 @@
 import { Folder } from 'lucide-react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
+import { buildFolderHref } from '@/lib/utils/folder-paths';
 import type { Folder as FolderType, Mock } from '@/lib/types';
 import { FolderDeleteButton } from './folder-delete-button';
 import { EditFolderDialog } from './edit-folder-dialog';
@@ -62,7 +63,7 @@ export function FolderList({
 						key={folder.id}
 						className="border-border bg-card p-0 overflow-hidden group hover:border-primary/50 transition-colors"
 					>
-						<Link href={`/app/folder/${folder.slug}`}>
+						<Link href={buildFolderHref(folder.slug)}>
 							<div className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
 								<div className="flex items-center gap-3">
 									<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

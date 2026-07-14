@@ -137,14 +137,22 @@ Simulate an endpoint that returns "Processing" for the first few hits, then "Com
 
 ## Why simulate these patterns?
 
-### 1. Hard-to-Reproduce States
-It is notoriously difficult to test "Out of Limits" or "Payment Failed" states in a real staging environment. With Workflows, you have deterministic control over these edge cases.
+<div>
+  <h4>1. Hard-to-Reproduce States</h4>
+  <div>
+    It is notoriously difficult to test "Out of Limits" or "Payment Failed" states in a real staging environment. With Workflows, you have deterministic control over these edge cases.
+  </div>
+</div>
 
 ### 2. Testing Asynchronicity
 If your frontend polls an API, you can test the **Loading -> Processing -> Success** transition instantly, without waiting for a real background worker to finish a 10-minute task.
 
-### 3. Idempotency Validation
-Verify that your frontend correctly generates and sends idempotency keys on retry attempts, ensuring users are never double-charged.
+<div>
+  <h4>3. Idempotency Validation</h4>
+  <div>
+    Verify that your frontend correctly generates and sends idempotency keys on retry attempts, ensuring users are never double-charged.
+  </div>
+</div>
 
 ---
 

@@ -4,7 +4,6 @@ import { FolderPlus, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { mutate } from 'swr';
 import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,18 +18,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import type { Folder } from '@/lib/types';
+import { normalizeFolderPath } from '@/lib/utils/folder-paths';
 
 interface CreateFolderDialogProps {
 	trigger?: React.ReactNode;
-	onSuccess?: () => void;
+	onSuccess?: (folder: Folder) => void;
 }
 
 function generateSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
+	return normalizeFolderPath(name);
 }
 
 export function CreateFolderDialog({
@@ -70,21 +67,15 @@ export function CreateFolderDialog({
 				const error = await response.json();
 				throw new Error(error.error);
 			}
+			const createdFolder = (await response.json()) as Folder;
 
 			toast.success('Folder Created', {
 				description: 'Your folder has been created successfully',
 			});
 
 			if (onSuccess) {
-				onSuccess();
+				onSuccess(createdFolder);
 			}
-
-			// Mutate relevant SWR keys to refresh data
-			mutate(
-				(key) => typeof key === 'string' && key.startsWith('/api/folders'),
-				undefined,
-				{ revalidate: true },
-			);
 
 			setOpen(false);
 			setName('');
@@ -167,27 +158,38 @@ export function CreateFolderDialog({
 
 						<div className="grid gap-2">
 							<div className="flex items-center gap-2">
-								<Label htmlFor="folder-slug">URL Slug</Label>
+								<Label htmlFor="folder-slug">URL Path</Label>
 								<FieldTooltip
-									label="The URL-friendly identifier used in mock endpoint paths."
-									description="Auto-generated from the folder name, but you can customize it. Only lowercase letters, numbers, and hyphens are allowed."
-									example="/api/mock/user-apis/..."
+									label="The URL-friendly base path used in mock endpoint paths."
+									description="Auto-generated from the folder name, but you can customize it. Slashes are allowed to create nested paths. Only lowercase letters, numbers, hyphens, and slashes are kept."
+									example="/api/mock/app/test-things/..."
 								/>
+							</div>
+							<div className="flex justify-end">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+									onClick={() => setUseCustomSlug((current) => !current)}
+								>
+									{useCustomSlug ? 'Auto-generate' : 'Customize'}
+								</Button>
 							</div>
 							<Input
 								id="folder-slug"
-								placeholder="e.g., user-apis"
+								placeholder="e.g., /app/test-things"
 								value={slug}
 								onChange={(e) =>
 									setSlug(
-										e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+										e.target.value.toLowerCase().replace(/[^a-z0-9/-]/g, ''),
 									)
 								}
 								disabled={!useCustomSlug}
 							/>
 							{slug && (
 								<p className="text-xs text-muted-foreground">
-									URL: /api/mock/<span className="font-mono">{slug}</span>/...
+									URL: /api/mock<span className="font-mono">{slug}</span>/...
 								</p>
 							)}
 						</div>

@@ -32,7 +32,7 @@ export async function GET() {
 		content += `> High-fidelity API mocking and stateful workflow simulation.\n\n`;
 		content += `- [llms-full.txt](${baseUrl}/llms.txt/llms-full.txt): The full documentation content in a single file.\n`;
 		content += `> Tip: Every route in the documentation also supports its own \`/llms.txt\` endpoint for scoped context.\n\n`;
-		
+
 		content += flattenToLinks(hierarchy, baseUrl);
 
 		return new NextResponse(content, {
@@ -42,6 +42,8 @@ export async function GET() {
 		});
 	} catch (error) {
 		console.error('Error generating llms.txt:', error);
-		return new NextResponse('Error generating documentation index.', { status: 500 });
+		return new NextResponse('Error generating documentation index.', {
+			status: 500,
+		});
 	}
 }

@@ -68,6 +68,8 @@ The documentation components (`@components/docs/**`) use a specific "Editor" the
 The docs header logo uses the shared `mockzilla-logo.png` asset inside a fixed-height container. Keep the rendered image shorter than the wrapper height so the transparent bitmap is not clipped by the rounded overflow mask.
 
 Docs previous/next navigation links are styled as bordered controls inside the MDX article. Keep that navigation wrapped with `not-prose` and keep `no-underline hover:no-underline` on the links so prose typography does not make them look like inline text links.
+
+MDX can turn multiline text inside JSX into generated paragraph nodes. Do not wrap prose-like MDX children in custom `<p>` tags; use `<div>` or plain Markdown paragraphs instead so rendered documentation cannot produce nested paragraphs and hydration warnings.
 *   **Editor Block**: `bg-[#1e1e1e] text-white p-4 rounded-lg overflow-x-auto shadow-inner`
 *   **Tip/Note Cards**: `bg-primary/5 border border-primary/20 rounded-lg p-4`
 
@@ -103,6 +105,8 @@ While we use standard Tailwind spacing utilities, certain patterns are prevalent
 *   **Dialog Spacing**: `DialogContent` usually includes `p-6` with `gap-4` for headers and footers.
 *   **Global Footer**: `components/site-footer.tsx` is rendered from the root layout so every page ends with the AC-JR open-source attribution and GitHub link.
 *   **Mock List Overflow**: Mock cards contain user-controlled names, endpoint paths, query parameters, and generated URLs. Keep flex children on these cards shrinkable with `min-w-0`, keep method/status/match badges grouped in the metadata row, place editable endpoint controls on their own row, and truncate long URL fields inside inputs instead of allowing path text to set the page width.
+*   **Query Param Form Rows**: Query parameter key/value rows in mock forms use stable row identity while typing and fixed grid tracks with `minmax(0, 1fr)` input columns, so focused inputs are not remounted and long values stay constrained inside the form.
+*   **Pagination Page Size Changes**: Changing rows per page resets the current page to 1, and paginated views clamp out-of-range `page` query values after data loads so a valid collection cannot render as an empty state because of a stale offset.
 
 ### Custom Utilities
 *   **`.scrollbar-thin`**: A custom utility for Firefox and Webkit to provide a non-obtrusive scrolling experience.

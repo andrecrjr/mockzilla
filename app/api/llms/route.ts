@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import path from 'node:path';
-import { getDocsHierarchy, findSectionByPath, type DocSection } from '@/lib/llms-utils';
+import {
+	getDocsHierarchy,
+	findSectionByPath,
+	type DocSection,
+} from '@/lib/llms-utils';
 
 function generateScopedIndex(section: DocSection, baseUrl: string): string {
 	let output = `# ${section.title}\n`;
@@ -25,16 +29,20 @@ export async function GET(request: Request) {
 	try {
 		const { searchParams } = new URL(request.url);
 		const rawPath = searchParams.get('path') || '';
-		
+
 		// Ensure the target path starts with /docs/
-		const targetPath = rawPath.startsWith('/docs') ? rawPath : `/docs/${rawPath}`;
-		
+		const targetPath = rawPath.startsWith('/docs')
+			? rawPath
+			: `/docs/${rawPath}`;
+
 		const docsDir = path.join(process.cwd(), 'content/docs');
 		const hierarchy = getDocsHierarchy(docsDir);
 		const section = findSectionByPath(hierarchy, targetPath);
 
 		if (!section) {
-			return new NextResponse('Documentation section not found.', { status: 404 });
+			return new NextResponse('Documentation section not found.', {
+				status: 404,
+			});
 		}
 
 		const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
@@ -47,6 +55,8 @@ export async function GET(request: Request) {
 		});
 	} catch (error) {
 		console.error('Error generating scoped llms.txt:', error);
-		return new NextResponse('Error generating documentation index.', { status: 500 });
+		return new NextResponse('Error generating documentation index.', {
+			status: 500,
+		});
 	}
 }

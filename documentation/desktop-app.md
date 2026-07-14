@@ -9,6 +9,12 @@ Mockzilla can be packaged as an installable Tauri desktop app for Windows, macOS
 - The sidecar runs Drizzle migrations, starts the Next standalone server, and uses PGlite by default.
 - `DATABASE_URL` is still supported for advanced users who want an external PostgreSQL database.
 
+## Opening Mock URLs
+
+Mock list URL actions use one shared opening behavior: desktop builds call the statically bundled Tauri opener plugin, while web and Docker builds use `window.open`. The static import ensures the opener client is included in the staged desktop bundle. This sends the `http://127.0.0.1:<port>/api/mock/...` URL to the user's default browser in desktop builds and to a new browser tab otherwise.
+
+Because the desktop WebView loads the Next.js UI from `http://127.0.0.1:<port>`, Tauri treats it as remote content. The `default` desktop capability explicitly grants opener access to `http://127.0.0.1:*/*`; no non-loopback origin receives native IPC access. The port wildcard is required because startup selects the first available port beginning at `36666`. If the native opener rejects a request, the mock card reports the error and leaves the URL available to copy manually.
+
 ## Build Paths
 
 The web and desktop builds share the same Next.js application, but they are separate release paths:
@@ -26,8 +32,9 @@ Desktop startup is intentionally separate from Docker development startup:
 2. Tauri runs `bun run desktop:stage` through `beforeBuildCommand`.
 3. `scripts/desktop-stage.mjs` builds the Next.js standalone server, then copies `.next/standalone`, static assets, `public`, Drizzle migrations, migration runtime packages, and `scripts/desktop-server.mjs` into `desktop-dist/server`.
 4. Tauri bundles a supported Node sidecar into `src-tauri/binaries`.
-5. At launch, `desktop-server.mjs` selects an available localhost port starting at `36666`, sets `MOCKZILLA_DESKTOP=1`, sets `MOCKZILLA_DATA_DIR`, runs migrations, and starts the standalone Next server.
-6. The Tauri WebView opens the selected local server URL.
+5. At launch, Tauri starts the Node sidecar with an inline ESM bootstrap and passes the staged `desktop-server.mjs` path through `MOCKZILLA_DESKTOP_ENTRY`. This avoids passing a Windows drive-letter path as Node's main script argument.
+6. `desktop-server.mjs` selects an available localhost port starting at `36666`, sets `MOCKZILLA_DESKTOP=1`, sets `MOCKZILLA_DATA_DIR`, runs migrations, and starts the standalone Next server.
+7. The Tauri WebView opens the selected local server URL.
 
 The web app still uses the same App Router tree in desktop and Docker development. Shared UI providers must therefore be available to `/app` pages in both paths; the `/app` shell owns its own theme provider boundary so navigation and nested app pages can render theme-aware controls during server rendering and hydration.
 
@@ -79,17 +86,20 @@ Linux packaging currently produces AppImage and deb installers. Windows packagin
 
 ## Release
 
-GitHub Actions publishes desktop installers after semantic-release creates a version:
+GitHub Actions publishes desktop installers automatically from the release CD
+workflow after semantic-release creates and publishes a GitHub release:
 
 - Linux: AppImage and deb
 - Windows: NSIS exe
 - macOS: DMG
 
-During the semantic-release prepare step, `scripts/sync-release-version.mjs` writes the next semantic version into `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the Mockzilla entry in `src-tauri/Cargo.lock`. The release commit includes those files, and the Docker and desktop packaging jobs explicitly check out `v${version}` before building. That keeps Docker tags, GitHub release tags, and installer metadata aligned.
+During the semantic-release prepare step, `scripts/sync-release-version.mjs` writes the next semantic version into `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the Mockzilla entry in `src-tauri/Cargo.lock`. The release commit includes those files. Docker publishing and automatic desktop packaging both check out `v${version}` inside the release-and-Docker workflow. That keeps Docker tags, GitHub release tags, and installer metadata aligned while release-ignored changes publish no artifacts.
+
+The separate `Desktop Release` workflow remains available for manual retries. Dispatch it with the release tag, for example `v1.0.3`.
 
 CI installs Node 24 before packaging so the bundled sidecar uses the same major runtime as the production Docker image. Local builds can also use Node 22 or Node 20.9+, but Node 25 is intentionally skipped for desktop packaging because Next.js 16 Webpack builds can fail in that runtime.
 
-The desktop release workflow must call `bun run desktop:build` rather than invoking the Tauri CLI action directly. That keeps CI/CD on the same wrapper path as local builds: supported Node selection, `next build --webpack`, desktop resource staging, Sharp musl pruning on Linux, and installer generation. The workflow uploads the generated files from `src-tauri/target/release/bundle`.
+The desktop release workflow must call `bun run desktop:build` rather than invoking the Tauri CLI action directly. That keeps CI/CD on the same wrapper path as local builds: supported Node selection, `next build --webpack`, desktop resource staging, Sharp musl pruning on Linux, and installer generation. The workflow uploads the generated files from `src-tauri/target/release/bundle`. Artifact upload globs are matrix-specific: Linux requires AppImage and deb outputs, Windows requires the NSIS `.exe`, and macOS requires the `.dmg`. Keep `fail_on_unmatched_files` enabled so a missing expected artifact still fails the producing platform without making other platforms require impossible formats.
 
 ## Install Release Artifacts
 

@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.landing
+    container_name: mockzilla-landing
+    ports:
+      - "36666:3000"
+    env_file:
+      - .env.landing
+    networks:
+      - mockzilla-dev-network
+
+networks:
+  mockzilla-dev-network:
+    driver: bridge

@@ -1,8 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { 
-	ManageScenariosArgs, 
-	ManageTransitionsArgs, 
-	WorkflowControlArgs 
+import {
+	ManageScenariosArgs,
+	ManageTransitionsArgs,
+	WorkflowControlArgs,
 } from '../schemas/workflows';
 
 export function registerWorkflowTools(server: McpServer) {

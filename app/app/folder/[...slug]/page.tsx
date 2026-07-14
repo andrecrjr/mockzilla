@@ -31,17 +31,37 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import type { Folder, Mock, MockSubfolder, UpdateMockRequest } from '@/lib/types';
+import type {
+	Folder,
+	Mock,
+	MockSubfolder,
+	UpdateMockRequest,
+} from '@/lib/types';
+import { swrFetcher } from '@/lib/swr-fetcher';
 import { copyToClipboard } from '@/lib/utils';
-import { generateSlug, joinMockPaths } from '@/lib/utils/mock-paths';
+import {
+	getSubfolderParentMainPath,
+	resolveSubfolderPathInput,
+} from '@/lib/utils/mock-paths';
+import { formatStoredFolderPath } from '@/lib/utils/folder-paths';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+type MockListResponse = {
+	data: Mock[];
+	meta: { total: number; page: number; limit: number; totalPages: number };
+};
 
 function FolderContent() {
 	const params = useParams();
-	const slug = params.slug as string;
+	const slug = formatStoredFolderPath(
+		Array.isArray(params.slug)
+			? params.slug.join('/')
+			: (params.slug as string),
+	);
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
-	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
+	const [limit, setLimit] = useQueryState(
+		'limit',
+		parseAsInteger.withDefault(10),
+	);
 	const [search, setSearch] = useQueryState('q', parseAsString.withDefault(''));
 	const [mockFolderId, setMockFolderId] = useQueryState(
 		'mockFolderId',
@@ -49,11 +69,12 @@ function FolderContent() {
 	);
 	const [debouncedSearch, setDebouncedSearch] = useState(search);
 	const [newSubfolderName, setNewSubfolderName] = useState('');
+	const [newSubfolderPath, setNewSubfolderPath] = useState('');
 	const [isCreateSubfolderOpen, setIsCreateSubfolderOpen] = useState(false);
-	const [editingSubfolder, setEditingSubfolder] = useState<MockSubfolder | null>(
-		null,
-	);
+	const [editingSubfolder, setEditingSubfolder] =
+		useState<MockSubfolder | null>(null);
 	const [editSubfolderName, setEditSubfolderName] = useState('');
+	const [editSubfolderPath, setEditSubfolderPath] = useState('');
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -65,7 +86,7 @@ function FolderContent() {
 
 	const { data: folders = [] } = useSWR<Folder[]>(
 		'/api/folders?all=true',
-		fetcher,
+		swrFetcher,
 	);
 	const folder = folders.find((f) => f.slug === slug);
 	const currentMockFolderId = mockFolderId || 'root';
@@ -74,58 +95,87 @@ function FolderContent() {
 		folder
 			? `/api/mock-subfolders?folderId=${folder.id}&parentId=${currentMockFolderId}`
 			: null,
-		fetcher,
+		swrFetcher,
 	);
 	const { data: allSubfolders = [] } = useSWR<MockSubfolder[]>(
 		folder ? `/api/mock-subfolders?folderId=${folder.id}&all=true` : null,
-		fetcher,
+		swrFetcher,
 	);
 	const currentSubfolder =
 		currentMockFolderId === 'root'
 			? null
-			: allSubfolders.find((subfolder) => subfolder.id === currentMockFolderId) ?? null;
+			: (allSubfolders.find(
+					(subfolder) => subfolder.id === currentMockFolderId,
+				) ?? null);
 	const parentSubfolder = currentSubfolder?.parentId
-		? allSubfolders.find((subfolder) => subfolder.id === currentSubfolder.parentId) ?? null
+		? (allSubfolders.find(
+				(subfolder) => subfolder.id === currentSubfolder.parentId,
+			) ?? null)
 		: null;
-	const editingParentSubfolder = editingSubfolder?.parentId
-		? allSubfolders.find((subfolder) => subfolder.id === editingSubfolder.parentId) ?? null
-		: null;
+	const editingParentMainPath = editingSubfolder
+		? getSubfolderParentMainPath(
+				editingSubfolder.path,
+				editingSubfolder.segment ?? '',
+			)
+		: '/';
 
-	const { data, isLoading: mocksLoading } = useSWR<{
-		data: Mock[];
-		meta: { total: number; page: number; limit: number; totalPages: number };
-	}>(
-		folder
-			? `/api/mocks?folderId=${folder.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`
-			: null,
-		fetcher,
+	const mocksCacheKey = folder
+		? `/api/mocks?folderId=${folder.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`
+		: null;
+	const { data, isLoading: mocksLoading } = useSWR<MockListResponse>(
+		mocksCacheKey,
+		swrFetcher,
 	);
 
 	const mocks = data?.data || [];
 	const meta = data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
-	const newSubfolderPreviewPath = joinMockPaths(
-		currentSubfolder?.mainPath ?? '/',
-		`/${generateSlug(newSubfolderName) || 'subfolder'}`,
-	);
-	const editSubfolderPreviewPath = editingSubfolder
-		? joinMockPaths(
-				editingParentSubfolder?.mainPath ?? '/',
-				`/${generateSlug(editSubfolderName) || editingSubfolder.slug}`,
-			)
-		: '/';
 
-	const handleMockSuccess = () => {
-		toast.success('Mock Created', {
-			description: 'Your mock endpoint has been created successfully',
-		});
-		mutate(
-			`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-		);
+	useEffect(() => {
+		if (!data) return;
+		const maxPage = Math.max(meta.totalPages || 1, 1);
+		const clampedPage = Math.min(Math.max(page, 1), maxPage);
+		if (page !== clampedPage) {
+			setPage(clampedPage);
+		}
+	}, [data, meta.totalPages, page, setPage]);
+
+	const newSubfolderPathDraft = resolveSubfolderPathInput(
+		newSubfolderPath,
+		currentSubfolder?.path ?? '/',
+		folder?.slug,
+		'subfolder',
+	);
+	const editSubfolderPathDraft = editingSubfolder
+		? resolveSubfolderPathInput(
+				editSubfolderPath,
+				editingParentMainPath,
+				folder?.slug,
+				editingSubfolder.segment,
+			)
+		: null;
+
+	const handleMockSuccess = (createdMock: Mock) => {
+		if (mocksCacheKey) {
+			mutate(
+				mocksCacheKey,
+				(current: MockListResponse | undefined) =>
+					current
+						? {
+								...current,
+								data: [createdMock, ...current.data].slice(0, limit),
+								meta: { ...current.meta, total: current.meta.total + 1 },
+							}
+						: current,
+				{ revalidate: true },
+			);
+		}
 	};
 
 	const refreshSubfolders = () => {
 		if (!folder) return;
-		mutate(`/api/mock-subfolders?folderId=${folder.id}&parentId=${currentMockFolderId}`);
+		mutate(
+			`/api/mock-subfolders?folderId=${folder.id}&parentId=${currentMockFolderId}`,
+		);
 		mutate(`/api/mock-subfolders?folderId=${folder.id}&all=true`);
 	};
 
@@ -140,6 +190,7 @@ function FolderContent() {
 					folderId: folder.id,
 					parentId: currentMockFolderId === 'root' ? null : currentMockFolderId,
 					name: newSubfolderName,
+					slug: newSubfolderPath.trim(),
 				}),
 			});
 			if (!response.ok) {
@@ -147,6 +198,7 @@ function FolderContent() {
 				throw new Error(error.error);
 			}
 			setNewSubfolderName('');
+			setNewSubfolderPath('');
 			setIsCreateSubfolderOpen(false);
 			toast.success('Subfolder Created');
 			refreshSubfolders();
@@ -180,6 +232,7 @@ function FolderContent() {
 	const openEditSubfolder = (subfolder: MockSubfolder) => {
 		setEditingSubfolder(subfolder);
 		setEditSubfolderName(subfolder.name);
+		setEditSubfolderPath(subfolder.path);
 	};
 
 	const handleUpdateSubfolder = async (event: React.FormEvent) => {
@@ -193,6 +246,7 @@ function FolderContent() {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						name: editSubfolderName,
+						slug: editSubfolderPath.trim(),
 					}),
 				},
 			);
@@ -203,6 +257,7 @@ function FolderContent() {
 			toast.success('Subfolder Updated');
 			setEditingSubfolder(null);
 			setEditSubfolderName('');
+			setEditSubfolderPath('');
 			refreshSubfolders();
 		} catch (error: unknown) {
 			toast.error('Error', {
@@ -212,15 +267,31 @@ function FolderContent() {
 		}
 	};
 
+	const normalizeNewSubfolderSlugField = () => {
+		if (!newSubfolderPath.trim()) return;
+		setNewSubfolderPath(newSubfolderPathDraft.displayPath);
+	};
+
+	const normalizeEditSubfolderSlugField = () => {
+		if (!editingSubfolder || !editSubfolderPath.trim()) return;
+		setEditSubfolderPath(
+			editSubfolderPathDraft?.displayPath || editingSubfolder.path,
+		);
+	};
+
 	const handleDeleteMock = async (id: string) => {
 		try {
-			await fetch(`/api/mocks?id=${id}`, { method: 'DELETE' });
+			const response = await fetch(`/api/mocks?id=${id}`, { method: 'DELETE' });
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete mock');
+			}
 			toast.success('Mock Deleted', {
 				description: 'Mock endpoint has been removed',
 			});
-			mutate(
-				`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-			);
+			if (mocksCacheKey) {
+				mutate(mocksCacheKey);
+			}
 		} catch {
 			toast.error('Error', {
 				description: 'Failed to delete mock',
@@ -260,9 +331,9 @@ function FolderContent() {
 			toast.success('Mock Duplicated', {
 				description: 'Mock endpoint has been duplicated successfully',
 			});
-			mutate(
-				`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-			);
+			if (mocksCacheKey) {
+				mutate(mocksCacheKey);
+			}
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -284,12 +355,26 @@ function FolderContent() {
 				throw new Error(error.error);
 			}
 
+			const updatedMock = (await response.json()) as Mock;
+
 			toast.success('Mock Updated', {
 				description: 'Mock endpoint has been updated successfully',
 			});
-			mutate(
-				`/api/mocks?folderId=${folder?.id}&mockFolderId=${currentMockFolderId}&page=${page}&limit=${limit}&q=${debouncedSearch}`,
-			);
+			if (mocksCacheKey) {
+				mutate(
+					mocksCacheKey,
+					(current: MockListResponse | undefined) =>
+						current
+							? {
+									...current,
+									data: current.data.map((mock) =>
+										mock.id === updatedMock.id ? updatedMock : mock,
+									),
+								}
+							: current,
+					{ revalidate: true },
+				);
+			}
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -356,10 +441,10 @@ function FolderContent() {
 							<h1 className="text-4xl font-bold tracking-tight text-foreground">
 								{folder.name}
 							</h1>
-							<p className="mt-1 text-muted-foreground">/{folder.slug}</p>
+							<p className="mt-1 text-muted-foreground">{folder.slug}</p>
 							{currentSubfolder && (
 								<p className="mt-1 text-sm text-muted-foreground">
-									{currentSubfolder.name} ({currentSubfolder.mainPath})
+									{currentSubfolder.name} ({currentSubfolder.path})
 								</p>
 							)}
 							{folder.description && (
@@ -408,7 +493,13 @@ function FolderContent() {
 							<div className="flex items-center gap-3">
 								<Dialog
 									open={isCreateSubfolderOpen}
-									onOpenChange={setIsCreateSubfolderOpen}
+									onOpenChange={(open) => {
+										setIsCreateSubfolderOpen(open);
+										if (!open) {
+											setNewSubfolderName('');
+											setNewSubfolderPath('');
+										}
+									}}
 								>
 									<DialogTrigger asChild>
 										<Button variant="outline">
@@ -420,10 +511,13 @@ function FolderContent() {
 										<DialogHeader>
 											<DialogTitle>Create Subfolder</DialogTitle>
 											<DialogDescription>
-												Create a nested mock group with a path derived from its name.
+												Create a nested mock group with a full path.
 											</DialogDescription>
 										</DialogHeader>
-										<form onSubmit={handleCreateSubfolder} className="space-y-4">
+										<form
+											onSubmit={handleCreateSubfolder}
+											className="space-y-4"
+										>
 											<div className="space-y-2">
 												<label
 													htmlFor="subfolder-name"
@@ -441,10 +535,28 @@ function FolderContent() {
 													required
 												/>
 											</div>
+											<div className="space-y-2">
+												<label
+													htmlFor="subfolder-slug"
+													className="text-sm font-medium"
+												>
+													Path
+												</label>
+												<Input
+													id="subfolder-slug"
+													placeholder="/app/ticket-management"
+													value={newSubfolderPath}
+													onChange={(event) =>
+														setNewSubfolderPath(event.target.value)
+													}
+													onBlur={normalizeNewSubfolderSlugField}
+													required
+												/>
+											</div>
 											<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
 												<p className="text-xs text-muted-foreground">Path</p>
 												<p className="mt-1 font-mono text-sm">
-													{newSubfolderPreviewPath}
+													{newSubfolderPathDraft.previewPath}
 												</p>
 											</div>
 											<div className="flex justify-end gap-2 pt-2">
@@ -498,7 +610,7 @@ function FolderContent() {
 													</span>
 												</div>
 												<p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-													{subfolder.mainPath}
+													{subfolder.path}
 												</p>
 											</button>
 											<Button
@@ -526,14 +638,18 @@ function FolderContent() {
 						<Dialog
 							open={Boolean(editingSubfolder)}
 							onOpenChange={(open) => {
-								if (!open) setEditingSubfolder(null);
+								if (!open) {
+									setEditingSubfolder(null);
+									setEditSubfolderName('');
+									setEditSubfolderPath('');
+								}
 							}}
 						>
 							<DialogContent>
 								<DialogHeader>
 									<DialogTitle>Edit Subfolder</DialogTitle>
 									<DialogDescription>
-										Update the subfolder name. Its path is derived from the folder hierarchy.
+										Update the subfolder name or full path independently.
 									</DialogDescription>
 								</DialogHeader>
 								<form onSubmit={handleUpdateSubfolder} className="space-y-4">
@@ -553,10 +669,27 @@ function FolderContent() {
 											required
 										/>
 									</div>
+									<div className="space-y-2">
+										<label
+											htmlFor="edit-subfolder-slug"
+											className="text-sm font-medium"
+										>
+											Path
+										</label>
+										<Input
+											id="edit-subfolder-slug"
+											value={editSubfolderPath}
+											onChange={(event) =>
+												setEditSubfolderPath(event.target.value)
+											}
+											onBlur={normalizeEditSubfolderSlugField}
+											required
+										/>
+									</div>
 									<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
 										<p className="text-xs text-muted-foreground">Path</p>
 										<p className="mt-1 font-mono text-sm">
-											{editSubfolderPreviewPath}
+											{editSubfolderPathDraft?.previewPath || '/'}
 										</p>
 									</div>
 									<div className="flex justify-end gap-2 pt-2">

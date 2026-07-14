@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
@@ -12,27 +12,37 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { validateSchema } from '@/lib/schema-generator';
 import type { Folder, Mock, MockSubfolder } from '@/lib/types';
+import { swrFetcher } from '@/lib/swr-fetcher';
+import {
+	buildFolderHref,
+	buildMockEditorHref,
+	formatStoredFolderPath,
+} from '@/lib/utils/folder-paths';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+type MockListResponse = {
+	data: Mock[];
+	meta: { total: number; page: number; limit: number; totalPages: number };
+};
 
 export default function EditMockPage() {
 	const params = useParams();
 	const router = useRouter();
-	const slug = params.slug as string;
+	const searchParams = useSearchParams();
+	const folderPath = formatStoredFolderPath(searchParams.get('folder') ?? '');
 	const mockId = params.mockId as string;
 
 	const { data: folder } = useSWR<Folder>(
-		slug ? `/api/folders?slug=${slug}` : null,
-		fetcher,
+		folderPath ? `/api/folders?slug=${encodeURIComponent(folderPath)}` : null,
+		swrFetcher,
 	);
 
 	const { data: mock } = useSWR<Mock>(
 		mockId ? `/api/mocks?id=${mockId}` : null,
-		fetcher,
+		swrFetcher,
 	);
 	const { data: mockSubfolders = [] } = useSWR<MockSubfolder[]>(
 		folder ? `/api/mock-subfolders?folderId=${folder.id}&all=true` : null,
-		fetcher,
+		swrFetcher,
 	);
 
 	const [isLoading, setIsLoading] = useState(false);
@@ -107,12 +117,27 @@ export default function EditMockPage() {
 				const error = await res.json();
 				throw new Error(error.error);
 			}
+			const updatedMock = (await res.json()) as Mock;
 			toast.success('Mock Updated', {
 				description: 'Mock endpoint has been updated successfully',
 			});
-			mutate(`/api/mocks?folderId=${folder.id}`);
-			mutate(`/api/mocks?id=${mock.id}`);
-			router.push(`/app/folder/${slug}`);
+			mutate(`/api/mocks?id=${mock.id}`, updatedMock, { revalidate: false });
+			mutate(
+				(key) =>
+					typeof key === 'string' &&
+					key.startsWith(`/api/mocks?folderId=${folder.id}`),
+				(current: MockListResponse | undefined) =>
+					current
+						? {
+								...current,
+								data: current.data.map((cachedMock) =>
+									cachedMock.id === updatedMock.id ? updatedMock : cachedMock,
+								),
+							}
+						: current,
+				{ revalidate: true },
+			);
+			router.push(buildFolderHref(folder.slug));
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -159,9 +184,13 @@ export default function EditMockPage() {
 			toast.success('Mock Duplicated', {
 				description: 'Mock endpoint has been duplicated successfully',
 			});
-			mutate(`/api/folders?slug=${slug}`);
-			mutate(`/api/mocks?folderId=${folder.id}`);
-			router.push(`/app/folder/${slug}/mock/${newMock.id}`);
+			mutate(`/api/folders?slug=${encodeURIComponent(folder.slug)}`);
+			mutate(
+				(key) =>
+					typeof key === 'string' &&
+					key.startsWith(`/api/mocks?folderId=${folder.id}`),
+			);
+			router.push(buildMockEditorHref(newMock.id, folder.slug));
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -190,7 +219,7 @@ export default function EditMockPage() {
 				<div className="mb-8 flex items-center justify-between">
 					<div className="flex items-center gap-4">
 						<Button variant="ghost" asChild>
-							<Link href={`/app/folder/${slug}`}>
+							<Link href={buildFolderHref(folder.slug)}>
 								<ArrowLeft className="mr-2 h-4 w-4" />
 								Back to {folder?.name}
 							</Link>
@@ -206,6 +235,7 @@ export default function EditMockPage() {
 					<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-6 overflow-y-auto">
 						<MockEditor
 							mode="edit"
+							initialRevision={`${mock.id}:${mock.updatedAt ?? mock.createdAt}`}
 							initial={
 								mock
 									? {
@@ -228,7 +258,7 @@ export default function EditMockPage() {
 									: undefined
 							}
 							submitLabel="Save Changes"
-							previewSlug={slug as string}
+							previewSlug={folder.slug}
 							folders={[folder]}
 							mockSubfolders={mockSubfolders}
 							defaultFolderId={folder.id}

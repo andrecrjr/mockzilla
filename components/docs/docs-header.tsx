@@ -31,9 +31,9 @@ export function DocsHeader({ sidebar }: DocsHeaderProps) {
 			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="flex h-16 items-center justify-between">
 					<Link
-						href="/app"
+						href="/"
 						className="flex items-center gap-4 font-bold text-xl"
-						title="Back to App"
+						title="Back to Mockzilla"
 					>
 						<div className="flex h-10 w-28 items-center justify-center rounded-lg overflow-hidden">
 							<img
@@ -79,17 +79,20 @@ export function DocsHeader({ sidebar }: DocsHeaderProps) {
 							}
 
 							const href = `/docs/${item.slug === 'index' ? '' : item.slug}`;
-							const isActive = mounted && (pathname === href || (item.slug === 'index' && pathname === '/docs'));
+							const isActive =
+								mounted &&
+								(pathname === href ||
+									(item.slug === 'index' && pathname === '/docs'));
 
 							return (
 								<Link
 									key={item.slug}
 									href={href}
 									className={cn(
-										"block px-3 py-2 text-base font-medium rounded-md transition-colors",
+										'block px-3 py-2 text-base font-medium rounded-md transition-colors',
 										isActive
-											? "bg-primary/10 text-primary"
-											: "text-foreground/70 hover:text-foreground hover:bg-muted"
+											? 'bg-primary/10 text-primary'
+											: 'text-foreground/70 hover:text-foreground hover:bg-muted',
 									)}
 									onClick={() => setMobileMenuOpen(false)}
 								>

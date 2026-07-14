@@ -40,7 +40,7 @@ Initiated from the Extension's Rule Manager.
 
 1.  **Selection**: The user enables "Server Sync" for specific rules or groups.
 2.  **Transport**: `ruleManager.js` in the extension collects all sync-enabled rules, groups them by folder, and POSTs to `/api/sync/extension`.
-3.  **Slug Generation**: The server generates a unique slug for the folder, appending an `-extension` suffix (e.g., `my-folder-extension`).
+3.  **URL Path Generation**: The server generates a unique URL-safe folder path for the synced folder, appending an `-extension` suffix (e.g., `/my-folder-extension`).
 4.  **Consistency**: Before importing, the server **wipes existing mocks** in that specific folder to ensure the server state exactly matches the extension's pushed state.
 5.  **Storage**: 
     -   Updates/Creates the `folders` record.
