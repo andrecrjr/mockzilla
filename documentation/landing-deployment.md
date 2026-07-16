@@ -38,6 +38,15 @@ make landing-logs    # View logs
 
 ## Accessible Routes in Landing Mode
 
+Alongside the landing page and documentation, the static export includes SEO
+metadata and the top-level LLM documentation files:
+
+- `/robots.txt`
+- `/sitemap.xml`
+- `/llms.txt`
+- `/llms-full.txt`
+- `/llms/docs/*` (static scoped documentation context)
+
 | Route       | Accessible |
 |-------------|------------|
 | `/`         | ✅ Yes     |

@@ -2,6 +2,8 @@ import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { MetadataRoute } from 'next';
 
+export const dynamic = 'force-static';
+
 const CONTENT_DIR = path.join(process.cwd(), 'content/docs');
 const DEPLOY_MODE = process.env.DEPLOY_MODE || 'full';
 

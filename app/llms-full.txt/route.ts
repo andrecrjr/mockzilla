@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import path from 'node:path';
 import { getDocsHierarchy, type DocSection } from '@/lib/llms-utils';
 
+export const dynamic = 'force-static';
+
 function flattenToContent(sections: DocSection[], depth: number = 2): string {
 	let output = '';
 	for (const section of sections) {

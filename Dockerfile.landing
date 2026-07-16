@@ -7,10 +7,10 @@ FROM base AS builder
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 COPY . .
-# The static site exposes only the landing page and documentation. Removing the
-# dashboard and API trees before Next collects page data keeps database-backed
-# modules out of the export.
-RUN rm -rf app/api app/app app/llms-full.txt app/llms.txt proxy.ts && rm -f app/robots.ts app/sitemap.ts
+# The static site exposes the landing page, documentation, SEO metadata, and
+# top-level LLM documentation files. Removing the dashboard and API trees
+# keeps database-backed modules out of the export.
+RUN rm -rf app/api app/app proxy.ts
 ENV NEXT_DISABLE_ESLINT=true
 ENV DEPLOY_MODE=landing
 RUN bun run build
