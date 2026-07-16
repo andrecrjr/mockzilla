@@ -19,7 +19,7 @@ function flattenToLinks(
 			}
 			output += flattenToLinks(section.items, baseUrl, scopedPathPrefix);
 		} else {
-			output += `- [${section.title}](${baseUrl}${scopedPathPrefix}${section.path})${description}\n`;
+			output += `- [${section.title}](${baseUrl}${scopedPathPrefix}${section.path}.txt)${description}\n`;
 		}
 	}
 	return output;

@@ -33,7 +33,7 @@ function generateScopedIndex(section: DocSection, baseUrl: string): string {
 		output += '## Sub-sections\n';
 		for (const item of section.items) {
 			const description = item.description ? `: ${item.description}` : '';
-			output += `- [${item.title}](${baseUrl}/llms${item.path})${description}\n`;
+			output += `- [${item.title}](${baseUrl}/llms${item.path}.txt)${description}\n`;
 		}
 	}
 
@@ -42,15 +42,22 @@ function generateScopedIndex(section: DocSection, baseUrl: string): string {
 
 export function generateStaticParams(): Array<{ path: string[] }> {
 	return flattenSections(getDocsHierarchy(DOCS_DIR)).map((section) => ({
-		path: section.path.replace(/^\/docs\/?/, '').split('/').filter(Boolean),
+		path: `${section.path.replace(/^\/docs\/?/, '')}.txt`
+			.split('/')
+			.filter(Boolean),
 	}));
 }
 
 export async function GET(_: Request, context: RouteContext) {
 	const { path: pathSegments = [] } = await context.params;
+	const targetPath = pathSegments
+		.map((segment, index) =>
+			index === pathSegments.length - 1 ? segment.replace(/\.txt$/, '') : segment,
+		)
+		.join('/');
 	const section = findSectionByPath(
 		getDocsHierarchy(DOCS_DIR),
-		`/docs/${pathSegments.join('/')}`,
+		`/docs/${targetPath}`,
 	);
 
 	if (!section) {
