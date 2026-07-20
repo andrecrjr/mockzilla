@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const HttpStatusCodeSchema = z.number().int().min(200).max(599);
+export const NonNegativeIntegerSchema = z.number().int().nonnegative();
+
 export const parseJsonOrPassthrough = (val: unknown) => {
 	if (typeof val === 'string') {
 		try {
@@ -14,7 +17,7 @@ export const parseJsonOrPassthrough = (val: unknown) => {
 export const MockVariantSchema = z.object({
 	key: z.string(),
 	body: z.string(),
-	statusCode: z.number().int(),
+	statusCode: HttpStatusCodeSchema,
 	bodyType: z.enum(['json', 'text']),
 });
 export type MockVariantSchema = z.infer<typeof MockVariantSchema>;
@@ -119,7 +122,7 @@ export const WorkflowTransitionSchema = z.object({
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.object({
-				status: z.number().int().default(200),
+				status: HttpStatusCodeSchema.default(200),
 				body: z.unknown().optional(),
 				headers: z.record(z.string()).optional(),
 			}),

@@ -30,3 +30,14 @@ export const ManageLogsArgs = z.discriminatedUnion('action', [
 	}),
 ]);
 export type ManageLogsArgs = z.infer<typeof ManageLogsArgs>;
+
+/** Object-shaped MCP transport schema; action-specific validation uses `ManageLogsArgs`. */
+export const ManageLogsInputSchema = z.object({
+	action: z.enum(['get', 'trace', 'clear']),
+	limit: z.number().int().min(1).max(500).optional(),
+	type: z.string().optional(),
+	level: z.union([z.number(), z.string()]).optional(),
+	search: z.string().optional(),
+	reqId: z.string().optional(),
+});
+export type ManageLogsInputSchema = z.infer<typeof ManageLogsInputSchema>;

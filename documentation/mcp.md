@@ -120,6 +120,15 @@ Example:
 ```
 
 ### 3. Mocks (`manage_mocks`)
+
+The MCP tool schema declares concrete JSON types and per-action required fields.
+Pass `statusCode` and `delay` as JSON numbers, and boolean options such as
+`enabled` as JSON booleans. Mock and workflow response status codes must be in
+the inclusive range 200–599; delay must be a non-negative whole number.
+
+This also applies to the workflow and observability tools: transition `id`,
+pagination fields, and response `status` values are JSON numbers; flags are JSON
+booleans.
 Unified tool for defining and testing API responses.
 - `list`: Paginated list of mocks, optionally filtered by folder.
 - `create`: Create a mock. If `jsonSchema` is provided without a `response`, a dynamic response is auto-generated.
