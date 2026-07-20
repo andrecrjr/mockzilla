@@ -141,6 +141,31 @@ describe('MockEditor', () => {
 		);
 	});
 
+	it('automatically uses wildcard matching when the endpoint path contains a wildcard', async () => {
+		const onSubmit = mock(async () => undefined);
+
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				initial={{ name: 'Users', response: '{}', statusCode: '200' }}
+				onSubmit={onSubmit}
+			/>,
+		);
+
+		fireEvent.change(screen.getByLabelText('Endpoint Path'), {
+			target: { value: '/users/*' },
+		});
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Create Mock Endpoint' }),
+		);
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({ matchType: 'wildcard', path: '/users/*' }),
+		);
+	});
+
 	it('does not split query params while a user is still typing', () => {
 		render(
 			<MockEditor

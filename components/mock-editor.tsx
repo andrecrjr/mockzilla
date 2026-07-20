@@ -370,6 +370,12 @@ export function MockEditor({
 	};
 	const isEchoRequestBodyEnabled =
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
+	const handlePathChange = (nextPath: string) => {
+		setPath(nextPath);
+		if (getEndpointInputParts(nextPath).path.includes('*')) {
+			setMatchType('wildcard');
+		}
+	};
 
 	useEffect(() => {
 		setPath((currentPath) => {
@@ -409,7 +415,7 @@ export function MockEditor({
 
 		event.preventDefault();
 		const parsed = getEndpointInputParts(pasted);
-		setPath(
+		handlePathChange(
 			`${formatEndpointPathForStorage(
 				parsed.path,
 				selectedMockSubfolder?.path ?? '/',
@@ -613,7 +619,7 @@ export function MockEditor({
 							<Input
 								id="create-path"
 								value={path}
-								onChange={(e) => setPath(e.target.value)}
+								onChange={(e) => handlePathChange(e.target.value)}
 								onBlur={extractPathQueryParams}
 								onPaste={handlePathPaste}
 								placeholder="/users"
