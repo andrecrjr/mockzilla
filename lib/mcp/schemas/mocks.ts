@@ -15,7 +15,9 @@ export const CreateMockArgs = z.object({
 	folderId: z
 		.string()
 		.optional()
-		.describe('The ID of the parent folder (required if folderSlug not provided)'),
+		.describe(
+			'The ID of the parent folder (required if folderSlug not provided)',
+		),
 	folderSlug: z
 		.string()
 		.optional()
@@ -26,7 +28,9 @@ export const CreateMockArgs = z.object({
 		.string()
 		.nullable()
 		.optional()
-		.describe('Optional mock subfolder ID. Null means root of the parent folder.'),
+		.describe(
+			'Optional mock subfolder ID. Null means root of the parent folder.',
+		),
 	response: z.string().describe('The response body (JSON string or text)'),
 	matchType: z
 		.enum(['exact', 'substring', 'wildcard'])
@@ -177,7 +181,10 @@ export const ManageMocksArgs = z.union([
 		folderId: z.string().optional(),
 		folderSlug: z.string().optional(),
 		mockFolderId: z.string().nullable().optional(),
-		response: z.string().optional().describe('Response body (required if jsonSchema not provided)'),
+		response: z
+			.string()
+			.optional()
+			.describe('Response body (required if jsonSchema not provided)'),
 		matchType: z.enum(['exact', 'substring', 'wildcard']).optional(),
 		bodyType: z.enum(['json', 'text']).optional(),
 		enabled: z.boolean().optional(),
@@ -236,7 +243,15 @@ export const ManageMocksArgs = z.union([
 		action: z.literal('preview'),
 		folderSlug: z.string(),
 		path: z.string(),
-		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+		method: z.enum([
+			'GET',
+			'POST',
+			'PUT',
+			'PATCH',
+			'DELETE',
+			'HEAD',
+			'OPTIONS',
+		]),
 		contentType: z.string().nullable().optional(),
 		queryParams: z.record(z.string()).nullable().optional(),
 		headers: z.record(z.string()).nullable().optional(),

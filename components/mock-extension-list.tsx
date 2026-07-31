@@ -17,7 +17,10 @@ import { swrFetcher } from '@/lib/swr-fetcher';
 
 export function MockExtensionList() {
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
-	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
+	const [limit, setLimit] = useQueryState(
+		'limit',
+		parseAsInteger.withDefault(10),
+	);
 
 	const { data, isLoading } = useSWR<{
 		data: Folder[];
@@ -45,7 +48,9 @@ export function MockExtensionList() {
 
 	const handleDeleteFolder = async (id: string) => {
 		try {
-			const response = await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
+			const response = await fetch(`/api/folders?id=${id}`, {
+				method: 'DELETE',
+			});
 			if (!response.ok) throw new Error('Failed to delete folder');
 			toast.success('Folder Deleted', {
 				description:

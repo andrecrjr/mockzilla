@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import path from 'node:path';
 import { getDocsHierarchy, type DocSection } from '@/lib/llms-utils';
 
+export const dynamic = 'force-static';
+
 function flattenToContent(sections: DocSection[], depth: number = 2): string {
 	let output = '';
 	for (const section of sections) {
@@ -25,7 +27,8 @@ export async function GET() {
 		const hierarchy = getDocsHierarchy(docsDir);
 
 		let fullContent = '# Mockzilla Full Documentation\n';
-		fullContent += '> This file contains the complete documentation for Mockzilla, organized by the actual site structure.\n\n';
+		fullContent +=
+			'> This file contains the complete documentation for Mockzilla, organized by the actual site structure.\n\n';
 
 		fullContent += flattenToContent(hierarchy);
 
@@ -36,6 +39,8 @@ export async function GET() {
 		});
 	} catch (error) {
 		console.error('Error generating llms-full.txt:', error);
-		return new NextResponse('Error generating full documentation.', { status: 500 });
+		return new NextResponse('Error generating full documentation.', {
+			status: 500,
+		});
 	}
 }

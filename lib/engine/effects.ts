@@ -48,7 +48,10 @@ export function applyEffects(
 					context.state[key] = replaceTemplates(val, context as any);
 				}
 			} else if (effect.key) {
-				context.state[effect.key] = replaceTemplates(effect.value, context as any);
+				context.state[effect.key] = replaceTemplates(
+					effect.value,
+					context as any,
+				);
 			}
 		} else if (effect.type === 'db.push') {
 			if (!context.tables[effect.table]) {

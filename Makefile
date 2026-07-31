@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build db-studio desktop-build desktop-dev desktop-smoke clean
+.PHONY: help dev-up dev-down dev-logs dev-build dev-restart prod-up prod-down prod-logs prod-build landing-build landing-run landing-up landing-down landing-clean landing-logs db-studio desktop-build desktop-dev desktop-smoke clean
 
 # Default target
 help:
@@ -24,6 +24,7 @@ help:
 	@echo "  make landing-up      - Start landing-only environment"
 	@echo "  make landing-down    - Stop landing-only environment"
 	@echo "  make landing-logs    - View landing-only logs"
+	@echo "  make landing-clean   - Remove landing containers and images"
 	@echo ""
 	@echo "Desktop Commands:"
 	@echo "  make desktop-dev     - Run the Tauri desktop app in development"
@@ -82,19 +83,27 @@ prod-logs:
 	docker logs -f mockzilla-prod
 
 prod-run: prod-build prod-up
+	@echo "✅ Production deployment complete"
 
 # Landing-only deploy
+landing-build:
+	docker compose -f docker-compose.landing.yaml build
+
+landing-run: landing-build
+	docker compose -f docker-compose.landing.yaml up -d
+
 landing-up:
-	docker run -d --env-file .env.landing -p 36666:36666 --name mockzilla-landing mockzilla:latest
+	docker compose -f docker-compose.landing.yaml up -d
 
 landing-down:
-	docker stop mockzilla-landing 2>/dev/null || true
-	docker rm mockzilla-landing 2>/dev/null || true
+	docker compose -f docker-compose.landing.yaml down
+
+landing-clean:
+	docker compose -f docker-compose.landing.yaml down --remove-orphans
+	docker rmi mockzilla-landing:latest
 
 landing-logs:
-	docker logs -f mockzilla-landing
-
-landing-run: prod-build landing-up
+	docker compose -f docker-compose.landing.yaml logs -f
 
 # Desktop commands
 desktop-dev:
@@ -113,6 +122,9 @@ clean:
 	docker rmi mockzilla:latest
 	docker stop mockzilla-prod 2>/dev/null || true
 	docker rm mockzilla-prod 2>/dev/null || true
+	docker stop mockzilla-landing 2>/dev/null || true
+	docker rm mockzilla-landing 2>/dev/null || true
+	docker rmi mockzilla-landing:latest
 
 db-shell:
 	docker exec -it mockzilla-postgres-dev psql -U mockzilla -d mockzilla

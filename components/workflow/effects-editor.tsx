@@ -38,7 +38,11 @@ interface EffectsEditorProps {
 	};
 }
 
-export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorProps) {
+export function EffectsEditor({
+	effects,
+	onChange,
+	stateData,
+}: EffectsEditorProps) {
 	const [activeTab, setActiveTab] = useState<'all' | 'state' | 'db'>('all');
 
 	const addEffect = (type: EffectType) => {
@@ -179,7 +183,8 @@ export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorPro
 							onClick={() => setActiveTab('all')}
 							className={cn(
 								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
-								activeTab === 'all' && 'bg-background shadow-sm text-foreground',
+								activeTab === 'all' &&
+									'bg-background shadow-sm text-foreground',
 							)}
 						>
 							All
@@ -199,7 +204,8 @@ export function EffectsEditor({ effects, onChange, stateData }: EffectsEditorPro
 							onClick={() => setActiveTab('state')}
 							className={cn(
 								'text-[10px] uppercase tracking-wider px-2 py-0.5 rounded transition-all',
-								activeTab === 'state' && 'bg-background shadow-sm text-foreground',
+								activeTab === 'state' &&
+									'bg-background shadow-sm text-foreground',
 							)}
 						>
 							States
@@ -503,7 +509,10 @@ function KeyValueEditor({
 	suggestions?: string[];
 	addButtonLabel?: string;
 }) {
-	const items = Object.entries(data).map(([key, value]) => ({ key, value: String(value) }));
+	const items = Object.entries(data).map(([key, value]) => ({
+		key,
+		value: String(value),
+	}));
 
 	const handleAdd = () => {
 		onChange({ ...data, '': '' });
@@ -517,7 +526,7 @@ function KeyValueEditor({
 
 	const handleUpdate = (oldKey: string, newKey: string, newValue: string) => {
 		const newData: Record<string, unknown> = {};
-		
+
 		for (const [k, v] of Object.entries(data)) {
 			if (k === oldKey) {
 				newData[newKey] = newValue;
@@ -536,7 +545,9 @@ function KeyValueEditor({
 	return (
 		<div className="space-y-2">
 			{items.length === 0 ? (
-				<p className="text-[10px] text-muted-foreground italic py-1">No items defined.</p>
+				<p className="text-[10px] text-muted-foreground italic py-1">
+					No items defined.
+				</p>
 			) : (
 				items.map((item) => (
 					<div key={item.key} className="flex items-center gap-2">

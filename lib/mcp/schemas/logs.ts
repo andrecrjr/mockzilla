@@ -1,9 +1,21 @@
 import { z } from 'zod';
 
 export const GetLogsArgs = z.object({
-	limit: z.number().int().min(1).max(500).optional().describe('Maximum number of logs to return (default 100)'),
-	type: z.string().optional().describe('Filter by log type (e.g., "intercept")'),
-	level: z.union([z.number(), z.string()]).optional().describe('Filter by log level (10-60 or "info", "error", etc)'),
+	limit: z
+		.number()
+		.int()
+		.min(1)
+		.max(500)
+		.optional()
+		.describe('Maximum number of logs to return (default 100)'),
+	type: z
+		.string()
+		.optional()
+		.describe('Filter by log type (e.g., "intercept")'),
+	level: z
+		.union([z.number(), z.string()])
+		.optional()
+		.describe('Filter by log level (10-60 or "info", "error", etc)'),
 	search: z.string().optional().describe('Text search within the message'),
 });
 export type GetLogsArgs = z.infer<typeof GetLogsArgs>;

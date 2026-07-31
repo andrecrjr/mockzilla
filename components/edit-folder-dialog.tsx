@@ -194,7 +194,6 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 									URL: /api/mock<span className="font-mono">{slug}</span>/...
 								</p>
 							</div>
-
 						</div>
 						<DialogFooter>
 							<Button

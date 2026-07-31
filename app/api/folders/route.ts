@@ -30,10 +30,15 @@ function formatFolderResponse(folder: typeof folders.$inferSelect) {
 
 async function findFolderByPath(path: string) {
 	const candidates = getFolderLookupCandidates(path);
-	const rows = await db.select().from(folders).where(inArray(folders.slug, candidates));
+	const rows = await db
+		.select()
+		.from(folders)
+		.where(inArray(folders.slug, candidates));
 	return (
-		rows.find((row) => formatStoredFolderPath(row.slug) === formatStoredFolderPath(path)) ??
-		null
+		rows.find(
+			(row) =>
+				formatStoredFolderPath(row.slug) === formatStoredFolderPath(path),
+		) ?? null
 	);
 }
 
@@ -175,7 +180,10 @@ export async function POST(request: NextRequest) {
 
 		if (!(await validateUniqueFolderPath(slug))) {
 			return NextResponse.json(
-				{ error: 'A folder with this path already exists or overlaps another folder path' },
+				{
+					error:
+						'A folder with this path already exists or overlaps another folder path',
+				},
 				{ status: 409 },
 			);
 		}
@@ -246,7 +254,10 @@ export async function PUT(request: NextRequest) {
 
 			if (!(await validateUniqueFolderPath(slug, id))) {
 				return NextResponse.json(
-					{ error: 'A folder with this path already exists or overlaps another folder path' },
+					{
+						error:
+							'A folder with this path already exists or overlaps another folder path',
+					},
 					{ status: 409 },
 				);
 			}
@@ -258,7 +269,10 @@ export async function PUT(request: NextRequest) {
 			if (nameChanged) {
 				const validation = validateFolderPath(slug);
 				if (!validation.valid) {
-					return NextResponse.json({ error: validation.error }, { status: 400 });
+					return NextResponse.json(
+						{ error: validation.error },
+						{ status: 400 },
+					);
 				}
 				if (!(await validateUniqueFolderPath(slug, id))) {
 					return NextResponse.json(

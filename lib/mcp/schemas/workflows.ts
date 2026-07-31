@@ -29,10 +29,7 @@ export const CreateWorkflowTransitionArgs = z.object({
 			'Rules to trigger this transition.\nFormat: Array of rules (RECOMMENDED) or Object (Legacy).',
 		),
 	effects: z
-		.preprocess(
-			parseJsonOrPassthrough,
-			z.array(EffectSchema).optional(),
-		)
+		.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional())
 		.describe('Side effects to execute (state.set, db.push, etc).'),
 	response: z
 		.preprocess(
@@ -48,7 +45,9 @@ export const CreateWorkflowTransitionArgs = z.object({
 		),
 	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
-export type CreateWorkflowTransitionArgs = z.infer<typeof CreateWorkflowTransitionArgs>;
+export type CreateWorkflowTransitionArgs = z.infer<
+	typeof CreateWorkflowTransitionArgs
+>;
 
 export const ResetWorkflowStateArgs = z.object({
 	scenarioId: z.string(),
@@ -75,10 +74,7 @@ export const UpdateWorkflowTransitionArgs = z.object({
 		)
 		.describe('Update conditions.'),
 	effects: z
-		.preprocess(
-			parseJsonOrPassthrough,
-			z.array(EffectSchema).optional(),
-		)
+		.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional())
 		.describe('Update effects.'),
 	response: z
 		.preprocess(
@@ -94,7 +90,9 @@ export const UpdateWorkflowTransitionArgs = z.object({
 		.describe('Update response configuration.'),
 	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 });
-export type UpdateWorkflowTransitionArgs = z.infer<typeof UpdateWorkflowTransitionArgs>;
+export type UpdateWorkflowTransitionArgs = z.infer<
+	typeof UpdateWorkflowTransitionArgs
+>;
 
 export const CreateWorkflowScenarioArgs = z.object({
 	name: z
@@ -104,28 +102,38 @@ export const CreateWorkflowScenarioArgs = z.object({
 		),
 	description: z.string().optional().describe('Scenario description'),
 });
-export type CreateWorkflowScenarioArgs = z.infer<typeof CreateWorkflowScenarioArgs>;
+export type CreateWorkflowScenarioArgs = z.infer<
+	typeof CreateWorkflowScenarioArgs
+>;
 
 export const ListWorkflowScenariosArgs = z.object({
 	page: z.number().int().min(1).optional(),
 	limit: z.number().int().min(1).max(100).optional(),
 });
-export type ListWorkflowScenariosArgs = z.infer<typeof ListWorkflowScenariosArgs>;
+export type ListWorkflowScenariosArgs = z.infer<
+	typeof ListWorkflowScenariosArgs
+>;
 
 export const DeleteWorkflowScenarioArgs = z.object({
 	id: z.string().describe('The ID (slug) of the scenario to delete.'),
 });
-export type DeleteWorkflowScenarioArgs = z.infer<typeof DeleteWorkflowScenarioArgs>;
+export type DeleteWorkflowScenarioArgs = z.infer<
+	typeof DeleteWorkflowScenarioArgs
+>;
 
 export const DeleteWorkflowTransitionArgs = z.object({
 	id: z.number().int().describe('The transition database ID'),
 });
-export type DeleteWorkflowTransitionArgs = z.infer<typeof DeleteWorkflowTransitionArgs>;
+export type DeleteWorkflowTransitionArgs = z.infer<
+	typeof DeleteWorkflowTransitionArgs
+>;
 
 export const ListWorkflowTransitionsArgs = z.object({
 	scenarioId: z.string().describe('Scenario ID or slug'),
 });
-export type ListWorkflowTransitionsArgs = z.infer<typeof ListWorkflowTransitionsArgs>;
+export type ListWorkflowTransitionsArgs = z.infer<
+	typeof ListWorkflowTransitionsArgs
+>;
 
 export const TestWorkflowArgs = z.object({
 	scenarioId: z.string().describe('Scenario ID or slug'),
@@ -188,24 +196,40 @@ export const CreateFullWorkflowArgs = z.object({
 export type CreateFullWorkflowArgs = z.infer<typeof CreateFullWorkflowArgs>;
 
 export const EvaluateTemplateArgs = z.object({
-	template: z.unknown().describe('The template string or object to evaluate (e.g. "Hello {{state.name}}")'),
-	context: z.object({
-		state: z.record(z.unknown()).optional().describe('Mock state object'),
-		tables: z.record(z.array(z.unknown())).optional().describe('Mini-database tables'),
-		input: z.object({
-			body: z.unknown().optional(),
-			query: z.record(z.string()).optional(),
-			params: z.record(z.string()).optional(),
-			headers: z.record(z.string()).optional(),
-		}).optional().describe('Simulated request input'),
-	}).optional().describe('The evaluation context'),
+	template: z
+		.unknown()
+		.describe(
+			'The template string or object to evaluate (e.g. "Hello {{state.name}}")',
+		),
+	context: z
+		.object({
+			state: z.record(z.unknown()).optional().describe('Mock state object'),
+			tables: z
+				.record(z.array(z.unknown()))
+				.optional()
+				.describe('Mini-database tables'),
+			input: z
+				.object({
+					body: z.unknown().optional(),
+					query: z.record(z.string()).optional(),
+					params: z.record(z.string()).optional(),
+					headers: z.record(z.string()).optional(),
+				})
+				.optional()
+				.describe('Simulated request input'),
+		})
+		.optional()
+		.describe('The evaluation context'),
 });
 export type EvaluateTemplateArgs = z.infer<typeof EvaluateTemplateArgs>;
 
 export const SeedWorkflowStateArgs = z.object({
 	scenarioId: z.string().describe('ID or slug of the scenario'),
 	state: z.record(z.unknown()).optional().describe('State object to inject'),
-	tables: z.record(z.array(z.unknown())).optional().describe('Mini-database tables to inject'),
+	tables: z
+		.record(z.array(z.unknown()))
+		.optional()
+		.describe('Mini-database tables to inject'),
 });
 export type SeedWorkflowStateArgs = z.infer<typeof SeedWorkflowStateArgs>;
 
@@ -410,23 +434,33 @@ export const WorkflowControlArgs = z.discriminatedUnion('action', [
 		scenarioId: z.string(),
 		path: z.string(),
 		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-		body: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
+		body: z.preprocess(
+			parseJsonOrPassthrough,
+			z.record(z.unknown()).optional(),
+		),
 		query: z.record(z.string()).optional(),
-		headers: z.preprocess(parseJsonOrPassthrough, z.record(z.string()).optional()),
+		headers: z.preprocess(
+			parseJsonOrPassthrough,
+			z.record(z.string()).optional(),
+		),
 	}),
 	z.object({
 		action: z.literal('evaluate_template'),
 		template: z.unknown(),
-		context: z.object({
-			state: z.record(z.unknown()).optional(),
-			tables: z.record(z.array(z.unknown())).optional(),
-			input: z.object({
-				body: z.unknown().optional(),
-				query: z.record(z.string()).optional(),
-				params: z.record(z.string()).optional(),
-				headers: z.record(z.string()).optional(),
-			}).optional(),
-		}).optional(),
+		context: z
+			.object({
+				state: z.record(z.unknown()).optional(),
+				tables: z.record(z.array(z.unknown())).optional(),
+				input: z
+					.object({
+						body: z.unknown().optional(),
+						query: z.record(z.string()).optional(),
+						params: z.record(z.string()).optional(),
+						headers: z.record(z.string()).optional(),
+					})
+					.optional(),
+			})
+			.optional(),
 	}),
 ]);
 export type WorkflowControlArgs = z.infer<typeof WorkflowControlArgs>;

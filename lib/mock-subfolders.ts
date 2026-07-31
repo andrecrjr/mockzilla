@@ -32,7 +32,10 @@ export function collectDescendantSubfolders<
 }
 
 export function computeSubtreeMainPaths<
-	TRow extends Pick<MockSubfolderHierarchyRow, 'id' | 'parentId' | 'slug' | 'mainPath'>,
+	TRow extends Pick<
+		MockSubfolderHierarchyRow,
+		'id' | 'parentId' | 'slug' | 'mainPath'
+	>,
 >(rows: TRow[], root: TRow): Map<string, string> {
 	const nextPaths = new Map<string, string>([[root.id, root.mainPath]]);
 	const visit = (parent: TRow) => {
@@ -81,7 +84,10 @@ export function computeCanonicalSubfolderMainPaths<
 }
 
 export function withCanonicalSubfolderMainPaths<
-	TRow extends Pick<MockSubfolderHierarchyRow, 'id' | 'parentId' | 'slug' | 'mainPath'>,
+	TRow extends Pick<
+		MockSubfolderHierarchyRow,
+		'id' | 'parentId' | 'slug' | 'mainPath'
+	>,
 >(rows: TRow[]): TRow[] {
 	const paths = computeCanonicalSubfolderMainPaths(rows);
 	return rows.map((row) => ({

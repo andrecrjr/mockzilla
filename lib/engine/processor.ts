@@ -18,7 +18,10 @@ export async function processWorkflowRequest(
 	log: Logger = logger,
 ): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
 	const scenarioId = transition.scenarioId;
-	log.debug({ scenarioId, transitionId: transition.id }, 'Processing workflow request');
+	log.debug(
+		{ scenarioId, transitionId: transition.id },
+		'Processing workflow request',
+	);
 
 	// 1. Load State
 	const stateRow = await db
@@ -58,7 +61,11 @@ export async function processWorkflowRequest(
 			return {
 				status: 400,
 				headers: {},
-				body: { error: 'Transition conditions not met', details: conditions, trace },
+				body: {
+					error: 'Transition conditions not met',
+					details: conditions,
+					trace,
+				},
 			};
 		}
 		log.debug('Transition conditions passed');

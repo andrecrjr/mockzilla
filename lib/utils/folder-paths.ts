@@ -27,7 +27,10 @@ export function validateFolderPath(
 		return { valid: false, error: 'Folder path cannot be empty' };
 	}
 	if (value.length > 200) {
-		return { valid: false, error: 'Folder path must be 200 characters or less' };
+		return {
+			valid: false,
+			error: 'Folder path must be 200 characters or less',
+		};
 	}
 	if (/[?#]/.test(value)) {
 		return { valid: false, error: 'Folder path cannot contain "?" or "#"' };
@@ -72,8 +75,12 @@ export function getFolderPathSegments(folderPath: string): string[] {
 export function getFolderLookupCandidates(value: string): string[] {
 	const canonical = normalizeFolderPath(value);
 	const raw = value.trim();
-	const withoutLeadingSlash = canonical.startsWith('/') ? canonical.slice(1) : canonical;
-	return Array.from(new Set([raw, canonical, withoutLeadingSlash].filter(Boolean)));
+	const withoutLeadingSlash = canonical.startsWith('/')
+		? canonical.slice(1)
+		: canonical;
+	return Array.from(
+		new Set([raw, canonical, withoutLeadingSlash].filter(Boolean)),
+	);
 }
 
 export function hasFolderPathConflict(
@@ -124,7 +131,10 @@ export function matchFolderByPathSegments<TRow extends { slug: string }>(
 	for (const row of rows) {
 		const folderPath = formatStoredFolderPath(row.slug);
 		const folderSegments = getFolderPathSegments(folderPath);
-		if (folderSegments.length === 0 || folderSegments.length > pathSegments.length) {
+		if (
+			folderSegments.length === 0 ||
+			folderSegments.length > pathSegments.length
+		) {
 			continue;
 		}
 

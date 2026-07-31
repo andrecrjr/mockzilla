@@ -23,7 +23,9 @@ function ensureWritableDirectory(directory: string) {
 function resolveLogDir() {
 	const explicitLogDir = getEnvPath('MOCKZILLA_LOG_DIR');
 	const desktopDataDir =
-		process.env.MOCKZILLA_DESKTOP === '1' ? getEnvPath('MOCKZILLA_DATA_DIR') : undefined;
+		process.env.MOCKZILLA_DESKTOP === '1'
+			? getEnvPath('MOCKZILLA_DATA_DIR')
+			: undefined;
 	const candidates = [
 		explicitLogDir,
 		desktopDataDir ? path.resolve(desktopDataDir, '..', 'logs') : undefined,
@@ -45,10 +47,19 @@ const LOG_DIR = resolveLogDir();
 
 const streams = [
 	...(LOG_DIR
-		? [{ stream: fs.createWriteStream(path.join(LOG_DIR, 'mockzilla.log'), { flags: 'a' }) }]
+		? [
+				{
+					stream: fs.createWriteStream(path.join(LOG_DIR, 'mockzilla.log'), {
+						flags: 'a',
+					}),
+				},
+			]
 		: []),
 	{
-		stream: process.env.NODE_ENV === 'production' ? process.stdout : pretty({ colorize: true }),
+		stream:
+			process.env.NODE_ENV === 'production'
+				? process.stdout
+				: pretty({ colorize: true }),
 	},
 ];
 
@@ -59,20 +70,27 @@ function getLogFile() {
 export const logger = pino(
 	{
 		level: process.env.LOG_LEVEL || 'info',
-		base: { pid: process.pid, service: 'mockzilla', version: MOCKZILLA_VERSION },
+		base: {
+			pid: process.pid,
+			service: 'mockzilla',
+			version: MOCKZILLA_VERSION,
+		},
 		timestamp: pino.stdTimeFunctions.isoTime,
 	},
-	pino.multistream(streams)
+	pino.multistream(streams),
 );
 
 export type Logger = typeof logger;
 
 // Compatibility wrapper for intercepted requests
 export function logInterceptedRequest(entry: Record<string, unknown>) {
-	logger.info({
-		type: 'intercept',
-		...entry,
-	}, `Intercepted ${entry.method} ${entry.path}`);
+	logger.info(
+		{
+			type: 'intercept',
+			...entry,
+		},
+		`Intercepted ${entry.method} ${entry.path}`,
+	);
 }
 
 /**
@@ -130,7 +148,9 @@ export function getRequestTrace(reqId: string): Record<string, unknown>[] {
 					return null;
 				}
 			})
-			.filter((e): e is Record<string, unknown> => e !== null && e.reqId === reqId);
+			.filter(
+				(e): e is Record<string, unknown> => e !== null && e.reqId === reqId,
+			);
 	} catch (error) {
 		console.error('Failed to trace request:', error);
 		return [];
