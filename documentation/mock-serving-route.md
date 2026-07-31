@@ -66,7 +66,7 @@ For mocks using `matchType: 'wildcard'`, Mockzilla supports multiple response va
 
 1. **Extract Key**: The captured wildcard segment(s) are joined by `|` to form a key (e.g., `/users/123` matches `/users/*` with key `123`).
 2. **Match Variant**: 
-   - Tries to find a variant with an exact match for the key.
+   - Tries to find a variant with an exact match for the key. URL-encoded captures are decoded for this comparison, so variant keys may use ordinary characters directly: enter `projects/api` rather than `projects%2Fapi`.
    - Falls back to a variant with key `*` (catch-all) if available.
 3. **Override Response**: If a variant is matched, its `body`, `statusCode`, and `bodyType` override the default mock configuration. 
    - **Note**: When a variant is matched, `useDynamicResponse` is automatically disabled for that request to ensure the variant's static body is returned.

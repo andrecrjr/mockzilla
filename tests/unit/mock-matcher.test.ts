@@ -353,6 +353,37 @@ describe('selectVariant', () => {
 		expect(result).toEqual(multiVariants[0]);
 	});
 
+	const encodedCaptureCases: ReadonlyArray<{
+		name: string;
+		key: string;
+		encodedCapture: string;
+	}> = [
+		{ name: 'slash', key: 'projects/api', encodedCapture: 'projects%2Fapi' },
+		{ name: 'space', key: 'project notes', encodedCapture: 'project%20notes' },
+		{ name: 'percent sign', key: '50% complete', encodedCapture: '50%25%20complete' },
+		{ name: 'question mark', key: 'draft?copy', encodedCapture: 'draft%3Fcopy' },
+		{ name: 'Unicode text', key: 'café', encodedCapture: 'caf%C3%A9' },
+	];
+
+	for (const { name, key, encodedCapture } of encodedCaptureCases) {
+		test(`matches an unencoded ${name} key to an encoded URL capture`, () => {
+			const variant: MockVariant = {
+				key,
+				body: '{"matched": true}',
+				statusCode: 200,
+				bodyType: 'json',
+			};
+
+			const result = selectVariant(
+				[variant],
+				`/api/files/${encodedCapture}`,
+				'/api/files/*',
+			);
+
+			expect(result).toEqual(variant);
+		});
+	}
+
 	test('wildcard fallback works with multi-segment captures', () => {
 		const multiVariants: MockVariant[] = [
 			{

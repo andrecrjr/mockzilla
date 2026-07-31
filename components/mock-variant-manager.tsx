@@ -68,8 +68,8 @@ function VariantCard({
 						<Label htmlFor={`variant-key-${index}`}>Capture Key</Label>
 						<FieldTooltip
 							label="Capture Key"
-							description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Use * as a catch-all fallback."
-							example="123 for /users/123, alice|42 for /users/*/posts/*"
+							description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Enter ordinary characters directly (for example /, not %2F). Use * as a catch-all fallback."
+							example="123 for /users/123, projects/api for /files/projects%2Fapi, alice|42 for /users/*/posts/*"
 							docsLink="/docs#wildcard-variants"
 						/>
 					</div>
@@ -77,7 +77,7 @@ function VariantCard({
 						id={`variant-key-${index}`}
 						value={variant.key ?? ''}
 						onChange={(e) => onUpdate({ ...variant, key: e.target.value })}
-						placeholder="e.g., 123 or alice|active"
+						placeholder="e.g., 123, projects/api, or alice|active"
 					/>
 					{endpoint && (
 						<VariantPatternPreview endpoint={endpoint} variant={variant} />
