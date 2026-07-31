@@ -1,3 +1,20 @@
+## [1.0.7](https://github.com/andrecrjr/mockzilla/compare/v1.0.6...v1.0.7) (2026-07-31)
+
+
+### Bug Fixes
+
+* fixing all mcp tools ([a2b5d45](https://github.com/andrecrjr/mockzilla/commit/a2b5d45bde5e362b42fc108e0e7942b478df9895))
+* improve formatting and structure in documentation for better readability ([59828a5](https://github.com/andrecrjr/mockzilla/commit/59828a509447fdec3aa323bbb971543bd67d581f))
+* landing page docker ([a8c7b8e](https://github.com/andrecrjr/mockzilla/commit/a8c7b8e36d06a6e4e6bb065270d5db295b9860f1))
+* problem syntax ([e9337f6](https://github.com/andrecrjr/mockzilla/commit/e9337f64d1b33305f2f016cd05ae1e2c7b74341f))
+* remove log ([d9ec776](https://github.com/andrecrjr/mockzilla/commit/d9ec7760f8e97d9f7b80727d92f50664388830d1))
+* update documentation links to include .txt extension for static files ([31cc1ae](https://github.com/andrecrjr/mockzilla/commit/31cc1ae77dcf7f912d1cfd0596daf760ba70807d))
+* update landing page Dockerfile and enhance documentation routes ([83aec0c](https://github.com/andrecrjr/mockzilla/commit/83aec0ca9d97f9d9bef8ceccfd5ef1a2c672e62b))
+* update mcp and hotfix wildcard ([e8080f3](https://github.com/andrecrjr/mockzilla/commit/e8080f368ea5e492cab6878f9d6cfed2ebcc5f5a))
+* wildcard update ([d1f3cac](https://github.com/andrecrjr/mockzilla/commit/d1f3cac74d3b7753ce0cf75c637edad10d7516c3))
+* wildcard variances ([462d170](https://github.com/andrecrjr/mockzilla/commit/462d17032bf698d1452d3c8ac619f51031bda395))
+* yaml for coolify ([a0d67de](https://github.com/andrecrjr/mockzilla/commit/a0d67de6aaecb037cd9ba4f331592c1088ee7f1f))
+
 ## [1.0.6](https://github.com/andrecrjr/mockzilla/compare/v1.0.5...v1.0.6) (2026-07-12)
 
 
