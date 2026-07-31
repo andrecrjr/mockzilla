@@ -147,7 +147,7 @@ The following components are unique to Mockzilla and built specifically for our 
 *   **`VisualPatternPreview`**: Specialized logic for visualizing wildcard path matching.
 *   **`EffectsEditor`**: A complex, stateful editor for transition side-effects.
 *   **`StateInspector`**: A diagnostic tool for real-time mini-DB and variable monitoring.
-*   **`MockVariantManager`**: Advanced logic for handling multiple response variants.
+*   **`MockVariantManager`**: Advanced logic for handling multiple response variants. Variant cards retain a stable UI identity while their capture keys are edited, so text inputs keep focus; the matching URL preview is displayed directly below the Capture Key input.
 
 ---
 

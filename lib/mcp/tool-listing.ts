@@ -1,9 +1,12 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { ManageFoldersArgs, ManageMockSubfoldersArgs } from './schemas/folders';
+import {
+	ManageFoldersInputSchema,
+	ManageMockSubfoldersInputSchema,
+} from './schemas/folders';
 import { ManageLogsArgs } from './schemas/logs';
-import { ManageMocksArgs } from './schemas/mocks';
+import { ManageMocksInputSchema } from './schemas/mocks';
 import {
 	ManageScenariosArgs,
 	ManageTransitionsArgs,
@@ -25,19 +28,22 @@ const actionTools: readonly ActionTool[] = [
 		name: 'manage_folders',
 		title: 'Manage Folders',
 		description: 'Perform CRUD operations on folders (list, create, get, update, delete).',
-		inputSchema: ManageFoldersArgs,
+		inputSchema: ManageFoldersInputSchema,
 	},
 	{
 		name: 'manage_mock_subfolders',
 		title: 'Manage Mock Subfolders',
 		description: 'Perform CRUD operations on mock subfolders nested inside a top-level folder.',
-		inputSchema: ManageMockSubfoldersArgs,
+		inputSchema: ManageMockSubfoldersInputSchema,
 	},
 	{
 		name: 'manage_mocks',
 		title: 'Manage Mocks',
 		description: 'Perform CRUD and preview operations on mock responses (list, create, get, update, delete, preview).',
-		inputSchema: ManageMocksArgs,
+		// Keep this a root object. Some MCP-to-function bridges cannot derive
+		// argument types from a root `anyOf`, causing numeric inputs such as
+		// `statusCode` to be serialized as strings.
+		inputSchema: ManageMocksInputSchema,
 	},
 	{
 		name: 'manage_scenarios',

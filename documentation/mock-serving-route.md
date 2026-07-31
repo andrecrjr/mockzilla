@@ -56,7 +56,7 @@ For mocks in subfolders, the matcher uses the subfolder's canonical `path` plus 
 
 ### Endpoint Paths and Search Params
 
-Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. The web UI keeps URL-style endpoint input visible in the path field, such as `/users?status=active`, while also copying those search params into Advanced Options. Advanced Options query-param edits also update the visible endpoint path and preview. On save, the frontend submits the API-safe path and structured `queryParams` separately. Create and update APIs reject persisted mock paths that include `?` because storage keeps endpoint paths separate from the query-param matcher.
+Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. The web UI keeps URL-style endpoint input visible in the path field, such as `/users?status=active`, while also copying those search params into Advanced Options. Advanced Options query-param edits also update the visible endpoint path and preview. Conversely, when the endpoint input loses focus, its query string is authoritative: removing a parameter there removes the corresponding Advanced Options field. On save, the frontend submits the API-safe path and structured `queryParams` separately. Create and update APIs reject persisted mock paths that include `?` because storage keeps endpoint paths separate from the query-param matcher.
 
 Wildcard captures are extracted from the normalized path only. For example, `/users/123?status=active` matched against `/users/*` exposes `input.params.0 = "123"` and `input.query.status = "active"`; the query string is not included in the wildcard capture.
 
@@ -86,6 +86,8 @@ Once a match is found, the route builds the response based on the mock configura
 
 ### Static Response
 Returns the configured `response` body with the specified `statusCode` and content type (`json` or `text`).
+
+For HTTP status codes `204`, `205`, and `304`, Mockzilla returns an empty body as required by HTTP, regardless of the configured response body.
 
 ### Echo Request Body
 If `echoRequestBody` is enabled, the response is exactly the request body received.

@@ -439,6 +439,34 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(res.status).toBe(204);
 	});
 
+	it.each([204, 205, 304])(
+		'returns an empty body for status %i',
+		async (statusCode) => {
+			let callCount = 0;
+			mockDb.select = mock(() => {
+				callCount++;
+				if (callCount === 1) return createMockBuilder([mockFolder]);
+				if (callCount === 2) {
+					return createMockBuilder([
+						{
+							...mockResponse,
+							statusCode,
+							response: JSON.stringify({ ignored: true }),
+						},
+					]);
+				}
+				return createMockBuilder([]);
+			});
+
+			const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+			const params = Promise.resolve({ path: ['api', 'users'] });
+			const res = await GET(req, { params });
+
+			expect(res.status).toBe(statusCode);
+			expect(await res.text()).toBe('');
+		},
+	);
+
 	it('skips query-specific mocks when query params mismatch', async () => {
 		const qpMock = {
 			...mockResponse,

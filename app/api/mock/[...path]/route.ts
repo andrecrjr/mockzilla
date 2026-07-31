@@ -17,6 +17,10 @@ import { joinMockPaths } from '@/lib/utils/mock-paths';
 type MockResponseRecord = typeof mockResponses.$inferSelect;
 type MockSubfolderRecord = typeof mockSubfolders.$inferSelect;
 
+function statusForbidsResponseBody(statusCode: number): boolean {
+	return statusCode === 204 || statusCode === 205 || statusCode === 304;
+}
+
 function getEffectiveEndpoint(
 	mock: MockResponseRecord,
 	subfoldersById: Map<string, MockSubfolderRecord>,
@@ -255,6 +259,13 @@ async function buildResponse(
 			urlQueryParams,
 			log,
 		);
+	}
+
+	// HTTP forbids a response body for these status codes. Returning early also
+	// covers static, echoed, dynamic, and wildcard-variant mock responses.
+	if (statusForbidsResponseBody(mock.statusCode)) {
+		log.info({ statusCode: mock.statusCode }, 'Returning bodyless response');
+		return new NextResponse(null, { status: mock.statusCode });
 	}
 
 	// Check if we should echo the request body

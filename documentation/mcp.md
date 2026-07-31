@@ -121,7 +121,7 @@ Example:
 
 ### 3. Mocks (`manage_mocks`)
 
-The MCP tool schema declares concrete JSON types and per-action required fields.
+The MCP schemas for folders, mock subfolders, and mocks expose flat root objects with concrete JSON types so MCP-to-function bridges preserve argument types. Action-specific required fields are validated when the tool executes.
 Pass `statusCode` and `delay` as JSON numbers, and boolean options such as
 `enabled` as JSON booleans. Mock and workflow response status codes must be in
 the inclusive range 200–599; delay must be a non-negative whole number.
