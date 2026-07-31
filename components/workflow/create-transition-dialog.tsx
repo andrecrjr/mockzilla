@@ -32,13 +32,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import {
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from '@/components/ui/tabs';
-import type { Condition, } from '@/lib/engine/match';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Condition } from '@/lib/engine/match';
 import type { Transition } from '@/lib/types';
 import { TooltipProvider } from '../ui/tooltip';
 import { type EffectItem, EffectsEditor } from './effects-editor';
@@ -497,10 +492,21 @@ export function TransitionDialog({
 							<div className="flex-1 overflow-y-auto p-6">
 								<TabsContent value="trigger" className="m-0 space-y-6">
 									<div className="space-y-1">
-										<h4 className="text-sm font-medium">1. Trigger Configuration</h4>
+										<h4 className="text-sm font-medium">
+											1. Trigger Configuration
+										</h4>
 										<p className="text-xs text-muted-foreground">
-											Define <strong>when</strong> this rule should run. Mockzilla matches incoming requests based on the HTTP method, path, and optional logic-based conditions.
-											<a href="/docs/reference/workflow-syntax#1-conditions" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about triggers &rarr;</a>
+											Define <strong>when</strong> this rule should run.
+											Mockzilla matches incoming requests based on the HTTP
+											method, path, and optional logic-based conditions.
+											<a
+												href="/docs/reference/workflow-syntax#1-conditions"
+												target="_blank"
+												className="ml-1 text-primary hover:underline"
+												rel="noopener"
+											>
+												Learn more about triggers &rarr;
+											</a>
 										</p>
 									</div>
 									{/* Basics */}
@@ -641,7 +647,9 @@ export function TransitionDialog({
 															Logged-in guard
 														</DropdownMenuItem>
 														<DropdownMenuItem
-															onClick={() => insertConditionExample('queryPage')}
+															onClick={() =>
+																insertConditionExample('queryPage')
+															}
 														>
 															Pagination guard
 														</DropdownMenuItem>
@@ -694,8 +702,12 @@ export function TransitionDialog({
 																</SelectTrigger>
 																<SelectContent>
 																	<SelectItem value="eq">Equals</SelectItem>
-																	<SelectItem value="neq">Not Equals</SelectItem>
-																	<SelectItem value="gt">Greater Than</SelectItem>
+																	<SelectItem value="neq">
+																		Not Equals
+																	</SelectItem>
+																	<SelectItem value="gt">
+																		Greater Than
+																	</SelectItem>
 																	<SelectItem value="lt">Less Than</SelectItem>
 																	<SelectItem value="exists">Exists</SelectItem>
 																	<SelectItem value="contains">
@@ -768,8 +780,17 @@ export function TransitionDialog({
 									<div className="space-y-1">
 										<h4 className="text-sm font-medium">2. Logic & Effects</h4>
 										<p className="text-xs text-muted-foreground">
-											Define <strong>what happens</strong> when the trigger fires. Use effects to update persistent states or perform CRUD operations on the mini-database tables.
-											<a href="/docs/reference/workflow-syntax#2-effects" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about effects &rarr;</a>
+											Define <strong>what happens</strong> when the trigger
+											fires. Use effects to update persistent states or perform
+											CRUD operations on the mini-database tables.
+											<a
+												href="/docs/reference/workflow-syntax#2-effects"
+												target="_blank"
+												className="ml-1 text-primary hover:underline"
+												rel="noopener"
+											>
+												Learn more about effects &rarr;
+											</a>
 										</p>
 									</div>
 									<div className="space-y-4">
@@ -857,8 +878,18 @@ export function TransitionDialog({
 									<div className="space-y-1">
 										<h4 className="text-sm font-medium">3. Client Response</h4>
 										<p className="text-xs text-muted-foreground">
-											Define <strong>what is returned</strong> to the client. You can use Handlebars logic and <code>{"{{ interpolation }}"}</code> to inject data from the states, database, or original request.
-											<a href="/docs/reference/dynamic-interpolation" target="_blank" className="ml-1 text-primary hover:underline" rel="noopener">Learn more about dynamic responses &rarr;</a>
+											Define <strong>what is returned</strong> to the client.
+											You can use Handlebars logic and{' '}
+											<code>{'{{ interpolation }}'}</code> to inject data from
+											the states, database, or original request.
+											<a
+												href="/docs/reference/dynamic-interpolation"
+												target="_blank"
+												className="ml-1 text-primary hover:underline"
+												rel="noopener"
+											>
+												Learn more about dynamic responses &rarr;
+											</a>
 										</p>
 									</div>
 									<div className="grid md:grid-cols-4 gap-6">

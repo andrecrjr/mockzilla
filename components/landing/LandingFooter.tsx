@@ -97,12 +97,14 @@ export function LandingFooter() {
 								</a>
 							</li>
 							<li>
-								<Link
-									href="/app"
+								<a
+									href="https://github.com/andrecrjr/mockzilla/releases"
+									target="_blank"
+									rel="noopener noreferrer"
 									className="text-muted-foreground hover:text-foreground transition-colors"
 								>
-									Open Dashboard
-								</Link>
+									Desktop releases
+								</a>
 							</li>
 						</ul>
 					</div>

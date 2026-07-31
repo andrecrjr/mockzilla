@@ -23,7 +23,10 @@ import { buildFolderHref } from '@/lib/utils/folder-paths';
 function MockzillaAdminContent() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
-	const [limit, setLimit] = useQueryState('limit', parseAsInteger.withDefault(10));
+	const [limit, setLimit] = useQueryState(
+		'limit',
+		parseAsInteger.withDefault(10),
+	);
 	const [search, setSearch] = useQueryState('q', parseAsString.withDefault(''));
 	const [debouncedSearch, setDebouncedSearch] = useState(search);
 
@@ -105,7 +108,9 @@ function MockzillaAdminContent() {
 
 	const handleDeleteFolder = async (id: string) => {
 		try {
-			const response = await fetch(`/api/folders?id=${id}`, { method: 'DELETE' });
+			const response = await fetch(`/api/folders?id=${id}`, {
+				method: 'DELETE',
+			});
 			if (!response.ok) throw new Error('Failed to delete folder');
 			toast.success('Folder Deleted', {
 				description: 'Folder and all its mocks have been removed',

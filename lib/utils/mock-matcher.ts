@@ -55,7 +55,7 @@ export function queryParamsMatch(
 	if (!required || Object.keys(required).length === 0) return true;
 	for (const [key, value] of Object.entries(required)) {
 		// Compare as strings to handle numeric defaults in database
-		if (String(actual[key] ?? "") !== String(value ?? "")) return false;
+		if (String(actual[key] ?? '') !== String(value ?? '')) return false;
 	}
 	return true;
 }
@@ -172,6 +172,21 @@ export function extractCaptureKey(url: string, pattern: string): string | null {
 }
 
 /**
+ * Normalizes a key for variant lookup without changing the capture value that
+ * is later exposed to response templates. This lets users enter ordinary URL
+ * characters (for example `/`) in a variant key while also supporting an
+ * encoded request value such as `%2F`.
+ */
+function normalizeVariantKey(key: string): string {
+	try {
+		return decodeURIComponent(key);
+	} catch {
+		// Keep malformed percent sequences matchable as literal text.
+		return key;
+	}
+}
+
+/**
  * Selects a matching variant from a wildcard mock's variants array.
  * Tries exact key match first, then falls back to "*" wildcard catch-all variant.
  * Returns null if no variant matches or if the mock has no variants.
@@ -187,7 +202,10 @@ export function selectVariant(
 	if (key === null) return null;
 
 	// Try exact match first
-	const exactMatch = variants.find((v) => v.key === key);
+	const normalizedKey = normalizeVariantKey(key);
+	const exactMatch = variants.find(
+		(variant) => normalizeVariantKey(variant.key) === normalizedKey,
+	);
 	if (exactMatch) return exactMatch;
 
 	// Fall back to wildcard catch-all variant

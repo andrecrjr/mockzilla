@@ -168,7 +168,8 @@ export async function callGetFolder(args: GetFolderArgs) {
 		row =
 			rows.find(
 				(folder) =>
-					formatStoredFolderPath(folder.slug) === formatStoredFolderPath(args.slug || ''),
+					formatStoredFolderPath(folder.slug) ===
+					formatStoredFolderPath(args.slug || ''),
 			) ?? null;
 		if (!row) {
 			const candidates = getFolderLookupCandidates(args.slug);
@@ -246,7 +247,10 @@ export async function callManageFolders(args: ManageFoldersArgs) {
 
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
 
-function formatMockSubfolder(row: MockSubfolderRow, canonicalMainPath?: string) {
+function formatMockSubfolder(
+	row: MockSubfolderRow,
+	canonicalMainPath?: string,
+) {
 	const path = canonicalMainPath ?? row.mainPath;
 	return {
 		id: row.id,
@@ -299,9 +303,7 @@ function hasMockSubfolderSiblingSlugInRows(
 ): boolean {
 	return rows.some(
 		(row) =>
-			row.parentId === parentId &&
-			row.slug === slug &&
-			row.id !== excludeId,
+			row.parentId === parentId && row.slug === slug && row.id !== excludeId,
 	);
 }
 
@@ -326,7 +328,9 @@ export async function callListMockSubfolders(args: ListMockSubfoldersArgs) {
 				)
 				.sort((a, b) => a.name.localeCompare(b.name));
 
-	return rows.map((row) => formatMockSubfolder(row, canonicalPaths.get(row.id)));
+	return rows.map((row) =>
+		formatMockSubfolder(row, canonicalPaths.get(row.id)),
+	);
 }
 
 export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
@@ -346,7 +350,7 @@ export async function callCreateMockSubfolder(args: CreateMockSubfolderArgs) {
 		throw new Error('Parent subfolder not found');
 	}
 	const parentMainPath = parent
-		? canonicalPaths.get(parent.id) ?? parent.mainPath
+		? (canonicalPaths.get(parent.id) ?? parent.mainPath)
 		: null;
 	const slug = normalizeSubfolderSlugInput(
 		args.path ?? args.slug ?? args.name,
@@ -410,7 +414,9 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 		.select()
 		.from(mockSubfolders)
 		.where(eq(mockSubfolders.folderId, existing.folderId));
-	const folderSubfolders = withCanonicalSubfolderMainPaths(storedFolderSubfolders);
+	const folderSubfolders = withCanonicalSubfolderMainPaths(
+		storedFolderSubfolders,
+	);
 	const descendants = collectDescendantSubfolders(folderSubfolders, args.id);
 	const descendantIds = new Set(descendants.map((row) => row.id));
 	if (nextParentId && descendantIds.has(nextParentId)) {
@@ -434,7 +440,14 @@ export async function callUpdateMockSubfolder(args: UpdateMockSubfolderArgs) {
 	if (!nextSlug) {
 		throw new Error('Subfolder slug is invalid');
 	}
-	if (hasMockSubfolderSiblingSlugInRows(folderSubfolders, nextParentId, nextSlug, args.id)) {
+	if (
+		hasMockSubfolderSiblingSlugInRows(
+			folderSubfolders,
+			nextParentId,
+			nextSlug,
+			args.id,
+		)
+	) {
 		throw new Error('A subfolder with this slug already exists here');
 	}
 
@@ -779,7 +792,9 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 			wildcardRequireMatch:
 				args.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
 			jsonSchema:
-				args.jsonSchema === undefined ? existingMock.jsonSchema : args.jsonSchema,
+				args.jsonSchema === undefined
+					? existingMock.jsonSchema
+					: args.jsonSchema,
 			useDynamicResponse:
 				args.useDynamicResponse ?? existingMock.useDynamicResponse,
 			echoRequestBody: args.echoRequestBody ?? existingMock.echoRequestBody,

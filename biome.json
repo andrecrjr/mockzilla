@@ -15,7 +15,14 @@
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab"
+		"indentStyle": "tab",
+		"includes": [
+			"app/**/*",
+			"components/**/*",
+			"pages/**/*",
+			"content/**/*",
+			"lib/**/*"
+		]
 	},
 	"linter": {
 		"enabled": true,

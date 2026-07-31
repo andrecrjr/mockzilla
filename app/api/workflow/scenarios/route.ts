@@ -13,7 +13,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 		if (q) {
 			scenariosQuery = scenariosQuery.where(
-				or(ilike(scenarios.name, `%${q}%`), ilike(scenarios.description, `%${q}%`)),
+				or(
+					ilike(scenarios.name, `%${q}%`),
+					ilike(scenarios.description, `%${q}%`),
+				),
 			) as typeof scenariosQuery;
 		}
 

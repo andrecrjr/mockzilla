@@ -371,7 +371,9 @@ function WorkflowsContent() {
 				<div className="text-center py-16 border-2 border-dashed rounded-lg bg-muted/10">
 					<GitBranch className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
 					<h3 className="text-lg font-medium mb-2">
-						{debouncedSearch ? 'No scenarios match your search' : 'No scenarios yet'}
+						{debouncedSearch
+							? 'No scenarios match your search'
+							: 'No scenarios yet'}
 					</h3>
 					<p className="text-muted-foreground mb-6">
 						{debouncedSearch

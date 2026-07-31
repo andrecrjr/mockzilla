@@ -120,6 +120,15 @@ Example:
 ```
 
 ### 3. Mocks (`manage_mocks`)
+
+The MCP schemas for folders, mock subfolders, and mocks expose flat root objects with concrete JSON types so MCP-to-function bridges preserve argument types. Action-specific required fields are validated when the tool executes.
+Pass `statusCode` and `delay` as JSON numbers, and boolean options such as
+`enabled` as JSON booleans. Mock and workflow response status codes must be in
+the inclusive range 200–599; delay must be a non-negative whole number.
+
+This also applies to the workflow and observability tools: transition `id`,
+pagination fields, and response `status` values are JSON numbers; flags are JSON
+booleans.
 Unified tool for defining and testing API responses.
 - `list`: Paginated list of mocks, optionally filtered by folder.
 - `create`: Create a mock. If `jsonSchema` is provided without a `response`, a dynamic response is auto-generated.
@@ -129,7 +138,7 @@ Unified tool for defining and testing API responses.
 - `delete`: Delete a mock.
 - `preview`: Test what a mock would return given a path, method, and request context.
 
-Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, URL-style endpoint input such as `/users?status=active` remains visible in the Endpoint Path field while `status=active` is synchronized with Advanced Options; saved API payloads still submit `path` and `queryParams` separately.
+Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, URL-style endpoint input such as `/users?status=active` remains visible in the Endpoint Path field while `status=active` is synchronized with Advanced Options; saved API payloads still submit `path` and `queryParams` separately. Entering or pasting a `*` in the Endpoint Path automatically sets the Advanced Options match type to `wildcard`.
 
 ### 4. Workflow Scenarios (`manage_scenarios`)
 Manage stateful, multi-step scenario containers.

@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const HttpStatusCodeSchema = z.number().int().min(200).max(599);
+export const NonNegativeIntegerSchema = z.number().int().nonnegative();
+
 export const parseJsonOrPassthrough = (val: unknown) => {
 	if (typeof val === 'string') {
 		try {
@@ -14,7 +17,7 @@ export const parseJsonOrPassthrough = (val: unknown) => {
 export const MockVariantSchema = z.object({
 	key: z.string(),
 	body: z.string(),
-	statusCode: z.number().int(),
+	statusCode: HttpStatusCodeSchema,
 	bodyType: z.enum(['json', 'text']),
 });
 export type MockVariantSchema = z.infer<typeof MockVariantSchema>;
@@ -52,7 +55,9 @@ export const EffectSchema = z.discriminatedUnion('type', [
 		table: z.string().describe('Table name in mini-database'),
 		value: z
 			.unknown()
-			.describe('Object or value to push to the table (interpolation supported)'),
+			.describe(
+				'Object or value to push to the table (interpolation supported)',
+			),
 	}),
 	z.object({
 		type: z.literal('db.update'),
@@ -108,10 +113,7 @@ export const WorkflowTransitionSchema = z.object({
 			'Rules to trigger this transition. Can be an array of Condition objects (preferred) or a key-value object (legacy). Supported operators: eq, neq, exists, gt, lt, contains. Context fields: input.body.*, input.query.*, input.params.*, input.headers.*, state.*, db.*',
 		),
 	effects: z
-		.preprocess(
-			parseJsonOrPassthrough,
-			z.array(EffectSchema).optional(),
-		)
+		.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional())
 		.describe(
 			'Side effects to execute. Array of effect objects. Supported types: "state.set" (sets state variables), "db.push" (adds to table), "db.update" (updates rows), "db.remove" (removes rows). Examples: { "type": "state.set", "raw": { "isLoggedIn": true } }, { "type": "db.push", "table": "users", "value": "{{input.body}}" }',
 		),
@@ -119,7 +121,7 @@ export const WorkflowTransitionSchema = z.object({
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.object({
-				status: z.number().int().default(200),
+				status: HttpStatusCodeSchema.default(200),
 				body: z.unknown().optional(),
 				headers: z.record(z.string()).optional(),
 			}),

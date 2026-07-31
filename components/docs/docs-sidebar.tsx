@@ -43,17 +43,20 @@ export function DocsSidebar({ sidebar }: DocsSidebarProps) {
 
 							const href = `/docs/${item.slug === 'index' ? '' : item.slug}`;
 							// Only apply active state after mounting to avoid hydration mismatch
-							const isActive = mounted && (pathname === href || (item.slug === 'index' && pathname === '/docs'));
+							const isActive =
+								mounted &&
+								(pathname === href ||
+									(item.slug === 'index' && pathname === '/docs'));
 
 							return (
 								<Link
 									key={item.slug}
 									href={href}
 									className={cn(
-										"block px-2 py-1.5 text-sm font-medium rounded-md transition-colors",
-										isActive 
-											? "bg-primary/10 text-primary" 
-											: "text-foreground/70 hover:text-foreground hover:bg-muted"
+										'block px-2 py-1.5 text-sm font-medium rounded-md transition-colors',
+										isActive
+											? 'bg-primary/10 text-primary'
+											: 'text-foreground/70 hover:text-foreground hover:bg-muted',
 									)}
 								>
 									{item.title}

@@ -1,4 +1,9 @@
-import type { Condition, ConditionTrace, Effect, MatchContext } from '../workflow-types';
+import type {
+	Condition,
+	ConditionTrace,
+	Effect,
+	MatchContext,
+} from '../workflow-types';
 import { resolvePath } from '../utils/path-resolver';
 import { interpolate } from './interpolation';
 
@@ -49,7 +54,7 @@ export function matches(
 	for (const [key, expected] of Object.entries(conditions)) {
 		const actual = resolveOp(key, context);
 		const passed = actual == expected;
-		
+
 		if (trace) {
 			trace.push({
 				field: key,
@@ -101,7 +106,8 @@ export function evaluateCondition(
 			if (actual === undefined || actual === null) {
 				passed = false;
 			} else {
-				passed = (Array.isArray(actual) && actual.includes(expected)) ||
+				passed =
+					(Array.isArray(actual) && actual.includes(expected)) ||
 					String(actual).includes(String(expected));
 			}
 			break;

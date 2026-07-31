@@ -47,8 +47,8 @@ next-env.d.ts
 data
 .agents
 .gemini
-.*.log
-*.log
-.log
+.*.logs
+*.logs
+.logs
 .aider*
 .opencode

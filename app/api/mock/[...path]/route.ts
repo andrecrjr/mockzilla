@@ -17,6 +17,10 @@ import { joinMockPaths } from '@/lib/utils/mock-paths';
 type MockResponseRecord = typeof mockResponses.$inferSelect;
 type MockSubfolderRecord = typeof mockSubfolders.$inferSelect;
 
+function statusForbidsResponseBody(statusCode: number): boolean {
+	return statusCode === 204 || statusCode === 205 || statusCode === 304;
+}
+
 function getEffectiveEndpoint(
 	mock: MockResponseRecord,
 	subfoldersById: Map<string, MockSubfolderRecord>,
@@ -193,7 +197,13 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
 					}
-					return await buildResponse(variantMock, request, paramsMap, log, mockPath);
+					return await buildResponse(
+						variantMock,
+						request,
+						paramsMap,
+						log,
+						mockPath,
+					);
 				}
 
 				// No variant matched
@@ -243,7 +253,9 @@ async function buildResponse(
 	log.debug({ mockId: mock.id }, 'Building response');
 	const meta = mock.meta as { proxyTargetUrl?: string } | null;
 	if (meta?.proxyTargetUrl) {
-		const urlQueryParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+		const urlQueryParams = Object.fromEntries(
+			request.nextUrl.searchParams.entries(),
+		);
 		const method = (request.method as HttpMethod) || 'GET';
 
 		return await handleProxyAndRecord(
@@ -255,6 +267,13 @@ async function buildResponse(
 			urlQueryParams,
 			log,
 		);
+	}
+
+	// HTTP forbids a response body for these status codes. Returning early also
+	// covers static, echoed, dynamic, and wildcard-variant mock responses.
+	if (statusForbidsResponseBody(mock.statusCode)) {
+		log.info({ statusCode: mock.statusCode }, 'Returning bodyless response');
+		return new NextResponse(null, { status: mock.statusCode });
 	}
 
 	// Check if we should echo the request body
@@ -350,7 +369,7 @@ async function handleProxyAndRecord(
 	});
 	try {
 		// Disable SSL verification for proxy calls in dev environments
-		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 		const requestClone = request.clone();
 		const headers = Object.fromEntries(request.headers.entries());
@@ -360,16 +379,16 @@ async function handleProxyAndRecord(
 		const response = await fetch(targetUrl.toString(), {
 			method,
 			headers,
-			body: ["GET", "HEAD"].includes(method) ? null : await requestClone.text(),
+			body: ['GET', 'HEAD'].includes(method) ? null : await requestClone.text(),
 		});
 
 		const responseText = await response.text();
-		const contentType = response.headers.get("content-type") || "text/plain";
-		const bodyType = contentType.includes("application/json") ? "json" : "text";
+		const contentType = response.headers.get('content-type') || 'text/plain';
+		const bodyType = contentType.includes('application/json') ? 'json' : 'text';
 
 		log.info(
 			{ statusCode: response.status, bodyType },
-			"Received proxy response, recording mock",
+			'Received proxy response, recording mock',
 		);
 
 		// Save the recorded mock
@@ -380,7 +399,7 @@ async function handleProxyAndRecord(
 			statusCode: response.status,
 			response: responseText,
 			folderId,
-			matchType: "exact",
+			matchType: 'exact',
 			bodyType,
 			enabled: true,
 			queryParams,
@@ -390,16 +409,16 @@ async function handleProxyAndRecord(
 		return new NextResponse(responseText, {
 			status: response.status,
 			headers: {
-				"Content-Type": contentType,
+				'Content-Type': contentType,
 			},
 		});
 	} catch (error) {
 		log.error(
 			{ err: error, targetUrl: targetUrl.toString() },
-			"Proxy request failed",
+			'Proxy request failed',
 		);
 		return NextResponse.json(
-			{ error: "Proxy request failed", details: String(error) },
+			{ error: 'Proxy request failed', details: String(error) },
 			{ status: 502 },
 		);
 	}

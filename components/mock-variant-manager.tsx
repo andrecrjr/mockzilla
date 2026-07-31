@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
 import { FieldTooltip } from '@/components/folder-tooltips';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,8 +68,8 @@ function VariantCard({
 						<Label htmlFor={`variant-key-${index}`}>Capture Key</Label>
 						<FieldTooltip
 							label="Capture Key"
-							description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Use * as a catch-all fallback."
-							example="123 for /users/123, alice|42 for /users/*/posts/*"
+							description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Enter ordinary characters directly (for example /, not %2F). Use * as a catch-all fallback."
+							example="123 for /users/123, projects/api for /files/projects%2Fapi, alice|42 for /users/*/posts/*"
 							docsLink="/docs#wildcard-variants"
 						/>
 					</div>
@@ -76,8 +77,11 @@ function VariantCard({
 						id={`variant-key-${index}`}
 						value={variant.key ?? ''}
 						onChange={(e) => onUpdate({ ...variant, key: e.target.value })}
-						placeholder="e.g., 123 or alice|active"
+						placeholder="e.g., 123, projects/api, or alice|active"
 					/>
+					{endpoint && (
+						<VariantPatternPreview endpoint={endpoint} variant={variant} />
+					)}
 				</div>
 
 				<div className="space-y-2">
@@ -143,10 +147,6 @@ function VariantCard({
 				</Select>
 			</div>
 
-			{/* Visual Pattern Preview for this variant */}
-			{endpoint && (
-				<VariantPatternPreview endpoint={endpoint} variant={variant} />
-			)}
 		</div>
 	);
 }
@@ -166,6 +166,19 @@ export function MockVariantManager({
 	onRequireMatchChange,
 	endpoint,
 }: MockVariantManagerProps) {
+	const variantIdsRef = useRef(new WeakMap<MockVariant, string>());
+	const nextVariantIdRef = useRef(0);
+
+	const getVariantId = (variant: MockVariant): string => {
+		const existingId = variantIdsRef.current.get(variant);
+		if (existingId) return existingId;
+
+		const nextId = `variant-${nextVariantIdRef.current}`;
+		nextVariantIdRef.current += 1;
+		variantIdsRef.current.set(variant, nextId);
+		return nextId;
+	};
+
 	const addVariant = () => {
 		onVariantsChange([
 			...variants,
@@ -180,6 +193,8 @@ export function MockVariantManager({
 
 	const updateVariant = (index: number, variant: MockVariant) => {
 		const updated = [...variants];
+		const variantId = variantIdsRef.current.get(variants[index]);
+		if (variantId) variantIdsRef.current.set(variant, variantId);
 		updated[index] = variant;
 		onVariantsChange(updated);
 	};
@@ -245,7 +260,7 @@ export function MockVariantManager({
 					<div className="space-y-4 mt-4">
 						{variants.map((variant, index) => (
 							<VariantCard
-								key={`variant-${variant.key || index}-${index}`}
+								key={getVariantId(variant)}
 								variant={variant}
 								index={index}
 								onUpdate={(v) => updateVariant(index, v)}

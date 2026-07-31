@@ -109,44 +109,6 @@ const createQueryParamField = (
 	value,
 });
 
-const createQueryParamId = () => {
-	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-		return crypto.randomUUID();
-	}
-	return `query-param-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-};
-
-function mergeQueryParamFields(
-	current: QueryParamField[],
-	incoming: Record<string, string>,
-): QueryParamField[] {
-	const next = current.map((param) => ({ ...param }));
-	const indexByKey = new Map<string, number>();
-
-	next.forEach((param, index) => {
-		const key = param.key.trim();
-		if (key) indexByKey.set(key, index);
-	});
-
-	for (const [key, value] of Object.entries(incoming)) {
-		const trimmedKey = key.trim();
-		if (!trimmedKey) continue;
-		const existingIndex = indexByKey.get(trimmedKey);
-		if (existingIndex === undefined) {
-			indexByKey.set(trimmedKey, next.length);
-			next.push({ id: createQueryParamId(), key: trimmedKey, value });
-		} else {
-			next[existingIndex] = {
-				...next[existingIndex],
-				key: trimmedKey,
-				value,
-			};
-		}
-	}
-
-	return next;
-}
-
 function serializeQueryParams(
 	queryParams: Record<string, string> | null | undefined,
 ): string {
@@ -175,6 +137,14 @@ function buildQueryParamsFromFields(
 		.map((param) => [param.key.trim(), param.value] as const)
 		.filter(([key]) => key.length > 0);
 	return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function buildQueryParamFields(
+	queryParams: Record<string, string>,
+): QueryParamField[] {
+	return Object.entries(queryParams).map(([key, value], index) =>
+		createQueryParamField(key, value, index),
+	);
 }
 
 function replacePathQueryParams(
@@ -311,13 +281,7 @@ export function MockEditor({
 		setMatchType((initial.matchType as MatchType) ?? 'exact');
 		const qp = initial.queryParams as Record<string, string> | null | undefined;
 		setPath(appendQueryParamsToPath(initial.path ?? '', qp));
-		setQueryParams(
-			qp
-				? Object.entries(qp).map(([key, value], index) =>
-						createQueryParamField(key, value, index),
-					)
-				: [],
-		);
+		setQueryParams(qp ? buildQueryParamFields(qp) : []);
 		setVariants((initial.variants as MockVariant[] | null | undefined) ?? []);
 		setWildcardRequireMatch(Boolean(initial.wildcardRequireMatch));
 		setActiveTab(initial.jsonSchema ? 'schema' : 'manual');
@@ -370,6 +334,12 @@ export function MockEditor({
 	};
 	const isEchoRequestBodyEnabled =
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
+	const handlePathChange = (nextPath: string) => {
+		setPath(nextPath);
+		if (getEndpointInputParts(nextPath).path.includes('*')) {
+			setMatchType('wildcard');
+		}
+	};
 
 	useEffect(() => {
 		setPath((currentPath) => {
@@ -390,15 +360,9 @@ export function MockEditor({
 			selectedMockSubfolder?.path ?? '/',
 			previewSlug ?? selectedFolder?.slug,
 		);
-		if (!path.includes('?')) {
-			setPath(nextPath);
-			return;
-		}
 		setPath(`${nextPath}${serializeQueryParams(parsed.queryParams)}`);
+		setQueryParams(buildQueryParamFields(parsed.queryParams));
 		if (Object.keys(parsed.queryParams).length > 0) {
-			setQueryParams((current) =>
-				mergeQueryParamFields(current, parsed.queryParams),
-			);
 			setActiveTab('advanced');
 		}
 	};
@@ -409,17 +373,15 @@ export function MockEditor({
 
 		event.preventDefault();
 		const parsed = getEndpointInputParts(pasted);
-		setPath(
+		handlePathChange(
 			`${formatEndpointPathForStorage(
 				parsed.path,
 				selectedMockSubfolder?.path ?? '/',
 				previewSlug ?? selectedFolder?.slug,
 			)}${serializeQueryParams(parsed.queryParams)}`,
 		);
+		setQueryParams(buildQueryParamFields(parsed.queryParams));
 		if (Object.keys(parsed.queryParams).length > 0) {
-			setQueryParams((current) =>
-				mergeQueryParamFields(current, parsed.queryParams),
-			);
 			setActiveTab('advanced');
 		}
 	};
@@ -454,11 +416,9 @@ export function MockEditor({
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		const parsedPath = path.includes('?') ? getEndpointInputParts(path) : null;
-		const submitQueryParams = parsedPath
-			? mergeQueryParamFields(queryParams, parsedPath.queryParams)
-			: queryParams;
-		const submitPath = parsedPath?.path ?? path;
+		const parsedPath = getEndpointInputParts(path);
+		const submitQueryParams = buildQueryParamFields(parsedPath.queryParams);
+		const submitPath = parsedPath.path;
 		if (!validateBeforeSubmit(submitPath)) return;
 
 		let formattedPath = formatEndpointPathForStorage(
@@ -613,7 +573,7 @@ export function MockEditor({
 							<Input
 								id="create-path"
 								value={path}
-								onChange={(e) => setPath(e.target.value)}
+								onChange={(e) => handlePathChange(e.target.value)}
 								onBlur={extractPathQueryParams}
 								onPaste={handlePathPaste}
 								placeholder="/users"
@@ -623,7 +583,10 @@ export function MockEditor({
 								<p className="text-xs text-muted-foreground font-mono">
 									Preview:{' '}
 									<span className="text-foreground wrap-break-word">
-										{appendQueryParamsToUrl(previewUrl, buildQueryParamsString())}
+										{appendQueryParamsToUrl(
+											previewUrl,
+											buildQueryParamsString(),
+										)}
 									</span>
 								</p>
 							)}

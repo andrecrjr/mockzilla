@@ -1,4 +1,8 @@
-export function resolvePath(path: string, data: unknown, root: unknown = data): unknown {
+export function resolvePath(
+	path: string,
+	data: unknown,
+	root: unknown = data,
+): unknown {
 	const cleanPath = path.startsWith('$.')
 		? path.slice(2)
 		: path.startsWith('$')

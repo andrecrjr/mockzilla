@@ -9,7 +9,10 @@ import type {
 	UpdateFolderRequest,
 	UpdateMockRequest,
 } from './types';
-import { formatStoredFolderPath, normalizeFolderPath } from './utils/folder-paths';
+import {
+	formatStoredFolderPath,
+	normalizeFolderPath,
+} from './utils/folder-paths';
 
 // Allow configuring the external Mockzilla API base URL via environment variables.
 // Falls back to a sensible default if not provided.

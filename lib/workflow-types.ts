@@ -1,4 +1,10 @@
-export type ConditionOperator = 'eq' | 'neq' | 'exists' | 'gt' | 'lt' | 'contains';
+export type ConditionOperator =
+	| 'eq'
+	| 'neq'
+	| 'exists'
+	| 'gt'
+	| 'lt'
+	| 'contains';
 
 export interface Condition {
 	type: ConditionOperator;

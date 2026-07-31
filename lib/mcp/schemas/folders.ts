@@ -62,7 +62,7 @@ export type UpdateMockSubfolderArgs = z.infer<typeof UpdateMockSubfolderArgs>;
 export const DeleteMockSubfolderArgs = z.object({ id: z.string() });
 export type DeleteMockSubfolderArgs = z.infer<typeof DeleteMockSubfolderArgs>;
 
-export const ManageFoldersArgs = z.discriminatedUnion('action', [
+export const ManageFoldersArgs = z.union([
 	z.object({
 		action: z.literal('list'),
 		page: z.number().int().min(1).optional(),
@@ -74,11 +74,15 @@ export const ManageFoldersArgs = z.discriminatedUnion('action', [
 		description: z.string().optional(),
 		slug: z.string().optional(),
 	}),
-	z.object({
+	z
+		.object({
 		action: z.literal('get'),
 		id: z.string().optional(),
 		slug: z.string().optional(),
-	}),
+		})
+		.refine((value) => Boolean(value.id || value.slug), {
+			message: 'id or slug is required',
+		}),
 	z.object({
 		action: z.literal('update'),
 		id: z.string(),
@@ -92,6 +96,18 @@ export const ManageFoldersArgs = z.discriminatedUnion('action', [
 	}),
 ]);
 export type ManageFoldersArgs = z.infer<typeof ManageFoldersArgs>;
+
+/** See `ManageMocksInputSchema` for why MCP tool schemas use a Zod object. */
+export const ManageFoldersInputSchema = z.object({
+	action: z.enum(['list', 'create', 'get', 'update', 'delete']),
+	id: z.string().optional(),
+	name: z.string().optional(),
+	description: z.string().optional(),
+	slug: z.string().optional(),
+	page: z.number().int().min(1).optional(),
+	limit: z.number().int().min(1).max(100).optional(),
+});
+export type ManageFoldersInputSchema = z.infer<typeof ManageFoldersInputSchema>;
 
 export const ManageMockSubfoldersArgs = z.discriminatedUnion('action', [
 	z.object({
@@ -128,3 +144,18 @@ export const ManageMockSubfoldersArgs = z.discriminatedUnion('action', [
 	}),
 ]);
 export type ManageMockSubfoldersArgs = z.infer<typeof ManageMockSubfoldersArgs>;
+
+export const ManageMockSubfoldersInputSchema = z.object({
+	action: z.enum(['list', 'create', 'get', 'update', 'delete']),
+	id: z.string().optional(),
+	folderId: z.string().optional(),
+	folderSlug: z.string().optional(),
+	parentId: z.string().nullable().optional(),
+	name: z.string().min(1).optional(),
+	slug: z.string().min(1).optional(),
+	path: z.string().min(1).optional(),
+	all: z.boolean().optional(),
+});
+export type ManageMockSubfoldersInputSchema = z.infer<
+	typeof ManageMockSubfoldersInputSchema
+>;
