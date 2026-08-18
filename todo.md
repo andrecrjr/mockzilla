@@ -20,7 +20,7 @@ Use [JOURNEY.md](./JOURNEY.md) as the product and engineering contract. Complete
 
 ## Sprint 1 — Journey persistence and routing
 
-- [ ] Add Journey persistence for identity, Lifecycle definitions, field definitions, current state map, and current field values.
+- [x] Add Journey persistence for identity, Lifecycle definitions, field definitions, current state map, and current field values.
 - [ ] Add Action persistence for method, path, required states, declared transitions, field writes, and response configuration.
 - [ ] Add Journey, Lifecycle, field, and Action validation.
 - [ ] Reject duplicate method/path/requires-map Action combinations.
