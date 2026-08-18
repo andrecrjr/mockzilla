@@ -1,5 +1,5 @@
 export default {
-	'creating-stateful-workflows': 'Creating Stateful Workflows',
+	'creating-journeys': 'Creating Journeys',
 	'browser-extension-sync': 'Extension Sync',
 	'openapi-import': 'OpenAPI Import',
 	'proxy-and-record': 'Proxy & Record',

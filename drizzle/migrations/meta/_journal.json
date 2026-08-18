@@ -43,6 +43,13 @@
       "when": 1781837111158,
       "tag": "0005_nested_mock_subfolders",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787017119044,
+      "tag": "0006_strong_peter_parker",
+      "breakpoints": true
     }
   ]
 }

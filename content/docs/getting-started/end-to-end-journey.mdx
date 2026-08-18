@@ -67,10 +67,10 @@ Static mocks get "stale" fast. Once your routes are set up, you can switch to **
 
 ---
 
-## Level 3: Stateful Workflows
-<Badge variant="outline" className="mb-4">Intelligent Simulations</Badge>
+## Level 3: Stateful Journeys
+<Badge variant="outline" className="mb-4">Followable Product Stories</Badge>
 
-For complex user journeys—like adding an item to a cart and then seeing it in the checkout list—you need **Stateful Workflows**. This turns Mockzilla into a "Mini-Backend."
+For a product story that changes across requests—such as signing in, paying an order, and tracking delivery—use a **Journey**. It keeps lifecycle tracks and a few carried fields visible instead of becoming a mini-backend.
 
 <Tabs defaultValue="actions" className="my-6">
   <TabsList className="grid w-full grid-cols-2">
@@ -78,14 +78,14 @@ For complex user journeys—like adding an item to a cart and then seeing it in 
     <TabsTrigger value="state">State</TabsTrigger>
   </TabsList>
   <TabsContent value="actions" className="p-4 border rounded-md">
-    **Trigger side effects** when an endpoint is called. `POST /login` sets an `isLoggedIn` flag in your session.
+    **Run real product Actions.** `POST /auth/sign-in` transitions `auth` from `signed_out` to `authenticated`.
   </TabsContent>
   <TabsContent value="state" className="p-4 border rounded-md">
-    **Store and recall data** using the internal **Mini-DB**. A `POST /cart` pushes data into a table that `GET /cart` can then read.
+    **Carry a few declared values.** The sign-in Action writes `accessToken`; payment writes `orderId`; later responses can return them.
   </TabsContent>
 </Tabs>
 
-**Outcome**: You can test complete business logic flows (Auth, Checkout, Multi-step forms) without a real backend.
+**Outcome**: You can test complete product stories—Auth, Checkout, Delivery, and multi-step forms—without hiding behavior in a database or rules engine.
 
 ---
 
@@ -124,7 +124,7 @@ The entire Mockzilla journey is optimized for **AI-First** development. Instead 
   </CardHeader>
   <CardContent className="space-y-4">
     <div className="text-sm">
-      "Use **mockzilla-mock-maker** to import my OpenAPI spec, then refactor the `/products` endpoint to use a high-fidelity JSON Schema. Finally, use **mockzilla-workflow-architect** to add a stateful checkout flow that tracks inventory in the Mini-DB."
+      "Use **mockzilla-mock-maker** to import my OpenAPI spec, then refactor the `/products` endpoint to use a high-fidelity JSON Schema. Finally, design a Customer Journey with auth, checkout, and delivery lifecycles that carries `orderId` and `trackingCode`."
     </div>
     <div className="text-xs bg-muted p-3 rounded-lg border border-dashed font-mono">
       // Tip: The AI acts as your senior backend engineer, handling all the complex Mockzilla logic for you.

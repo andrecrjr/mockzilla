@@ -1,13 +1,13 @@
 # Mockzilla Reference
 
-High-performance mocking server for JSON and stateful API workflows.
+High-performance mocking server for JSON APIs, organized through folders and subfolders, with Journeys as the simplified model for stateful behavior.
 
 ## 📚 Documentation
 
 - [MCP Integration](/documentation/mcp.md) - Connect via Model Context Protocol.
 - [Design System](/documentation/design-system.md) - Color palette, typography, and UI patterns.
 - [OpenAPI Import](/documentation/openapi-import.md) - Specification parsing and mock conversion.
-- [Workflow Mode](/documentation/workflow-mode.md) - Stateful transitions and mini-db logic.
+- [Journeys](/documentation/journeys.md) - The simplified model for stateful API simulations.
 - [Proxy & Record Mode](/documentation/proxy-and-record.md) - Capture live traffic and auto-generate mocks.
 - [Mock Subfolders](/documentation/mock-subfolders.md) - Nested mock organization and effective serving paths.
 - [Schema Interpolation](/documentation/schema-interpolation.md) - `{$.path}` and `{{input.*}}` templates.
@@ -24,10 +24,10 @@ High-performance mocking server for JSON and stateful API workflows.
 - **Structured Logging**: Production-grade logs via Pino in `.logs/mockzilla.log` for web/dev runs, or the configured desktop log directory for packaged desktop builds.
 - **Version Stamping**: The frontend shows the running Mockzilla version, and each structured log entry includes the same `version` field for release traceability.
 - **Request Tracing**: Every mock request is tracked via a unique `reqId`.
-- **Workflow Tracing**: Inspect why transitions did or didn't match with `executionTrace`.
+- **Request Tracing**: Inspect served mocks and request behavior with a unique `reqId`.
 
 ## 🧠 Patterns
 
-- **Mini-Database (`db.*`)**: Persistent in-memory state. Use `workflow_control` (action: `inspect`) to verify.
-- **Action-Driven**: Trigger endpoints with `effects` rather than manual mutation.
+- **Folders and Subfolders**: Group endpoint mocks by API domain and route hierarchy.
+- **Journeys**: Model a complete product story with declared lifecycles, carried fields, Actions, and Handlebars.
 - **High-Fidelity Mocks**: Use `manage_mocks` (action: `create`) with `jsonSchema` and the [reference guide](/documentation/json-schema-faker.md#High-Fidelity-Patterns) for production-grade data.

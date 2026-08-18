@@ -11,21 +11,22 @@ Mockzilla is a high-fidelity API mocking platform designed to bridge the gap bet
 
 Mockzilla is designed for the modern development ecosystem, where speed, product validation, and cost-efficiency are paramount.
 
-### Core Strengths (The Pros)
+### Core Strengths
 - **🚀 Product-First approach**: Deliver as fast as possible by mocking first. Establish Mockzilla as the **Ground Truth**—design your API contract and validate your UI before writing a single line of backend code.
 - **🤖 AI-Native Power-Ups**: Built-in MCP support allows AI agents (like **Claude Opus**, **GPT**, or **Gemini**) to autonomously build, debug, and maintain your mock infrastructure while minimizing token burn.
-- **🎭 Stateful "Living" Mocks**: Unlike static JSON servers, Mockzilla supports complex stateful scenarios with an in-memory Mini-DB and session state—perfect for BFFs and Microservice prototypes.
+- **🗂️ Folders & Subfolders**: Organize endpoint mocks by API domain and route hierarchy, from a small service to a large nested API.
+- **🧭 Journeys**: Model a complete customer story across authentication, checkout, and delivery lifecycles.
 - **🎲 High-Fidelity Dynamic Data**: Use JSON Schema + Faker.js to generate fresh, realistic data that adheres strictly to your API contracts.
 - **🔌 Browser-to-Dashboard Sync**: Capture real-world production traffic via our Chrome Extension and convert it into high-fidelity mocks with one click.
-- **🧠 Smart Hybrid Engine**: Automatically switches between type-preserving JSON interpolation and powerful Handlebars logic for maximum flexibility.
+- **🧠 Smart Dynamic Data**: Generate realistic responses from JSON Schema and templates without turning every endpoint into custom code.
 - **🐳 DevOps Friendly**: Standalone Docker support and a robust Makefile-driven CLI for seamless integration into local and CI/CD environments.
 - **💸 Token Burn Mitigation**: Drastically reduce AI SaaS costs by mocking expensive LLM responses during UI/UX development—stop wasting your token budget on layout refreshes.
-- **🔍 Forensic Debugging**: Built-in observability tools allow you to trace exactly why a specific mock matched (or didn't) and how state mutated during a request.
+- **🔍 Request Debugging**: Inspect served mocks and request traces when a simulation behaves unexpectedly.
 
-### Points of Consideration (The Cons)
-- **📈 Learning Curve**: Mastering advanced Handlebars interpolation and stateful transition logic requires some initial time investment.
+### Points of Consideration
+- **📈 Scope Control**: A mock should simulate the behavior a frontend needs; it does not need to become a replacement production backend.
 - **🔄 Mock Drift**: Like any mocking tool, you must maintain discipline to keep mocks in sync with evolving production backend contracts.
-- **🧩 Logic Complexity**: While powerful, building highly complex stateful simulations can become difficult to manage without proper modularization.
+- **🧩 Scope Control**: A mock should simulate the behavior a frontend needs; it does not need to become a replacement production backend.
 
 ---
 
@@ -43,7 +44,7 @@ Parallelize development by working against high-fidelity mocks before the backen
 
 ### For AI Engineers
 Native MCP support allows AI assistants to autonomously create and manage mocks within your workspace.
-- **Pros:** Zero-latency testing for agent tool-calling; AI can build complex stateful scenarios in seconds.
+- **Pros:** Zero-latency testing for agent tool-calling; AI can draft and replay realistic API Journeys in seconds.
 - **Cons:** Requires initial MCP server configuration.
 
 ### For QA & Automation
@@ -67,7 +68,7 @@ Reproduce edge cases that are hard to trigger in real staging environments.
       <CardHeader>
         <Globe className="w-8 h-8 text-primary mb-2" />
         <CardTitle>End-to-End Journey</CardTitle>
-        <CardDescription>Explore the "Meta-Workflow" from capturing real traffic to scaling with AI.</CardDescription>
+      <CardDescription>Explore the path from captured traffic to organized mocks and stateful Journeys.</CardDescription>
       </CardHeader>
     </Card>
   </Link>
@@ -125,7 +126,7 @@ Reproduce edge cases that are hard to trigger in real staging environments.
           <span className="font-bold text-primary">3</span>
         </div>
         <div>
-          <CardTitle className="text-lg group-hover:text-primary transition-colors">Stateful Workflows</CardTitle>
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">Stateful Journeys</CardTitle>
           <CardDescription>Build simulations that remember user actions, like shopping carts and auth flows.</CardDescription>
         </div>
       </CardHeader>

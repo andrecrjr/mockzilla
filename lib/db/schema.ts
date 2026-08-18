@@ -24,6 +24,11 @@ export const httpMethodEnum = pgEnum('http_method', [
 ]);
 
 export const bodyTypeEnum = pgEnum('body_type', ['json', 'text']);
+export const journeyFieldTypeEnum = pgEnum('journey_field_type', [
+	'string',
+	'number',
+	'boolean',
+]);
 
 // Tables
 export const folders = pgTable('folders', {
@@ -94,6 +99,50 @@ export const mockResponses = pgTable('mock_responses', {
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at'),
 });
+
+export const journeys = pgTable('journeys', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	name: text('name').notNull(),
+	slug: text('slug').notNull().unique(),
+	description: text('description'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at'),
+});
+
+export const journeyLifecycles = pgTable(
+	'journey_lifecycles',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		journeyId: uuid('journey_id').notNull().references(() => journeys.id, { onDelete: 'cascade' }),
+		key: text('key').notNull(), name: text('name').notNull(), states: jsonb('states').notNull(), initialState: text('initial_state').notNull(), position: integer('position').notNull(),
+	},
+	(table) => ({ keyUnique: uniqueIndex('journey_lifecycles_journey_key_unique').on(table.journeyId, table.key) }),
+);
+
+export const journeyFields = pgTable(
+	'journey_fields',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		journeyId: uuid('journey_id').notNull().references(() => journeys.id, { onDelete: 'cascade' }),
+		key: text('key').notNull(), type: journeyFieldTypeEnum('type').notNull(), initialValue: jsonb('initial_value').notNull(), position: integer('position').notNull(),
+	},
+	(table) => ({ keyUnique: uniqueIndex('journey_fields_journey_key_unique').on(table.journeyId, table.key) }),
+);
+
+export const journeyRuntimeStates = pgTable('journey_runtime_states', {
+	journeyId: uuid('journey_id').primaryKey().references(() => journeys.id, { onDelete: 'cascade' }),
+	state: jsonb('state').notNull(), fields: jsonb('fields').notNull(), updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const journeyActions = pgTable(
+	'journey_actions',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		journeyId: uuid('journey_id').notNull().references(() => journeys.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(), method: httpMethodEnum('method').notNull(), path: text('path').notNull(), requires: jsonb('requires').notNull(), transitions: jsonb('transitions').notNull(), setFields: jsonb('set_fields').notNull(), matchSignature: text('match_signature').notNull(), statusCode: integer('status_code').notNull(), headers: jsonb('headers').notNull(), body: jsonb('body').notNull(), bodyType: bodyTypeEnum('body_type').notNull(), position: integer('position').notNull(), createdAt: timestamp('created_at').defaultNow().notNull(), updatedAt: timestamp('updated_at'),
+	},
+	(table) => ({ matchUnique: uniqueIndex('journey_actions_match_unique').on(table.journeyId, table.method, table.path, table.matchSignature) }),
+);
 
 // Relations removed to fix TS compilation hang.
 // Workflow Tables

@@ -346,6 +346,49 @@ describe('Mock Serving /mock/[folder]/[path]', () => {
 		expect(body).toEqual({ nested: true });
 	});
 
+	it('keeps root and nested subfolder mocks independently serveable', async () => {
+		const nestedMock = {
+			...mockResponse,
+			id: 'mock-subfolder-baseline',
+			endpoint: '/42',
+			mockFolderId: 'users-subfolder',
+			response: JSON.stringify({ source: 'subfolder' }),
+		};
+		const usersSubfolder = {
+			id: 'users-subfolder',
+			folderId: 'folder-1',
+			parentId: null,
+			name: 'Users',
+			slug: 'users',
+			mainPath: '/users',
+		};
+
+		const respondToRequest = async (path: string[]) => {
+			let callCount = 0;
+			mockDb.select = mock(() => {
+				callCount++;
+				if (callCount === 1) return createMockBuilder([mockFolder]);
+				if (callCount === 2)
+					return createMockBuilder([mockResponse, nestedMock]);
+				if (callCount === 3) return createMockBuilder([usersSubfolder]);
+				return createMockBuilder([]);
+			});
+
+			return GET(
+				new NextRequest(`http://localhost:3000/api/mock/${path.join('/')}`),
+				{ params: Promise.resolve({ path }) },
+			);
+		};
+
+		const rootResponse = await respondToRequest(['api', 'users']);
+		expect(rootResponse.status).toBe(200);
+		expect(await rootResponse.json()).toEqual({ users: [] });
+
+		const nestedResponse = await respondToRequest(['api', 'users', '42']);
+		expect(nestedResponse.status).toBe(200);
+		expect(await nestedResponse.json()).toEqual({ source: 'subfolder' });
+	});
+
 	it('serves a subfolder wildcard mock with query params and clean captures', async () => {
 		const subfolderWildcardMock = {
 			...mockResponse,

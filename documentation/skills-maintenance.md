@@ -1,57 +1,21 @@
 # Skills Maintenance
 
-This page records the maintenance rules for `.agent/skills/`.
+This page records the documentation contract for Mockzilla agent skills.
 
-## Current Skills
+## Core authoring rules
 
-| Skill | Use |
-| :--- | :--- |
-| `mockzilla-mock-maker` | Stateless mocks, JSON Schema Faker responses, variants, and previews. |
-| `mockzilla-workflow-architect` | Stateful workflow design, transitions, mini-DB effects, and fallback behavior. |
-| `mockzilla-spec-translator` | Translating OpenAPI, Swagger, Jira, or endpoint inventories into Mockzilla setup. |
-| `mockzilla-logic-doctor` | Forensics for transition matching, state drift, request traces, and broken interpolation. |
+- Start with a folder and subfolder structure for ordinary endpoint mocks.
+- Keep each mock focused on one request and response behavior.
+- Use realistic schemas and dynamic data only where they improve frontend work.
+- Use Journeys only when behavior must persist across multiple requests.
+- Describe stateful behavior with declared lifecycle tracks, scalar fields, Actions, Handlebars, and replay.
 
-## Manager Tool Rule
+## Validation checklist
 
-Skills must prefer the consolidated MCP manager tools documented in `documentation/mcp.md`:
+After changing a skill:
 
-- `manage_folders`
-- `manage_mock_subfolders`
-- `manage_mocks`
-- `manage_scenarios`
-- `manage_transitions`
-- `workflow_control`
-- `manage_logs`
-
-Use only the current consolidated manager tools and actions. Their contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
-
-## Metadata Rule
-
-Each skill should include:
-
-- `SKILL.md` with clear frontmatter `name` and `description`.
-- `agents/openai.yaml` with `display_name`, `short_description`, and `default_prompt`.
-- Optional `resources/`, `examples/`, or `assets/` only when they reduce repeated context in `SKILL.md`.
-
-## Progressive Disclosure Rule
-
-Keep `SKILL.md` focused on:
-
-- when to use the skill
-- tool selection
-- critical syntax rules
-- standard workflow
-- validation checklist
-- links to references
-
-Move long examples, domain templates, and detailed reference material into files under `resources/` or `examples/`.
-
-## Validation Checklist
-
-After changing skills:
-
-- Search `.agent/skills` for stale tool names or unsupported actions.
-- Confirm every skill still links to the shared manager tools contract.
-- Confirm `agents/openai.yaml` descriptions match `SKILL.md`.
-- Update `documentation/skills.md` when user-facing skill behavior changes.
-- Run local checks when code changed. Markdown-only skill updates do not require database or Docker commands.
+- Confirm mock examples use folders and subfolders when route hierarchy matters.
+- Confirm Journey examples describe a user or business story.
+- Confirm generated work includes a request sequence the frontend can run.
+- Confirm documentation links point to `documentation/mock-subfolders.md`, `documentation/journeys.md`, and `documentation/mcp.md`.
+- Update `documentation/skills.md` whenever user-facing behavior changes.

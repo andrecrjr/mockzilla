@@ -1,89 +1,38 @@
 # Agent Skills
 
-Agent Skills are specialized instruction sets (located in `.agent/skills/`) that supercharge AI agents with expert Mockzilla knowledge. Instead of just having access to raw tools, a skill-enabled agent understands our **Action-Driven** philosophy and knows exactly how to build high-fidelity simulations.
+Agent Skills give AI assistants focused Mockzilla knowledge for creating useful API simulations.
 
----
+## Mock-first capability
 
-## Maintenance Contract
+The primary skills should help an agent:
 
-Skills should instruct agents to use the consolidated MCP manager tools:
+- create folders for API domains;
+- organize endpoints in subfolders;
+- create and preview ordinary endpoint mocks;
+- generate realistic responses from JSON Schema and dynamic data;
+- import an OpenAPI description into a clean mock hierarchy.
 
-| Area | Tool |
-| :--- | :--- |
-| Folders | `manage_folders` |
-| Mock subfolders | `manage_mock_subfolders` |
-| Mocks | `manage_mocks` |
-| Workflow scenarios | `manage_scenarios` |
-| Workflow transitions | `manage_transitions` |
-| Workflow state/testing | `workflow_control` |
-| Logs and traces | `manage_logs` |
+## Journey capability
 
-Use only the current manager tools and actions listed above. The canonical contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
+Journeys are the simplified stateful model. A Journey-aware agent should turn a product story into declared lifecycle tracks, small scalar fields, clear Actions, and a replayable request sequence using Handlebars for field and response values.
 
-Each skill also has `agents/openai.yaml` metadata for UI display and default prompts. Keep that metadata aligned with the corresponding `SKILL.md` frontmatter.
+## Prompting examples
 
----
+> “Create a Catalog API folder with product and category subfolders, then add realistic list and detail mocks.”
 
-## 🛠️ Available Skills
+> “Import this OpenAPI document and organize the endpoints by resource under nested subfolders.”
 
-### 1. Mockzilla Mock Maker (`mockzilla-mock-maker`)
-Expert for high-fidelity, data-heavy mocks using JSON Schema + Faker.
-- **Resources**: [JSON Faker Mock References](/documentation/json-schema-faker.md)
-- **Best for**: Catalogs, User profiles, Search results, Analytics events.
-- **Principle**: "Stateless First" - Use powerful schemas for 90% of your mocking needs.
-- **Verify with**: `manage_mocks` (action: `preview`).
+> “Design a checkout Journey with pending, paid, shipped, and cancelled states.”
 
-### 2. Mockzilla Workflow Architect (`mockzilla-workflow-architect`)
-Expert for stateful, interactive API scenarios and business logic.
-- **Best for**: Checkouts, Authentication flows, Inventory management, State-dependent responses.
-- **Principle**: "Action-Driven" - Endpoints are actions, and state changes are side-effects stored in the mini-DB.
-- **Verify with**: `workflow_control` (actions: `test`, `inspect`).
+> “Explain the Journey request sequence a frontend should use to reach the shipped state.”
 
-### 3. Mockzilla Spec Translator (`mockzilla-spec-translator`)
-High-velocity architect for project bootstrapping from external specs.
-- **Best for**: Translating OpenAPI, Jira requirements, or endpoint documentation into a current Mockzilla setup.
-- **Workflow**: Automated creation of folders and high-fidelity schema mocks.
-- **Verify with**: `manage_mocks` (action: `preview`) for stateless endpoints and `workflow_control` (action: `test`) for stateful flows.
+## Vocabulary contract
 
-### 4. Mockzilla Logic Doctor (`mockzilla-logic-doctor`)
-Forensic specialist for debugging complex workflow matching and state issues.
-- **Best for**: Resolving "No matching transition found" and state corruption errors.
-- **Method**: Step-by-step reproduction and surgical fixes using MCP tools.
-- **Verify with**: `manage_logs` (action: `trace`) and `workflow_control` (actions: `test`, `inspect`).
+Skills should use these terms consistently:
 
----
+- Folder and subfolder for mock organization.
+- Mock for an endpoint response.
+- Journey for a stateful API simulation.
+- State, Action, and replay for Journey behavior.
 
-## 🚀 Installation
-
-Install these skills into any compatible agent (like Gemini CLI) using the universal `npx skills` command pointing to this repository:
-
-```bash
-npx skills add github.com/andrecrjr/mockzilla
-```
-
-When you run this command, you will be able to select one or more of the following specialized experts:
-
-- **Mockzilla Mock Maker**: Expert for high-fidelity, data-heavy mocks using JSON Schema + Faker.
-- **Mockzilla Workflow Architect**: Expert for stateful, interactive API scenarios and business logic.
-- **Mockzilla Spec Translator**: High-velocity architect for project bootstrapping from OpenAPI or technical specs.
-- **Mockzilla Logic Doctor**: Forensic specialist for debugging complex workflow matching and state issues.
-
----
-
-## 💡 How to Use Skills
-
-Skills are activated through **Inference-based Activation**. You don't need to manually import them; you just need to prompt the agent with intent.
-
-### Examples:
-
-> **"Use mockzilla-mock-maker to create a realistic E-commerce product catalog API."**
-> *The agent will activate the skill, read its internal documentation on schemas, and generate a robust response.*
-
-> **"Design a stateful checkout flow using mockzilla-workflow-architect."**
-> *The agent will load the workflow best practices and use the proper `state.set` and `db.push` effects.*
-
-### Tips for Success:
-- **Mention the skill name**: It helps the agent identify the best expert for the task.
-- **Provide a spec**: Skills work best when you provide an OpenAPI or JSON Schema as a starting point.
-- **Verify state**: When using the Workflow Architect, ask the agent to "Show me the mini-DB tables" to confirm state is being handled correctly.
-- **Keep docs synced**: When changing skill behavior, update this page and the relevant reference in `documentation/`.
+Read [Mock Subfolders](./mock-subfolders.md), [Journeys](./journeys.md), and [MCP Integration](./mcp.md).

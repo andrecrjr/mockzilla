@@ -1,6 +1,6 @@
 # TypeScript
 
-Mockzilla uses TypeScript `6.0.3` as a development dependency for project-wide type checking. TypeScript 6 requires explicit ambient type packages, so `tsconfig.json` includes the Node.js and Bun types used by the app and its tests.
+Mockzilla uses TypeScript `6.0.3` as a development dependency for project-wide type checking. TypeScript 6 requires explicit ambient type packages, so `tsconfig.json` includes the Node.js and Bun types used by the app and its tests. The project targets ES2022 because the pinned Drizzle Kit/esbuild version uses that target when loading TypeScript migration configuration inside Docker.
 
 Run the checks from the repository root:
 

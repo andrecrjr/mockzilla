@@ -1,0 +1,95 @@
+---
+title: Journeys
+description: Model a complete API story with visible lifecycle tracks and Actions.
+---
+
+# Journeys
+
+Use ordinary mocks in folders and subfolders for most endpoints. Use a Journey when requests together tell a product story: a customer signs in, pays an order, and follows its delivery.
+
+> **Planned product:** Journeys define Mockzilla's future stateful model. They are documented before runtime support ships. Existing workflow features remain the current implementation until Journey delivery is complete.
+
+## One complete story, several lifecycles
+
+A Journey is standalone. It contains named Lifecycle tracks, each with a visible current state, plus a few declared Fields that carry values through the story.
+
+```text
+Customer Journey
+├── Authentication: signed_out → authenticated
+├── Checkout:      browsing → pending → paid → shipped
+└── Delivery:      not_started → tracking → delivered
+
+Fields: orderId, accessToken, trackingCode
+```
+
+This lets one API request depend on the part of the story that matters. Paying can require an authenticated customer and a pending checkout, while delivery can stay independent until the order is shipped.
+
+## Actions move the story forward
+
+An Action defines:
+
+- its HTTP method and path;
+- the lifecycle states it requires;
+- the lifecycle states it transitions;
+- the declared Fields it writes;
+- its status, headers, and response body.
+
+```json
+{
+  "name": "Pay order",
+  "method": "POST",
+  "path": "/orders/:id/pay",
+  "requires": {
+    "auth": "authenticated",
+    "checkout": "pending"
+  },
+  "transitions": {
+    "checkout": "paid"
+  },
+  "setFields": {
+    "orderId": "{{params.id}}"
+  },
+  "statusCode": 200,
+  "body": {
+    "id": "{{params.id}}",
+    "status": "{{state.checkout}}",
+    "orderId": "{{fields.orderId}}"
+  }
+}
+```
+
+Mockzilla selects an Action only by method, path, route parameters, and exact required lifecycle states. If none is available, it returns `409 Conflict` with the current state map and the requirements that were not met.
+
+## Keep ordinary mocks ordinary
+
+Folders and subfolders organize independent API endpoints. They remain right for static responses, schema-driven data, request echoing, and endpoints whose response does not depend on earlier requests.
+
+Choose a Journey when this sentence is true: **“This request changes where the customer is in the product story.”**
+
+## Dynamic values: Handlebars only
+
+Journey templates use Handlebars for declared Field writes, response headers, and body. There is no condition language, effect language, or JavaScript escape hatch.
+
+Every response template receives:
+
+```text
+request.body
+request.query
+request.headers
+params
+state
+fields
+faker
+```
+
+Transitions are declared data, not templates. Mockzilla applies them and `setFields` before rendering the response, so `{{state.checkout}}` can return `paid` and `{{fields.orderId}}` can return the paid order immediately.
+
+## Deliberate limits in v1
+
+Journeys do not include resources, collections, session contexts, arbitrary JSON state beyond declared scalar Fields, condition/effect DSLs, graph editors, or template side effects outside `setFields`. Those features make the engine hard to explain and debug.
+
+Keep lifecycle state and a few carried Fields in the Journey. Keep complex or collection-based response data in ordinary mocks and schemas.
+
+## Next step
+
+Read [Creating a Journey](/docs/guides/creating-journeys) for a complete customer-flow example.

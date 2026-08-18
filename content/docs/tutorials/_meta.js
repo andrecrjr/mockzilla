@@ -5,7 +5,7 @@ export default {
 	'ai-prototype': 'The 10-Minute AI Prototype',
 	'chaos-monkey': 'Chaos Monkey: Testing Resilience',
 	'legacy-apis': 'Microservices: Mocking Legacy APIs',
-	'stateful-authentication': 'Tutorial: Building an Auth Flow',
-	'shopping-cart-simulation': 'Tutorial: Creating a Shopping Cart',
-	'advanced-systems-simulation': 'Tutorial: Advanced Queues & CRUD',
+	'stateful-authentication': 'Tutorial: Authentication Journey',
+	'shopping-cart-simulation': 'Tutorial: Shopping Cart Journey',
+	'advanced-systems-simulation': 'Tutorial: Polling Job Journey',
 };

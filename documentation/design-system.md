@@ -52,15 +52,15 @@ Used sparingly for high-impact sections and brand recognition.
 *   **Subtle Accent**: `bg-gradient-to-br from-primary/5 to-purple-500/5` (Section backgrounds)
 *   **Gradient Text**: `bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent`
 
-### Workflow & Effect Coding
-Workflow mode uses a color-coding system to distinguish between State and Database operations.
+### Journey and Mock Coding
+Mockzilla uses clear visual language for endpoint mocks today and the Journey model for stateful behavior.
 
-| Operation Type | Border/BG Style | Color Logic |
+| Element | Border/BG Style | Color Logic |
 | :--- | :--- | :--- |
-| **Database (DB)** | `border-blue-200 bg-blue-50` (Light) / `dark:border-blue-900 dark:bg-blue-950` | Professional Blue |
-| **State** | `border-orange-200 bg-orange-50` (Light) / `dark:border-orange-900 dark:bg-orange-950` | Logical Orange |
-| **Scenario** | `border-l-4 border-l-blue-500` | Indicator left-border |
-| **Transition** | `border-l-4 border-l-green-500` | Indicator left-border |
+| **Folder** | `border-l-4 border-l-blue-500` | API domain |
+| **Mock** | `border-l-4 border-l-green-500` | Endpoint response |
+| **State** | `border-orange-200 bg-orange-50` (Light) / `dark:border-orange-900 dark:bg-orange-950` | Journey lifecycle phase |
+| **Action** | `border-l-4 border-l-purple-500` | Journey request and result |
 
 ### Custom Documentation Styles
 The documentation components (`@components/docs/**`) use a specific "Editor" theme for code previews.
@@ -142,12 +142,12 @@ Destructive deletes should use the shared `AlertDialog` confirmation pattern ins
 *   **Action Labels**: Prefer explicit confirm text such as `Delete Folder`, `Delete All Mocks`, or `Delete Mock`.
 
 ### Custom Components (Non-shadcn)
-The following components are unique to Mockzilla and built specifically for our workflow engine:
+The following components are unique to Mockzilla's mock and Journey experience:
 
 *   **`VisualPatternPreview`**: Specialized logic for visualizing wildcard path matching.
-*   **`EffectsEditor`**: A complex, stateful editor for transition side-effects.
-*   **`StateInspector`**: A diagnostic tool for real-time mini-DB and variable monitoring.
-*   **`MockVariantManager`**: Advanced logic for handling multiple response variants. Variant cards retain a stable UI identity while their capture keys are edited, so text inputs keep focus; the matching URL preview is displayed directly below the Capture Key input.
+*   **`MockVariantManager`**: Advanced logic for handling multiple response variants.
+*   **Journey list and Action editor**: Planned compact list-and-form UI for Journeys and their Actions.
+*   **Journey run panel**: Planned request runner showing the selected Action, lifecycle state map, carried fields, response, and resulting values.
 
 ---
 

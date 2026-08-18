@@ -1,45 +1,34 @@
 ---
-title: Action-Driven State Philosophy
-description: Understand the paradigm shift from static mocks to stateful API simulations.
+title: Action-Driven Journeys
+description: Keep state changes next to the real API request that causes them.
 ---
 
-# Action-Driven State Philosophy
+# Action-Driven Journeys
 
-Stateful workflows are one of Mockzilla's most powerful features, but they require a different mental model than static mocks.
+An application changes state because something happens: a user signs in, an order is paid, or a job completes. A Journey should use those same API requests—not test-only endpoints—to change its state.
 
-## The Problem: "Static Mocks are Dead"
-In a real application, APIs are not static. When you click "Checkout," the database changes. When you log in, your session remembers you.
+## Avoid mock-control endpoints
 
-Traditional mocking tools force you to create "static snapshots" for every possible state:
-- `/cart-empty`
-- `/cart-one-item`
-- `/cart-after-checkout`
+Do not make the frontend call endpoints such as `POST /set-login-status` or `POST /set-order-state`. They are not part of the production API and hide the behavior a test is meant to prove.
 
-This approach is fragile and doesn't scale as your application's logic grows more complex.
+Instead, put the request, state requirement, state transition, and response in one Action:
 
----
+```text
+POST /auth/sign-in
+  required state: signed_out
+  transition: auth → authenticated
+  response: 200 with a token
+```
 
-## The Solution: "Action-Driven State"
-Mockzilla follows a simple rule: **State variables must not be modified via direct "setter" endpoints.**
+An Action can also write a declared Journey Field—for example, `accessToken`—while remaining explicit. There is no resource layer, effect language, or hidden mutation rule.
 
-In a real app, you rarely "set the database status to 'paid'" directly via an API call. Instead, you "process a payment" (`POST /checkout`), and as a *side effect* of that action, the database status becomes 'paid'.
+## Why it matters
 
-### ❌ The "Bad" Way (CRUD on State):
-Creating endpoints just to manually set variables for your tests.
-- `POST /set-login-status?val=true`
-- `POST /add-to-cart-variable`
+1. The Journey reads like the product lifecycle.
+2. Frontend tests call production-shaped endpoints.
+3. Resetting declared lifecycle tracks makes replay deterministic.
+4. A rejected request can explain the current and required state directly.
 
-### ✅ The "Action-Driven" Way:
-Creating transitions that mirror real business logic.
-- **Action**: `POST /login`
-- **Effect**: Internal state `isLoggedIn` is set to `true`.
-- **Outcome**: Future requests to `GET /profile` will now match the "logged-in" transition.
+Use Handlebars only for declared field values and dynamic response data. Use ordinary folder/subfolder mocks when no previous request needs to affect the result.
 
----
-
-## The Benefits
-1.  **Logical Consistency**: Your mock server mirrors the behavior of your real backend.
-2.  **Reduced Mock Fatigue**: Instead of dozens of static files, you have a single scenario that "lives" and "reacts."
-3.  **Real-World Testing**: Your frontend code can trigger real actions and observe the cascading effects on the UI, exactly like it would with a production API.
-
-> **Get Started**: Learn [how to create your first workflow](/docs/guides/creating-stateful-workflows) or jump straight into the [Authentication Tutorial](/docs/tutorials/stateful-authentication).
+Continue with [Journeys](/docs/concepts/journeys) and [Creating a Journey](/docs/guides/creating-journeys).

@@ -1,6 +1,6 @@
 export default {
 	'quick-start': 'Quick Start',
-	'end-to-end-journey': 'End-to-End Journey',
+	'end-to-end-journey': 'The Mockzilla Journey',
 	configuration: 'Configuration',
 	'installing-skills': 'Installing AI Skills',
 };

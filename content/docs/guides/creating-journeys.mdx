@@ -1,0 +1,127 @@
+---
+title: Creating Journeys
+description: Create a complete customer story with lifecycle tracks and carried fields.
+---
+
+# Creating a Journey
+
+This planned Journey follows a customer through sign-in, checkout, and delivery:
+
+```text
+auth:     signed_out → authenticated
+checkout: browsing → pending → paid → shipped
+delivery: not_started → tracking → delivered
+```
+
+> **Planned product:** This is the Journey authoring contract, not a supported runtime format yet. Existing workflows remain available until Journeys replace them.
+
+## 1. Declare the lifecycles
+
+Start by naming business lifecycles, not by writing matching rules:
+
+```json
+{
+  "name": "Customer order",
+  "slug": "customer-order",
+  "lifecycles": [
+    {
+      "key": "auth",
+      "name": "Authentication",
+      "states": ["signed_out", "authenticated"],
+      "initialState": "signed_out"
+    },
+    {
+      "key": "checkout",
+      "name": "Checkout",
+      "states": ["browsing", "pending", "paid", "shipped"],
+      "initialState": "browsing"
+    },
+    {
+      "key": "delivery",
+      "name": "Delivery",
+      "states": ["not_started", "tracking", "delivered"],
+      "initialState": "not_started"
+    }
+  ]
+}
+```
+
+At runtime, Mockzilla holds only the declared state map, such as `auth: authenticated` and `checkout: pending`. It is not a cart database or a per-user session.
+
+## 2. Declare the fields the story carries
+
+Fields hold a few scalar values that later Actions need to return. They always have a type and initial value:
+
+```json
+{
+  "fields": [
+    { "key": "accessToken", "type": "string", "initialValue": null },
+    { "key": "orderId", "type": "string", "initialValue": null },
+    { "key": "trackingCode", "type": "string", "initialValue": null }
+  ]
+}
+```
+
+Fields are not used to decide whether an Action matches. They carry values after a matching Action runs.
+
+## 3. Add Actions
+
+Each Action declares the states it needs and the states it changes. Here, payment needs an authenticated customer and a pending checkout:
+
+```json
+{
+  "name": "Pay order",
+  "method": "POST",
+  "path": "/orders/:id/pay",
+  "requires": {
+    "auth": "authenticated",
+    "checkout": "pending"
+  },
+  "transitions": {
+    "checkout": "paid"
+  },
+  "setFields": {
+    "orderId": "{{params.id}}"
+  },
+  "statusCode": 200,
+  "body": {
+    "id": "{{params.id}}",
+    "status": "{{state.checkout}}",
+    "orderId": "{{fields.orderId}}"
+  }
+}
+```
+
+Shipping then requires `checkout: paid` and transitions it to `shipped`. Starting delivery can require `checkout: shipped` and transition `delivery` to `tracking`.
+
+## 4. Use Handlebars for carried values and responses
+
+Headers and body use this Handlebars context:
+
+```text
+request.body, request.query, request.headers, params, state, fields, faker
+```
+
+For example:
+
+```json
+{
+  "orderId": "{{params.id}}",
+  "checkoutStatus": "{{state.checkout}}",
+  "trackingCode": "{{fields.trackingCode}}",
+  "trackingCode": "{{faker.string.alphanumeric}}"
+}
+```
+
+Handlebars cannot choose transitions. It can render a declared `setFields` value. The declared Action always makes lifecycle movement obvious before a request runs.
+
+## 4. Know the failure behavior
+
+`POST /orders/order-1/pay` while `auth` is `signed_out` returns `409 Conflict`. The response identifies the current map and unmet requirement: `auth` must be `authenticated`.
+
+Reset restores every Lifecycle and every Field to its initial value, letting a developer replay the complete customer story reliably.
+
+## Where to go next
+
+- Review the model in [Journeys](/docs/concepts/journeys).
+- Use folders and subfolders for [ordinary mocks](/docs/getting-started/quick-start).
