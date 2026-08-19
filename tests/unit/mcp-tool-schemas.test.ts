@@ -83,19 +83,24 @@ describe('MCP tool schemas', () => {
 	it('publishes action-specific typed inputs for every manager tool', async () => {
 		const { tools } = await listRegisteredTools();
 		const byName = new Map(tools.map((tool) => [tool.name, tool]));
-		expect(tools).toHaveLength(7);
+		expect(tools).toHaveLength(8);
 		for (const tool of tools) {
 			expect(tool.inputSchema.type).toBe('object');
 			if (
 				tool.name !== 'manage_mocks' &&
 				tool.name !== 'manage_folders' &&
-				tool.name !== 'manage_mock_subfolders'
+				tool.name !== 'manage_mock_subfolders' &&
+				tool.name !== 'manage_journeys'
 			) {
 				expect(Array.isArray(tool.inputSchema.anyOf)).toBe(true);
 			}
 		}
 
 		const manageMocks = byName.get('manage_mocks')?.inputSchema as JsonSchema;
+		const manageJourneys = byName.get('manage_journeys')?.inputSchema as JsonSchema;
+		expect(manageJourneys.type).toBe('object');
+		expect(manageJourneys.anyOf).toBeUndefined();
+		expect(manageJourneys.required).toEqual(['action']);
 		expect(manageMocks.type).toBe('object');
 		expect(manageMocks.anyOf).toBeUndefined();
 		expect((manageMocks.properties as JsonSchema).statusCode).toMatchObject({

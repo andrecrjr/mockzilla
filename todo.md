@@ -21,34 +21,34 @@ Use [JOURNEY.md](./JOURNEY.md) as the product and engineering contract. Complete
 ## Sprint 1 — Journey persistence and routing
 
 - [x] Add Journey persistence for identity, Lifecycle definitions, field definitions, current state map, and current field values.
-- [ ] Add Action persistence for method, path, required states, declared transitions, field writes, and response configuration.
-- [ ] Add Journey, Lifecycle, field, and Action validation.
-- [ ] Reject duplicate method/path/requires-map Action combinations.
-- [ ] Implement route-parameter matching for Actions.
-- [ ] Add reset-to-initial-lifecycle-state-and-field behavior.
+- [x] Add Action persistence for method, path, required states, declared transitions, field writes, and response configuration.
+- [x] Add Journey, Lifecycle, field, and Action validation.
+- [x] Reject duplicate method/path/requires-map Action combinations.
+- [x] Implement route-parameter matching for Actions.
+- [x] Add reset-to-initial-lifecycle-state-and-field behavior.
 
 **Done when:** a Journey can be created, listed, updated, reset, and deleted without execution behavior.
 
 ## Sprint 2 — Handlebars execution
 
-- [ ] Define the Journey Handlebars context: `request`, `params`, `state`, `fields`, and `faker`.
-- [ ] Select Actions by method, path, and optional exact Lifecycle-state requirements.
-- [ ] Apply declared Lifecycle transitions and field writes atomically before response output.
-- [ ] Render response headers and body with the resulting state map and fields.
-- [ ] Return `409 Conflict` with useful state information when no Action is available.
-- [ ] Reject unknown Lifecycle keys, undeclared state values, unknown fields, and invalid field values with clear validation errors.
-- [ ] Add unit and integration coverage for multi-Lifecycle branches and field carry/reset behavior.
+- [x] Define the Journey Handlebars context: `request`, `params`, `state`, `fields`, and `faker`.
+- [x] Select Actions by method, path, and optional exact Lifecycle-state requirements.
+- [x] Apply declared Lifecycle transitions and field writes atomically before response output.
+- [x] Render response headers and body with the resulting state map and fields.
+- [x] Return `409 Conflict` with useful state information when no Action is available.
+- [x] Reject unknown Lifecycle keys, undeclared state values, unknown fields, and invalid field values with clear validation errors.
+- [x] Add unit and integration coverage for multi-Lifecycle branches and field carry/reset behavior.
 
 **Done when:** an authentication, checkout, and polling sequence can execute and reset predictably.
 
 ## Sprint 3 — HTTP and MCP management
 
-- [ ] Add Journey CRUD API routes.
-- [ ] Add Action CRUD API routes.
-- [ ] Add Journey execution and reset API routes.
-- [ ] Add one `manage_journeys` MCP manager for Journey, Action, run, and reset operations.
-- [ ] Ensure HTTP and MCP validation rules are identical.
-- [ ] Add API/MCP parity tests.
+- [x] Add Journey CRUD API routes.
+- [x] Add Action CRUD API routes.
+- [x] Add Journey execution and reset API routes.
+- [x] Add one `manage_journeys` MCP manager for Journey, Action, run, and reset operations.
+- [x] Ensure HTTP and MCP validation rules are identical.
+- [x] Add API/MCP parity tests.
 
 **Done when:** an AI agent and the dashboard can manage the same Journey behavior.
 

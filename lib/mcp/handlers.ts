@@ -91,6 +91,22 @@ import type {
 	GetRequestTraceArgs,
 	ManageLogsArgs,
 } from './schemas/logs';
+import type { ManageJourneysArgs } from './schemas/journeys';
+import {
+	createJourney,
+	createJourneyAction,
+	deleteJourney,
+	deleteJourneyAction,
+	executePersistedJourney,
+	getJourneyBySlug,
+	getJourneyRuntime,
+	getPersistedJourneyDefinition,
+	listJourneyActions,
+	listJourneys,
+	resetJourney,
+	updateJourneyAction,
+	updateJourneyMetadata,
+} from '../journey-store';
 
 // Helpers
 export function generateSlug(name: string): string {
@@ -1311,6 +1327,51 @@ export async function callManageTransitions(args: ManageTransitionsArgs) {
 			return callCreateFullWorkflow(args);
 		default:
 			throw new Error(`Unknown action: ${(args as { action: string }).action}`);
+	}
+}
+
+export async function callManageJourneys(args: ManageJourneysArgs) {
+	switch (args.action) {
+		case 'list': return listJourneys();
+		case 'create': return createJourney(args.journey);
+		case 'get': {
+			const persisted = await getPersistedJourneyDefinition(args.slug);
+			if (!persisted) return null;
+			return { ...persisted.journey, definition: persisted.definition, runtime: await getJourneyRuntime(persisted.journey.id) };
+		}
+		case 'update': {
+			const journey = await getJourneyBySlug(args.slug);
+			return journey ? updateJourneyMetadata(journey.id, { name: args.name, description: args.description }) : null;
+		}
+		case 'delete': {
+			const journey = await getJourneyBySlug(args.slug);
+			return journey ? deleteJourney(journey.id) : null;
+		}
+		case 'list_actions': {
+			const journey = await getJourneyBySlug(args.slug);
+			return journey ? listJourneyActions(journey.id) : null;
+		}
+		case 'create_action': {
+			const persisted = await getPersistedJourneyDefinition(args.slug);
+			return persisted ? createJourneyAction(persisted.definition, persisted.journey.id, args.journeyAction) : null;
+		}
+		case 'update_action': {
+			const persisted = await getPersistedJourneyDefinition(args.slug);
+			return persisted ? updateJourneyAction(persisted.definition, persisted.journey.id, args.actionId, args.journeyAction) : null;
+		}
+		case 'delete_action': {
+			const journey = await getJourneyBySlug(args.slug);
+			return journey ? deleteJourneyAction(journey.id, args.actionId) : null;
+		}
+		case 'run': return executePersistedJourney(args.slug, args.request);
+		case 'reset': {
+			const journey = await getJourneyBySlug(args.slug);
+			return journey ? resetJourney(journey.id) : null;
+		}
+		default: {
+			const exhaustive: never = args;
+			throw new Error(`Unknown action: ${JSON.stringify(exhaustive)}`);
+		}
 	}
 }
 

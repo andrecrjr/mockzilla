@@ -7,6 +7,7 @@ import {
 } from './schemas/folders';
 import { ManageLogsArgs } from './schemas/logs';
 import { ManageMocksInputSchema } from './schemas/mocks';
+import { ManageJourneysInputSchema } from './schemas/journeys';
 import {
 	ManageScenariosArgs,
 	ManageTransitionsArgs,
@@ -62,6 +63,12 @@ const actionTools: readonly ActionTool[] = [
 		title: 'Workflow Control',
 		description: 'Test, inspect, and seed workflow state.',
 		inputSchema: WorkflowControlArgs,
+	},
+	{
+		name: 'manage_journeys',
+		title: 'Manage Journeys',
+		description: 'Manage Journey definitions, Actions, execution, and reset using the Journey state model.',
+		inputSchema: ManageJourneysInputSchema,
 	},
 	{
 		name: 'manage_logs',

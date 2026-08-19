@@ -2,7 +2,7 @@
 
 ## Status
 
-Journeys are the approved replacement design for Mockzilla workflows. This document is the developer contract for implementation; it is not yet a runtime API or import format. The existing workflow engine stays operational until Sprint 6, when the delivered Journey surface has been verified.
+Journeys are the approved replacement design for Mockzilla workflows. Sprint 3 exposes the model through `/api/journeys` and the `manage_journeys` MCP manager: both use the same Journey validation for definitions and Actions, and support CRUD, execution, and reset. Actions execute with a Handlebars context containing `request`, `params`, `state`, `fields`, and `faker`; the selected Action applies transitions and field writes atomically before its response is rendered. An unavailable Action reports `409 Conflict` with the current state and candidate requirements. The existing workflow engine stays operational until Sprint 6, when the delivered Journey surface has been verified.
 
 ## Use the smallest model that fits
 

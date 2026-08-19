@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { journeyActions, journeyFields, journeyLifecycles, journeyRuntimeStates, journeys } from '@/lib/db/schema';
+import { executeJourneyAction, type JourneyExecutionResult, type JourneyRequest } from './journey-execution';
 import { createInitialJourneyRuntime, type JourneyAction, type JourneyDefinition, validateJourneyAction, validateJourneyDefinition } from './journeys';
 
 function actionSignature(action: JourneyAction): string {
@@ -23,6 +24,15 @@ export async function getJourneyBySlug(slug: string) { const [journey] = await d
 export async function updateJourneyMetadata(id: string, input: Pick<JourneyDefinition, 'name' | 'description'>) { const [journey] = await db.update(journeys).set({ ...input, updatedAt: new Date() }).where(eq(journeys.id, id)).returning(); return journey ?? null; }
 export async function deleteJourney(id: string) { const [journey] = await db.delete(journeys).where(eq(journeys.id, id)).returning(); return journey ?? null; }
 
+export async function listJourneyActions(journeyId: string) {
+	return db.select().from(journeyActions).where(eq(journeyActions.journeyId, journeyId)).orderBy(asc(journeyActions.position));
+}
+
+export async function getJourneyRuntime(journeyId: string) {
+	const [runtime] = await db.select().from(journeyRuntimeStates).where(eq(journeyRuntimeStates.journeyId, journeyId)).limit(1);
+	return runtime ?? null;
+}
+
 export async function resetJourney(id: string) {
 	const [lifecycleRows, fieldRows] = await Promise.all([
 		db.select().from(journeyLifecycles).where(eq(journeyLifecycles.journeyId, id)).orderBy(asc(journeyLifecycles.position)),
@@ -38,9 +48,107 @@ export async function resetJourney(id: string) {
 export async function createJourneyAction(journey: JourneyDefinition, journeyId: string, input: unknown) {
 	const parsed = validateJourneyAction(journey, input);
 	if (!parsed.success) return parsed;
-	const existing = await db.select().from(journeyActions).where(eq(journeyActions.journeyId, journeyId)).orderBy(asc(journeyActions.position));
+	const existing = await listJourneyActions(journeyId);
 	const signature = actionSignature(parsed.data);
 	if (existing.some((action) => action.method === parsed.data.method && action.path === parsed.data.path && action.matchSignature === signature)) return { success: false as const, error: 'Duplicate Journey Action method, path, and requires map' };
-	const [action] = await db.insert(journeyActions).values({ journeyId, ...parsed.data, matchSignature: signature, position: existing.length }).returning();
+	const [action] = await db.insert(journeyActions).values({
+		journeyId,
+		...parsed.data,
+		body: parsed.data.body ?? null,
+		matchSignature: signature,
+		position: existing.length,
+	}).returning();
 	return { success: true as const, data: action };
+}
+
+export async function updateJourneyAction(journey: JourneyDefinition, journeyId: string, actionId: string, input: unknown) {
+	const parsed = validateJourneyAction(journey, input);
+	if (!parsed.success) return parsed;
+	const existing = await listJourneyActions(journeyId);
+	const target = existing.find((action) => action.id === actionId);
+	if (!target) return null;
+	const signature = actionSignature(parsed.data);
+	if (existing.some((action) => action.id !== actionId && action.method === parsed.data.method && action.path === parsed.data.path && action.matchSignature === signature)) {
+		return { success: false as const, error: 'Duplicate Journey Action method, path, and requires map' };
+	}
+	const [action] = await db.update(journeyActions).set({
+		...parsed.data,
+		body: parsed.data.body ?? null,
+		matchSignature: signature,
+		updatedAt: new Date(),
+	}).where(eq(journeyActions.id, actionId)).returning();
+	return { success: true as const, data: action };
+}
+
+export async function deleteJourneyAction(journeyId: string, actionId: string) {
+	const actions = await listJourneyActions(journeyId);
+	if (!actions.some((action) => action.id === actionId)) return null;
+	const [action] = await db.delete(journeyActions).where(eq(journeyActions.id, actionId)).returning();
+	return action ?? null;
+}
+
+function toJourneyAction(row: typeof journeyActions.$inferSelect): JourneyAction {
+	return {
+		name: row.name,
+		method: row.method,
+		path: row.path,
+		requires: row.requires as Record<string, string>,
+		transitions: row.transitions as Record<string, string>,
+		setFields: row.setFields as Record<string, string>,
+		statusCode: row.statusCode,
+		headers: row.headers as Record<string, string>,
+		body: row.body,
+		bodyType: row.bodyType,
+	};
+}
+
+function toJourneyDefinition(
+	journey: typeof journeys.$inferSelect,
+	lifecycleRows: Array<typeof journeyLifecycles.$inferSelect>,
+	fieldRows: Array<typeof journeyFields.$inferSelect>,
+): JourneyDefinition {
+	return {
+		name: journey.name,
+		slug: journey.slug,
+		description: journey.description ?? undefined,
+		lifecycles: lifecycleRows.map((row) => ({ key: row.key, name: row.name, states: row.states as string[], initialState: row.initialState })),
+		fields: fieldRows.map((row) => ({ key: row.key, type: row.type, initialValue: row.initialValue as string | number | boolean | null })),
+	};
+}
+
+export async function getPersistedJourneyDefinition(slug: string): Promise<{ journey: typeof journeys.$inferSelect; definition: JourneyDefinition } | null> {
+	const [journey] = await db.select().from(journeys).where(eq(journeys.slug, slug)).limit(1);
+	if (!journey) return null;
+	const [lifecycleRows, fieldRows] = await Promise.all([
+		db.select().from(journeyLifecycles).where(eq(journeyLifecycles.journeyId, journey.id)).orderBy(asc(journeyLifecycles.position)),
+		db.select().from(journeyFields).where(eq(journeyFields.journeyId, journey.id)).orderBy(asc(journeyFields.position)),
+	]);
+	return { journey, definition: toJourneyDefinition(journey, lifecycleRows, fieldRows) };
+}
+
+export async function executePersistedJourney(
+	slug: string,
+	request: JourneyRequest,
+): Promise<JourneyExecutionResult | null> {
+	return db.transaction(async (tx) => {
+		const [journey] = await tx.select().from(journeys).where(eq(journeys.slug, slug)).limit(1);
+		if (!journey) return null;
+		const [lifecycleRows, fieldRows, runtimeRows, actionRows] = await Promise.all([
+			tx.select().from(journeyLifecycles).where(eq(journeyLifecycles.journeyId, journey.id)).orderBy(asc(journeyLifecycles.position)),
+			tx.select().from(journeyFields).where(eq(journeyFields.journeyId, journey.id)).orderBy(asc(journeyFields.position)),
+			tx.select().from(journeyRuntimeStates).where(eq(journeyRuntimeStates.journeyId, journey.id)).limit(1),
+			tx.select().from(journeyActions).where(eq(journeyActions.journeyId, journey.id)).orderBy(asc(journeyActions.position)),
+		]);
+		const definition = toJourneyDefinition(journey, lifecycleRows, fieldRows);
+		const runtimeRow = runtimeRows[0];
+		if (!runtimeRow) throw new Error(`Journey ${slug} has no runtime state`);
+		const result = executeJourneyAction(definition, actionRows.map(toJourneyAction), {
+			state: runtimeRow.state as Record<string, string>,
+			fields: runtimeRow.fields as Record<string, string | number | boolean | null>,
+		}, request);
+		if (result.success) {
+			await tx.update(journeyRuntimeStates).set({ state: result.runtime.state, fields: result.runtime.fields, updatedAt: new Date() }).where(eq(journeyRuntimeStates.journeyId, journey.id));
+		}
+		return result;
+	});
 }

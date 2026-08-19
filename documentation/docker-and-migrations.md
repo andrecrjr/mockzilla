@@ -25,6 +25,8 @@ When opening the Docker development server from another device, set `NODE_ORIGIN
 
 CI runs `make prod-build` after lint, typecheck, and tests pass. This validates the production Docker image and Next.js standalone build on every pull request to `main` without pushing an image. CD publishes Docker images only after semantic-release creates a new version on `main`.
 
+The application uses system font stacks instead of build-time `next/font/google` downloads. Production builds therefore do not require network access to Google Fonts. Local production builds require Node 24 (`nvm use`, using the repository's `.nvmrc`), matching the Docker runtime and avoiding Node 25's server-side `localStorage` warning during static generation.
+
 ## Docker Development Initialization
 
 `make dev-up` starts the Compose app and PostgreSQL services. The app container mounts the source folders for hot reload, receives `DATABASE_URL` pointing at the Compose PostgreSQL service, and starts Next.js through `START_CMD`:
