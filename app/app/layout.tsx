@@ -52,10 +52,10 @@ export default function AppLayout({
 											Extension Sync
 										</Link>
 										<Link
-											href="/app/workflows"
+											href="/app/journeys"
 											className="text-foreground/80 hover:text-foreground hover:bg-accent px-3 py-2 rounded-md text-sm font-medium transition-colors"
 										>
-											Workflows
+											Journeys
 										</Link>
 									</div>
 								</div>

@@ -74,6 +74,6 @@ export function proxy(request: NextRequest) {
 // Run proxy on all routes except static assets
 export const config = {
 	matcher: [
-		'/((?!_next/static|_next/image|favicon.ico|.*\\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2|ttf|json)$).*)',
+		'/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|.*\\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2|ttf|json)$).*)',
 	],
 };

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { deleteJourney, getJourneyRuntime, getPersistedJourneyDefinition, updateJourneyMetadata } from '@/lib/journey-store';
+import { deleteJourney, getJourneyRuntime, getPersistedJourneyDefinition, updateJourneyDefinition } from '@/lib/journey-store';
 import { journeyError } from '@/lib/journey-http';
 
 type RouteContext = { params: Promise<{ slug: string }> };
@@ -14,11 +14,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 	try {
 		const persisted = await getPersistedJourneyDefinition((await params).slug);
 		if (!persisted) return NextResponse.json({ error: 'Journey not found' }, { status: 404 });
-		const body: unknown = await request.json();
-		if (typeof body !== 'object' || body === null || !('name' in body) || typeof body.name !== 'string') return journeyError(new Error('name is required'));
-		const description = 'description' in body && typeof body.description === 'string' ? body.description : undefined;
-		const journey = await updateJourneyMetadata(persisted.journey.id, { name: body.name, description });
-		return NextResponse.json(journey);
+		const result = await updateJourneyDefinition(persisted.journey.id, { ...(await request.json()), slug: persisted.journey.slug });
+		if (!result.success) return journeyError(result.error);
+		return NextResponse.json(result.data);
 	} catch (error: unknown) { return journeyError(error); }
 }
 

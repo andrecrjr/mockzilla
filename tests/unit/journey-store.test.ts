@@ -9,11 +9,23 @@ function createQuery(result: unknown) {
 		from: mock(() => query),
 		where: mock(() => query),
 		orderBy: mock(() => query),
+		limit: mock(() => query),
 		values: mock((value: unknown) => {
 			insertedValues = value;
 			return query;
 		}),
 		onConflictDoUpdate: mock(() => query),
+		returning: mock(() => query),
+		then: (resolve: (value: unknown) => void) => resolve(result),
+	};
+
+	return query;
+}
+
+function createUpdateQuery(result: unknown) {
+	const query = {
+		set: mock(() => query),
+		where: mock(() => query),
 		returning: mock(() => query),
 		then: (resolve: (value: unknown) => void) => resolve(result),
 	};
@@ -43,11 +55,13 @@ const persistedAction = {
 const mockDb = {
 	select: mock(() => createQuery(existingActions)),
 	insert: mock(() => createQuery([persistedAction])),
+	update: mock(() => createUpdateQuery([])),
+	transaction: mock(async (callback: (transaction: typeof mockDb) => unknown) => callback(mockDb)),
 };
 
 mock.module('@/lib/db', () => ({ db: mockDb }));
 
-import { createJourneyAction, listJourneyActions, resetJourney } from '@/lib/journey-store';
+import { createJourneyAction, executePersistedJourney, listJourneyActions, resetJourney } from '@/lib/journey-store';
 
 const journey: JourneyDefinition = {
 	name: 'Customer order',
@@ -78,6 +92,8 @@ describe('Journey Action persistence', () => {
 		insertedValues = undefined;
 		mockDb.select = mock(() => createQuery(existingActions));
 		mockDb.insert = mock(() => createQuery([persistedAction]));
+		mockDb.update = mock(() => createUpdateQuery([]));
+		mockDb.transaction = mock(async (callback: (transaction: typeof mockDb) => unknown) => callback(mockDb));
 	});
 
 	it('persists every declared Action and assigns the next position', async () => {
@@ -118,6 +134,7 @@ describe('Journey Action persistence', () => {
 			journeyId: 'journey-1',
 			state: { auth: 'signed_out', checkout: 'pending' },
 			fields: { orderId: null },
+			version: 0,
 			updatedAt: new Date('2026-08-19T00:00:00.000Z'),
 		};
 		const selectResults = [
@@ -137,5 +154,43 @@ describe('Journey Action persistence', () => {
 			fields: { orderId: null },
 			updatedAt: expect.any(Date),
 		});
+	});
+
+	it('retries execution from a fresh runtime when a concurrent write wins the compare-and-swap', async () => {
+		const persistedJourney = {
+			id: 'journey-1',
+			name: journey.name,
+			slug: journey.slug,
+			description: null,
+			createdAt: new Date(),
+			updatedAt: null,
+		};
+		const lifecycleRows = journey.lifecycles.map((lifecycle, position) => ({ ...lifecycle, journeyId: 'journey-1', position }));
+		const fieldRows = journey.fields.map((field, position) => ({ ...field, journeyId: 'journey-1', position }));
+		const runtimeRow = {
+			journeyId: 'journey-1',
+			state: { auth: 'authenticated', checkout: 'pending' },
+			fields: { orderId: null },
+			version: 1,
+			updatedAt: new Date(),
+		};
+		const selectResults = [
+			[persistedJourney], lifecycleRows, fieldRows, [runtimeRow], [persistedAction],
+			[persistedJourney], lifecycleRows, fieldRows, [{ ...runtimeRow, version: 2 }], [persistedAction],
+		];
+		const updateResults = [[], [{ ...runtimeRow, version: 3 }]];
+		mockDb.select = mock(() => createQuery(selectResults.shift() ?? []));
+		mockDb.update = mock(() => createUpdateQuery(updateResults.shift() ?? []));
+
+		const result = await executePersistedJourney(journey.slug, {
+			method: 'POST',
+			path: '/orders/order-1/pay',
+		});
+
+		expect(result).toMatchObject({
+			success: true,
+			runtime: { state: { auth: 'authenticated', checkout: 'paid' }, fields: { orderId: 'order-1' } },
+		});
+		expect(mockDb.update).toHaveBeenCalledTimes(2);
 	});
 });

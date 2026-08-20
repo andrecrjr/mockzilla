@@ -63,7 +63,12 @@ export function matchJourneyPath(pattern: string, path: string): Record<string, 
 	const names: string[] = [];
 	const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:([A-Za-z][A-Za-z0-9_]*)/g, (_match, name: string) => { names.push(name); return '([^/]+)'; });
 	const result = new RegExp(`^${escaped}$`).exec(path);
-	return result ? Object.fromEntries(names.map((name, index) => [name, decodeURIComponent(result[index + 1])])) : null;
+	if (!result) return null;
+	try {
+		return Object.fromEntries(names.map((name, index) => [name, decodeURIComponent(result[index + 1])]));
+	} catch {
+		return null;
+	}
 }
 export function isDuplicateJourneyAction(existing: JourneyAction[], candidate: JourneyAction): boolean {
 	const normalize = (requires: Record<string, string>) => JSON.stringify(Object.entries(requires).sort(([a], [b]) => a.localeCompare(b)));

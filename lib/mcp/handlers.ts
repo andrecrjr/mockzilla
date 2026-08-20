@@ -105,6 +105,7 @@ import {
 	listJourneys,
 	resetJourney,
 	updateJourneyAction,
+	updateJourneyDefinition,
 	updateJourneyMetadata,
 } from '../journey-store';
 
@@ -1341,7 +1342,7 @@ export async function callManageJourneys(args: ManageJourneysArgs) {
 		}
 		case 'update': {
 			const journey = await getJourneyBySlug(args.slug);
-			return journey ? updateJourneyMetadata(journey.id, { name: args.name, description: args.description }) : null;
+			return journey ? updateJourneyDefinition(journey.id, { ...args.journey, slug: journey.slug }) : null;
 		}
 		case 'delete': {
 			const journey = await getJourneyBySlug(args.slug);

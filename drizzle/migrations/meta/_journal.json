@@ -50,6 +50,13 @@
       "when": 1787017119044,
       "tag": "0006_strong_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787237396747,
+      "tag": "0007_living_scarecrow",
+      "breakpoints": true
     }
   ]
 }

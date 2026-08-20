@@ -1,0 +1,1 @@
+ALTER TABLE "journey_runtime_states" ADD COLUMN "version" integer DEFAULT 0 NOT NULL;

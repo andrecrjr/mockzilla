@@ -59,6 +59,10 @@ describe('Journey contract', () => {
 		expect(matchJourneyPath('/orders/:id/pay', '/orders/order-1/ship')).toBeNull();
 	});
 
+	it('treats malformed percent-encoded route parameters as a non-match', () => {
+		expect(matchJourneyPath('/orders/:id', '/orders/%E0%A4%A')).toBeNull();
+	});
+
 	it('treats equivalent requires maps as duplicate Actions', () => {
 		const action = {
 			name: 'Pay', method: 'POST' as const, path: '/orders/:id/pay',

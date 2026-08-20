@@ -131,7 +131,7 @@ export const journeyFields = pgTable(
 
 export const journeyRuntimeStates = pgTable('journey_runtime_states', {
 	journeyId: uuid('journey_id').primaryKey().references(() => journeys.id, { onDelete: 'cascade' }),
-	state: jsonb('state').notNull(), fields: jsonb('fields').notNull(), updatedAt: timestamp('updated_at').defaultNow().notNull(),
+	state: jsonb('state').notNull(), fields: jsonb('fields').notNull(), version: integer('version').notNull().default(0), updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const journeyActions = pgTable(
