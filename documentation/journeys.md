@@ -13,6 +13,8 @@ Use folders and subfolders with ordinary mocks unless a request must change the 
 | Independent endpoint response or schema-generated data | Folder/subfolder and ordinary mock |
 | One product story across sign-in, checkout, and polling | Journey |
 
+Business-focused Journey examples include purchase-order approval before fulfilment, seller verification before payouts, claim review before settlement, subscription dunning and restoration, incident communications, and change approval before deployment. Keep collections and detailed business records in ordinary mocks; model only the state that permits or changes a later operation.
+
 ## V1 contract
 
 A Journey contains `name`, `slug`, optional `description`, declared Lifecycles, declared scalar fields, a current state map, current field values, and ordered Actions.
@@ -61,7 +63,7 @@ Do not implement resources, collections, mini-databases, contexts, session parti
 
 ## Required documentation standard
 
-Public MDX must describe a full Journey with declared lifecycle tracks and fields, clearly label it planned until shipped, and avoid presenting the old workflow engine as Journey behavior. Each Journey page must link to the concept page, authoring guide, and ordinary-mocks path where relevant.
+Public MDX must describe the live Journey runtime with declared lifecycle tracks and fields, including authoring, execution, `409 Conflict`, and reset behavior. Each Journey page must link to the concept page, authoring guide, and ordinary-mocks path where relevant.
 
 ## Implementation reference
 

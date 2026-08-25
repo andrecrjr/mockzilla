@@ -5,7 +5,7 @@ description: Create a complete customer story with lifecycle tracks and carried 
 
 # Creating a Journey
 
-This planned Journey follows a customer through sign-in, checkout, and delivery:
+This Journey follows a customer through sign-in, checkout, and delivery:
 
 ```text
 auth:     signed_out → authenticated
@@ -13,7 +13,9 @@ checkout: browsing → pending → paid → shipped
 delivery: not_started → tracking → delivered
 ```
 
-> **Planned product:** This is the Journey authoring contract, not a supported runtime format yet. Existing workflows remain available until Journeys replace them.
+Create the Journey from the dashboard, then add Actions that model the requests in this story. Use the request runner to execute an Action and inspect the runtime before and after it changes.
+
+The same authoring pattern works for business processes beyond commerce: procurement approval before fulfilment, seller verification before payouts, claims review before settlement, subscription recovery after a failed renewal, incident communication during an outage, or release approval before deployment. Choose the smallest set of lifecycle tracks that makes the next permitted API operation obvious.
 
 ## 1. Declare the lifecycles
 

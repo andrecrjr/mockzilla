@@ -7,7 +7,7 @@ description: Model a complete API story with visible lifecycle tracks and Action
 
 Use ordinary mocks in folders and subfolders for most endpoints. Use a Journey when requests together tell a product story: a customer signs in, pays an order, and follows its delivery.
 
-> **Planned product:** Journeys define Mockzilla's future stateful model. They are documented before runtime support ships. Existing workflow features remain the current implementation until Journey delivery is complete.
+Journeys are live in the dashboard and API. Create a Journey, add its Actions, run the same endpoints your client calls, inspect the resulting runtime, and reset the story whenever you need to replay it.
 
 ## One complete story, several lifecycles
 
@@ -23,6 +23,39 @@ Fields: orderId, accessToken, trackingCode
 ```
 
 This lets one API request depend on the part of the story that matters. Paying can require an authenticated customer and a pending checkout, while delivery can stay independent until the order is shipped.
+
+## Business cases that benefit from a Journey
+
+Journeys are most useful when the API must expose a **business decision already made by an earlier request**. They are not limited to consumer checkout.
+
+| Business flow | Lifecycle tracks | Small carried Fields | Requests worth testing in order |
+|---|---|---|---|
+| B2B purchase approval | `purchaseOrder: draft → submitted → approved → rejected`; `fulfilment: not_ready → queued → dispatched` | `purchaseOrderId`, `approvalCode` | Submit a PO, approve it, then release fulfilment. Verify dispatch is unavailable while approval is pending. |
+| Seller onboarding and compliance | `application: started → submitted → under_review → approved`; `payouts: blocked → enabled` | `sellerId`, `reviewReference` | Submit onboarding, receive a review outcome, then create a payout account only after approval. |
+| Insurance or warranty claim | `claim: opened → evidence_requested → under_review → settled → denied`; `payment: not_due → ready → issued` | `claimId`, `settlementId` | Open a claim, attach evidence, settle it, then retrieve the payment instruction. |
+| Subscription dunning | `invoice: current → overdue → retry_scheduled → paid`; `service: active → grace_period → suspended → restored` | `invoiceId`, `paymentAttemptId` | Fail a renewal, schedule a retry, accept payment, and prove service access is restored. |
+| Incident response | `incident: detected → acknowledged → mitigated → resolved`; `communications: quiet → customer_notified → postmortem_sent` | `incidentId`, `statusPageMessageId` | Acknowledge an incident, publish a customer update, resolve it, and prevent a postmortem before resolution. |
+| Release governance | `change: draft → submitted → approved → rejected`; `deployment: idle → running → deployed → rolled_back` | `changeId`, `deploymentId` | Submit a change, approve it, deploy it, then test rollback as a distinct, visible state transition. |
+
+### Example: B2B purchase approval
+
+A procurement client often needs to show different UI and API behavior while a buyer waits for approval. Model the decision and fulfilment separately so the test sequence stays understandable:
+
+```text
+purchaseOrder: draft → submitted → approved → rejected
+fulfilment:    not_ready → queued → dispatched
+
+Fields: purchaseOrderId, approvalCode
+```
+
+| Request | Requires | Changes | Why it matters |
+|---|---|---|---|
+| `POST /purchase-orders` | `purchaseOrder: draft` | `purchaseOrder: submitted`; saves `purchaseOrderId` | The client can show a submitted state and poll the same ID. |
+| `POST /purchase-orders/:id/approve` | `purchaseOrder: submitted` | `purchaseOrder: approved`; saves `approvalCode` | Approval is explicit instead of a hidden response variant. |
+| `POST /fulfilments` | `purchaseOrder: approved`, `fulfilment: not_ready` | `fulfilment: queued` | A premature fulfilment call receives `409 Conflict`, exercising the buyer-facing blocked state. |
+| `POST /fulfilments/:id/dispatch` | `fulfilment: queued` | `fulfilment: dispatched` | The response can render `{{fields.purchaseOrderId}}` and `{{fields.approvalCode}}`. |
+
+Keep PO line items, supplier catalogues, approval-history collections, and fulfilment payloads in ordinary mocks or schemas. The Journey owns only the decisions that make the next request legal or change its response.
 
 ## Actions move the story forward
 
@@ -65,6 +98,8 @@ Mockzilla selects an Action only by method, path, route parameters, and exact re
 Folders and subfolders organize independent API endpoints. They remain right for static responses, schema-driven data, request echoing, and endpoints whose response does not depend on earlier requests.
 
 Choose a Journey when this sentence is true: **“This request changes where the customer is in the product story.”**
+
+For a business-facing alternative, read that as: **“This request changes which business operation is now permitted.”**
 
 ## Dynamic values: Handlebars only
 

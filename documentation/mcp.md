@@ -37,7 +37,7 @@ Use a folder for a coherent API surface, then use subfolders to keep large endpo
 
 Journeys are Mockzilla’s simplified model for stateful API behavior. A Journey is standalone and groups declared lifecycle tracks, small carried fields, and Actions around a complete business flow such as authentication, checkout, and delivery. Handlebars is its only template language.
 
-Journey documentation defines the intended product model. It does not claim a separate MCP contract is available yet. Use folders, subfolders, and ordinary mocks for today’s API work, then read [Journeys](./journeys.md) to design future stateful behavior in the new model.
+Journeys are available through the dashboard, `/api/journeys`, and the `manage_journeys` MCP manager. Use folders and ordinary mocks for independent endpoints, then use a [Journey](./journeys.md) when a request must change a later response.
 
 ## Connection
 
