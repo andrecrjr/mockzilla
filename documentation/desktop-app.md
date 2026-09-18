@@ -22,7 +22,7 @@ The web and desktop builds share the same Next.js application, but they are sepa
 - Web/Docker release: use `make prod-build` or `make prod-run`. This builds the production Docker image from `Dockerfile.prd`.
 - Desktop release: use `bun run desktop:build` or `make desktop-build`. This invokes Tauri through the local wrapper and packages OS installers.
 
-Do not run `bun run build` as a separate prerequisite for Tauri packaging. Tauri's `beforeBuildCommand` already runs `bun run desktop:stage`, which creates and stages the standalone Next server that the desktop sidecar runs.
+Do not run `bun run app:build` as a separate prerequisite for Tauri packaging. Tauri's `beforeBuildCommand` already runs `bun run desktop:stage`, which creates and stages the standalone Next server that the desktop sidecar runs.
 
 ## Initialization Flow
 

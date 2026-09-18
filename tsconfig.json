@@ -30,6 +30,7 @@
 		"components/**/*.ts",
 		"components/**/*.tsx",
 		"scripts/**/*.ts",
+		"cli/**/*.mjs",
 		"tests/**/*.ts",
 		"tests/**/*.tsx",
 		"mdx-components.tsx",
@@ -39,5 +40,13 @@
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts"
 	],
-		"exclude": ["node_modules", ".next", "drizzle/migrations", "public", "dist", "build", "lib"]
+	"exclude": [
+		"node_modules",
+		".next",
+		"drizzle/migrations",
+		"public",
+		"dist",
+		"build",
+		"lib"
+	]
 }

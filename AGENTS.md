@@ -1,7 +1,7 @@
 # Mockzilla Agent
 
-Last updated: 2025-12-02
-Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`. This catalog defines callable agents, their capabilities, inputs/outputs, constraints, and cross-references to detailed docs in `documentation/`.
+Last updated: 2026-09-17
+Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`, plus the dependency-free terminal client under `cli/`. This catalog defines callable agents, their capabilities, inputs/outputs, constraints, and cross-references to detailed docs in `documentation/`.
 
 
 ## Conventions
@@ -35,6 +35,7 @@ Scope: Next.js app under `app/` with API routes and supporting libs under `lib/`
 - API Client Agent
 - Local Storage Agent
 - Agent Skills Reference
+- Mockzilla CLI Skill
 - UI Component Architecture
 - Observability & Forensic Agent
 
@@ -279,6 +280,7 @@ Tags: #skills #automation #creator #architect
   - `mockzilla-workflow-architect`: Expert for stateful API workflows and scenarios.
   - `mockzilla-spec-translator`: Expert for rapid project bootstrapping from OpenAPI/Markdown specs.
   - `mockzilla-logic-doctor`: Forensic specialist for debugging workflow matching and state.
+  - `mockzilla-cli`: Dependency-free terminal client for configuring the server and managing folders, mocks, variants, and dynamic responses.
 - Usage: "Use [skill-name] to [task description]".
 - Related Docs: `documentation/skills.md`.
 
@@ -289,6 +291,10 @@ Tags: #skills #automation #creator #architect
 - Tables: `folders`, `mock_responses` and relations (lib/db/schema.ts:20–59).
 
 ## Prompting Patterns
+- Use the CLI skill in terminal-only environments: run `mockzilla agent-skill` to render its current Markdown instructions.
+- Run `mockzilla health`, then resolve or create a folder before creating a mock.
+- Use JSON files or stdin for complex variants and JSON Schema payloads; use `--json` for machine-readable output.
+
 - Use Skills
   - "Invoke `mockzilla-mock-maker` skill to generate a complex E-commerce schema."
 - Serve a mock

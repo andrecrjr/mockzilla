@@ -10,6 +10,7 @@ This page records the maintenance rules for `.agent/skills/`.
 | `mockzilla-workflow-architect` | Stateful workflow design, transitions, mini-DB effects, and fallback behavior. |
 | `mockzilla-spec-translator` | Translating OpenAPI, Swagger, Jira, or endpoint inventories into Mockzilla setup. |
 | `mockzilla-logic-doctor` | Forensics for transition matching, state drift, request traces, and broken interpolation. |
+| `mockzilla-cli` | Terminal configuration and REST CRUD for folders, mocks, variants, and dynamic responses. |
 
 ## Manager Tool Rule
 
@@ -24,6 +25,8 @@ Skills must prefer the consolidated MCP manager tools documented in `documentati
 - `manage_logs`
 
 Use only the current consolidated manager tools and actions. Their contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
+
+The `mockzilla-cli` skill is the terminal exception: it teaches the dependency-free `mockzilla` REST client for environments without MCP access and does not call manager tools directly.
 
 ## Metadata Rule
 

@@ -20,6 +20,16 @@ function escapeRegex(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function queryParamValueMatches(expected: string, actual: string): boolean {
+	const expectedValue = String(expected ?? '');
+	const actualValue = String(actual ?? '');
+
+	if (!expectedValue.includes('*')) return expectedValue === actualValue;
+
+	const pattern = expectedValue.split('*').map(escapeRegex).join('.*');
+	return new RegExp(`^${pattern}$`).test(actualValue);
+}
+
 export function wildcardToRegex(p: string): RegExp {
 	const s = String(p || '');
 	const parts = s.split('*').map(escapeRegex);
@@ -50,8 +60,8 @@ export function queryParamsMatch(
 ): boolean {
 	if (!required || Object.keys(required).length === 0) return true;
 	for (const [key, value] of Object.entries(required)) {
-		// Compare as strings to handle numeric defaults in database
-		if (String(actual[key] ?? '') !== String(value ?? '')) return false;
+		if (!Object.hasOwn(actual, key)) return false;
+		if (!queryParamValueMatches(value, actual[key])) return false;
 	}
 	return true;
 }
@@ -121,6 +131,10 @@ function scoreCandidate(
 	// Bonus for having query params requirement met (more specific)
 	if (Object.keys(requiredQueryParams).length > 0) {
 		score += Object.keys(requiredQueryParams).length * 10;
+		// Exact query values are more specific than wildcard values.
+		score += Object.values(requiredQueryParams).filter(
+			(value) => !String(value ?? '').includes('*'),
+		).length;
 	}
 
 	// Tie-breaker: longer endpoint is more specific

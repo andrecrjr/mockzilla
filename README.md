@@ -40,6 +40,26 @@ docker run -p 36666:36666 -e DATABASE_URL=postgresql://username:password@host:54
 
 The mock server and dashboard will be available at http://localhost:36666
 
+## Mockzilla CLI
+
+Install the dependency-free CLI directly from this GitHub repository:
+
+```bash
+npx --yes github:andrecrjr/mockzilla health
+# or
+pnpm dlx github:andrecrjr/mockzilla health
+```
+
+Configure the server once, then manage folders and mocks from the terminal:
+
+```bash
+npx --yes github:andrecrjr/mockzilla config set --url http://localhost:36666
+npx --yes github:andrecrjr/mockzilla folders list
+npx --yes github:andrecrjr/mockzilla mocks create --file mock.json
+```
+
+For a persistent `mockzilla` command, install the Git package with `pnpm add --global github:andrecrjr/mockzilla`. Use `mockzilla agent-skill` to print the agent-facing Markdown instructions, or read the [CLI guide](/documentation/cli.md) for payloads, wildcard variants, JSON Schema responses, and automation.
+
 ## Configuration
 
 The following environment variables can be configured:
@@ -59,6 +79,7 @@ Available experts:
 - Workflow Architect: Stateful scenarios and business logic.
 - Spec Translator: Fast bootstrapping from OpenAPI/technical specifications.
 - Logic Doctor: Forensic debugging and state repair.
+- Mockzilla CLI: Terminal workflows for folders, mocks, variants, and dynamic responses.
 
 ## Self-Hosting Stack
 

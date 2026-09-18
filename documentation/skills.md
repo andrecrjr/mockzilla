@@ -51,6 +51,11 @@ Forensic specialist for debugging complex workflow matching and state issues.
 - **Method**: Step-by-step reproduction and surgical fixes using MCP tools.
 - **Verify with**: `manage_logs` (action: `trace`) and `workflow_control` (actions: `test`, `inspect`).
 
+### 5. Mockzilla CLI (`mockzilla-cli`)
+Terminal specialist for configuring a Mockzilla server and managing folders, mocks, wildcard variants, and JSON Schema responses through the dependency-free CLI.
+- **Best for**: Agents running without MCP access, CI setup, reproducible REST CRUD, and shell automation.
+- **Entry point**: `mockzilla agent-skill` prints the current Markdown instructions.
+
 ---
 
 ## 🚀 Installation
@@ -67,6 +72,7 @@ When you run this command, you will be able to select one or more of the followi
 - **Mockzilla Workflow Architect**: Expert for stateful, interactive API scenarios and business logic.
 - **Mockzilla Spec Translator**: High-velocity architect for project bootstrapping from OpenAPI or technical specs.
 - **Mockzilla Logic Doctor**: Forensic specialist for debugging complex workflow matching and state issues.
+- **Mockzilla CLI**: Terminal workflows for folders, mocks, variants, and dynamic responses.
 
 ---
 

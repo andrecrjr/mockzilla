@@ -21,7 +21,11 @@
 			"components/**/*",
 			"pages/**/*",
 			"content/**/*",
-			"lib/**/*"
+			"lib/**/*",
+			"cli/**/*",
+			"tests/**/*",
+			"package.json",
+			"tsconfig.json"
 		]
 	},
 	"linter": {
