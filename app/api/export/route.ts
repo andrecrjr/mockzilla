@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
-import type { ExportData } from '@/lib/types';
+import type { ExportData, Mock } from '@/lib/types';
 import { formatStoredFolderPath } from '@/lib/utils/folder-paths';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
 
 export async function GET() {
 	try {
@@ -66,6 +67,12 @@ export async function GET() {
 				jsonSchema: mock.jsonSchema || undefined,
 				useDynamicResponse: mock.useDynamicResponse,
 				echoRequestBody: mock.echoRequestBody,
+				queryParams: mock.queryParams as Record<string, string> | null,
+				variants: normalizeMockVariants(
+					mock.variants as Mock['variants'],
+					mock.endpoint,
+				),
+				wildcardRequireMatch: mock.wildcardRequireMatch ?? undefined,
 				createdAt: mock.createdAt.toISOString(),
 				updatedAt: mock.updatedAt?.toISOString(),
 			})),

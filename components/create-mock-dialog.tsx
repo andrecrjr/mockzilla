@@ -6,7 +6,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { mutate } from 'swr';
-import { MockEditor } from '@/components/mock-editor';
+import { MockEditor, type MockFormValues } from '@/components/mock-editor';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -45,29 +45,7 @@ export function CreateMockDialog({
 	const [open, setOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const handleCreate = async (values: {
-		name: string;
-		path: string;
-		method: string;
-		statusCode: string;
-		folderId?: string;
-		mockFolderId?: string | null;
-		response: string;
-		matchType?: string;
-		queryParams?: Record<string, string> | null;
-		jsonSchema?: string;
-		useDynamicResponse?: boolean;
-		echoRequestBody?: boolean;
-		delay?: string;
-		variants?: Array<{
-			key: string;
-			body: string;
-			statusCode: number;
-			bodyType: string;
-		}> | null;
-		wildcardRequireMatch?: boolean;
-		meta?: Record<string, unknown>;
-	}) => {
+	const handleCreate = async (values: MockFormValues) => {
 		try {
 			setIsSubmitting(true);
 			const payload: CreateMockRequest = {

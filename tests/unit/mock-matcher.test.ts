@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { MockCandidate, MockVariant } from '../../lib/utils/mock-matcher';
 import {
 	extractCaptureKey,
+	extractCaptureValues,
 	findBestMatch,
 	matchWildcard,
 	queryParamsMatch,
@@ -255,6 +256,26 @@ describe('extractCaptureKey', () => {
 	});
 });
 
+describe('extractCaptureValues', () => {
+	test('keeps multiple captures structured', () => {
+		const captures = extractCaptureValues(
+			'/api/users/alice/status/active',
+			'/api/users/*/status/*',
+		);
+
+		expect(captures).toEqual(['alice', 'active']);
+	});
+
+	test('preserves a literal pipe inside a capture', () => {
+		const captures = extractCaptureValues(
+			'/api/files/alpha%7Cbeta',
+			'/api/files/*',
+		);
+
+		expect(captures).toEqual(['alpha%7Cbeta']);
+	});
+});
+
 // -------------------------------------------------------
 // selectVariant
 // -------------------------------------------------------
@@ -351,6 +372,61 @@ describe('selectVariant', () => {
 			'/api/users/*/status/*',
 		);
 		expect(result).toEqual(multiVariants[0]);
+	});
+
+	test('selects a variant using structured captures', () => {
+		const variant: MockVariant = {
+			key: 'alice|active',
+			captures: ['alice', 'active'],
+			body: '{"matched": true}',
+			statusCode: 200,
+			bodyType: 'json',
+		};
+
+		const result = selectVariant(
+			[variant],
+			'/api/users/alice/status/active',
+			'/api/users/*/status/*',
+		);
+
+		expect(result).toEqual(variant);
+	});
+
+	test('matches a literal pipe in a structured single capture', () => {
+		const variant: MockVariant = {
+			key: 'alpha|beta',
+			captures: ['alpha|beta'],
+			body: '{"matched": true}',
+			statusCode: 200,
+			bodyType: 'json',
+		};
+
+		const result = selectVariant(
+			[variant],
+			'/api/files/alpha%7Cbeta',
+			'/api/files/*',
+		);
+
+		expect(result).toEqual(variant);
+	});
+
+	test('uses the explicit fallback marker', () => {
+		const variant: MockVariant = {
+			key: '*',
+			captures: [],
+			isFallback: true,
+			body: '{"fallback": true}',
+			statusCode: 404,
+			bodyType: 'json',
+		};
+
+		const result = selectVariant(
+			[variant],
+			'/api/files/unknown',
+			'/api/files/*',
+		);
+
+		expect(result).toEqual(variant);
 	});
 
 	const encodedCaptureCases: ReadonlyArray<{

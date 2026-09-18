@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
-import { MockEditor } from '@/components/mock-editor';
+import { MockEditor, type MockFormValues } from '@/components/mock-editor';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -47,28 +47,7 @@ export default function EditMockPage() {
 
 	const [isLoading, setIsLoading] = useState(false);
 
-	const handleUpdate = async (values: {
-		name: string;
-		path: string;
-		method: string;
-		statusCode: string;
-		response: string;
-		mockFolderId?: string | null;
-		matchType?: string;
-		queryParams?: Record<string, string> | null;
-		jsonSchema?: string;
-		useDynamicResponse?: boolean;
-		echoRequestBody?: boolean;
-		delay?: string;
-		variants?: Array<{
-			key: string;
-			body: string;
-			statusCode: number;
-			bodyType: string;
-		}> | null;
-		wildcardRequireMatch?: boolean;
-		meta?: Record<string, unknown>;
-	}) => {
+	const handleUpdate = async (values: MockFormValues) => {
 		if (!mock || !folder) return;
 		setIsLoading(true);
 		try {

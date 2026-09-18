@@ -1,12 +1,8 @@
-import type { MatchType } from '@/lib/types';
+import type { MatchType, MockVariant } from '@/lib/types';
 import { splitPathSearchParams } from './mock-paths';
+import { normalizeMockVariant } from './mock-variants';
 
-export interface MockVariant {
-	key: string;
-	body: string;
-	statusCode: number;
-	bodyType: string;
-}
+export type { MockVariant } from '@/lib/types';
 
 export interface MockCandidate {
 	endpoint: string;
@@ -157,18 +153,24 @@ export function findBestMatch(
 // Variant selection (mirrors Chrome extension logic)
 // -------------------------------------------------------
 
-/**
- * Extracts the capture key from a URL matched against a wildcard pattern.
- * The key is formed by joining all captured wildcard segments with pipe.
- * Example: pattern "/api/users/WILDCARD" matching "/api/users/123" returns "123"
- * Example: pattern "/api/users/WILDCARD/status/WILDCARD" matching "/api/users/alice/status/active" returns "alice|active"
- */
-export function extractCaptureKey(url: string, pattern: string): string | null {
+/** Extracts wildcard values in endpoint order without serializing them. */
+export function extractCaptureValues(
+	url: string,
+	pattern: string,
+): string[] | null {
 	const parsedUrl = splitPathSearchParams(url);
 	const parsedPattern = splitPathSearchParams(pattern);
 	const result = matchWildcard(parsedUrl.path, parsedPattern.path);
 	if (!result.ok || result.captures.length === 0) return null;
-	return result.captures.join('|');
+	return result.captures;
+}
+
+/**
+ * Legacy capture-key helper. New code should use extractCaptureValues so URL
+ * values never need a delimiter. The pipe format remains for compatibility.
+ */
+export function extractCaptureKey(url: string, pattern: string): string | null {
+	return extractCaptureValues(url, pattern)?.join('|') ?? null;
 }
 
 /**
@@ -198,16 +200,27 @@ export function selectVariant(
 ): MockVariant | null {
 	if (!variants || variants.length === 0) return null;
 
-	const key = extractCaptureKey(urlPath, endpointPattern);
-	if (key === null) return null;
+	const captures = extractCaptureValues(urlPath, endpointPattern);
+	if (captures === null) return null;
 
-	// Try exact match first
-	const normalizedKey = normalizeVariantKey(key);
-	const exactMatch = variants.find(
-		(variant) => normalizeVariantKey(variant.key) === normalizedKey,
-	);
+	const normalizedCaptures = captures.map(normalizeVariantKey);
+	const exactMatch = variants.find((variant) => {
+		const normalizedVariant = normalizeMockVariant(variant, endpointPattern);
+		return (
+			!normalizedVariant.isFallback &&
+			normalizedVariant.captures.length === normalizedCaptures.length &&
+			normalizedVariant.captures.every(
+				(capture, index) =>
+					normalizeVariantKey(capture) === normalizedCaptures[index],
+			)
+		);
+	});
 	if (exactMatch) return exactMatch;
 
-	// Fall back to wildcard catch-all variant
-	return variants.find((v) => v.key === '*') ?? null;
+	// Fall back to an explicitly marked or legacy wildcard variant.
+	return (
+		variants.find(
+			(variant) => normalizeMockVariant(variant, endpointPattern).isFallback,
+		) ?? null
+	);
 }

@@ -141,7 +141,31 @@ describe('MockEditor', () => {
 		);
 	});
 
-	it('automatically uses wildcard matching when the endpoint path contains a wildcard', async () => {
+	it('opens Mock Response by default when editing a mock with advanced settings', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users',
+					response: '{}',
+					statusCode: '200',
+					queryParams: { page: '2' },
+					delay: '300',
+					meta: { proxyTargetUrl: 'https://example.com/users' },
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(screen.getByRole('heading', { name: 'Mock Response' })).toBeDefined();
+		expect(
+			screen.queryByRole('heading', { name: 'Advanced Options' }),
+		).toBeNull();
+	});
+
+	it('keeps exact matching by default when the endpoint path contains a wildcard', async () => {
 		const onSubmit = mock(async () => undefined);
 
 		render(
@@ -162,8 +186,95 @@ describe('MockEditor', () => {
 
 		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
 		expect(onSubmit).toHaveBeenCalledWith(
-			expect.objectContaining({ matchType: 'wildcard', path: '/users/*' }),
+			expect.objectContaining({ matchType: 'exact', path: '/users/*' }),
 		);
+	});
+
+	it('keeps exact matching when an existing wildcard path has no match type', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '{}',
+					statusCode: '200',
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(screen.getByLabelText('Match Type').textContent).toContain('Exact');
+	});
+
+	it('submits wildcard variants without requiring a hidden base response', async () => {
+		const onSubmit = mock(async () => undefined);
+
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '',
+					matchType: 'wildcard',
+					statusCode: '200',
+					variants: [
+						{
+							key: 'test',
+							body: '{"id":1}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					],
+				}}
+				onSubmit={onSubmit}
+			/>,
+		);
+
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Create Mock Endpoint' }),
+		);
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+	});
+
+	it('shows variants as the response editor for wildcard matching', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '{"source":"manual"}',
+					jsonSchema: '{"type":"object"}',
+					matchType: 'wildcard',
+					statusCode: '200',
+					variants: [
+						{
+							key: '123',
+							body: '{"source":"variant"}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					],
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(screen.getAllByText('Mock Response').length).toBeGreaterThan(1);
+		expect(
+			screen.getAllByRole('textbox', { name: 'Manual JSON response' }).length,
+		).toBe(1);
+		expect(
+			screen.queryAllByRole('textbox', { name: 'Dynamic response schema' }).length,
+		).toBe(0);
+		expect(screen.getAllByText('Active response source').length).toBe(1);
+		expect(screen.getByLabelText('Wildcard capture 1')).toBeDefined();
 	});
 
 	it('does not split query params while a user is still typing', () => {

@@ -140,6 +140,30 @@ Unified tool for defining and testing API responses.
 
 Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, URL-style endpoint input such as `/users?status=active` remains visible in the Endpoint Path field while `status=active` is synchronized with Advanced Options; saved API payloads still submit `path` and `queryParams` separately. Entering or pasting a `*` in the Endpoint Path automatically sets the Advanced Options match type to `wildcard`.
 
+Wildcard `variants` use one `captures` value per `*` in the endpoint, in endpoint
+order. They also accept the legacy static fields (`key`, `body`, `statusCode`,
+`bodyType`) plus optional `jsonSchema`, `useDynamicResponse`, and `isFallback`:
+
+```json
+{
+  "captures": ["alice", "active"],
+  "key": "alice|active",
+  "isFallback": false,
+  "body": "{\"user\":\"alice\"}",
+  "statusCode": 200,
+  "bodyType": "json"
+}
+```
+
+`captures` is the canonical field. `key` is retained for older clients and is
+generated automatically on create/update. A single-wildcard legacy key is kept
+as one value even when it contains `|`; multi-wildcard legacy keys use the old
+pipe separator. Set `isFallback: true` for a catch-all variant; legacy `key: "*"`
+is recognized and normalized automatically. Dynamic variants require valid JSON
+Schema text and use JSON output; a static JSON variant must contain valid JSON.
+MCP preview applies the selected variant's schema and gives the selected variant
+precedence over base echo behavior.
+
 ### 4. Workflow Scenarios (`manage_scenarios`)
 Manage stateful, multi-step scenario containers.
 - `list`: List all active scenarios.

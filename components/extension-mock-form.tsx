@@ -15,6 +15,26 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { VariantPathEditor } from '@/components/visual-pattern-preview';
+import type { MockVariant } from '@/lib/types';
+import {
+	legacyKeyFromCaptures,
+	normalizeMockVariant,
+	type NormalizedMockVariant,
+} from '@/lib/utils/mock-variants';
+
+interface ExtensionVariant {
+	id?: string;
+	key?: string;
+	captures?: string[];
+	isFallback?: boolean;
+	name?: string;
+	statusCode: number;
+	body?: string;
+	bodyType?: string;
+	jsonSchema?: string | null;
+	useDynamicResponse?: boolean;
+}
 
 export interface ExtensionMock {
 	id: string;
@@ -26,15 +46,39 @@ export interface ExtensionMock {
 	body?: string;
 	response?: string;
 	matchType?: string;
+	wildcardRequireMatch?: boolean;
 	serverMockId?: string;
-	variants?: Array<{
-		id?: string;
-		key?: string;
-		name?: string;
-		statusCode: number;
-		body?: string;
-		bodyType?: string;
-	}>;
+	variants?: ExtensionVariant[];
+}
+
+function toMockVariant(variant: ExtensionVariant): MockVariant {
+	return {
+		key: variant.key,
+		captures: variant.captures,
+		isFallback: variant.isFallback,
+		body: variant.body ?? '',
+		statusCode: variant.statusCode,
+		bodyType: variant.bodyType === 'text' ? 'text' : 'json',
+		jsonSchema: variant.jsonSchema,
+		useDynamicResponse: variant.useDynamicResponse,
+	};
+}
+
+function normalizeExtensionVariant(
+	variant: ExtensionVariant,
+	endpoint: string,
+): NormalizedMockVariant {
+	return normalizeMockVariant(toMockVariant(variant), endpoint);
+}
+
+function normalizeExtensionVariants(
+	variants: ExtensionVariant[] | undefined,
+	endpoint: string,
+): ExtensionVariant[] | undefined {
+	return variants?.map((variant) => ({
+		...variant,
+		...normalizeExtensionVariant(variant, endpoint),
+	}));
 }
 
 interface ExtensionMockFormProps {
@@ -55,12 +99,22 @@ export function ExtensionMockForm({
 		...initialMock,
 		// Ensure response is synced with body if one is missing
 		response: initialMock.response || initialMock.body || '',
+		variants: normalizeExtensionVariants(
+			initialMock.variants,
+			initialMock.pattern ?? '',
+		),
 	});
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		// Ensure we pass the latest state back to the parent
-		await onSave(formState);
+		await onSave({
+			...formState,
+			variants: normalizeExtensionVariants(
+				formState.variants,
+				formState.pattern ?? '',
+			),
+		});
 	};
 
 	const updateField = (field: keyof ExtensionMock, value: unknown) => {
@@ -71,6 +125,22 @@ export function ExtensionMockForm({
 		const newVariants = [...(formState.variants || [])];
 		newVariants[idx] = { ...newVariants[idx], [field]: value };
 		setFormState((prev) => ({ ...prev, variants: newVariants }));
+	};
+
+	const updateVariantCaptures = (idx: number, captures: string[]) => {
+		setFormState((prev) => {
+			const newVariants = [...(prev.variants || [])];
+			const variant = newVariants[idx];
+			if (!variant) return prev;
+
+			newVariants[idx] = {
+				...variant,
+				key: legacyKeyFromCaptures(captures),
+				captures,
+				isFallback: false,
+			};
+			return { ...prev, variants: newVariants };
+		});
 	};
 
 	return (
@@ -199,27 +269,21 @@ export function ExtensionMockForm({
 						<div className="grid gap-6 md:grid-cols-2">
 							{formState.variants.map((variant, idx) => (
 								<div
-									key={variant.id || variant.key || idx}
+									key={variant.id || `extension-variant-${idx}`}
 									className="grid gap-4 bg-secondary/5 p-6 rounded-3xl border border-secondary/20 hover:border-secondary/40 transition-colors shadow-sm"
 								>
-									<div className="grid grid-cols-4 gap-4 items-end">
-										<div className="col-span-3 space-y-1.5">
-											<Label
-												htmlFor={`v-name-${idx}`}
-												className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider"
-											>
-												Variant Key (Capture Result)
-											</Label>
-											<Input
-												id={`v-name-${idx}`}
-												value={variant.key || variant.name || ''}
-												className="h-10 text-sm bg-background/50 border-secondary/20"
-												onChange={(e) =>
-													updateVariant(idx, 'key', e.target.value)
-												}
-											/>
-										</div>
-										<div className="space-y-1.5">
+									<div className="space-y-4">
+										<VariantPathEditor
+											endpoint={formState.pattern ?? ''}
+											variant={normalizeExtensionVariant(
+												variant,
+												formState.pattern ?? '',
+											)}
+											onCapturesChange={(captures) =>
+												updateVariantCaptures(idx, captures)
+											}
+										/>
+										<div className="max-w-[180px] space-y-1.5">
 											<Label
 												htmlFor={`v-status-${idx}`}
 												className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider"

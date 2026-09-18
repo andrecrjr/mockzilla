@@ -3,14 +3,27 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
-import type { CreateMockRequest, UpdateMockRequest } from '@/lib/types';
+import type {
+	CreateMockRequest,
+	MockVariant,
+	UpdateMockRequest,
+} from '@/lib/types';
+import { MockVariantSchema } from '@/lib/mcp/schemas/shared';
 import {
 	joinMockPaths,
 	validateEndpointPathSearchParams,
 } from '@/lib/utils/mock-paths';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
 
 type MockResponseRow = typeof mockResponses.$inferSelect;
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
+
+function validateVariants(value: unknown): string | null {
+	if (value === undefined || value === null) return null;
+	const result = MockVariantSchema.array().safeParse(value);
+	if (result.success) return null;
+	return result.error.issues[0]?.message ?? 'Invalid wildcard variants';
+}
 
 function formatMock(
 	mock: MockResponseRow,
@@ -22,6 +35,10 @@ function formatMock(
 	const effectivePath = joinMockPaths(
 		subfolder?.mainPath ?? '/',
 		mock.endpoint,
+	);
+	const variants = normalizeMockVariants(
+		mock.variants as MockVariant[] | null,
+		effectivePath,
 	);
 	return {
 		id: mock.id,
@@ -43,7 +60,7 @@ function formatMock(
 		delay: mock.delay,
 		meta: mock.meta,
 		queryParams: mock.queryParams,
-		variants: mock.variants,
+		variants,
 		wildcardRequireMatch: mock.wildcardRequireMatch,
 		createdAt: mock.createdAt.toISOString(),
 		updatedAt: mock.updatedAt?.toISOString(),
@@ -218,6 +235,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body: CreateMockRequest = await request.json();
+		const variantsError = validateVariants(body.variants);
+		if (variantsError) {
+			return NextResponse.json(
+				{ error: `Invalid wildcard variants: ${variantsError}` },
+				{ status: 400 },
+			);
+		}
 		const pathValidation = validateEndpointPathSearchParams(
 			body.path,
 			body.queryParams,
@@ -234,6 +258,7 @@ export async function POST(request: NextRequest) {
 			body.mockFolderId,
 		);
 		if (ownershipError) return ownershipError;
+		const variants = normalizeMockVariants(body.variants, body.path);
 
 		const [newMock] = await db
 			.insert(mockResponses)
@@ -249,7 +274,7 @@ export async function POST(request: NextRequest) {
 				bodyType: body.bodyType || 'json',
 				enabled: body.enabled ?? true,
 				queryParams: body.queryParams,
-				variants: body.variants,
+				variants,
 				wildcardRequireMatch: body.wildcardRequireMatch,
 				jsonSchema: body.jsonSchema,
 				useDynamicResponse: body.useDynamicResponse,
@@ -288,6 +313,15 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body: UpdateMockRequest = await request.json();
+		if (Object.hasOwn(body, 'variants')) {
+			const variantsError = validateVariants(body.variants);
+			if (variantsError) {
+				return NextResponse.json(
+					{ error: `Invalid wildcard variants: ${variantsError}` },
+					{ status: 400 },
+				);
+			}
+		}
 
 		const [existingMock] = await db
 			.select()
@@ -321,6 +355,12 @@ export async function PUT(request: NextRequest) {
 			nextMockFolderId,
 		);
 		if (ownershipError) return ownershipError;
+		const nextVariants = normalizeMockVariants(
+			Object.hasOwn(body, 'variants')
+				? body.variants
+				: (existingMock.variants as MockVariant[] | null),
+			nextPath,
+		);
 
 		const [updatedMock] = await db
 			.update(mockResponses)
@@ -335,9 +375,7 @@ export async function PUT(request: NextRequest) {
 				queryParams: Object.hasOwn(body, 'queryParams')
 					? nextQueryParams
 					: existingMock.queryParams,
-				variants: Object.hasOwn(body, 'variants')
-					? body.variants
-					: existingMock.variants,
+				variants: nextVariants,
 				wildcardRequireMatch:
 					body.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
 				jsonSchema: Object.hasOwn(body, 'jsonSchema')

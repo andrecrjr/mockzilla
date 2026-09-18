@@ -52,8 +52,17 @@ Mocks in "Extension Sync" folders can be edited via the Server UI.
 
 1.  **Component**: `ExtensionMockTable.tsx` provides the editing interface.
 2.  **Mechanism**: When a mock is updated, the component modifies the `extensionSyncData` blob inside the folder's `meta`.
-3.  **Persistence**: It calls `PUT /api/folders?id=...` with the updated metadata.
+3.  **Persistence**: It calls `PUT /api/folders?id=...` with the updated metadata and `PUT /api/mocks?id=...` with the canonical mock variants.
 4.  **Source of Truth**: For extension folders, the `meta.extensionSyncData` blob is the primary source of truth for both server-side edits and original extension data.
+
+### Wildcard Variant Captures
+
+The Extension Sync editor uses the same structured capture model as the main mock editor:
+
+- Legacy single-wildcard keys remain one capture, even when the value contains `|`.
+- Legacy multi-wildcard keys such as `alice|active` are shown as one input per wildcard.
+- Saved variants contain `captures: string[]` and retain the pipe-joined `key` for older extension clients.
+- Fallback variants are represented with `isFallback: true` and do not require capture inputs.
 
 ### 3. Server → Extension Sync (PULL/IMPORT)
 Importing data back into the browser.

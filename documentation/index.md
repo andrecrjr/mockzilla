@@ -11,6 +11,7 @@ High-performance mocking server for JSON and stateful API workflows.
 - [Proxy & Record Mode](/documentation/proxy-and-record.md) - Capture live traffic and auto-generate mocks.
 - [Mock Subfolders](/documentation/mock-subfolders.md) - Nested mock organization and effective serving paths.
 - [Schema Interpolation](/documentation/schema-interpolation.md) - `{$.path}` and `{{input.*}}` templates.
+- [Wildcard Variants Audit](/documentation/wildcard-variants-audit.md) - Wildcard matching, schema-backed variants, precedence, and editor behavior.
 - [Agent Skills](/documentation/skills.md) - Instruction sets (Creator, Architect).
 - [Skills Maintenance](/documentation/skills-maintenance.md) - Rules for keeping `.agent/skills/` current.
 - [Release Process](/documentation/release-process.md) - Commit and branch rules for releases and docs-only changes.

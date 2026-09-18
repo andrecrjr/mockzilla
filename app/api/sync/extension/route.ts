@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
-import type { HttpMethod } from '@/lib/types';
+import type { HttpMethod, MockVariant } from '@/lib/types';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
 
 // Helper to generate slugs (consistent with import route)
 function generateSlug(name: string): string {
@@ -121,7 +122,10 @@ export async function POST(request: NextRequest) {
 								bodyType: 'json', // Extension sends JSON predominantly, or we can add a field for it
 								enabled: mock.enabled,
 								useDynamicResponse: false,
-								variants: mock.variants || null,
+								variants: normalizeMockVariants(
+									(mock.variants as MockVariant[] | null) || null,
+									mock.pattern,
+								),
 								wildcardRequireMatch: mock.wildcardRequireMatch || false,
 							})
 							.returning();

@@ -4,9 +4,10 @@ import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-	ResponseConfig,
+	AdvancedOptions,
 	type QueryParamField,
-} from '@/components/mock-response-config';
+} from '@/components/mock-advanced-options';
+import { ResponseConfig } from '@/components/mock-response-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,8 +34,12 @@ import {
 	normalizeAbsolutePath,
 	splitPathSearchParams,
 } from '@/lib/utils/mock-paths';
+import {
+	getWildcardCount,
+	normalizeMockVariants,
+} from '@/lib/utils/mock-variants';
 
-type MockFormValues = {
+export type MockFormValues = {
 	name: string;
 	path: string;
 	method: HttpMethod;
@@ -221,8 +226,8 @@ export function MockEditor({
 		(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ?? '',
 	);
 
-	const [activeTab, setActiveTab] = useState<'manual' | 'schema' | 'advanced'>(
-		initial?.jsonSchema ? 'schema' : 'manual',
+	const [activeSection, setActiveSection] = useState<'response' | 'advanced'>(
+		'response',
 	);
 	const [response, setResponse] = useState(initial?.response ?? '');
 	const [jsonSchema, setJsonSchema] = useState(initial?.jsonSchema ?? '');
@@ -246,7 +251,11 @@ export function MockEditor({
 		);
 	});
 	const [variants, setVariants] = useState<MockVariant[]>(
-		(initial?.variants as MockVariant[] | null | undefined) ?? [],
+		() =>
+			normalizeMockVariants(
+				(initial?.variants as MockVariant[] | null | undefined) ?? null,
+				initial?.path ?? '',
+			) ?? [],
 	);
 	const [wildcardRequireMatch, setWildcardRequireMatch] = useState<boolean>(
 		Boolean(initial?.wildcardRequireMatch),
@@ -282,9 +291,14 @@ export function MockEditor({
 		const qp = initial.queryParams as Record<string, string> | null | undefined;
 		setPath(appendQueryParamsToPath(initial.path ?? '', qp));
 		setQueryParams(qp ? buildQueryParamFields(qp) : []);
-		setVariants((initial.variants as MockVariant[] | null | undefined) ?? []);
+		setVariants(
+			normalizeMockVariants(
+				(initial.variants as MockVariant[] | null | undefined) ?? null,
+				initial.path ?? '',
+			) ?? [],
+		);
 		setWildcardRequireMatch(Boolean(initial.wildcardRequireMatch));
-		setActiveTab(initial.jsonSchema ? 'schema' : 'manual');
+		setActiveSection('response');
 	}, [initial, initialRevision, mode, defaultFolderId, defaultMockFolderId]);
 
 	const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -336,9 +350,6 @@ export function MockEditor({
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
 	const handlePathChange = (nextPath: string) => {
 		setPath(nextPath);
-		if (getEndpointInputParts(nextPath).path.includes('*')) {
-			setMatchType('wildcard');
-		}
 	};
 
 	useEffect(() => {
@@ -363,7 +374,7 @@ export function MockEditor({
 		setPath(`${nextPath}${serializeQueryParams(parsed.queryParams)}`);
 		setQueryParams(buildQueryParamFields(parsed.queryParams));
 		if (Object.keys(parsed.queryParams).length > 0) {
-			setActiveTab('advanced');
+			setActiveSection('advanced');
 		}
 	};
 
@@ -382,7 +393,7 @@ export function MockEditor({
 		);
 		setQueryParams(buildQueryParamFields(parsed.queryParams));
 		if (Object.keys(parsed.queryParams).length > 0) {
-			setActiveTab('advanced');
+			setActiveSection('advanced');
 		}
 	};
 
@@ -395,7 +406,7 @@ export function MockEditor({
 			toast.error('Error', { description: 'Path must start with /' });
 			return false;
 		}
-		if (!isEchoRequestBodyEnabled) {
+		if (!isEchoRequestBodyEnabled && matchType !== 'wildcard') {
 			try {
 				if (useDynamicResponse) {
 					const validation = validateSchema(jsonSchema);
@@ -411,6 +422,43 @@ export function MockEditor({
 				return false;
 			}
 		}
+		if (matchType === 'wildcard') {
+			try {
+				const normalizedVariants = normalizeMockVariants(variants, path) ?? [];
+				const wildcardCount = getWildcardCount(path);
+				for (const variant of normalizedVariants) {
+					if (
+						!variant.isFallback &&
+						(variant.captures.length !== wildcardCount ||
+							variant.captures.some((capture) => !capture.trim()))
+					) {
+						throw new Error('Every variant needs one value for each wildcard');
+					}
+					if (variant.useDynamicResponse) {
+						if (variant.bodyType !== 'json') {
+							throw new Error('Dynamic variants must use JSON body type');
+						}
+						const validation = validateSchema(variant.jsonSchema ?? '');
+						if (!validation.valid) {
+							throw new Error(
+								validation.error || 'Invalid variant JSON Schema',
+							);
+						}
+						JSON.parse(variant.jsonSchema ?? '');
+					} else if (variant.bodyType === 'json') {
+						JSON.parse(variant.body);
+					}
+				}
+			} catch (error) {
+				toast.error('Error', {
+					description:
+						error instanceof Error
+							? error.message
+							: 'Please provide valid variant responses',
+				});
+				return false;
+			}
+		}
 		return true;
 	};
 
@@ -420,6 +468,7 @@ export function MockEditor({
 		const submitQueryParams = buildQueryParamFields(parsedPath.queryParams);
 		const submitPath = parsedPath.path;
 		if (!validateBeforeSubmit(submitPath)) return;
+		const normalizedVariants = normalizeMockVariants(variants, submitPath);
 
 		let formattedPath = formatEndpointPathForStorage(
 			submitPath,
@@ -448,7 +497,10 @@ export function MockEditor({
 				...initial?.meta,
 				proxyTargetUrl: proxyTargetUrl.trim() || undefined,
 			},
-			variants: variants.length > 0 ? variants : null,
+			variants:
+				matchType === 'wildcard' && normalizedVariants?.length
+					? normalizedVariants
+					: null,
 			wildcardRequireMatch,
 		};
 		await onSubmit({
@@ -553,22 +605,6 @@ export function MockEditor({
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="create-delay">Response Delay (ms)</Label>
-							<Input
-								id="create-delay"
-								type="number"
-								min="0"
-								step="1"
-								value={delay}
-								onChange={(e) => setDelay(e.target.value)}
-								placeholder="e.g., 500"
-							/>
-							<p className="text-[10px] text-muted-foreground">
-								Simulate network latency/throttling in milliseconds.
-							</p>
-						</div>
-
-						<div className="space-y-2">
 							<Label htmlFor="create-path">Endpoint Path</Label>
 							<Input
 								id="create-path"
@@ -591,56 +627,59 @@ export function MockEditor({
 								</p>
 							)}
 						</div>
-
-						<div className="space-y-2 pt-4 border-t border-border/50">
-							<Label htmlFor="create-proxy">Proxy Target URL (Optional)</Label>
-							<Input
-								id="create-proxy"
-								value={proxyTargetUrl}
-								onChange={(e) => setProxyTargetUrl(e.target.value)}
-								placeholder="e.g., https://api.example.com/v1/users"
-								className="font-mono text-sm"
-							/>
-							<p className="text-[10px] text-muted-foreground">
-								If set, Mockzilla will proxy directly to this full URL
-								(preserving query params).
-							</p>
-						</div>
 					</div>
 
-					{/* Right Column - Response Config with Tabs */}
-					<div className="space-y-6 col-span-3">
-						<ResponseConfig
-							method={method}
-							echoRequestBody={echoRequestBody}
-							onEchoRequestBodyChange={setEchoRequestBody}
-							response={response}
-							onResponseChange={setResponse}
-							jsonSchema={jsonSchema}
-							onJsonSchemaChange={setJsonSchema}
-							useDynamicResponse={useDynamicResponse}
-							onUseDynamicResponseChange={setUseDynamicResponse}
-							activeTab={activeTab}
-							onActiveTabChange={(newTab) => {
-								setActiveTab(newTab);
-							}}
-							// Advanced Options props
-							matchType={matchType}
-							onMatchTypeChange={(newMatchType) => {
-								setMatchType(newMatchType);
-								if (newMatchType === 'wildcard') {
-									setActiveTab('advanced'); // Switch to advanced tab when wildcard selected
-								}
-							}}
-							queryParams={queryParams}
-							onQueryParamsChange={(newParams) => setQueryParams(newParams)}
-							// MockVariantManager props
-							variants={variants}
-							onVariantsChange={setVariants}
-							requireMatch={wildcardRequireMatch}
-							onRequireMatchChange={setWildcardRequireMatch}
-							endpoint={path}
-						/>
+					{/* Right Column - Mock Response and Advanced Options */}
+					<div className="col-span-3 space-y-4">
+						<div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2 sm:flex-row lg:flex-col">
+							<Button
+								type="button"
+								variant={activeSection === 'response' ? 'secondary' : 'ghost'}
+								className="justify-start"
+								onClick={() => setActiveSection('response')}
+							>
+								Mock Response
+							</Button>
+							<Button
+								type="button"
+								variant={activeSection === 'advanced' ? 'secondary' : 'ghost'}
+								className="justify-start"
+								onClick={() => setActiveSection('advanced')}
+							>
+								Advanced Options
+							</Button>
+						</div>
+
+						<div hidden={activeSection !== 'response'}>
+							<ResponseConfig
+								response={response}
+								onResponseChange={setResponse}
+								jsonSchema={jsonSchema}
+								onJsonSchemaChange={setJsonSchema}
+								useDynamicResponse={useDynamicResponse}
+								onUseDynamicResponseChange={setUseDynamicResponse}
+								matchType={matchType}
+								onMatchTypeChange={setMatchType}
+								variants={variants}
+								onVariantsChange={setVariants}
+								requireMatch={wildcardRequireMatch}
+								onRequireMatchChange={setWildcardRequireMatch}
+								endpoint={path}
+							/>
+						</div>
+						<div hidden={activeSection !== 'advanced'}>
+							<AdvancedOptions
+								method={method}
+								queryParams={queryParams}
+								onQueryParamsChange={setQueryParams}
+								echoRequestBody={echoRequestBody}
+								onEchoRequestBodyChange={setEchoRequestBody}
+								delay={delay}
+								onDelayChange={setDelay}
+								proxyTargetUrl={proxyTargetUrl}
+								onProxyTargetUrlChange={setProxyTargetUrl}
+							/>
+						</div>
 					</div>
 				</div>
 

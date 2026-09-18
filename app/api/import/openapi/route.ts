@@ -4,9 +4,10 @@ import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { db } from '@/lib/db';
 import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { generateFromSchema } from '@/lib/schema-generator';
-import type { HttpMethod, MatchType } from '@/lib/types';
+import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import { deriveSubfolderMainPath } from '@/lib/mock-subfolders';
 import { normalizeFolderPath } from '@/lib/utils/folder-paths';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
 
 /**
  * Basic OpenAPI types for dereferenced spec
@@ -385,6 +386,8 @@ async function processOpenApiPaths(
 				variants = [
 					{
 						key: '*',
+						captures: [],
+						isFallback: true,
 						body: responseBody,
 						statusCode: Number.parseInt(successCode, 10) || 200,
 						bodyType: 'json',
@@ -404,7 +407,10 @@ async function processOpenApiPaths(
 				bodyType: 'json',
 				enabled: true,
 				queryParams: Object.keys(queryParams).length > 0 ? queryParams : null,
-				variants,
+				variants: normalizeMockVariants(
+					variants as MockVariant[] | null,
+					endpoint,
+				),
 				jsonSchema,
 				useDynamicResponse,
 				echoRequestBody,

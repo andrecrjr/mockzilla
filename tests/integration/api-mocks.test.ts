@@ -101,6 +101,40 @@ describe('API /api/mocks', () => {
 		expect(body.id).toBe('mock-123');
 	});
 
+	it('GET normalizes legacy variants for clients', async () => {
+		mockResolvedValue = [
+			{
+				...mockMockData,
+				endpoint: '/files/*',
+				variants: [
+					{
+						key: 'alpha|beta',
+						body: '{"matched":true}',
+						statusCode: 200,
+						bodyType: 'json',
+					},
+				],
+			},
+		];
+
+		const res = await GET(
+			new NextRequest('http://localhost:3000/api/mocks?id=mock-123'),
+		);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.variants).toEqual([
+			{
+				key: 'alpha|beta',
+				captures: ['alpha|beta'],
+				isFallback: false,
+				body: '{"matched":true}',
+				statusCode: 200,
+				bodyType: 'json',
+			},
+		]);
+	});
+
 	it('POST creates a mock', async () => {
 		const payload = {
 			name: 'New Mock',
@@ -154,6 +188,106 @@ describe('API /api/mocks', () => {
 		expect(res.status).toBe(400);
 		expect(body.error).toContain('Endpoint path cannot include search params');
 		expect(latestInsertValue).toBeUndefined();
+	});
+
+	it('POST rejects malformed wildcard variants before persistence', async () => {
+		const payload = {
+			name: 'Invalid Variant Mock',
+			path: '/users/*',
+			method: 'GET',
+			statusCode: 200,
+			response: '{}',
+			folderId: 'folder-123',
+			variants: [
+				{
+					key: '123',
+					body: 'not-json',
+					statusCode: 200,
+					bodyType: 'json',
+				},
+			],
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(400);
+		expect(body.error).toContain('valid JSON body');
+		expect(latestInsertValue).toBeUndefined();
+	});
+
+	it('POST stores structured captures while retaining the legacy key', async () => {
+		const payload = {
+			name: 'Structured Variant Mock',
+			path: '/users/*/status/*',
+			method: 'GET',
+			statusCode: 200,
+			response: '{}',
+			folderId: 'folder-123',
+			variants: [
+				{
+					captures: ['alice', 'active'],
+					body: '{"matched":true}',
+					statusCode: 200,
+					bodyType: 'json',
+				},
+			],
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await POST(req);
+
+		expect(res.status).toBe(201);
+		expect(latestInsertValue).toMatchObject({
+			variants: [
+				{
+					key: 'alice|active',
+					captures: ['alice', 'active'],
+					isFallback: false,
+				},
+			],
+		});
+	});
+
+	it('PUT automatically enriches an existing legacy variant', async () => {
+		mockResolvedValue = [
+			{
+				...mockMockData,
+				endpoint: '/users/*/status/*',
+				variants: [
+					{
+						key: 'alice|active',
+						body: '{"matched":true}',
+						statusCode: 200,
+						bodyType: 'json',
+					},
+				],
+			},
+		];
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ name: 'Migrated Mock' }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(200);
+		expect(latestSetValue).toMatchObject({
+			variants: [
+				{
+					key: 'alice|active',
+					captures: ['alice', 'active'],
+					isFallback: false,
+				},
+			],
+		});
 	});
 
 	it('POST rejects a mock subfolder outside the folder', async () => {

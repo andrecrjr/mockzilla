@@ -28,7 +28,7 @@ import type {
 } from '@/lib/types';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
-	extractCaptureKey,
+	extractCaptureValues,
 	findBestMatch,
 	selectVariant,
 } from '@/lib/utils/mock-matcher';
@@ -38,6 +38,10 @@ import {
 	splitPathSearchParams,
 	validateEndpointPathSearchParams,
 } from '@/lib/utils/mock-paths';
+import {
+	applyVariantResponse,
+	normalizeMockVariants,
+} from '@/lib/utils/mock-variants';
 import {
 	formatStoredFolderPath,
 	getFolderLookupCandidates,
@@ -580,7 +584,10 @@ export async function callCreateMock(args: CreateMockArgs) {
 		bodyType: args.bodyType,
 		enabled: args.enabled,
 		queryParams: args.queryParams,
-		variants: args.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			args.variants as MockVariant[] | null,
+			args.path,
+		),
 		wildcardRequireMatch: args.wildcardRequireMatch,
 		jsonSchema: args.jsonSchema ?? undefined,
 		useDynamicResponse: args.useDynamicResponse ?? undefined,
@@ -623,7 +630,10 @@ export async function callCreateMock(args: CreateMockArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
@@ -704,7 +714,10 @@ export async function callListMocks(args: ListMocksArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
@@ -736,7 +749,10 @@ export async function callGetMock(args: GetMockArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
@@ -768,6 +784,12 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 	if (!pathValidation.valid) {
 		throw new Error(pathValidation.error);
 	}
+	const nextVariants = normalizeMockVariants(
+		args.variants === undefined
+			? (existingMock.variants as MockVariant[] | null)
+			: args.variants,
+		nextPath,
+	);
 
 	const [row] = await db
 		.update(mockResponses)
@@ -785,10 +807,7 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 			bodyType: args.bodyType ?? existingMock.bodyType ?? 'json',
 			enabled: args.enabled ?? existingMock.enabled,
 			queryParams: nextQueryParams,
-			variants:
-				args.variants === undefined
-					? (existingMock.variants as MockVariant[] | null)
-					: args.variants,
+			variants: nextVariants,
 			wildcardRequireMatch:
 				args.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
 			jsonSchema:
@@ -817,7 +836,10 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
@@ -931,7 +953,7 @@ export async function callCreateSchemaMock(args: {
 			bodyType: 'json',
 			enabled: args.enabled ?? true,
 			queryParams: args.queryParams || null,
-			variants: args.variants || null,
+			variants: normalizeMockVariants(args.variants, args.path),
 			wildcardRequireMatch: args.wildcardRequireMatch ?? false,
 			jsonSchema: args.jsonSchema,
 			useDynamicResponse: true,
@@ -953,7 +975,10 @@ export async function callCreateSchemaMock(args: {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
@@ -1044,9 +1069,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		};
 	}
 
-	let finalResponse = bestMock.response;
-	let finalStatusCode = bestMock.statusCode;
-	let finalBodyType = bestMock.bodyType || 'json';
+	let responseMock = bestMock;
 	let paramsMap: Record<string, string> = {};
 	const effectiveEndpoint = getEffectiveMockEndpoint(bestMock, subfoldersById);
 
@@ -1056,12 +1079,10 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		if (variants && variants.length > 0) {
 			const variant = selectVariant(variants, mockPath, effectiveEndpoint);
 			if (variant) {
-				finalResponse = variant.body;
-				finalStatusCode = variant.statusCode;
-				finalBodyType = variant.bodyType as 'json' | 'text';
+				responseMock = applyVariantResponse(bestMock, variant);
 
 				const captures =
-					extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
+					extractCaptureValues(mockPath, effectiveEndpoint) || [];
 				for (let i = 0; i < captures.length; i++) {
 					paramsMap[String(i)] = captures[i];
 				}
@@ -1076,15 +1097,18 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		}
 
 		if (Object.keys(paramsMap).length === 0) {
-			const captures =
-				extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
+			const captures = extractCaptureValues(mockPath, effectiveEndpoint) || [];
 			for (let i = 0; i < captures.length; i++) {
 				paramsMap[String(i)] = captures[i];
 			}
 		}
 	}
 
-	if (bestMock.echoRequestBody) {
+	const finalResponse = responseMock.response;
+	const finalStatusCode = responseMock.statusCode;
+	const finalBodyType = responseMock.bodyType || 'json';
+
+	if (responseMock.echoRequestBody) {
 		return {
 			statusCode: finalStatusCode,
 			headers: { 'Content-Type': 'application/json' },
@@ -1102,7 +1126,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		},
 	};
 
-	if (bestMock.useDynamicResponse && bestMock.jsonSchema) {
+	if (responseMock.useDynamicResponse && responseMock.jsonSchema) {
 		try {
 			const { generateFromSchema } = await import('@/lib/schema-generator');
 			const { faker } = await import('@faker-js/faker');
@@ -1118,7 +1142,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 			};
 
 			const generated = generateFromSchema(
-				JSON.parse(bestMock.jsonSchema),
+				JSON.parse(responseMock.jsonSchema),
 				enrichedContext,
 			);
 			return {

@@ -14,12 +14,80 @@ export const parseJsonOrPassthrough = (val: unknown) => {
 	return val;
 };
 
-export const MockVariantSchema = z.object({
-	key: z.string(),
-	body: z.string(),
-	statusCode: HttpStatusCodeSchema,
-	bodyType: z.enum(['json', 'text']),
-});
+export const MockVariantSchema = z
+	.object({
+		key: z.string().min(1).optional(),
+		captures: z.array(z.string()).optional(),
+		isFallback: z.boolean().optional(),
+		body: z.string(),
+		statusCode: HttpStatusCodeSchema,
+		bodyType: z.enum(['json', 'text']),
+		jsonSchema: z.string().nullable().optional(),
+		useDynamicResponse: z.boolean().optional(),
+	})
+	.superRefine((variant, context) => {
+		if (!variant.isFallback && !variant.key && !variant.captures) {
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['captures'],
+				message: 'Variant requires captures or a legacy key',
+			});
+		}
+
+		if (variant.useDynamicResponse) {
+			if (!variant.jsonSchema?.trim()) {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['jsonSchema'],
+					message: 'Dynamic variants require a JSON Schema',
+				});
+				return;
+			}
+			try {
+				const parsedSchema: unknown = JSON.parse(variant.jsonSchema);
+				const hasSchemaShape =
+					typeof parsedSchema === 'object' &&
+					parsedSchema !== null &&
+					!Array.isArray(parsedSchema) &&
+					(['type', 'properties', '$ref'] as const).some((key) =>
+						Object.hasOwn(parsedSchema, key),
+					);
+				if (!hasSchemaShape) {
+					context.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ['jsonSchema'],
+						message: 'jsonSchema must define type, properties, or $ref',
+					});
+				}
+			} catch {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['jsonSchema'],
+					message: 'jsonSchema must be valid JSON',
+				});
+			}
+			if (variant.bodyType !== 'json') {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['bodyType'],
+					message: 'Dynamic variants must use JSON body type',
+				});
+			}
+			return;
+		}
+
+		if (variant.bodyType === 'json') {
+			try {
+				JSON.parse(variant.body);
+			} catch {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['body'],
+					message: 'JSON variants require a valid JSON body',
+				});
+			}
+		}
+	});
 export type MockVariantSchema = z.infer<typeof MockVariantSchema>;
 
 export const ConditionSchema = z.object({

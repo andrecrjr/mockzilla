@@ -44,7 +44,7 @@ const mockDb = {
 
 mock.module('@/lib/db', () => ({ db: mockDb }));
 
-import { GET } from '../../app/api/mock/[...path]/route';
+import { GET, POST } from '../../app/api/mock/[...path]/route';
 
 // -------------------------------------------------------
 // Tests
@@ -375,5 +375,50 @@ describe('Mock Serving — wildcard variants', () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body).toEqual({ default: true });
+	});
+
+	it('uses a matching variant instead of the base echo response', async () => {
+		const wildcardMock = {
+			id: 'm1',
+			folderId: 'folder-1',
+			endpoint: '/users/*',
+			method: 'POST',
+			statusCode: 200,
+			response: JSON.stringify({ default: true }),
+			bodyType: 'json',
+			matchType: 'wildcard',
+			queryParams: null,
+			enabled: true,
+			echoRequestBody: true,
+			useDynamicResponse: false,
+			variants: [
+				{
+					key: '123',
+					body: JSON.stringify({ variant: true }),
+					statusCode: 200,
+					bodyType: 'json',
+				},
+			],
+			wildcardRequireMatch: false,
+		};
+
+		let selectCall = 0;
+		mockDb.select = mock(() => {
+			selectCall++;
+			if (selectCall === 1) return createMockBuilder([mockFolder]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users/123', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sent: true }),
+		});
+		const params = Promise.resolve({ path: ['api', 'users', '123'] });
+
+		const res = await POST(req, { params });
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({ variant: true });
 	});
 });

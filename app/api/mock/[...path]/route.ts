@@ -8,11 +8,15 @@ import type { HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import { matchFolderByPathSegments } from '@/lib/utils/folder-paths';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
-	extractCaptureKey,
+	extractCaptureValues,
 	findBestMatch,
 	selectVariant as selectMockVariant,
 } from '@/lib/utils/mock-matcher';
 import { joinMockPaths } from '@/lib/utils/mock-paths';
+import {
+	applyVariantResponse,
+	normalizeMockVariant,
+} from '@/lib/utils/mock-variants';
 
 type MockResponseRecord = typeof mockResponses.$inferSelect;
 type MockSubfolderRecord = typeof mockSubfolders.$inferSelect;
@@ -182,17 +186,16 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 					effectiveEndpoint,
 				);
 				if (variant) {
-					log.info({ variantKey: variant.key }, 'Wildcard variant matched');
-					// Use variant's body, statusCode, bodyType
-					const variantMock = {
-						...bestMock,
-						response: variant.body,
-						statusCode: variant.statusCode,
-						bodyType: variant.bodyType as 'json' | 'text',
-						useDynamicResponse: false, // Ensure variants always return their static body
-					};
+					log.info(
+						{
+							variantCaptures: normalizeMockVariant(variant, effectiveEndpoint)
+								.captures,
+						},
+						'Wildcard variant matched',
+					);
+					const variantMock = applyVariantResponse(bestMock, variant);
 					const captures =
-						extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
+						extractCaptureValues(mockPath, effectiveEndpoint) || [];
 					const paramsMap: Record<string, string> = {};
 					for (let i = 0; i < captures.length; i++) {
 						paramsMap[String(i)] = captures[i];
@@ -226,7 +229,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 		const effectiveEndpoint = getEffectiveEndpoint(bestMock, subfoldersById);
 		const captures =
 			bestMock.matchType === 'wildcard'
-				? extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || []
+				? extractCaptureValues(mockPath, effectiveEndpoint) || []
 				: [];
 		const paramsMap: Record<string, string> = {};
 		for (let i = 0; i < captures.length; i++) {
