@@ -18,7 +18,7 @@ export default function LandingPage() {
 		operatingSystem: 'Any',
 		applicationCategory: 'DeveloperApplication',
 		description:
-			'Chrome Extension for instant interception. HTTP Server for dynamic mocking. JSON Schema + Faker, MCP integration, and stateful workflows.',
+			'Chrome Extension for instant interception. HTTP Server for dynamic mocking. JSON Schema + Faker, MCP integration, and flexible route matching.',
 		offers: {
 			'@type': 'Offer',
 			price: '0',
@@ -28,7 +28,7 @@ export default function LandingPage() {
 			'JSON Schema + Faker.js interpolation',
 			'Chrome Extension interception',
 			'Model Context Protocol (MCP) integration',
-			'Stateful workflow scenarios',
+			'Static and dynamic responses',
 			'Docker-based deployment',
 		],
 	};

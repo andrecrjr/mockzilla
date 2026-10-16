@@ -5,7 +5,7 @@ description: Master Handlebars logic, temporal manipulation, collection filterin
 
 # Dynamic Data Syntax
 
-Mockzilla uses **Handlebars** as its primary engine for generating high-fidelity, dynamic responses. This allows you to build complex state machines and business logic directly inside your mocks.
+Mockzilla uses **Handlebars** as its primary engine for generating high-fidelity, dynamic responses. Use request data and helper functions to shape each response.
 
 ## 1. The Handlebars-First Philosophy
 
@@ -23,7 +23,7 @@ Control the flow of your data with standard and boolean logic.
 | `not` | Inverts a boolean value. | `{{#if (not $.query.locked)}}` |
 | `default` | Returns a fallback value if the first is empty. | `{{default $.query.theme "dark"}}` |
 | `eq` / `neq` | Strict equality check. | `{{#if (eq $.query.role "admin")}}` |
-| `gt` / `lt` | Numeric comparisons. | `{{#if (gt state.count 5)}}` |
+| `gt` / `lt` | Numeric comparisons. | `{{#if (gt $.query.count 5)}}` |
 
 ---
 
@@ -42,15 +42,15 @@ Mocking dates and expirations is easy with built-in time manipulation.
 ---
 
 ## 4. Collection Wizards (Array Manipulation)
-Sculpt your Mini-DB data or request arrays before returning them.
+Sculpt request arrays before returning them.
 
 | Helper | Description | Example |
 |--------|-------------|---------|
-| `filter` | Filters an array by a key/value pair. | `{{filter db.users "status" "active"}}` |
-| `sort` | Sorts an array by a specific key. | `{{sort db.products "price" "desc"}}` |
-| `slice` | Returns a portion of an array. | `{{slice db.items 0 10}}` |
+| `filter` | Filters an array by a key/value pair. | `{{filter $.body.users "status" "active"}}` |
+| `sort` | Sorts an array by a specific key. | `{{sort $.body.products "price" "desc"}}` |
+| `slice` | Returns a portion of an array. | `{{slice $.body.items 0 10}}` |
 | `join` | Joins array elements into a string. | `{{join $.query.tags ", "}}` |
-| `json` | Stringifies an object/array. | `{{{json db.users}}}` |
+| `json` | Stringifies an object/array. | `{{{json $.body.users}}}` |
 
 ---
 
@@ -63,24 +63,24 @@ Format your data to look production-ready.
 | `truncate` | Limits string length with `...`. | `{{truncate long_text 50}}` |
 | `currency` | Formats numbers as money. | `{{currency 123.4 "USD" "en-US"}}` → `$123.40` |
 | `toFixed` | Controls decimal precision. | `{{toFixed 10.555 2}}` → `10.56` |
-| `math` | Basic arithmetic (`+ - * / %`). | `{{math state.val "+" 1}}` |
+| `math` | Basic arithmetic (`+ - * / %`). | `{{math $.query.val "+" 1}}` |
 
 ---
 
 ## 6. Power Patterns (Masterclass)
 
 ### The "Search & Paginate" Pattern
-Filter a database, sort it, and return a specific page with metadata.
+Filter request data, sort it, and return a specific page with metadata.
 
 ```handlebars
 {
   "metadata": {
-    "total": {{db.products.length}},
+    "total": {{$.body.products.length}},
     "returned": {{$.query.limit}},
     "next_page": "{{dateAdd (now) 1 'days'}}"
   },
   "results": [
-    {{#each (slice (sort (filter db.products "category" $.query.cat) "price" "asc") 0 5)}}
+    {{#each (slice (sort (filter $.body.products "category" $.query.cat) "price" "asc") 0 5)}}
     {
       "id": "{{this.id}}",
       "slug": "{{slugify this.name}}",
@@ -98,7 +98,7 @@ Return different nested structures based on complex permission logic.
 ```handlebars
 {
   "user": "{{faker.person.fullName}}",
-  "permissions": {{#if (or (eq $.headers.[x-role] "admin") (eq state.user_id 1))}}
+  "permissions": {{#if (or (eq $.headers.[x-role] "admin") (eq $.query.user_id 1))}}
     ["read", "write", "delete", "sudo"]
   {{else}}
     ["read"]
@@ -120,8 +120,8 @@ Return different nested structures based on complex permission logic.
 | JSON Body | `{{$.body.user.email}}` |
 | Path Segment | `{{$.params.[0]}}` |
 | Headers | `{{$.headers.[user-agent]}}` |
-| State | `{{state.variable_name}}` |
-| Mini-DB | `{{db.table_name}}` |
+| Request body | `{{$.body.field_name}}` |
+| Request query | `{{$.query.parameter_name}}` |
 
 ---
 
@@ -133,7 +133,7 @@ Mockzilla is unique because it preserves JSON types even through Handlebars. If 
 {
   "isAdmin": {{#if $.query.admin}}true{{else}}false{{/if}},
   "price": {{math $.query.base "*" 1.1}},
-  "raw_data": {{{json db.items}}}
+  "raw_data": {{{json $.body.items}}}
 }
 ```
 *(Notice: Use triple braces `{{{json ...}}}` to prevent Handlebars from HTML-escaping JSON characters!)*

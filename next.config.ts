@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
 	...(process.env.DEPLOY_MODE === 'landing'
 		? {}
 		: {
+			async redirects() {
+				return [
+					{
+						source: '/app/workflows/:path*',
+						destination: '/app',
+						permanent: false,
+					},
+				];
+			},
 			async rewrites() {
 				return [
 					{

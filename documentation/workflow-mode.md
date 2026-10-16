@@ -1,5 +1,7 @@
 # Workflow Mode Guide
 
+> Product visibility status (2026-10-15): Workflow Mode is hidden from the app navigation, public documentation, and marketing pages. The implementation, routes, and APIs remain in the repository.
+
 Mockzilla Workflow Mode enables stateful, scenario-based mocking with dynamic data, in-memory databases, and complex multi-step flows.
 
 ---

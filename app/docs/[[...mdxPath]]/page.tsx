@@ -8,6 +8,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
 import { mdxComponents } from '@/mdx-components';
+import { isHiddenDoc } from '@/lib/llms-utils';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content/docs');
 
@@ -74,7 +75,7 @@ function buildSidebar(
 		const fullPath = path.join(dir, key);
 
 		// Check if it's an MDX file
-		if (existsSync(`${fullPath}.mdx`)) {
+		if (existsSync(`${fullPath}.mdx`) && !isHiddenDoc(`${fullPath}.mdx`)) {
 			entries.push({
 				slug,
 				title:
@@ -111,6 +112,7 @@ function buildSidebar(
 		const fullPath = path.join(dir, file);
 
 		if (file.endsWith('.mdx')) {
+			if (isHiddenDoc(fullPath)) continue;
 			entries.push({
 				slug,
 				title: name
@@ -153,6 +155,7 @@ export function generateStaticParams() {
 			if (statSync(fullPath).isDirectory()) {
 				files.push(...getAllFiles(fullPath, base ? `${base}/${file}` : file));
 			} else if (file.endsWith('.mdx')) {
+				if (isHiddenDoc(fullPath)) continue;
 				const name = file.replace(/\.mdx$/, '');
 				if (name === 'index') {
 					files.push(base || ''); // Empty string for root index, directory name for sub-index
@@ -187,12 +190,19 @@ export async function generateMetadata({
 		if (!existsSync(filePath)) throw new Error('File not found');
 		const fileContent = readFileSync(filePath, 'utf-8');
 		const { data } = matter(fileContent);
+		if (data.hidden === true) {
+			return {
+				title: 'Mockzilla Docs',
+				description: 'Mockzilla documentation',
+				robots: { index: false, follow: false },
+			};
+		}
 		const title = data.title
 			? `${data.title} | Mockzilla Docs`
 			: 'Mockzilla Documentation';
 		const description =
 			data.description ||
-			'Learn how to use Mockzilla for API mocking, browser interception, and stateful workflows.';
+			'Learn how to use Mockzilla for API mocking, browser interception, and dynamic responses.';
 
 		return {
 			title,
@@ -246,6 +256,7 @@ export default async function DocPage({
 			notFound();
 		}
 	}
+	if (isHiddenDoc(filePath)) notFound();
 
 	try {
 		const fileContent = readFileSync(filePath, 'utf-8');

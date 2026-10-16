@@ -5,7 +5,7 @@ description: Master API mocking with Mockzilla.
 
 # Welcome to Mockzilla
 
-Mockzilla is a high-fidelity API mocking platform designed to bridge the gap between frontend development and backend reality. From simple static responses to complex stateful simulations, we've got you covered.
+Mockzilla is an API mocking platform designed to help frontend teams work against realistic endpoints before a backend is ready. Configure static responses, generate dynamic data, and manage mocks from the dashboard or AI tools.
 
 ## Why Mockzilla?
 
@@ -14,18 +14,16 @@ Mockzilla is designed for the modern development ecosystem, where speed, product
 ### Core Strengths (The Pros)
 - **🚀 Product-First approach**: Deliver as fast as possible by mocking first. Establish Mockzilla as the **Ground Truth**—design your API contract and validate your UI before writing a single line of backend code.
 - **🤖 AI-Native Power-Ups**: Built-in MCP support allows AI agents (like **Claude Opus**, **GPT**, or **Gemini**) to autonomously build, debug, and maintain your mock infrastructure while minimizing token burn.
-- **🎭 Stateful "Living" Mocks**: Unlike static JSON servers, Mockzilla supports complex stateful scenarios with an in-memory Mini-DB and session state—perfect for BFFs and Microservice prototypes.
 - **🎲 High-Fidelity Dynamic Data**: Use JSON Schema + Faker.js to generate fresh, realistic data that adheres strictly to your API contracts.
 - **🔌 Browser-to-Dashboard Sync**: Capture real-world production traffic via our Chrome Extension and convert it into high-fidelity mocks with one click.
 - **🧠 Smart Hybrid Engine**: Automatically switches between type-preserving JSON interpolation and powerful Handlebars logic for maximum flexibility.
 - **🐳 DevOps Friendly**: Standalone Docker support and a robust Makefile-driven CLI for seamless integration into local and CI/CD environments.
 - **💸 Token Burn Mitigation**: Drastically reduce AI SaaS costs by mocking expensive LLM responses during UI/UX development—stop wasting your token budget on layout refreshes.
-- **🔍 Forensic Debugging**: Built-in observability tools allow you to trace exactly why a specific mock matched (or didn't) and how state mutated during a request.
+- **🔍 Forensic Debugging**: Built-in observability tools help trace why a specific mock matched or did not match a request.
 
 ### Points of Consideration (The Cons)
-- **📈 Learning Curve**: Mastering advanced Handlebars interpolation and stateful transition logic requires some initial time investment.
+- **📈 Learning Curve**: Advanced Handlebars interpolation requires some initial time investment.
 - **🔄 Mock Drift**: Like any mocking tool, you must maintain discipline to keep mocks in sync with evolving production backend contracts.
-- **🧩 Logic Complexity**: While powerful, building highly complex stateful simulations can become difficult to manage without proper modularization.
 
 ---
 
@@ -33,7 +31,7 @@ Mockzilla is designed for the modern development ecosystem, where speed, product
 
 ### For Product Teams
 Deliver a functional, interactive prototype in days, not months.
-- **Pros:** Validate product-market fit against a "Living Mock" without waiting for a full MVP backend; perfect for rapid iteration.
+- **Pros:** Validate product-market fit against realistic API responses without waiting for a full MVP backend; perfect for rapid iteration.
 - **Cons:** Requires clear specification of the product's API contract.
 
 ### For Frontend Developers
@@ -48,7 +46,7 @@ Native MCP support allows AI assistants to autonomously create and manage mocks 
 
 ### For QA & Automation
 Reproduce edge cases that are hard to trigger in real staging environments.
-- **Pros:** Instantly simulate 500 errors, timeouts, or specific "dirty" data; test stateful flows without backend seeding.
+- **Pros:** Instantly simulate 500 errors, timeouts, or specific "dirty" data without backend seeding.
 - **Cons:** Not a replacement for full, end-to-end integration testing.
 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
@@ -62,15 +60,6 @@ Reproduce edge cases that are hard to trigger in real staging environments.
     </Card>
   </Link>
 
-  <Link href="/docs/getting-started/end-to-end-journey" className="no-underline">
-    <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-primary/20">
-      <CardHeader>
-        <Globe className="w-8 h-8 text-primary mb-2" />
-        <CardTitle>End-to-End Journey</CardTitle>
-        <CardDescription>Explore the "Meta-Workflow" from capturing real traffic to scaling with AI.</CardDescription>
-      </CardHeader>
-    </Card>
-  </Link>
 </div>
 
 ## Explore the Journey
@@ -118,25 +107,11 @@ Reproduce edge cases that are hard to trigger in real staging environments.
     </Card>
   </Link>
 
-  <Link href="/docs/tutorials" className="no-underline block group">
-    <Card className="hover:bg-muted/50 transition-colors border-primary/10">
-      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-          <span className="font-bold text-primary">3</span>
-        </div>
-        <div>
-          <CardTitle className="text-lg group-hover:text-primary transition-colors">Stateful Workflows</CardTitle>
-          <CardDescription>Build simulations that remember user actions, like shopping carts and auth flows.</CardDescription>
-        </div>
-      </CardHeader>
-    </Card>
-  </Link>
-
   <Link href="/docs/guides/ai-integration-mcp" className="no-underline block group">
     <Card className="hover:bg-muted/50 transition-colors border-primary/10">
       <CardHeader className="flex flex-row items-center gap-4 space-y-0">
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-          <span className="font-bold text-primary">4</span>
+          <span className="font-bold text-primary">3</span>
         </div>
         <div>
           <CardTitle className="text-lg group-hover:text-primary transition-colors">AI-Driven Development</CardTitle>
@@ -150,7 +125,7 @@ Reproduce edge cases that are hard to trigger in real staging environments.
 <div className="mt-12 flex justify-center">
   <Link href="/docs/getting-started/quick-start">
     <Button size="lg" className="gap-2">
-      Start the Journey <ChevronRight className="w-4 h-4" />
+      Get started <ChevronRight className="w-4 h-4" />
     </Button>
   </Link>
 </div>

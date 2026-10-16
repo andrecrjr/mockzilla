@@ -36,13 +36,6 @@ const features = [
 		product: 'server' as const,
 	},
 	{
-		icon: Network,
-		title: 'Workflow Mode',
-		description:
-			'Build stateful scenarios with workflow mode. Simulate complex API interactions and multi-step processes.',
-		product: 'server' as const,
-	},
-	{
 		icon: Brain,
 		title: 'MCP Integration',
 		description:

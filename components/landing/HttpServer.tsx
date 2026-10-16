@@ -1,14 +1,14 @@
 'use client';
 
-import { Bot, Cog, Database, Server } from 'lucide-react';
+import { Bot, Database, Server, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 const features = [
 	{
 		icon: Database,
-		title: 'Mini-Database',
+		title: 'PostgreSQL Persistence',
 		description:
-			'Scenario-based data persistence with PostgreSQL. Store and query mock data like a real database.',
+			'Reliable storage for your mock folders, endpoints, and response data.',
 	},
 	{
 		icon: Bot,
@@ -17,10 +17,10 @@ const features = [
 			'First-class support for AI agents. 24 Model Context Protocol tools for Claude, Cursor, and more.',
 	},
 	{
-		icon: Cog,
-		title: 'Workflow Scenarios',
+		icon: Zap,
+		title: 'Dynamic Responses',
 		description:
-			'Complex stateful scenarios that simulate multi-step API interactions and user flows.',
+			'Generate realistic API responses with JSON Schema and Faker.js.',
 	},
 ];
 
@@ -48,7 +48,7 @@ export function HttpServer() {
 						<p className="text-muted-foreground mb-8">
 							A powerful, self-hosted mock server that lets you create dynamic
 							API endpoints with JSON Schema interpolation, wildcard routes, and
-							stateful workflows. Perfect for teams that need reliable,
+							flexible response matching. Perfect for teams that need reliable,
 							consistent mock data during development.
 						</p>
 
@@ -123,14 +123,14 @@ export function HttpServer() {
 							<Card className="mockzilla-border bg-card/50 backdrop-blur-sm p-4">
 								<div className="flex items-center gap-3">
 									<div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-										<Cog className="h-5 w-5 text-primary" />
+										<Zap className="h-5 w-5 text-primary" />
 									</div>
 									<div>
 										<div className="text-sm font-semibold text-foreground">
-											Workflows
+											Mocks
 										</div>
 										<div className="text-xs text-muted-foreground">
-											Stateful scenarios
+											Static and dynamic responses
 										</div>
 									</div>
 								</div>

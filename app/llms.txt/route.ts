@@ -40,7 +40,7 @@ export async function GET() {
 			: '/llms.txt/llms-full.txt';
 
 		let content = `# Mockzilla Documentation\n`;
-		content += `> High-fidelity API mocking and stateful workflow simulation.\n\n`;
+		content += `> High-fidelity API mocking with static and dynamic responses.\n\n`;
 		content += `- [llms-full.txt](${baseUrl}${fullDocumentationPath}): The full documentation content in a single file.\n`;
 		content += `> Tip: Every route in the documentation also supports its own \`/llms.txt\` endpoint for scoped context.\n\n`;
 

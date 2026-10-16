@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 		default: 'Mockzilla - The Open Source API Mocking Platform',
 	},
 	description:
-		'Chrome Extension for instant interception. HTTP Server for dynamic mocking. JSON Schema + Faker, MCP integration, and stateful workflows.',
+		'Chrome Extension for instant interception. HTTP Server for dynamic mocking. JSON Schema + Faker, MCP integration, and flexible route matching.',
 	keywords: [
 		'API Mocking',
 		'Chrome Extension',

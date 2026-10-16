@@ -10,6 +10,10 @@ export interface DocSection {
 	items?: DocSection[];
 }
 
+export function isHiddenDoc(filePath: string): boolean {
+	return matter(fs.readFileSync(filePath, 'utf-8')).data.hidden === true;
+}
+
 export function getDocsHierarchy(
 	dir: string,
 	baseDir: string = dir,
@@ -61,6 +65,7 @@ export function getDocsHierarchy(
 		if (fs.existsSync(mdxPath)) {
 			const fileContent = fs.readFileSync(mdxPath, 'utf-8');
 			const { content, data } = matter(fileContent);
+			if (data.hidden === true) continue;
 			const relativePath = path
 				.relative(baseDir, mdxPath)
 				.replace(/\.mdx$/, '');
@@ -72,10 +77,12 @@ export function getDocsHierarchy(
 				content: content.trim(),
 			});
 		} else if (fs.existsSync(subDir) && fs.statSync(subDir).isDirectory()) {
+			const items = getDocsHierarchy(subDir, baseDir);
+			if (items.length === 0) continue;
 			hierarchy.push({
 				title: meta[key] || key,
 				path: `/docs/${path.relative(baseDir, subDir)}`,
-				items: getDocsHierarchy(subDir, baseDir),
+				items,
 			});
 		}
 	}

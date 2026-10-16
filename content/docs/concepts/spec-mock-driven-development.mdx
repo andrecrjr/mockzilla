@@ -42,8 +42,8 @@ AI agents are "Power-Ups" in the SMDD workflow, enabling you to deliver even fas
 
 ### The Orchestrator (Claude Opus, GPT, Gemini)
 A high-reasoning model acts as your architect. It uses Mockzilla's MCP tools to:
-- **Design**: Convert high-level product requirements into functional Mockzilla transitions.
-- **Audit**: Use the **Logic Doctor** skill to find edge cases before you write a single line of backend code.
+- **Design**: Convert high-level product requirements into functional mocks.
+- **Audit**: Preview requests and validate response schemas before you write a single line of backend code.
 - **Token Efficiency**: Instead of calling an expensive model for every single UI refresh, the orchestrator generates one high-quality "Seed" response, which Mockzilla then serves infinitely for free.
 
 ---
@@ -66,7 +66,7 @@ A high-reasoning model acts as your architect. It uses Mockzilla's MCP tools to:
   </div>
   <div className="flex flex-col justify-center items-start">
     <h4 className="font-bold text-xl text-blue-500 m-0 leading-none">Live Mock Ground Truth</h4>
-    <p className="text-muted-foreground mt-2 m-0 text-base leading-relaxed">Mockzilla turns that spec into a live, stateful simulation. This becomes the source of truth for the entire product team.</p>
+    <p className="text-muted-foreground mt-2 m-0 text-base leading-relaxed">Mockzilla turns that spec into live API endpoints with realistic responses. This becomes the source of truth for the entire product team.</p>
   </div>
 
   {/* Step 3 */}
