@@ -52,6 +52,15 @@ The route fetches all enabled mocks for the folder and method, then evaluates th
 3. **Find best match**: Uses `findBestMatch()` to score and rank candidates.
 4. **Select variant**: For wildcard mocks, selects the appropriate variant if configured.
 
+Scoring (`scoreCandidate` in `lib/utils/mock-matcher.ts`): match type (exact 300,
+wildcard 200, substring 100) + 10 per required query param + 1 per query value
+without `*` + endpoint path length. The highest score wins; ties go to non-proxy mocks,
+then the newest `createdAt` (`sortMocksForMatchTieBreakers`). Variants never affect
+which mock wins. Wildcard patterns compile to lazy `(.+?)` groups anchored only at the
+end (unless the endpoint contains `://`), so a `*` can span `/` and `/products/*` also
+matches `/shop/products/1`. User-facing examples live in
+`content/docs/reference/routing-and-matching.mdx`.
+
 The web editor keeps this configuration in one **Mock Response** area. Match Type is
 exact by default. Exact and substring mocks show the base response source selector;
 wildcard mocks hide that source editor and show variants as the primary response
@@ -165,6 +174,6 @@ OPTIONS requests receive a 204 response for CORS preflight handling.
 
 ## Related Documentation
 
-- [Schema Interpolation](/documentation/schema-interpolation.md) - How `{$.path}` templates resolve
+- [Schema Interpolation](/documentation/schema-interpolation.md) - How `{{$.path}}` templates resolve
 - [Test Schemas](/documentation/test-schemas.md) - Sample schemas for dynamic generation
 - [Mock Matcher](/lib/utils/mock-matcher.ts) - Matching logic for wildcard and substring types

@@ -99,12 +99,18 @@ Mockzilla supports advanced predicates for array lookups using the `[key=value]`
 
 You can reference incoming request data directly using the `input.` or `$.` prefixes. Both syntaxes are equivalent.
 
+For ordinary served mock responses, the request context contains query parameters,
+wildcard captures, and headers. Request bodies are not available to response
+interpolation; use Echo Request Body to return a request body unchanged. For a
+step-by-step walkthrough of dynamic wildcard responses, see the
+[Dynamic Wildcard Mocks guide](../content/docs/guides/dynamic-wildcard-mocks.mdx).
+
 | Syntax | Alias | Description |
 |--------|-------|-------------|
 | `{{input.query.id}}` | `{{$.query.id}}` | Injects the `?id=...` query parameter |
 | `{{input.params.0}}` | `{{$.params.[0]}}` | Injects a URL path segment (wildcards) |
 | `{{input.headers.user-agent}}` | `{{$.headers.[user-agent]}}` | Injects a request header |
-| `{{input.body.name}}` | `{{$.body.name}}` | Injects a value from the request JSON body |
+| `{{input.body.name}}` | `{{$.body.name}}` | Available in workflow request/effect context; not in ordinary served mock responses |
 
 > **Tip**: When using Handlebars logic with `$.` syntax and numeric keys (like params) or headers with hyphens, use square brackets: `{{$.params.[0]}}` or `{{$.headers.[x-api-key]}}`.
 > **Query/wildcard split**: For a request like `/users/123?status=active` matched by `/users/*`, `input.params.0` is `123` and `input.query.status` is `active`. Wildcard parameters are populated from the structured capture array, so a literal `|` in a captured value is not split.

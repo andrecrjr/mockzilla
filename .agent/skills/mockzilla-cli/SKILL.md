@@ -83,7 +83,7 @@ exact is the default. A path containing an asterisk does not become wildcard mat
 | wildcard | Asterisk characters capture values in endpoint order | One mock should serve paths such as /users/* or /users/*/orders/* | The path is fixed or you need arbitrary substring matching |
 | substring | The request path contains the endpoint text | A deliberately broad legacy/fragment match is required | A path parameter or precise API route can be expressed with exact/wildcard |
 
-Matching priority is exact, then wildcard, then substring. Endpoint length breaks ties after the match score. Therefore an exact /users/test mock wins over a wildcard /users/* mock even when the wildcard has a test variant. Query-parameter requirements are checked as part of matching; a mock with no required query parameters can match any query string.
+Matching score is path type (exact 300, wildcard 200, substring 100) plus 10 per required query parameter, plus 1 per query value without *, plus the endpoint path length. Ties go to non-proxy mocks, then the newest mock. With equal query requirements an exact /users/test mock wins over a wildcard /users/* mock even when the wildcard has a test variant, because variants are chosen only after a mock wins. A wildcard mock with about ten more required query parameters can still outscore an exact path. Query-parameter requirements are checked as part of matching; a mock with no required query parameters can match any query string. Wildcard endpoints are anchored to the end of the path only, and each * can span /, so /products/* also matches /shop/products/1; use the full prefix.
 
 Examples:
 
@@ -298,7 +298,7 @@ The generator uses JSON Schema Faker with deterministic fixed probabilities, use
 
 ## Dynamic interpolation and request context
 
-Dynamic generation first creates a schema-shaped value and then replaces templates. Use {$.path} or {{$.path}} request references for type-preserving values. The dollar alias points to request input in this context.
+Dynamic generation first creates a schema-shaped value and then replaces templates. Use {{$.path}} request references for type-preserving values; single-brace {$.path} is not resolved. The dollar alias points to request input in this context.
 
 Common request context:
 

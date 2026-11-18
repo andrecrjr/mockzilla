@@ -24,7 +24,7 @@ skill and this file before making MCP calls; do not invent tool names or actions
 - Use `manage_scenarios` for scenario records and import/export; use `manage_transitions` for transition CRUD; use `workflow_control` to test, inspect, seed, or reset runtime state.
 - Treat folder and scenario IDs as strings. Transition IDs are integers.
 - Read with `get`/`list` before updating or deleting. After writes, re-read or preview the affected resource.
-- Keep stateless mock interpolation (`{$.path}`) separate from workflow Handlebars (`{{path}}`).
+- Use double-brace templates (`{{$.path}}`, `{{input.query.id}}`) in both stateless mocks and workflows; single-brace `{$.path}` is returned literally.
 - Update relevant `documentation/` when behavior or conventions change.
 
 ## Skill Maintenance Rule

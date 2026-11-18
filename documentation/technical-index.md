@@ -32,6 +32,11 @@ This project includes Docker configurations for both **development** and **produ
 
 ### Production Environment
 
+`make prod-up` runs the image with `--env-file .env`, so `DATABASE_URL` must point at
+a PostgreSQL host reachable from that container (not the Compose `postgres` host).
+Remove `DATABASE_URL` to use embedded PGlite instead, or use `make prod-pglite`, which
+mounts `./data/mockzilla-data` at `/app/data`.
+
 1. **Build and start production:**
    ```bash
    make prod-run
@@ -101,7 +106,7 @@ Copy `.env.example` to `.env` and customize as needed. Here are the key configur
 ### Next.js & System
 - `NODE_ENV`: Set to `development` or `production`.
 - `NEXT_TELEMETRY_DISABLED`: Set to `1` to disable Next.js telemetry.
-- `NEXT_DISABLE_ESLINT`: Set to `true` to skip ESLint during builds.
+- `NODE_ORIGINS`: Comma-separated hosts allowed to open the dev server from another device (`allowedDevOrigins`).
 
 ### Mockzilla Specifics
 - `MOCKZILLA_MAX_ITEMS`: **(New)** Controls the maximum number of items generated in arrays when using Dynamic Responses (JSON Schema). Default is `1000`. This prevents accidental memory exhaustion from massive schemas.
@@ -139,17 +144,21 @@ docker exec -it mockzilla-postgres-dev psql -U mockzilla -d mockzilla
 
 ### Running Migrations
 
-Migrations run automatically when containers start. To run manually:
+Migrations run automatically when containers start (`docker-entrypoint.sh` runs
+`scripts/migrate.mjs`). To run them manually:
 
 **Development:**
 ```bash
-docker exec -it mockzilla-app-dev bun run db:push
+make db-migrate
 ```
 
 **Production:**
 ```bash
-docker exec -it mockzilla-frontend drizzle-kit migrate
+docker exec -it mockzilla-prod node scripts/migrate.mjs
 ```
+
+Create new migrations with `make db-generate`; don't use `db:push`, which skips
+migration files.
 
 ## Troubleshooting
 
@@ -237,9 +246,10 @@ This will remove all containers, volumes, and cached images.
 │  └──────────┬──────────────────────┘   │
 │             │                            │
 │  ┌──────────▼──────────────────────┐   │
-│  │  PostgreSQL Container           │   │
-│  │  - Port 5432                    │   │
-│  │  - Persistent Volume            │   │
+│  │  Database                       │   │
+│  │  - Embedded PGlite (/app/data)  │   │
+│  │    when DATABASE_URL is unset   │   │
+│  │  - or external PostgreSQL       │   │
 │  └─────────────────────────────────┘   │
 └─────────────────────────────────────────┘
 ```

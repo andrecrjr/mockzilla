@@ -33,8 +33,9 @@ const MATCH_TYPES: MatchType[] = ['exact', 'wildcard', 'substring'];
 
 const MATCH_TYPE_DESCRIPTIONS: Record<MatchType, string> = {
 	exact:
-		'Path must match exactly. An exact endpoint wins over wildcard matches.',
-	wildcard: 'Use * to capture URL segments, for example /users/*.',
+		'Path must match exactly. Exact paths start with higher priority; query filters also affect selection.',
+	wildcard:
+		'Use * to capture path text. Dynamic Response can use captures and query values.',
 	substring: 'Path matches when the endpoint appears inside the request path.',
 };
 
@@ -69,9 +70,9 @@ export function ResponseConfig({
 					</Label>
 					<FieldTooltip
 						label="Match Type"
-						description="Exact matches first, wildcard captures segments, and substring checks for a contained path."
-						example="exact: /users/test | wildcard: /users/*"
-						docsLink="/docs/reference/routing-and-matching#wildcard-matching"
+						description="Exact paths start with higher priority; query filters also affect which matching mock wins."
+						example="wildcard /users/* → $.params.[0]"
+						docsLink="/docs/guides/dynamic-wildcard-mocks#build-a-dynamic-wildcard-mock"
 					/>
 				</div>
 				<Select

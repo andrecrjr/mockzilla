@@ -18,7 +18,7 @@ Instead of just asking for a React component, use an AI agent (like Claude Opus,
 **Your Prompt:**
 > "I need a paginated Product List in React. 
 > 
-> 1. Use Mockzilla to create `GET /api/products`. Return 10 random products (id, name, price, status) and `total_pages: 5`. Add a 1-second delay.
+> 1. Use Mockzilla to create `GET /api/products`. Return `items` with 10 random products (id, name, price, status) and `total_pages: 5`. Add a 1-second delay.
 > 2. Then, build `ProductList.tsx` using Tailwind. It must fetch from the mock, handle loading/error states, and support page navigation."
 
 ## 2. What Happens Next
@@ -26,7 +26,7 @@ Instead of just asking for a React component, use an AI agent (like Claude Opus,
 The AI orchestrator will perform two distinct actions in parallel:
 
 ### Action A: The Mockzilla Configuration (via MCP)
-The agent calls Mockzilla's tools to create the `products` mock. It configures the schema so that every time the React app hits `/api/products?page=2`, Mockzilla generates 10 *new* random products instantly.
+The agent calls Mockzilla's tools to create the `products` mock. It sets a JSON Schema with `minItems` and `maxItems` of `10` and a 1000 ms delay, so every time the React app hits `/api/products?page=2`, Mockzilla generates 10 *new* random products.
 
 ### Action B: The Frontend Code
 The agent writes a production-ready `ProductList.tsx`:
@@ -42,7 +42,7 @@ interface Product {
 }
 
 export default function ProductList() {
-  const [data, setData] = useState<{ items: Product[], total: number } | null>(null);
+  const [data, setData] = useState<{ items: Product[], total_pages: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
@@ -78,7 +78,7 @@ export default function ProductList() {
       </table>
       <div className="mt-4 flex gap-2">
         <button onClick={() => setPage(p => Math.max(1, p - 1))}>Previous</button>
-        <span className="py-1 px-3 bg-gray-100 rounded">Page {page} of {data?.total}</span>
+        <span className="py-1 px-3 bg-gray-100 rounded">Page {page} of {data?.total_pages}</span>
         <button onClick={() => setPage(p => p + 1)}>Next</button>
       </div>
     </div>

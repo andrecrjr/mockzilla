@@ -262,7 +262,7 @@ export function MockVariantManager({
 								label="No-match behavior"
 								description="When enabled, unmatched wildcard requests return 404. When disabled, the base mock response is used."
 								example="OFF = use base response, ON = 404 Not Found"
-								docsLink="/docs#wildcard-variants"
+								docsLink="/docs/guides/dynamic-wildcard-mocks#give-selected-ids-their-own-response"
 							/>
 						</div>
 						<p className="text-xs text-muted-foreground">

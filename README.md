@@ -19,16 +19,16 @@ A powerful self-hosted API mocking platform for development and testing. Deploy 
 
 ## Quick Start
 
-### In-Memory with PGLite (Recommended for Development)
+### Embedded PGlite (Recommended for Development)
 
-Start instantly with ephemeral storage:
+Start instantly. Data lives inside the container and is lost when the container is removed:
 ```bash
 docker run -p 36666:36666 andrecrjr/mockzilla:latest
 ```
 
 To persist data between container restarts:
 ```bash
-docker run -p 36666:36666 -v mockzilla-data:/data andrecrjr/mockzilla:latest
+docker run -p 36666:36666 -v mockzilla-data:/app/data andrecrjr/mockzilla:latest
 ```
 
 ### Persistent with External PostgreSQL (Recommended for Production)

@@ -158,7 +158,7 @@ You can now call Faker methods directly within your templates using `{{faker.met
 
 ### Referencing Query Parameters
 
-You can access query parameters using the `{$.query.paramName}` syntax.
+You can access query parameters using the `{{$.query.paramName}}` syntax. Values are strings; a missing key leaves the template text in place, so use `{{default $.query.page "1"}}` or require the key.
 
 **Example: Paginated Response echoing query params**
 ```json
@@ -169,8 +169,8 @@ You can access query parameters using the `{$.query.paramName}` syntax.
     "meta": {
       "type": "object",
       "properties": {
-        "page": { "const": "{$.query.page}" },
-        "limit": { "const": "{$.query.limit}" }
+        "page": { "const": "{{$.query.page}}" },
+        "limit": { "const": "{{$.query.limit}}" }
       }
     }
   }
@@ -207,4 +207,4 @@ Mockzilla supports all standard JSON Schema formats plus these additional OpenAP
 - **Empty Properties**: Ensure every property has a defined `type`. If you use constraints like `minLength` without `type: "string"`, compatibility with other tools may vary.
 - **Circular References**: JSF and Mockzilla's interpolation engine both have protections against circular references.
 - **Array Size Capped**: If your array never grows beyond 5 items despite settings, it's due to the global `maxItems: 5` limit in the generator.
-- **Consistency**: Use [Schema Interpolation](schema-interpolation.md) (`{$.path}`) to match values across your object.
+- **Consistency**: Use [Schema Interpolation](schema-interpolation.md) (`{{$.path}}`) to match values across your object.

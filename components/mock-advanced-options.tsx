@@ -82,9 +82,9 @@ export function AdvancedOptions({
 						<Label className="text-base font-semibold">Query Parameters</Label>
 						<FieldTooltip
 							label="Required Query Params"
-							description="The mock only matches when every configured query parameter has the expected value."
-							example="?page=1&limit=10"
-							docsLink="/docs/reference/routing-and-matching#query-parameters"
+							description="Every listed key must be present and match. Use * for any value, then reference it as {{$.query.key}} in a Dynamic Response."
+							example="category=* requires ?category=..."
+							docsLink="/docs/reference/routing-and-matching#matching-by-query-parameters"
 						/>
 					</div>
 					{queryParams.length === 0 ? (

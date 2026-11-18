@@ -88,12 +88,12 @@ Use `isFallback: true` for an explicit catch-all variant. Legacy `key: "*"` rema
 The complete terminal workflow is rendered by `mockzilla agent-skill`. Its behavior rules are important when a path contains `*`:
 
 - `exact` is the default. A wildcard-looking path remains exact unless `matchType: "wildcard"` is set.
-- `exact` wins over `wildcard`, and `wildcard` wins over `substring`; an exact `/users/test` mock therefore wins over `/users/*`.
+- Score = path type (`exact` 300, `wildcard` 200, `substring` 100) + 10 per required query parameter + 1 per query value without `*` + endpoint path length. Ties go to non-proxy mocks, then the newest mock. See the [routing reference](../content/docs/reference/routing-and-matching.mdx#strategy-precedence) for worked examples.
 - Dynamic responses attach a JSON Schema through `jsonSchema` plus `useDynamicResponse: true`; `bodyType` must be `json` and `response` is the generation fallback.
 - Wildcard variants use ordered `captures` arrays. Use `isFallback: true` for an explicit fallback, and use `wildcardRequireMatch` when an unknown capture must return 404.
 - A selected variant overrides the base response source, status, body type, schema, dynamic mode, and echo behavior.
 
-Query parameters are matched separately from path wildcards. Parameter names are exact, but values support `*` glob matching: `queryParams: { "status": "*" }` matches `?status=active`, `?status=banned`, or any other present status value. The parameter must still be present, and an exact value such as `status=active` wins over the wildcard mock when both match. Values are available to Dynamic Response templates as `{{$.query.name}}`.
+Query parameters are matched separately from path wildcards. Parameter names are exact, but values support `*` glob matching: `queryParams: { "status": "*" }` matches `?status=active`, `?status=banned`, or any other present status value. The parameter must still be present. Exact query values are more specific than wildcard values when the other matching factors are equal. Values are available to Dynamic Response templates as `{{$.query.name}}`.
 
 For a schema file and a real serving request:
 
@@ -103,7 +103,7 @@ mockzilla mocks get <id> --json
 curl -sS -D - http://localhost:36666/api/mock/demo/users/123
 ```
 
-The skill also documents Faker keywords, request interpolation (`{$.params.[0]}`, query, headers, and body), schema test matrices, fallback behavior, and mismatch diagnosis. The maintained schema references are [test schemas](test-schemas.md), [JSON Schema Faker](json-schema-faker.md), [schema interpolation](schema-interpolation.md), and [wildcard variants](wildcard-variants-audit.md).
+The skill also documents Faker keywords, request interpolation (`{{$.params.[0]}}`, query, headers, and body), schema test matrices, fallback behavior, and mismatch diagnosis. The maintained schema references are [test schemas](test-schemas.md), [JSON Schema Faker](json-schema-faker.md), [schema interpolation](schema-interpolation.md), and [wildcard variants](wildcard-variants-audit.md).
 
 ## Agent skill
 

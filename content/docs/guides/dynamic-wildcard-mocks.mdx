@@ -1,0 +1,266 @@
+---
+title: Dynamic Wildcard Mocks
+description: Serve many resource IDs from one mock and build each response from path captures, query parameters, and headers.
+---
+
+# Dynamic Wildcard Mocks
+
+One wildcard mock can serve every product, user, or order ID. Mockzilla captures the
+changing parts of the URL and copies them, plus query values and headers, into a
+generated response.
+
+By the end of this guide, one mock answers both of these requests with a matching body:
+
+```sh
+GET /api/products/p-42?category=books&page=2
+GET /api/products/p-99?category=games&page=3
+```
+
+## How a request is handled
+
+Three separate settings work in order. Keep them apart when you debug a mock:
+
+| Step | Setting | What it decides |
+| --- | --- | --- |
+| 1. Match | **Endpoint** + **Match Type: Wildcard** | Which paths can use the mock |
+| 2. Filter | **Advanced Options → Query Parameters** | Which query strings can use the mock |
+| 3. Respond | **Wildcard Variants** (specific or fallback) | Which response to return, and how to build it |
+
+Steps 1 and 2 only choose the mock. They never change the response. To return a
+captured or query value, reference it in the response, as shown below.
+
+## Build a dynamic wildcard mock
+
+### 1. Create the mock
+
+In your folder, create a mock with these settings:
+
+| Setting | Value |
+| --- | --- |
+| Method | `GET` |
+| Endpoint | `/api/products/*` |
+| Match Type | `Wildcard` |
+
+Match Type stays **Exact** by default, even if the endpoint contains `*`. Choose
+**Wildcard** yourself. If you choose Wildcard without a `*`, the editor shows a
+*No wildcard detected* warning.
+
+### 2. Add a fallback with a Dynamic Response
+
+Wildcard mocks build their response from **Wildcard Variants**, not from a separate
+base response editor. Under **Wildcard Variants**:
+
+1. Click **Add fallback**. The fallback answers every capture value that has no
+   specific variant.
+2. Set its **Status Code** to `200`.
+3. Under **Variant Response**, select **Dynamic Response** and paste this JSON Schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "const": "{{$.params.[0]}}" },
+    "category": { "type": "string", "const": "{{default $.query.category \"all\"}}" },
+    "page": { "type": "integer", "const": "{{math $.query.page \"+\" 0}}" },
+    "title": { "type": "string", "faker": "commerce.productName" },
+    "price": { "type": "number", "minimum": 10, "maximum": 100 }
+  },
+  "required": ["id", "category", "page", "title", "price"]
+}
+```
+
+- `{{$.params.[0]}}` inserts the value captured by the first `*`.
+- `{{default $.query.category "all"}}` inserts the `category` query value, or `all`
+  when the request has none.
+- `{{math $.query.page "+" 0}}` turns the `page` query string into a JSON number.
+- Faker and the numeric limits generate `title` and `price` fresh on each request.
+
+### 3. Try it
+
+```sh
+curl "http://localhost:36666/api/mock/catalog/api/products/p-42?category=books&page=2"
+```
+
+```json
+{
+  "id": "p-42",
+  "category": "books",
+  "page": 2,
+  "title": "Handcrafted Steel Chair",
+  "price": 49.19948933508831
+}
+```
+
+`title` and `price` change on every call. `id`, `category`, and `page` always follow
+the request. Replace `catalog` with your folder slug.
+
+## What `*` captures
+
+Each `*` captures **one or more characters, including `/`**. Captures are numbered from
+zero, in the order the stars appear in the endpoint:
+
+| Endpoint | Request path | Captures |
+| --- | --- | --- |
+| `/api/products/*` | `/api/products/p-42` | `[0] = p-42` |
+| `/users/*/orders/*` | `/users/user-7/orders/order-3` | `[0] = user-7`, `[1] = order-3` |
+| `/files/*` | `/files/2024/report.pdf` | `[0] = 2024/report.pdf` |
+| `/files/*/*` | `/files/a/b/c` | `[0] = a`, `[1] = b/c` |
+| `/api/products/*` | `/api/products` | No match: `*` needs at least one character |
+
+Keep these rules in mind:
+
+- **Earlier stars capture as little as possible.** Later stars take the rest. With
+  `/files/*/*`, the request `/files/a/b/c` gives `a` and `b/c`.
+- **A star is not limited to one segment.** `/users/*/profile` also matches
+  `/users/team/7/profile` and captures `team/7`.
+- **The pattern can match the end of a longer path.** A wildcard endpoint must match
+  the end of the request path but may start partway through it. `/products/*`
+  matches `/products/1` and also `/shop/products/1` in the same folder. Start the
+  endpoint with its full prefix, such as `/api/products/*`, so it can't match
+  another resource by accident.
+- **Trailing slashes are ignored.** `/api/products/p-42/` is treated as
+  `/api/products/p-42`.
+- **Stars have no names.** Use their position: `$.params.[0]`, `$.params.[1]`, and so on.
+
+## Filter by query parameters
+
+Open **Advanced Options → Query Parameters** and add one row per required key:
+
+| Required row | Matching requests | Not matching |
+| --- | --- | --- |
+| *(no rows)* | Any query string, or none | — |
+| `category` = `books` | `?category=books`, `?category=books&page=2` | `?category=games`, no `category` |
+| `category` = `*` | `?category=books`, `?category=` (empty value) | no `category` key |
+| `category` = `boo*` | `?category=books`, `?category=boots` | `?category=ebooks` |
+
+- Every row must match. Extra query parameters in the request are allowed.
+- Key names match exactly and are case-sensitive.
+- A value without `*` must match exactly. A `*` in the value matches any characters,
+  including none.
+- If a request repeats a key (`?tag=a&tag=b`), only the last value (`b`) is used.
+
+Query filters choose the mock; they don't put values in the response. Reference a
+value with `{{$.query.key}}` to return it.
+
+## Use request values in responses
+
+Served mocks expose three request sources to templates:
+
+| Source | Syntax | Example value |
+| --- | --- | --- |
+| Path capture | `{{$.params.[0]}}` | `p-42` |
+| Query parameter | `{{$.query.category}}` | `books` |
+| Request header | `{{$.headers.[x-api-key]}}` | `secret-123` |
+
+Use square brackets for numeric keys (`[0]`) and for headers that contain a hyphen.
+Header names are lowercase.
+
+### Values are strings
+
+Query values, captures, and headers are always strings. Setting `"type": "integer"`
+alone doesn't convert them: `"const": "{{$.query.page}}"` still returns `"2"`. Use
+`math` to return a number:
+
+```json
+{ "type": "integer", "const": "{{math $.query.page \"+\" 0}}" }
+```
+
+### Handle a missing value
+
+If the request doesn't include a referenced value, Mockzilla leaves the template text
+in the response. For example, with no `category`, `{{$.query.category}}` returns the
+literal string `"{{$.query.category}}"`. Choose one fix:
+
+- **Give it a default:** `{{default $.query.category "all"}}`.
+- **Require the key:** add the query row `category` = `*` so requests without it
+  don't match this mock.
+
+`math` with a missing value returns `"NaN"`, so require numeric parameters or give them
+a default.
+
+### Combine values into text
+
+A template can mix literal text and several values:
+
+```json
+{ "type": "string", "const": "Product {{$.params.[0]}} in {{$.query.category}}" }
+```
+
+Templates also work inside array items. Each generated item gets the same value.
+
+The request **body** is not available to served mock templates. To return the body
+as-is, use **Echo Request Body** on a non-wildcard mock.
+
+## Give selected IDs their own response
+
+Add a **specific variant** when a few IDs need a fixed response, such as a missing or
+discontinued product:
+
+1. Click **Add specific variant**.
+2. Enter the capture value, for example `p-404`.
+3. Set **Status Code** to `404` and give it a Manual JSON body:
+
+```json
+{ "error": "Product not found" }
+```
+
+Mockzilla chooses a variant in this order:
+
+1. A **specific variant** whose captures equal the request's captures.
+2. The **fallback**, if there is one.
+3. Otherwise, **Return 404 when no variant matches** decides:
+   - **On:** respond `404` with the error `No matching variant found`.
+   - **Off:** use the mock's stored base response.
+
+A mock can have one fallback. For endpoints with more than one `*`, a specific variant
+needs one value per star, in order. `user-7` plus `order-3` matches only that exact
+pair. Values are compared after URL-decoding, so a variant `a/b` also matches a
+request where the capture is `a%2Fb`.
+
+A variant replaces the whole response: body, status code, body type, and schema. Echo
+Request Body is off for variant responses. Each variant can be static or dynamic, so a
+dynamic fallback and static specific variants work well together.
+
+Variants only choose a response **after** this mock wins the request. They never decide
+which mock wins.
+
+## When two mocks match
+
+If several mocks in a folder match a request, Mockzilla scores each one and uses the
+highest score:
+
+- **Path type:** Exact `300`, Wildcard `200`, Substring `100`.
+- **Query rows:** `+10` per required row, plus `+1` for each row with an exact (no `*`)
+  value.
+- **Endpoint length:** `+1` per character of the endpoint path.
+
+For example, with the request `/users/1?role=admin`:
+
+| Mock | Score | Result |
+| --- | --- | --- |
+| Wildcard `/users/*`, query `role` = `admin` | 200 + 11 + 8 = **219** | Wins |
+| Wildcard `/users/*`, query `role` = `*` | 200 + 10 + 8 = 218 | |
+| Wildcard `/users/*`, no query rows | 200 + 8 = 208 | |
+
+An exact path usually beats a wildcard. A wildcard with many more query rows can still
+outscore it. See [Strategy precedence](/docs/reference/routing-and-matching#strategy-precedence)
+for the full rules and tie-breakers.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `Mock endpoint not found` | The method, path, or a required query row doesn't match | Check the method and every required query key. `key = *` still requires the key. |
+| `No matching variant found` | No specific variant matches, there is no fallback, and 404 is on | Add a fallback or turn off **Return 404 when no variant matches** |
+| Response shows `{{$.query.x}}` literally | The request doesn't include `x` | Use `{{default $.query.x "..."}}` or require `x = *` |
+| A number comes back as a string | Templates always produce strings | Use `{{math $.query.x "+" 0}}` |
+| A capture is missing or empty | The wrong capture position | The first `*` is `$.params.[0]` |
+| The wrong mock answers | Another mock scores higher | Make the endpoints and query rows more specific, or disable the other mock |
+| `/products/*` answers `/shop/products/1` | A wildcard can match the end of a longer path | Use the full prefix, such as `/api/products/*` |
+| `?limit=10` doesn't change the array size | Query values don't change schema settings | Set `minItems`/`maxItems` in the schema |
+| The request body is empty in the response | Served templates don't include the body | Use **Echo Request Body** |
+
+See the [Routing & Matching Reference](/docs/reference/routing-and-matching) for all
+matching rules, the [Dynamic Data Syntax](/docs/reference/dynamic-interpolation)
+reference for helpers, and the [JSON Schema Reference](/docs/reference/json-schema) for
+Faker options.

@@ -11,7 +11,7 @@ description: Use when translating OpenAPI, Swagger, technical specs, Jira requir
 1.  **Data over Placeholders**: Never use `"string"` or `"number"` as values. Use specific Faker methods that match the business domain.
 2.  **Schema Strictness**: Always set `additionalProperties: false`. A mock that allows "anything" is a mock that hides bugs.
 3.  **Consistent IDs**: Ensure that if an ID appears in multiple mocks (e.g., `userId`), it follows a consistent format (e.g., UUID vs. Serial).
-4.  **Proactive Variants**: If a spec mentions an error code (401, 403, 422), implement it immediately as a wildcard variant.
+4.  **Proactive Error Cases**: If a spec mentions an error code (401, 403, 404, 422), implement it immediately: as a wildcard variant for a specific capture value (e.g. ID `missing` → 404), or as a separate mock on the same path with a required query parameter (e.g. `force_error=true` → 401). Variants select by path captures only, never by query, header, or body.
 5.  **Always verify**: Call `manage_mocks` (action: `preview`) on the first 3 primary endpoints before finishing.
 
 ## References
@@ -59,7 +59,7 @@ Before calling tools, determine the **Business Domain** (Fintech, Healthcare, E-
 ### 3. Structural Patterns
 - **Pagination**: Preserve the response envelope from the source spec. If unspecified, use a consistent `data` array plus `meta` (`total`, `page`, `limit`) and document that choice.
 - **Polymorphism**: If a spec uses `oneOf` or `anyOf`, represent this using a complex JSON Schema with `anyOf` sub-objects.
-- **Path Params**: For `/users/:id`, set `path: "/users/*"`, `matchType: "wildcard"` and add a `variants` entry with key `id` to handle specific IDs.
+- **Path Params**: For `/users/{id}`, set `path: "/users/*"` and `matchType: "wildcard"`. Add an `isFallback: true` variant for the normal response, and add `captures: ["<value>"]` variants for specific IDs (for example `captures: ["missing"]` with status 404). `captures` holds request values, not parameter names.
 - **Nested Resource Groups**: When a spec is naturally grouped by tag or prefix, create subfolders with `manage_mock_subfolders`, then pass the returned `id` as `mockFolderId` and keep each mock path relative to that subfolder.
 - **Stateful flows**: If the spec defines a complex CRUD flow, create a scenario and use `manage_transitions` (`create_full` for a new atomic scenario, or `create` for incremental changes).
 
@@ -85,8 +85,8 @@ manage_folders (action: 'list' - check for duplicates)
 ## 💡 Expert Best Practices
 
 - **Path Parameter Precision**: For paths like `/users/*`, set `matchType: "wildcard"` and provide `variants` for specific IDs.
-- **Pagination Interpolation**: Use `"page": { "const": "{$.query.page}" }` to echo the request's page number back.
-- **Error Variants**: For `matchType: "wildcard"` mocks, add variants for `401`, `403`, `404`. Set `wildcardRequireMatch: true`.
+- **Pagination Interpolation**: Use `"page": { "const": "{{$.query.page}}" }` to echo the request's page number back.
+- **Error Variants**: For `matchType: "wildcard"` mocks, add specific-capture variants for error IDs (e.g. `captures: ["missing"]` → 404) plus a fallback for everything else. Use `wildcardRequireMatch: true` only when there is no fallback and every unknown ID should return 404.
 - **Echo POST bodies**: For `POST` confirmation endpoints, use `echoRequestBody: true` in `manage_mocks` (action: `create`).
 
 ## ⏭️ Skill Chaining

@@ -5,16 +5,17 @@ description: Instantly bootstrap your functional mock environment from an OpenAP
 
 # OpenAPI Import
 
-Mockzilla can ingest any **OpenAPI 3.x** specification (YAML or JSON) and automatically generate a complete mocked backend. It's designed for **Contract-First development**, allowing front-end teams to start building before the actual API is ready.
+Mockzilla can ingest an **OpenAPI 3.x** or **Swagger 2.0** specification (YAML or JSON) and automatically generate a complete mocked backend. It's designed for **Contract-First development**, allowing front-end teams to start building before the actual API is ready.
 
 ## Feature Overview
 
 When you import a specification, Mockzilla automatically configures your environment:
 
-- **Automatic Folder Creation**: Uses the spec title to group your mocks. Re-importing updates existing routes, keeping your environment in sync with the latest contract.
-- **Smart Path Mapping**: Converts standard OpenAPI parameters (e.g., `/users/{id}`) into functional **Wildcards** (`/users/*`) immediately, and uses static nested prefixes as mock subfolders.
-- **High-Fidelity Data**: Automatically generates realistic JSON payloads using your defined schemas, formats, and `x-faker` extensions.
-- **Write Method Support**: Methods like `POST`, `PUT`, and `PATCH` are configured to **echo the request body** by default if no response schema is provided.
+- **Automatic Folder Creation**: Uses `info.title` to name the folder. Importing a newer version of the same spec **updates** the existing mocks instead of duplicating them (see [Re-importing a spec](#re-importing-a-spec)).
+- **Smart Path Mapping**: Converts standard OpenAPI parameters (e.g., `/users/{id}`) into functional **Wildcards** (`/users/*`) immediately, and uses static nested prefixes as mock subfolders. The server path (`servers[0].url`, or Swagger `basePath`) is kept, so `https://api.example.com/v1` + `/users` is served at `/api/mock/{folder}/v1/users`.
+- **High-Fidelity Data**: Generates a realistic JSON body once, at import time, from your schemas, formats, and `x-faker` extensions. If there is no schema, the first `example` or `examples` entry is used. `application/json`, other JSON types such as `application/problem+json`, and `text/plain` responses are supported.
+- **Error Responses**: Each `4xx`/`5xx` response becomes its own mock, selected by adding `?__status=<code>` to the request (see [Testing error responses](#testing-error-responses)).
+- **Write Method Support**: `POST`, `PUT`, and `PATCH` operations with no response schema or example **echo the request body**. This does not apply to operations with path parameters, which return the fallback variant instead.
 
 ---
 
@@ -23,10 +24,12 @@ When you import a specification, Mockzilla automatically configures your environ
 | OpenAPI Feature | Mockzilla Implementation |
 | :--- | :--- |
 | **Nested Paths** | Static prefixes become dashboard subfolders so imported APIs stay easy to browse |
-| **Path Parameters** | `{id}` → `*` (Wildcard match) |
-| **JSON Schema** | Pre-generated realistic body + Dynamic Schema reference |
-| **Query Parameters** | Default values extracted for match matching |
-| **Success Responses** | Prioritizes `200` or `201` as the default response |
+| **Path Parameters** | `{id}` → `*` (Wildcard match) with a fallback variant holding the generated body |
+| **JSON Schema** | Body generated once at import; schema stored with Dynamic Response off |
+| **Query Parameters** | Parameters with `required: true` become required query rows with value `*` (any value). Optional parameters are not filters. Path-level parameters apply to every operation. |
+| **Success Responses** | `200`, then `201`, then any other `2xx`, then a `2XX` range (served as 200); `default` if there is none |
+| **Error Responses** | Each `4xx`/`5xx` (or `4XX`/`5XX` range) becomes a mock that requires `?__status=<code>` |
+| **External `$ref`s** | Not fetched. They are replaced with empty schemas and listed in an import warning; bundle the spec first |
 | **Metadata** | `summary` or `operationId` used to name your mocks |
 
 ---
@@ -37,6 +40,10 @@ Given this standard OpenAPI specification:
 
 ```yaml
 # openapi.yaml
+openapi: 3.0.3
+info:
+  title: My App
+  version: 1.0.0
 paths:
   /users/{userId}:
     get:
@@ -60,7 +67,8 @@ paths:
 ```
 
 **Result in Mockzilla:**
-- **Path**: `/api/mock/my-app/users/*` (Works for any ID)
+- **Folder**: `My App` (slug `my-app`), with a `users` subfolder
+- **Served URL**: `/api/mock/my-app/users/*` (Works for any ID)
 - **Method**: `GET`
 - **Generated Body**:
   ```json
@@ -73,10 +81,59 @@ paths:
 
 ---
 
+## Testing error responses
+
+For every `4xx` or `5xx` response in the spec, Mockzilla creates a second mock on the
+same path and method, named after the operation with the status code, such as
+`Get user profile (404)`. That mock requires the query parameter `__status` with the
+code as its value:
+
+```bash
+curl "http://localhost:36666/api/mock/my-app/users/42"              # 200 response
+curl "http://localhost:36666/api/mock/my-app/users/42?__status=404" # 404 response
+```
+
+The error mock has one more required query row than the success mock, so it wins
+whenever `__status` matches. A `5XX` range in the spec is served as `500`.
+
+---
+
+## Re-importing a spec
+
+Import the updated spec again to sync your mocks. Mockzilla matches each operation to
+the mock from the earlier import by **method, path, subfolder, and `__status`**:
+
+- **Matched mocks are updated** with the spec's name, status code, body, schema,
+  match type, and query parameters.
+- **Your changes are kept**: enabled/disabled, response delay, proxy target, Dynamic
+  Response mode (and its schema, when the spec has none), and wildcard variants you
+  added for specific IDs. Only the generated fallback variant is replaced.
+- **New operations** are created. Mocks for operations removed from the spec are left
+  in place; delete them yourself if you no longer need them.
+
+If two operations map to the same mock (for example `/users/{id}` and
+`/users/{name}` both become `/users/*`), the first one is imported and the import
+reports the other as skipped.
+
+---
+
+## After importing
+
+1. **Responses are static.** The body was generated once. To generate fresh data on
+   every request, open the mock and switch the response to **Dynamic Response**. For
+   wildcard mocks, do this on the **fallback** variant. Set `maxItems` on arrays
+   first: the stored schema has no import-time limit, and an array without
+   `maxItems` generates up to `MOCKZILLA_MAX_ITEMS` (1000) items.
+2. **Check import warnings.** External `$ref`s are not fetched, so schemas that use
+   them import as empty objects. Bundle the spec into one file (for example with
+   `redocly bundle`) and import again.
+
+---
+
 ## Product Dev Focus
 
 - **Parallel Development**: Front-end developers can build entire features against the "future" API contract.
 - **Realistic Data**: Use `x-faker` to ensure your UI handles real-world data constraints (emails, long names, dates) instead of static placeholders.
-- **Zero Configuration**: No manual setup for parameters or status codes. Import and start coding.
+- **Fast setup**: Paths, methods, status codes, and bodies are created for you. Switch to Dynamic Response where you want fresh data, then start coding.
 
 > **Pro Tip:** Combine OpenAPI import with the **[Chrome Extension](/docs/guides/browser-extension-sync)** to intercept real calls and redirect them to your newly created mocks.

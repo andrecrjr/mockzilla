@@ -28,9 +28,16 @@ fallback `body` for the route's existing generation-error behavior.
 
 ## Matching and precedence
 
-1. The matcher scores exact paths above wildcard paths, and wildcard paths above
-   substring paths. Therefore `/users/test` still uses an exact mock even when
-   `/users/*` has a matching variant or `key: "*"` catch-all.
+1. The matcher (`lib/utils/mock-matcher.ts`, `scoreCandidate`) scores
+   `matchType` (exact 300, wildcard 200, substring 100) + 10 per required query
+   param + 1 per non-`*` query value + endpoint path length. Ties go to non-proxy
+   mocks, then the newest `createdAt` (`sortMocksForMatchTieBreakers` in the route).
+   With equal query requirements `/users/test` (exact, 311) beats `/users/*`
+   (wildcard, 208). Variants never influence mock selection, but a wildcard mock
+   with ~10 more required query params can outscore an exact path.
+   Wildcard regexes are end-anchored only (`${pattern}$`) unless the endpoint
+   contains `://`, so `/products/*` also matches `/shop/products/1`; each `*` is
+   lazy `(.+?)` and may span `/`.
 2. A wildcard mock extracts one capture per `*`, in endpoint order. The matcher
    compares the structured array directly, so captured values can contain `|`.
 3. Variant selection tries the normalized exact `captures` array, then an explicit

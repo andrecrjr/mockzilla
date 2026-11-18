@@ -8,12 +8,12 @@ description: Use Dynamic Data to simulate large datasets and test UI loading sta
 Testing infinite scroll or pagination in a UI can be painful if you have to manually create dozens of JSON objects. Mockzilla’s **Dynamic Data** feature makes this effortless.
 
 ## The Goal
-Create an endpoint `/api/posts` that returns a different number of realistic posts based on a `limit` query parameter, or just generates a large list by default.
+Create an endpoint `/api/posts` that returns realistic generated posts. The schema controls the number of posts; a `limit` query parameter can be copied into response metadata, but does not change the generated array size.
 
 ---
 
 ## Step 1: Define the Post Schema
-In your mock's **Response Config**, enable **From Schema** and paste this JSON Schema:
+Create a `GET` mock with endpoint `/api/posts`. In **Mock Response**, select **Dynamic Response** and paste this JSON Schema:
 
 ```json
 {
@@ -27,7 +27,7 @@ In your mock's **Response Config**, enable **From Schema** and paste this JSON S
       "title": { "type": "string", "faker": "lorem.sentence" },
       "author": { "type": "string", "faker": "person.fullName" },
       "content": { "type": "string", "faker": "lorem.paragraphs" },
-      "createdAt": { "type": "string", "faker": "date.past" }
+      "createdAt": { "type": "string", "format": "date-time", "faker": "date.past" }
     },
     "required": ["id", "title", "author"]
   }
@@ -35,7 +35,8 @@ In your mock's **Response Config**, enable **From Schema** and paste this JSON S
 ```
 
 ### Why this works:
-- **`minItems`/`maxItems`**: Ensures you always get a varied number of results, helping you test how your UI handles different list lengths.
+- **`maxItems` sets the length**: Mockzilla always generates exactly `maxItems` items, so this schema returns 20 posts on every request. To test a different list length, change `maxItems`. Always set it: an array without `maxItems` generates `MOCKZILLA_MAX_ITEMS` (default 1000) items.
+- **`format: date-time`**: Returns an ISO timestamp. Without it, `date.past` returns a JavaScript date string such as `Thu Nov 27 2025 09:22:33 GMT…`.
 - **Faker integration**: Generates realistic sentences and names instead of "test 1", "test 2".
 
 ---
@@ -46,15 +47,21 @@ To test how your UI looks when there is **no data**, you don't need a new mock. 
 ```json
 {
   "type": "array",
-  "maxItems": 0
+  "minItems": 0,
+  "maxItems": 0,
+  "items": { "type": "object" }
 }
 ```
+
+Set both limits to `0` and keep `items`. Without `items` the schema fails and Mockzilla
+falls back to the static response; with only `maxItems: 0`, one item is still
+generated.
 **Outcome**: Your endpoint will now return `[]`, allowing you to verify your "No posts found" UI state.
 
 ---
 
 ## Step 3: Dynamic Pagination
-Instead of creating multiple mocks, you can now use a single mock that echoes back your `page` and `limit` query parameters using **Request Context Interpolation**.
+Instead of creating multiple mocks, use a single mock that echoes back your `page` and `limit` query parameters using **Request Context Interpolation**. These values are metadata only; the schema's `minItems` and `maxItems` set the array size.
 
 ```json
 {
@@ -64,15 +71,15 @@ Instead of creating multiple mocks, you can now use a single mock that echoes ba
     "meta": {
       "type": "object",
       "properties": {
-        "page": { "const": "{$.query.page}" },
-        "limit": { "const": "{$.query.limit}" }
+        "page": { "type": "integer", "const": "{{math (default $.query.page 1) \"+\" 0}}" },
+        "limit": { "type": "integer", "const": "{{math (default $.query.limit 10) \"+\" 0}}" }
       }
     }
   }
 }
 ```
 
-When you call `?page=2&limit=50`, the response will automatically reflect those values in the `meta` object.
+When you call `?page=2&limit=50`, `meta` returns `{"page": 2, "limit": 50}` as numbers. Without the query string it returns the defaults `1` and `10`. The `items` array still contains the 10 entries configured in its schema. See [missing values and types](/docs/reference/dynamic-interpolation#missing-values-and-types) for how `default` and `math` work.
 
 ---
 
@@ -105,7 +112,7 @@ Mockzilla is a **developer and AI-first** platform. Instead of writing JSON Sche
 By using Dynamic Data, you can:
 1.  **Test Large Lists**: Set `maxItems` to 100+. (Capped by `MOCKZILLA_MAX_ITEMS` env var, default 1000).
 2.  **Test Varied Content**: Use Faker to generate long and short strings.
-3.  **Test Empty States**: Set `maxItems` to 0.
-4.  **Echo Request Data**: Use `{$.query.field}` to simulate paginated APIs realistically.
+3.  **Test Empty States**: Set `minItems` and `maxItems` to 0.
+4.  **Echo Request Data**: Use `{{$.query.field}}` to include query values in the response.
 
 > **Next Step**: See all configuration options in the [Configuration Reference](/docs/getting-started/configuration).

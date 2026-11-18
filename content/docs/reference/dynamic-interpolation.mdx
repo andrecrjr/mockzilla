@@ -41,16 +41,16 @@ Mocking dates and expirations is easy with built-in time manipulation.
 
 ---
 
-## 4. Collection Wizards (Array Manipulation)
-Sculpt request arrays before returning them.
+## 4. Collection Helpers
+Use collection helpers on array fields produced by a dynamic schema, such as a generated `users` or `items` field.
 
 | Helper | Description | Example |
 |--------|-------------|---------|
-| `filter` | Filters an array by a key/value pair. | `{{filter $.body.users "status" "active"}}` |
-| `sort` | Sorts an array by a specific key. | `{{sort $.body.products "price" "desc"}}` |
-| `slice` | Returns a portion of an array. | `{{slice $.body.items 0 10}}` |
-| `join` | Joins array elements into a string. | `{{join $.query.tags ", "}}` |
-| `json` | Stringifies an object/array. | `{{{json $.body.users}}}` |
+| `filter` | Filters an array by a key/value pair. | `{{filter $.users "status" "active"}}` |
+| `sort` | Sorts an array by a specific key. | `{{sort $.products "price" "desc"}}` |
+| `slice` | Returns a portion of an array. | `{{slice $.items 0 10}}` |
+| `join` | Joins array elements into a string. | `{{join $.tags ", "}}` |
+| `json` | Stringifies an object/array. | `{{{json $.users}}}` |
 
 ---
 
@@ -69,36 +69,25 @@ Format your data to look production-ready.
 
 ## 6. Power Patterns (Masterclass)
 
-### The "Search & Paginate" Pattern
-Filter request data, sort it, and return a specific page with metadata.
+### Echo request values in a response
+In a served mock, path captures and query parameters are available in the response context. Query values are strings.
 
 ```handlebars
 {
-  "metadata": {
-    "total": {{$.body.products.length}},
-    "returned": {{$.query.limit}},
-    "next_page": "{{dateAdd (now) 1 'days'}}"
-  },
-  "results": [
-    {{#each (slice (sort (filter $.body.products "category" $.query.cat) "price" "asc") 0 5)}}
-    {
-      "id": "{{this.id}}",
-      "slug": "{{slugify this.name}}",
-      "price_pretty": "{{currency this.price 'USD'}}",
-      "is_cheap": {{#if (lt this.price 20)}}true{{else}}false{{/if}}
-    }{{#unless @last}},{{/unless}}
-    {{/each}}
-  ]
+  "productId": "{{$.params.[0]}}",
+  "category": "{{$.query.category}}",
+  "page": "{{$.query.page}}",
+  "generatedAt": "{{now}}"
 }
 ```
 
-### The "Dynamic User Role" Pattern
-Return different nested structures based on complex permission logic.
+### Build a response from request values
+Return a different permission list based on a request header or query value.
 
 ```handlebars
 {
   "user": "{{faker.person.fullName}}",
-  "permissions": {{#if (or (eq $.headers.[x-role] "admin") (eq $.query.user_id 1))}}
+  "permissions": {{#if (or (eq $.headers.[x-role] "admin") (eq $.query.user_id "1"))}}
     ["read", "write", "delete", "sudo"]
   {{else}}
     ["read"]
@@ -117,11 +106,27 @@ Return different nested structures based on complex permission logic.
 | Goal | Handlebars Syntax |
 |------|-------------------|
 | Query Param | `{{$.query.id}}` |
-| JSON Body | `{{$.body.user.email}}` |
 | Path Segment | `{{$.params.[0]}}` |
 | Headers | `{{$.headers.[user-agent]}}` |
-| Request body | `{{$.body.field_name}}` |
-| Request query | `{{$.query.parameter_name}}` |
+
+For ordinary served mock responses, the available request context is query parameters,
+wildcard captures, and headers. The request body is not available for response
+interpolation; use **Echo Request Body** when you need to return it unchanged.
+
+Header names are lowercase. Use brackets for numeric keys and hyphenated names:
+`{{$.params.[0]}}`, `{{$.headers.[x-api-key]}}`.
+
+### Missing values and types
+
+| Situation | Result | Fix |
+| --- | --- | --- |
+| The value is in the request | Inserted as a **string** | — |
+| The value is missing | The template text stays in the output, for example `"{{$.query.page}}"` | `{{default $.query.page "1"}}`, or require the key in Query Parameters |
+| A number is needed | `"const": "{{$.query.page}}"` returns `"2"` | `{{math $.query.page "+" 0}}` returns `2` |
+| `math` with a missing value | `"NaN"` | Require the key or add a default |
+
+See the [Dynamic Wildcard Mocks guide](/docs/guides/dynamic-wildcard-mocks) for a
+complete example.
 
 ---
 
@@ -131,9 +136,8 @@ Mockzilla is unique because it preserves JSON types even through Handlebars. If 
 
 ```json
 {
-  "isAdmin": {{#if $.query.admin}}true{{else}}false{{/if}},
-  "price": {{math $.query.base "*" 1.1}},
-  "raw_data": {{{json $.body.items}}}
+  "isAdmin": {{#if (eq $.query.admin "true")}}true{{else}}false{{/if}},
+  "price": {{math $.query.base "*" 1.1}}
 }
 ```
 *(Notice: Use triple braces `{{{json ...}}}` to prevent Handlebars from HTML-escaping JSON characters!)*

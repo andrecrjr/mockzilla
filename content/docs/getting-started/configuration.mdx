@@ -5,57 +5,62 @@ description: Customize Mockzilla via environment variables and Docker settings.
 
 # Configuration
 
-Mockzilla is highly configurable via environment variables. This guide covers the most common settings for development and production.
+Mockzilla is configured with environment variables. This page covers the settings the
+server actually reads.
 
 ## Environment Variables
 
 ### Core Settings
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | The port Mockzilla runs on inside Docker. | `36666` |
-| `NODE_ENV` | Environment mode (`development` or `production`). | `development` |
-| `DEPLOY_MODE` | Controls available features. `full` enables the complete dashboard. `landing` serves only the marketing page. | `full` |
-| `NEXT_PUBLIC_APP_URL` | The base URL where Mockzilla is hosted. | `http://localhost:36666` |
-| `NEXT_TELEMETRY_DISABLED` | Disables anonymous data collection by Next.js. | `1` |
+| `PORT` | Port the server listens on. | `36666` |
+| `NODE_ENV` | `development` or `production`. | `development` in Docker Compose |
+| `DEPLOY_MODE` | `full` serves the dashboard and APIs and redirects `/` to `/app`. `landing` serves only the marketing pages and docs; `/app` and `/api` return 404. | `full` |
+| `NEXT_TELEMETRY_DISABLED` | Set to `1` to disable Next.js telemetry. | `1` in Docker |
+| `NODE_ORIGINS` | Comma-separated hosts allowed to open the **development** server from another device, such as `192.168.1.10`. | *(none)* |
 
 ### Database
-Mockzilla uses PostgreSQL with Drizzle ORM.
+Mockzilla stores folders and mocks in PostgreSQL through Drizzle ORM.
+
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | Full PostgreSQL connection string. |
-| `POSTGRES_USER` | Database user (development only). |
-| `POSTGRES_PASSWORD` | Database password (development only). |
-| `POSTGRES_DB` | Database name (development only). |
+| `DATABASE_URL` | PostgreSQL connection string. If it is **not set**, Mockzilla uses an embedded PGlite database instead. |
+| `MOCKZILLA_DATA_DIR` | Directory for PGlite data when `DATABASE_URL` is unset. Defaults to `./data` (`/app/data` in the Docker image). |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Used by the development `docker-compose.yaml` to create its PostgreSQL container. All default to `mockzilla`. |
+
+To keep PGlite data between container restarts, mount a volume at `/app/data`:
+
+```bash
+docker run -p 36666:36666 -v mockzilla-data:/app/data andrecrjr/mockzilla:latest
+```
 
 ### Data Generation
-Control how JSON Schema Faker behaves.
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MOCKZILLA_MAX_ITEMS` | Maximum number of items in generated arrays. | `1000` |
+| `MOCKZILLA_MAX_ITEMS` | Upper limit for generated arrays. Arrays with no `maxItems` in their schema generate this many items. | `1000` |
 
-### Next.js Specifics
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NEXT_DISABLE_ESLINT` | Skips ESLint checks during the build process to speed up iteration. | `true` |
-
-### Docker Configuration
-Mockzilla is designed to be run with Docker Compose.
+### Docker Compose example
 
 ```yaml
 # docker-compose.yaml snippet
 services:
   app:
     environment:
-      - DATABASE_URL=postgres://mockzilla:password@postgres:5432/mockzilla
-      - NEXT_PUBLIC_APP_URL=http://localhost:36666
+      - PORT=36666
+      - DATABASE_URL=postgresql://mockzilla:mockzilla@postgres:5432/mockzilla
     ports:
       - "36666:36666"
 ```
 
 ## Advanced Settings
 
-### CORS Configuration
-Mockzilla handles CORS automatically in `middleware.ts`, allowing all origins in development and restricted origins in production based on `NEXT_PUBLIC_APP_URL`.
+### CORS
+Every `/api/*` response, including served mocks and MCP, includes CORS headers.
+Mockzilla echoes the request's `Origin` (or `*` when there is none), allows
+credentials, and answers `OPTIONS` preflight requests directly. There is no origin
+allow-list to configure, so put Mockzilla behind your own proxy if you need to
+restrict access.
 
 ### MCP (Model Context Protocol)
-To use Mockzilla with AI agents via MCP, ensure the MCP endpoint is accessible at `/api/mcp`. No additional configuration is required beyond standard environment setup.
+The MCP endpoint is `/api/mcp`, for example `http://localhost:36666/api/mcp`. It needs
+no extra configuration. See [AI Integration (MCP)](/docs/guides/ai-integration-mcp).

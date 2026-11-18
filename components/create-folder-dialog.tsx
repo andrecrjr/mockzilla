@@ -112,7 +112,7 @@ export function CreateFolderDialog({
 						<DialogDescription>
 							Create a new folder to organize your mock endpoints.{' '}
 							<Link
-								href="/docs#overview"
+								href="/docs"
 								className="text-primary hover:underline inline-flex items-center gap-1"
 							>
 								Learn more <HelpCircle className="h-3 w-3" />

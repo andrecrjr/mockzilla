@@ -150,7 +150,7 @@ Tags: #routing #mock #schema #echo #nextjs #drizzle #handlebars
   - 404 when folder or mock not found (app/api/mock/[...path]/route.ts:22–24, 39–43).
   - 500 on internal errors (app/api/mock/[...path]/route.ts:115–118).
 - Related Docs
-  - `documentation/schema-interpolation.md` — how `{$.path}` templates resolve.
+  - `documentation/schema-interpolation.md` — how `{{$.path}}` templates resolve.
   - `documentation/test-schemas.md` — sample schemas for dynamic generation.
 
 ---
@@ -234,7 +234,7 @@ Tags: #jsonschema #faker #templates #llm-context #handlebars
   - **Smart Hybrid Engine**: Automatically switches between **Type-Preserving Interpolation** (for valid JSON) and **Handlebars** (for logic/loops).
   - **Handlebars-First Workflows**: Both **Responses** and **Database Effects** support full Handlebars power, including loops, conditionals, and Faker.
   - Custom Helpers: `math` (arithmetic), `faker` (dynamic data), `eq/neq/gt/lt/gte/lte` (comparisons).
-  - Template interpolation using `{$.path}` or `{{$.path}}` across the generated object (lib/schema-generator.ts).
+  - Template interpolation using `{{$.path}}` across the generated object and request context (lib/schema-generator.ts). Single-brace `{$.path}` is not resolved.
   - Validation helper `validateSchema`.
   - Entry point: `generateFromSchema`, `replaceTemplates`.
 - Dependencies

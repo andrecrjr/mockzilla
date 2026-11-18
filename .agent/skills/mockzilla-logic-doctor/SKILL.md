@@ -98,7 +98,7 @@ manage_logs (action: 'get' - find the incident)
 ## 💡 Pro Tips for Experts
 
 - **Header Normalization**: Always provide headers as lowercase in `workflow_control` (action: `test`) — `{ "authorization": "Bearer token" }`, not `Authorization`.
-- **Interpolation Check**: For workflow responses, use `{{path}}` (double braces) not `{$.path}` (single brace with `$.`). The `{$.path}` syntax is for JSON Schema mocks created through `manage_mocks`.
+- **Interpolation Check**: Both workflow responses and JSON Schema mocks use double braces (`{{path}}`, `{{$.query.id}}`). Single-brace `{$.path}` is not resolved anywhere and is returned literally.
 - **Relational Integrity**: If a transition pushes to a table, ensure the primary key (e.g., `id`) is interpolated correctly from the input or state.
 - **Effect Order**: Effects execute in array order. `state.set` before `db.push` if the push value depends on state.
 - **Conditions are AND logic**: All conditions in the array must pass. For OR logic, create a separate transition.

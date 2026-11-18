@@ -10,7 +10,7 @@ the target instead of returning the mock's static response.
 
 1. **Matched Request**: A request must match an existing mock by method, path,
    match type, and query params.
-2. **Live Fetch**: Mockzilla forwards the request to the exact **Proxy Target URL** configured in the mock, preserving query parameters, method, headers, and request body. The original mock path is NOT appended to the target URL.
+2. **Live Fetch**: Mockzilla forwards the request to the exact **Proxy Target URL** configured in the mock, preserving query parameters, method, headers (except `Host`), and request body. The original mock path is NOT appended to the target URL.
 3. **Auto-Record**: The live response is returned to the client and saved as a new exact-match mock in the same folder, using the original request path.
 4. **No Folder Fallback**: If no mock matches, Mockzilla returns `404`; folder
    metadata does not enable proxy recording.
@@ -20,7 +20,7 @@ the target instead of returning the mock's static response.
 ### Via Dashboard
 
 1. Create or edit a mock endpoint.
-2. Under the basic fields, enter a **Proxy Target URL**.
+2. Open **Advanced Options** and enter a **Proxy Target URL**.
 3. Save the mock.
 
 ### Via API
@@ -28,7 +28,7 @@ the target instead of returning the mock's static response.
 Pass `proxyTargetUrl` inside the mock `meta` object in the request body.
 
 ```bash
-curl -X PUT "http://localhost:3000/api/mocks?id={mock-id}" \
+curl -X PUT "http://localhost:36666/api/mocks?id={mock-id}" \
      -H "Content-Type: application/json" \
      -d '{
        "name": "Specific Proxy", 
@@ -38,7 +38,58 @@ curl -X PUT "http://localhost:3000/api/mocks?id={mock-id}" \
 
 ## Features
 
-- **Transparent Proxying**: Method, headers, and body are preserved during the proxy request.
+- **Transparent Proxying**: Method, headers (except `Host`), body, and query parameters are preserved during the proxy request.
+- **Smart Body Detection**: Automatically detects if the response is JSON or plain text based on the `Content-Type` header.
+- **Immediate Availability**: The recorded mock is active immediately and visible in the dashboard for further customization.
+- **Mock Scoped**: Each proxy recorder is attached to one mock, so different endpoints can proxy to different upstream services inside the same folder.
+
+## Use Cases
+
+- **Backend Replacement**: Set the proxy to your staging server, hit all your app's features once, and you have a full mock environment ready for offline dev.
+- **Edge Case Capture**: Point the proxy to a server that is currently exhibiting a bug. Once Mockzilla records the faulty response, you can test your frontend fix against it repeatedly.
+- **API Versioning**: Record responses from `v1` of an API to ensure your app remains compatible while you develop against `v2`.
+
+## Precedence
+
+When several mocks match the same request, Mockzilla uses the normal
+[match score](/docs/reference/routing-and-matching#strategy-precedence): path type,
+required query parameters, and endpoint length. When scores tie:
+
+1. **Recorded vs. Proxy**: a mock **without** a `proxyTargetUrl` wins over one
+   **with** a `proxyTargetUrl`.
+2. **Recency**: otherwise, the most recently created mock wins.
+
+The recorded mock uses the exact request path and **every query parameter of the
+recorded request** as required query parameters. Because it is exact and has those
+query rows, it normally outscores the proxy mock for the same request, so the next
+identical request is served from the recording instead of being proxied again. A
+request with different query values still reaches the proxy and creates another
+recording.
+
+## Configuration
+
+### Via Dashboard
+
+1. Create or edit a mock endpoint.
+2. Open **Advanced Options** and enter a **Proxy Target URL**.
+3. Save the mock.
+
+### Via API
+
+Pass `proxyTargetUrl` inside the mock `meta` object in the request body.
+
+```bash
+curl -X PUT "http://localhost:36666/api/mocks?id={mock-id}" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "name": "Specific Proxy", 
+       "meta": { "proxyTargetUrl": "https://api.example.com" }
+     }'
+```
+
+## Features
+
+- **Transparent Proxying**: Method, headers (except `Host`), body, and query parameters are preserved during the proxy request.
 - **Smart Body Detection**: Automatically detects if the response is JSON or plain text based on the `Content-Type` header.
 - **Immediate Availability**: The recorded mock is active immediately and visible in the dashboard for further customization.
 - **Mock Scoped**: Each proxy recorder is attached to one mock, so different endpoints can proxy to different upstream services inside the same folder.

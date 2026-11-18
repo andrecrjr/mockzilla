@@ -35,7 +35,7 @@ In Mockzilla, create a new mock for `GET /api/dashboard/summary`. Instead of har
 
 ### The Dynamic Schema
 
-Paste this into the **JSON Schema** tab in Mockzilla and enable **Dynamic Response**:
+In the mock's **Mock Response** section, select **Dynamic Response** and paste this schema:
 
 ```json
 {
@@ -44,7 +44,7 @@ Paste this into the **JSON Schema** tab in Mockzilla and enable **Dynamic Respon
     "user": {
       "type": "object",
       "properties": {
-        "id": { "type": "string", "faker": "string.alphanumeric" },
+        "id": { "type": "string", "faker": { "string.alphanumeric": 10 } },
         "name": { "type": "string", "faker": "person.fullName" },
         "tier": { "type": "string", "enum": ["free", "pro", "premium"] }
       },
@@ -60,8 +60,8 @@ Paste this into the **JSON Schema** tab in Mockzilla and enable **Dynamic Respon
     },
     "recent_transactions": {
       "type": "array",
-      "minItems": 3,
-      "maxItems": 7,
+      "minItems": 5,
+      "maxItems": 5,
       "items": {
         "type": "object",
         "properties": {
@@ -82,13 +82,13 @@ Paste this into the **JSON Schema** tab in Mockzilla and enable **Dynamic Respon
 
 ## 3. The Result: Instant Unblocking
 
-1. **Realistic UI Testing:** Every refresh yields new names, balances, and categories. Test for text-overflows, empty transaction states, and badge rendering logic.
+1. **Realistic UI Testing:** Every refresh yields new names, balances, and categories. Test for text overflow and badge rendering logic. Arrays always contain exactly `maxItems` entries (5 here); set `minItems` and `maxItems` to `0` to test the empty transactions state.
 2. **Zero Blockers:** The frontend team can finish the entire Dashboard UI/UX and get it approved by stakeholders in 2 days.
 3. **Perfect Contract:** The Backend team now has the exact JSON schema they need to implement. No guessing what the frontend needs.
 
 <div className="mt-8 p-6 bg-primary/10 rounded-xl border border-primary/20">
   <h3 className="text-xl font-bold mb-2">🤖 Do it with AI</h3>
   <blockquote className="border-l-4 border-primary pl-4 italic">
-    "Create a Mockzilla endpoint at GET /api/dashboard/summary. Use a dynamic schema for a financial dashboard: user profile, balance stats with percentage changes, and 3-7 transactions with merchant names and categories."
+    "Create a Mockzilla endpoint at GET /api/dashboard/summary. Use a dynamic schema for a financial dashboard: user profile, balance stats with percentage changes, and 5 transactions with merchant names and categories."
   </blockquote>
 </div>
