@@ -49,6 +49,8 @@ type VariantPathEditorProps = {
 	endpoint: string;
 	variant: MockVariant;
 	onCapturesChange: (captures: string[]) => void;
+	/** Builds the full served URL for an example path; falls back to the path. */
+	buildPreviewUrl?: (examplePath: string) => string | null;
 };
 
 /** Edits one value per wildcard while keeping the route context visible. */
@@ -56,15 +58,30 @@ export function VariantPathEditor({
 	endpoint,
 	variant,
 	onCapturesChange,
+	buildPreviewUrl,
 }: VariantPathEditorProps) {
 	const normalizedVariant = normalizeMockVariant(variant, endpoint);
 	const wildcardCount = getWildcardCount(endpoint);
 	const captures = normalizedVariant.captures;
 	let captureIndex = 0;
 
+	const hasMissingValue =
+		!normalizedVariant.isFallback &&
+		wildcardCount > 0 &&
+		Array.from({ length: wildcardCount }, (_, i) => captures[i] ?? '').some(
+			(capture) => !capture.trim(),
+		);
+
+	const examplePath = generateExampleUrl(
+		endpoint,
+		normalizedVariant.isFallback ? undefined : captures,
+	);
+	const previewText = buildPreviewUrl?.(examplePath) ?? examplePath;
+
 	const handleCaptureChange = (index: number, value: string) => {
+		// Size to the current endpoint so values for removed wildcards are dropped.
 		const nextCaptures = Array.from(
-			{ length: Math.max(wildcardCount, captures.length) },
+			{ length: wildcardCount },
 			(_, currentIndex) => captures[currentIndex] ?? '',
 		);
 		nextCaptures[index] = value;
@@ -120,34 +137,13 @@ export function VariantPathEditor({
 			<p className="text-xs text-muted-foreground">
 				Preview:{' '}
 				<code className="break-all font-mono text-foreground/80">
-					{generateExampleUrl(
-						endpoint,
-						normalizedVariant.isFallback ? undefined : captures,
-					)}
+					{previewText}
 				</code>
 			</p>
-		</div>
-	);
-}
-
-/** Require match indicator. */
-export function RequireMatchIndicator({
-	requireMatch,
-}: {
-	requireMatch: boolean;
-}) {
-	return (
-		<div className="flex items-center gap-2 pt-1">
-			{requireMatch ? (
-				<div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-					<span>⚠</span>
-					<span>Require match: returns 404 if no variant matches</span>
-				</div>
-			) : (
-				<div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-					<span>✓</span>
-					<span>Fallback: uses base mock if no variant matches</span>
-				</div>
+			{hasMissingValue && (
+				<p className="text-xs text-amber-600 dark:text-amber-400">
+					Fill in every wildcard value before saving.
+				</p>
 			)}
 		</div>
 	);

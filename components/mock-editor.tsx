@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
 	AdvancedOptions,
@@ -35,9 +35,11 @@ import {
 	splitPathSearchParams,
 } from '@/lib/utils/mock-paths';
 import {
+	alignVariantCaptures,
 	getWildcardCount,
 	normalizeMockVariants,
 } from '@/lib/utils/mock-variants';
+import { getStatusCodeOptions } from '@/lib/utils/status-codes';
 
 export type MockFormValues = {
 	name: string;
@@ -86,23 +88,6 @@ const HTTP_METHODS: HttpMethod[] = [
 ];
 
 const ECHO_REQUEST_BODY_METHODS: HttpMethod[] = ['POST', 'PUT', 'PATCH'];
-
-const STATUS_CODES = [
-	{ value: '200', label: '200 - OK' },
-	{ value: '201', label: '201 - Created' },
-	{ value: '202', label: '202 - Accepted' },
-	{ value: '204', label: '204 - No Content' },
-	{ value: '400', label: '400 - Bad Request' },
-	{ value: '401', label: '401 - Unauthorized' },
-	{ value: '403', label: '403 - Forbidden' },
-	{ value: '404', label: '404 - Not Found' },
-	{ value: '405', label: '405 - Method Not Allowed' },
-	{ value: '409', label: '409 - Conflict' },
-	{ value: '422', label: '422 - Unprocessable Entity' },
-	{ value: '500', label: '500 - Internal Server Error' },
-	{ value: '502', label: '502 - Bad Gateway' },
-	{ value: '503', label: '503 - Service Unavailable' },
-];
 
 const createQueryParamField = (
 	key: string,
@@ -312,26 +297,35 @@ export function MockEditor({
 		);
 	}, [mockSubfolders, mockFolderId]);
 
-	const previewUrl = useMemo(() => {
-		const baseSlug = previewSlug ?? selectedFolder?.slug;
-		if (!baseSlug) return null;
-		if (!path.startsWith('/') || path.length <= 1) return null;
-		const endpointPath = path.includes('?')
-			? getEndpointInputParts(path).path
-			: path;
-		const effectivePath = getServedMockPath(
-			selectedMockSubfolder?.path ?? '/',
-			endpointPath,
-			baseSlug,
-		);
-		return `${origin}${buildMockApiBasePath(baseSlug)}${effectivePath}`;
-	}, [
-		origin,
-		previewSlug,
-		selectedFolder?.slug,
-		selectedMockSubfolder?.path,
-		path,
-	]);
+	const buildServedUrl = useCallback(
+		(endpointPath: string): string | null => {
+			const baseSlug = previewSlug ?? selectedFolder?.slug;
+			if (!baseSlug) return null;
+			if (!endpointPath.startsWith('/') || endpointPath.length <= 1) {
+				return null;
+			}
+			const effectivePath = getServedMockPath(
+				selectedMockSubfolder?.path ?? '/',
+				endpointPath,
+				baseSlug,
+			);
+			return `${origin}${buildMockApiBasePath(baseSlug)}${effectivePath}`;
+		},
+		[origin, previewSlug, selectedFolder?.slug, selectedMockSubfolder?.path],
+	);
+
+	const buildVariantPreviewUrl = (examplePath: string): string | null => {
+		const url = buildServedUrl(examplePath);
+		return url ? appendQueryParamsToUrl(url, buildQueryParamsString()) : null;
+	};
+
+	const previewUrl = useMemo(
+		() =>
+			buildServedUrl(
+				path.includes('?') ? getEndpointInputParts(path).path : path,
+			),
+		[buildServedUrl, path],
+	);
 
 	const showFolder =
 		showFolderSelect ?? (mode === 'create' && !defaultFolderId);
@@ -348,6 +342,11 @@ export function MockEditor({
 	};
 	const isEchoRequestBodyEnabled =
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
+	const advancedSettingsCount =
+		queryParams.filter((param) => param.key.trim()).length +
+		(Number.parseInt(delay || '0', 10) > 0 ? 1 : 0) +
+		(proxyTargetUrl.trim() ? 1 : 0) +
+		(isEchoRequestBodyEnabled ? 1 : 0);
 	const handlePathChange = (nextPath: string) => {
 		setPath(nextPath);
 	};
@@ -397,6 +396,15 @@ export function MockEditor({
 		}
 	};
 
+	const getAlignedVariants = (endpointPath: string) => {
+		const wildcardCount = getWildcardCount(endpointPath);
+		return (
+			normalizeMockVariants(variants, endpointPath)?.map((variant) =>
+				alignVariantCaptures(variant, wildcardCount),
+			) ?? null
+		);
+	};
+
 	const validateBeforeSubmit = (pathToValidate = path): boolean => {
 		if (showFolder && !folderId) {
 			toast.error('Error', { description: 'Please select a folder' });
@@ -424,29 +432,46 @@ export function MockEditor({
 		}
 		if (matchType === 'wildcard') {
 			try {
-				const normalizedVariants = normalizeMockVariants(variants, path) ?? [];
-				const wildcardCount = getWildcardCount(path);
+				const normalizedVariants = getAlignedVariants(pathToValidate) ?? [];
+				const wildcardCount = getWildcardCount(pathToValidate);
+				if (
+					wildcardCount === 0 &&
+					normalizedVariants.some((variant) => !variant.isFallback)
+				) {
+					throw new Error(
+						'Add * to the endpoint path before creating specific variants',
+					);
+				}
+				let specificNumber = 0;
 				for (const variant of normalizedVariants) {
+					if (!variant.isFallback) specificNumber += 1;
+					const variantLabel = variant.isFallback
+						? 'Fallback response'
+						: `Variant ${specificNumber}`;
 					if (
 						!variant.isFallback &&
 						(variant.captures.length !== wildcardCount ||
 							variant.captures.some((capture) => !capture.trim()))
 					) {
-						throw new Error('Every variant needs one value for each wildcard');
+						throw new Error(`${variantLabel} needs a value for every wildcard`);
 					}
 					if (variant.useDynamicResponse) {
 						if (variant.bodyType !== 'json') {
-							throw new Error('Dynamic variants must use JSON body type');
+							throw new Error(`${variantLabel} must use JSON body type`);
 						}
 						const validation = validateSchema(variant.jsonSchema ?? '');
 						if (!validation.valid) {
 							throw new Error(
-								validation.error || 'Invalid variant JSON Schema',
+								`${variantLabel}: ${validation.error || 'invalid JSON Schema'}`,
 							);
 						}
 						JSON.parse(variant.jsonSchema ?? '');
 					} else if (variant.bodyType === 'json') {
-						JSON.parse(variant.body);
+						try {
+							JSON.parse(variant.body);
+						} catch {
+							throw new Error(`${variantLabel} has invalid JSON`);
+						}
 					}
 				}
 			} catch (error) {
@@ -468,7 +493,7 @@ export function MockEditor({
 		const submitQueryParams = buildQueryParamFields(parsedPath.queryParams);
 		const submitPath = parsedPath.path;
 		if (!validateBeforeSubmit(submitPath)) return;
-		const normalizedVariants = normalizeMockVariants(variants, submitPath);
+		const normalizedVariants = getAlignedVariants(submitPath);
 
 		let formattedPath = formatEndpointPathForStorage(
 			submitPath,
@@ -594,7 +619,7 @@ export function MockEditor({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										{STATUS_CODES.map((code) => (
+										{getStatusCodeOptions(statusCode).map((code) => (
 											<SelectItem key={code.value} value={code.value}>
 												{code.label}
 											</SelectItem>
@@ -631,11 +656,12 @@ export function MockEditor({
 
 					{/* Right Column - Mock Response and Advanced Options */}
 					<div className="col-span-3 space-y-4">
-						<div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2 sm:flex-row lg:flex-col">
+						<div className="flex gap-2 rounded-lg border border-border bg-muted/30 p-1.5">
 							<Button
 								type="button"
 								variant={activeSection === 'response' ? 'secondary' : 'ghost'}
-								className="justify-start"
+								className="flex-1"
+								aria-pressed={activeSection === 'response'}
 								onClick={() => setActiveSection('response')}
 							>
 								Mock Response
@@ -643,10 +669,20 @@ export function MockEditor({
 							<Button
 								type="button"
 								variant={activeSection === 'advanced' ? 'secondary' : 'ghost'}
-								className="justify-start"
+								className="flex-1"
+								aria-pressed={activeSection === 'advanced'}
 								onClick={() => setActiveSection('advanced')}
 							>
 								Advanced Options
+								{advancedSettingsCount > 0 && (
+									<span
+										aria-hidden="true"
+										className="ml-1 rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary"
+										title={`${advancedSettingsCount} advanced setting${advancedSettingsCount === 1 ? '' : 's'} active`}
+									>
+										{advancedSettingsCount}
+									</span>
+								)}
 							</Button>
 						</div>
 
@@ -665,6 +701,7 @@ export function MockEditor({
 								requireMatch={wildcardRequireMatch}
 								onRequireMatchChange={setWildcardRequireMatch}
 								endpoint={path}
+								buildPreviewUrl={buildVariantPreviewUrl}
 							/>
 						</div>
 						<div hidden={activeSection !== 'advanced'}>

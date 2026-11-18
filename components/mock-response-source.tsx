@@ -106,7 +106,7 @@ export function MockResponseSource({
 				</Button>
 			</div>
 
-			<div className="grid gap-4 xl:grid-cols-2">
+			<div className="grid gap-4">
 				<section
 					hidden={useDynamicResponse}
 					className={cn(
@@ -118,7 +118,9 @@ export function MockResponseSource({
 				>
 					<div className="flex items-center justify-between gap-2">
 						<div className="flex items-center gap-2">
-							<Label htmlFor={`${idPrefix}-response`}>Manual JSON</Label>
+							<Label htmlFor={`${idPrefix}-response`}>
+								{bodyType === 'text' ? 'Manual Text' : 'Manual JSON'}
+							</Label>
 							<FieldTooltip
 								label="Manual JSON"
 								description="Keep a static response body for this mock or variant."
@@ -134,7 +136,9 @@ export function MockResponseSource({
 						id={`${idPrefix}-response`}
 						value={response}
 						onChange={(event) => onResponseChange(event.target.value)}
-						placeholder='{"message": "Hello World"}'
+						placeholder={
+							bodyType === 'text' ? 'Hello World' : '{"message": "Hello World"}'
+						}
 						className="min-h-[260px] font-mono text-sm"
 						aria-label="Manual JSON response"
 					/>
@@ -142,9 +146,8 @@ export function MockResponseSource({
 						<div className="space-y-2">
 							<Label htmlFor={`${idPrefix}-body-type`}>Body Type</Label>
 							<Select
-								value={useDynamicResponse ? 'json' : bodyType}
+								value={bodyType}
 								onValueChange={(value) => onBodyTypeChange(value as BodyType)}
-								disabled={useDynamicResponse}
 							>
 								<SelectTrigger id={`${idPrefix}-body-type`}>
 									<SelectValue />
@@ -154,11 +157,6 @@ export function MockResponseSource({
 									<SelectItem value="text">Text</SelectItem>
 								</SelectContent>
 							</Select>
-							{useDynamicResponse && (
-								<p className="text-xs text-muted-foreground">
-									Dynamic responses are always returned as JSON.
-								</p>
-							)}
 						</div>
 					)}
 				</section>

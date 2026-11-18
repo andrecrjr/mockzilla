@@ -81,3 +81,22 @@ export function applyVariantResponse<T extends VariantResponseTarget>(
 		echoRequestBody: false,
 	};
 }
+
+/**
+ * Resizes a specific variant's captures to the endpoint's current wildcard
+ * count. Values for wildcards that no longer exist are dropped, and missing
+ * ones become empty strings so validation can point at them.
+ */
+export function alignVariantCaptures(
+	variant: NormalizedMockVariant,
+	wildcardCount: number,
+): NormalizedMockVariant {
+	if (variant.isFallback || variant.captures.length === wildcardCount) {
+		return variant;
+	}
+	const captures = Array.from(
+		{ length: wildcardCount },
+		(_, index) => variant.captures[index] ?? '',
+	);
+	return { ...variant, captures, key: legacyKeyFromCaptures(captures) };
+}

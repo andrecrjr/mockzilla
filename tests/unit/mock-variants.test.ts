@@ -1,10 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { MockVariant } from '../../lib/types';
 import {
+	alignVariantCaptures,
 	getWildcardCount,
 	normalizeMockVariant,
 	normalizeMockVariants,
 } from '../../lib/utils/mock-variants';
+import {
+	getStatusCodeOptions,
+	STATUS_CODE_OPTIONS,
+} from '../../lib/utils/status-codes';
 
 const baseVariant: Omit<MockVariant, 'key' | 'captures' | 'isFallback'> = {
 	body: '{}',
@@ -60,5 +65,35 @@ describe('mock variant normalization', () => {
 	test('normalizes all variants without changing null collections', () => {
 		expect(normalizeMockVariants(null, '/users/*')).toBeNull();
 		expect(getWildcardCount('/users/*/posts/*')).toBe(2);
+	});
+
+	test('aligns captures to the current wildcard count', () => {
+		const variant = normalizeMockVariant(
+			{ ...baseVariant, key: 'alice|active', captures: ['alice', 'active'] },
+			'/users/*/status/*',
+		);
+
+		const shrunk = alignVariantCaptures(variant, 1);
+		expect(shrunk.captures).toEqual(['alice']);
+		expect(shrunk.key).toBe('alice');
+
+		const grown = alignVariantCaptures(variant, 3);
+		expect(grown.captures).toEqual(['alice', 'active', '']);
+	});
+
+	test('leaves fallback variants untouched when aligning', () => {
+		const fallback = normalizeMockVariant(
+			{ ...baseVariant, key: '*', isFallback: true },
+			'/users/*',
+		);
+		expect(alignVariantCaptures(fallback, 2)).toBe(fallback);
+	});
+});
+
+describe('getStatusCodeOptions', () => {
+	test('keeps a stored status code missing from the presets', () => {
+		const options = getStatusCodeOptions('418');
+		expect(options.some((option) => option.value === '418')).toBe(true);
+		expect(getStatusCodeOptions('200')).toBe(STATUS_CODE_OPTIONS);
 	});
 });

@@ -27,6 +27,8 @@ type ResponseConfigProps = {
 	requireMatch: boolean;
 	onRequireMatchChange: (value: boolean) => void;
 	endpoint?: string;
+	/** Builds the full served URL (host, folder, subfolder, query) for a path. */
+	buildPreviewUrl?: (examplePath: string) => string | null;
 };
 
 const MATCH_TYPES: MatchType[] = ['exact', 'wildcard', 'substring'];
@@ -53,6 +55,7 @@ export function ResponseConfig({
 	requireMatch,
 	onRequireMatchChange,
 	endpoint,
+	buildPreviewUrl,
 }: ResponseConfigProps) {
 	return (
 		<div className="space-y-6">
@@ -125,6 +128,7 @@ export function ResponseConfig({
 					requireMatch={requireMatch}
 					onRequireMatchChange={onRequireMatchChange}
 					endpoint={endpoint}
+					buildPreviewUrl={buildPreviewUrl}
 				/>
 			)}
 		</div>

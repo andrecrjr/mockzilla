@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { MockVariantManager } from '../../components/mock-variant-manager';
@@ -93,7 +93,7 @@ describe('MockVariantManager', () => {
 		expect(screen.getByLabelText('Dynamic response schema')).toBeDefined();
 		expect(
 			screen.queryByRole('textbox', { name: 'Manual JSON response' }),
-	).toBeNull();
+		).toBeNull();
 		expect(screen.getByDisplayValue('{"type":"object"}')).toBeDefined();
 	});
 
@@ -114,5 +114,88 @@ describe('MockVariantManager', () => {
 		fireEvent.click(dynamicButton);
 
 		expect(dynamicButton.getAttribute('aria-pressed')).toBe('true');
+	});
+
+	it('disables the 404 toggle when a fallback response exists', () => {
+		render(
+			<TooltipProvider>
+				<MockVariantManager
+					variants={[
+						{
+							key: '1',
+							captures: ['1'],
+							body: '{}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+						{
+							key: '*',
+							captures: [],
+							isFallback: true,
+							body: '{}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					]}
+					onVariantsChange={() => undefined}
+					requireMatch={true}
+					onRequireMatchChange={() => undefined}
+					endpoint="/users/*"
+				/>
+			</TooltipProvider>,
+		);
+
+		const toggle = screen.getByRole('switch');
+		expect(toggle.hasAttribute('disabled')).toBe(true);
+		expect(toggle.getAttribute('aria-checked')).toBe('false');
+		expect(screen.getByText('Variant 1')).toBeDefined();
+		expect(screen.getByText('Fallback response')).toBeDefined();
+	});
+
+	it('disables specific variants when the endpoint has no wildcard', () => {
+		render(
+			<TooltipProvider>
+				<MockVariantManager
+					variants={[]}
+					onVariantsChange={() => undefined}
+					requireMatch={false}
+					onRequireMatchChange={() => undefined}
+					endpoint="/users"
+				/>
+			</TooltipProvider>,
+		);
+
+		const addButton = screen.getByRole('button', {
+			name: /Add specific variant/,
+		});
+		expect(addButton.hasAttribute('disabled')).toBe(true);
+	});
+
+	it('drops values for wildcards removed from the endpoint', () => {
+		const onVariantsChange = mock((_: MockVariant[]) => undefined);
+		render(
+			<TooltipProvider>
+				<MockVariantManager
+					variants={[
+						{
+							key: 'alice|active',
+							captures: ['alice', 'active'],
+							body: '{}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					]}
+					onVariantsChange={onVariantsChange}
+					requireMatch={false}
+					onRequireMatchChange={() => undefined}
+					endpoint="/users/*"
+				/>
+			</TooltipProvider>,
+		);
+
+		fireEvent.change(screen.getByLabelText('Wildcard capture 1'), {
+			target: { value: 'bob' },
+		});
+		expect(onVariantsChange.mock.calls[0][0][0].captures).toEqual(['bob']);
 	});
 });

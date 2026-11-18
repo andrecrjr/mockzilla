@@ -212,6 +212,9 @@ Mockzilla chooses a variant in this order:
    - **On:** respond `404` with the error `No matching variant found`.
    - **Off:** use the mock's stored base response.
 
+While a fallback exists, **Return 404 when no variant matches** is disabled, because
+the fallback answers every unmatched request.
+
 A mock can have one fallback. For endpoints with more than one `*`, a specific variant
 needs one value per star, in order. `user-7` plus `order-3` matches only that exact
 pair. Values are compared after URL-decoding, so a variant `a/b` also matches a

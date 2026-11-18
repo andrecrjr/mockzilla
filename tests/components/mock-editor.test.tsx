@@ -58,7 +58,9 @@ describe('MockEditor', () => {
 			screen.getByText(/\/api\/mock\/ticket-management\/app\/ticket-type$/),
 		).toBeDefined();
 		expect(
-			screen.queryByText(/\/api\/mock\/ticket-management\/app\/ticket-management/),
+			screen.queryByText(
+				/\/api\/mock\/ticket-management\/app\/ticket-management/,
+			),
 		).toBeNull();
 	});
 
@@ -159,7 +161,9 @@ describe('MockEditor', () => {
 			/>,
 		);
 
-		expect(screen.getByRole('heading', { name: 'Mock Response' })).toBeDefined();
+		expect(
+			screen.getByRole('heading', { name: 'Mock Response' }),
+		).toBeDefined();
 		expect(
 			screen.queryByRole('heading', { name: 'Advanced Options' }),
 		).toBeNull();
@@ -206,6 +210,38 @@ describe('MockEditor', () => {
 		);
 
 		expect(screen.getByLabelText('Match Type').textContent).toContain('Exact');
+	});
+
+	it('previews wildcard variants as the full served URL with query params', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				previewSlug="shop"
+				initial={{
+					name: 'Orders',
+					path: '/users/*/orders/*',
+					queryParams: { status: 'open' },
+					response: '{}',
+					matchType: 'wildcard',
+					statusCode: '200',
+					variants: [
+						{
+							key: '7|3',
+							captures: ['7', '3'],
+							body: '{}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					],
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(
+			screen.getByText(/\/api\/mock\/shop\/users\/7\/orders\/3\?status=open$/),
+		).toBeDefined();
 	});
 
 	it('submits wildcard variants without requiring a hidden base response', async () => {
@@ -271,7 +307,8 @@ describe('MockEditor', () => {
 			screen.getAllByRole('textbox', { name: 'Manual JSON response' }).length,
 		).toBe(1);
 		expect(
-			screen.queryAllByRole('textbox', { name: 'Dynamic response schema' }).length,
+			screen.queryAllByRole('textbox', { name: 'Dynamic response schema' })
+				.length,
 		).toBe(0);
 		expect(screen.getAllByText('Active response source').length).toBe(1);
 		expect(screen.getByLabelText('Wildcard capture 1')).toBeDefined();
@@ -343,9 +380,7 @@ describe('MockEditor', () => {
 		fireEvent.change(pathInput, { target: { value: '/users?status=active' } });
 		fireEvent.blur(pathInput);
 
-		await waitFor(() =>
-			expect(screen.queryByDisplayValue('page')).toBeNull(),
-		);
+		await waitFor(() => expect(screen.queryByDisplayValue('page')).toBeNull());
 		expect(screen.queryByDisplayValue('1')).toBeNull();
 		expect(screen.getByDisplayValue('status')).toBeDefined();
 		expect(screen.getByDisplayValue('active')).toBeDefined();
@@ -427,12 +462,16 @@ describe('MockEditor', () => {
 			/>,
 		);
 
-		const pathInput = screen.getByLabelText('Endpoint Path') as HTMLInputElement;
+		const pathInput = screen.getByLabelText(
+			'Endpoint Path',
+		) as HTMLInputElement;
 		fireEvent.change(pathInput, {
 			target: { value: '/users/*?status=active' },
 		});
 		fireEvent.blur(pathInput);
-		await waitFor(() => expect(screen.getByDisplayValue('active')).toBeDefined());
+		await waitFor(() =>
+			expect(screen.getByDisplayValue('active')).toBeDefined(),
+		);
 		fireEvent.change(screen.getByDisplayValue('active'), {
 			target: { value: 'inactive' },
 		});

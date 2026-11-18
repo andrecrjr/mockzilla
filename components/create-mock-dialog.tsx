@@ -91,7 +91,9 @@ export function CreateMockDialog({
 							typeof key === 'string' &&
 							key.startsWith(`/api/mocks?folderId=${selectedFolder.id}`),
 					);
-					router.push(buildFolderHref(selectedFolder.slug));
+					router.push(
+						buildFolderHref(selectedFolder.slug, values.mockFolderId ?? null),
+					);
 				}
 			}
 			setOpen(false);

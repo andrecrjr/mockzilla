@@ -73,6 +73,29 @@ The core editor now has a responsive side menu:
   dedicated action rather than typing a special delimiter value.
 - Every variant has the same two response sources as the base mock. Dynamic variants
   automatically use JSON; static variants can use JSON or text.
+- The section switcher is a horizontal two-button control. **Advanced Options** shows
+  a count badge of active settings (query params, delay, proxy target, echo) so values
+  in the hidden section stay discoverable.
+- The response source editor is full width; only the active source (Manual JSON/Text
+  or Dynamic Response) renders.
+- Variant cards are numbered among specific variants only (`Variant 1`, `Variant 2`,
+  then `Fallback response`). New specific variants are inserted above the fallback so
+  the list reads in matching order. The summary line reads e.g.
+  `2 specific variants · fallback configured`.
+- **Return 404 when no variant matches** is disabled while a fallback exists (the
+  fallback always wins), and its helper text explains the effective no-match result:
+  404, the base response (amber warning, since the base editor is hidden in wildcard
+  mode), or "no variants yet".
+- **Add specific variant** is disabled until the endpoint contains `*`.
+- Capture inputs are sized to the current endpoint's wildcard count. On save,
+  `alignVariantCaptures()` (`lib/utils/mock-variants.ts`) drops values for wildcards
+  removed from the path and pads missing ones, so a shortened endpoint never leaves
+  invisible captures that block validation. Missing values show an inline warning.
+- Validation errors name the variant (`Variant 2 has invalid JSON`,
+  `Fallback response needs ...`).
+- Status code selects use `getStatusCodeOptions()` (`lib/utils/status-codes.ts`),
+  which keeps a stored code outside the presets (e.g. `418`) instead of rendering a
+  blank select.
 
 The separate extension editor is unchanged.
 

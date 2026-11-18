@@ -95,8 +95,14 @@ export function hasFolderPathConflict(
 	);
 }
 
-export function buildFolderHref(folderPath: string): string {
-	return `/app/folder${formatStoredFolderPath(folderPath)}`;
+export function buildFolderHref(
+	folderPath: string,
+	mockFolderId?: string | null,
+): string {
+	const href = `/app/folder${formatStoredFolderPath(folderPath)}`;
+	return mockFolderId
+		? `${href}?mockFolderId=${encodeURIComponent(mockFolderId)}`
+		: href;
 }
 
 export function buildExtensionFolderHref(folderPath: string): string {
