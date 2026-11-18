@@ -22,6 +22,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Explicit name so the landing build (also service `app`) cannot overwrite it.
+    image: mockzilla-dev:latest
     container_name: mockzilla-app-dev
     ports:
       - "36666:36666"
