@@ -39,6 +39,7 @@ import {
 	getWildcardCount,
 	normalizeMockVariants,
 } from '@/lib/utils/mock-variants';
+import { validateProxyTargetUrl } from '@/lib/utils/proxy-record';
 import { getStatusCodeOptions } from '@/lib/utils/status-codes';
 
 export type MockFormValues = {
@@ -414,6 +415,12 @@ export function MockEditor({
 			toast.error('Error', { description: 'Path must start with /' });
 			return false;
 		}
+		const proxyError = validateProxyTargetUrl(proxyTargetUrl);
+		if (proxyError) {
+			setActiveSection('advanced');
+			toast.error('Invalid proxy target', { description: proxyError });
+			return false;
+		}
 		if (!isEchoRequestBodyEnabled && matchType !== 'wildcard') {
 			try {
 				if (useDynamicResponse) {
@@ -702,6 +709,8 @@ export function MockEditor({
 								onRequireMatchChange={setWildcardRequireMatch}
 								endpoint={path}
 								buildPreviewUrl={buildVariantPreviewUrl}
+								proxyTargetUrl={proxyTargetUrl.trim()}
+								onEditProxy={() => setActiveSection('advanced')}
 							/>
 						</div>
 						<div hidden={activeSection !== 'advanced'}>

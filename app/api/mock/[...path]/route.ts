@@ -12,11 +12,20 @@ import {
 	findBestMatch,
 	selectVariant as selectMockVariant,
 } from '@/lib/utils/mock-matcher';
-import { joinMockPaths } from '@/lib/utils/mock-paths';
+import {
+	getMockFolderRelativePath,
+	joinMockPaths,
+} from '@/lib/utils/mock-paths';
 import {
 	applyVariantResponse,
 	normalizeMockVariant,
 } from '@/lib/utils/mock-variants';
+import {
+	buildProxyRequestHeaders,
+	buildProxyTargetUrl,
+	buildRecordedMockName,
+	isRecordedMock,
+} from '@/lib/utils/proxy-record';
 
 type MockResponseRecord = typeof mockResponses.$inferSelect;
 type MockSubfolderRecord = typeof mockSubfolders.$inferSelect;
@@ -127,6 +136,7 @@ async function handleRequest(request: NextRequest, params: { path: string[] }) {
 			endpoint: getEffectiveEndpoint(m, subfoldersById),
 			matchType: (m.matchType as MatchType) || 'exact',
 			queryParams: (m.queryParams as Record<string, string> | null) ?? null,
+			exactQuery: isRecordedMock(m.meta, m.name),
 			_score: 0,
 			_id: m.id,
 		}));
@@ -256,18 +266,14 @@ async function buildResponse(
 	log.debug({ mockId: mock.id }, 'Building response');
 	const meta = mock.meta as { proxyTargetUrl?: string } | null;
 	if (meta?.proxyTargetUrl) {
-		const urlQueryParams = Object.fromEntries(
-			request.nextUrl.searchParams.entries(),
-		);
-		const method = (request.method as HttpMethod) || 'GET';
-
 		return await handleProxyAndRecord(
+			mock,
 			meta.proxyTargetUrl,
-			mock.folderId,
 			mockPath,
-			method,
 			request,
-			urlQueryParams,
+			Object.keys(paramsMap)
+				.sort((a, b) => Number(a) - Number(b))
+				.map((key) => paramsMap[key]),
 			log,
 		);
 	}
@@ -353,67 +359,45 @@ async function buildResponse(
 	});
 }
 async function handleProxyAndRecord(
+	proxyMock: MockResponseRecord,
 	targetUrlString: string,
-	folderId: string,
 	mockPath: string,
-	method: HttpMethod,
 	request: NextRequest,
-	queryParams: Record<string, string>,
+	captures: string[],
 	log: Logger,
 ): Promise<NextResponse> {
-	log.info({ targetUrlString, mockPath }, 'Proxying request to target');
-
-	const url = new URL(request.url);
-	const targetUrl = new URL(targetUrlString);
-
-	// Preserve incoming query params
-	url.searchParams.forEach((value, key) => {
-		targetUrl.searchParams.set(key, value);
-	});
-	try {
-		// Disable SSL verification for proxy calls in dev environments
-		process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
-		const requestClone = request.clone();
-		const headers = Object.fromEntries(request.headers.entries());
-
-		delete headers.host; // Cloudflare requirement: dont send localhost as Host header
-
-		const response = await fetch(targetUrl.toString(), {
-			method,
-			headers,
-			body: ['GET', 'HEAD'].includes(method) ? null : await requestClone.text(),
-		});
-
-		const responseText = await response.text();
-		const contentType = response.headers.get('content-type') || 'text/plain';
-		const bodyType = contentType.includes('application/json') ? 'json' : 'text';
-
-		log.info(
-			{ statusCode: response.status, bodyType },
-			'Received proxy response, recording mock',
-		);
-
-		// Save the recorded mock
-		await db.insert(mockResponses).values({
-			name: `Auto-captured: ${method} ${mockPath}`,
-			endpoint: mockPath,
-			method,
-			statusCode: response.status,
-			response: responseText,
-			folderId,
-			matchType: 'exact',
-			bodyType,
-			enabled: true,
-			queryParams,
-		});
-
-		// Return the real response to the client
-		return new NextResponse(responseText, {
-			status: response.status,
-			headers: {
-				'Content-Type': contentType,
+	const method = (request.method as HttpMethod) || 'GET';
+	const target = buildProxyTargetUrl(
+		targetUrlString,
+		captures,
+		request.nextUrl.searchParams,
+	);
+	if (!target.ok) {
+		log.warn({ targetUrlString }, target.error);
+		return NextResponse.json(
+			{
+				error: 'Invalid proxy target URL',
+				details: target.error,
+				mockId: proxyMock.id,
 			},
+			{ status: 502 },
+		);
+	}
+	const targetUrl = target.url;
+	log.info(
+		{ targetUrl: targetUrl.toString(), mockPath },
+		'Proxying request to target',
+	);
+
+	let response: Response;
+	try {
+		response = await fetch(targetUrl.toString(), {
+			method,
+			headers: buildProxyRequestHeaders(request.headers),
+			body: ['GET', 'HEAD'].includes(method)
+				? null
+				: await request.clone().text(),
+			redirect: 'follow',
 		});
 	} catch (error) {
 		log.error(
@@ -421,10 +405,73 @@ async function handleProxyAndRecord(
 			'Proxy request failed',
 		);
 		return NextResponse.json(
-			{ error: 'Proxy request failed', details: String(error) },
+			{
+				error: 'Proxy request failed',
+				details: String(error),
+				target: targetUrl.toString(),
+			},
 			{ status: 502 },
 		);
 	}
+
+	const responseText = await response.text();
+	const contentType = response.headers.get('content-type') || 'text/plain';
+	const bodyType = contentType.includes('json') ? 'json' : 'text';
+	const queryParams = Object.fromEntries(
+		request.nextUrl.searchParams.entries(),
+	);
+
+	try {
+		// Record next to the proxy mock: same subfolder, path relative to it.
+		const subfolders = proxyMock.mockFolderId
+			? withCanonicalSubfolderMainPaths(
+					await db
+						.select()
+						.from(mockSubfolders)
+						.where(eq(mockSubfolders.folderId, proxyMock.folderId)),
+				)
+			: [];
+		const subfolder = subfolders.find(
+			(candidate) => candidate.id === proxyMock.mockFolderId,
+		);
+		const endpoint = subfolder
+			? getMockFolderRelativePath(mockPath, subfolder.mainPath)
+			: mockPath;
+
+		await db.insert(mockResponses).values({
+			name: buildRecordedMockName(method, mockPath, queryParams),
+			endpoint,
+			method,
+			statusCode: response.status,
+			response: responseText,
+			folderId: proxyMock.folderId,
+			mockFolderId: subfolder?.id ?? null,
+			matchType: 'exact',
+			bodyType,
+			enabled: true,
+			queryParams,
+			meta: {
+				recordedFrom: proxyMock.id,
+				recordedAt: new Date().toISOString(),
+				recordedTarget: targetUrl.toString(),
+			},
+		});
+		log.info(
+			{ statusCode: response.status, bodyType, endpoint },
+			'Recorded proxied response',
+		);
+	} catch (error) {
+		// Still return the live response; recording is best effort.
+		log.error({ err: error }, 'Failed to record proxied response');
+	}
+
+	return new NextResponse(
+		statusForbidsResponseBody(response.status) ? null : responseText,
+		{
+			status: response.status,
+			headers: { 'Content-Type': contentType },
+		},
+	);
 }
 
 async function handleEchoRequestBody(

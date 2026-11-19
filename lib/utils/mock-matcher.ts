@@ -8,6 +8,11 @@ export interface MockCandidate {
 	endpoint: string;
 	matchType: MatchType;
 	queryParams: Record<string, string> | null;
+	/**
+	 * When true the request must carry exactly the required query keys, no
+	 * more (used by Proxy & Record recordings, which answer one exact query).
+	 */
+	exactQuery?: boolean;
 	_score: number;
 	_id?: string;
 }
@@ -123,6 +128,14 @@ function scoreCandidate(
 		return 0;
 	}
 	if (!queryParamsMatch(requiredQueryParams, actualQueryParams)) {
+		return 0;
+	}
+	if (
+		candidate.exactQuery &&
+		Object.keys(actualQueryParams).some(
+			(key) => !Object.hasOwn(requiredQueryParams, key),
+		)
+	) {
 		return 0;
 	}
 

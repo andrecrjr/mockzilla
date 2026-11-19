@@ -190,9 +190,11 @@ disable the one you don't want.
 
 When the matched mock has `meta.proxyTargetUrl`:
 
-1. It **proxies** the request to that URL, keeping the query string.
-2. It **records** the response.
-3. It **creates a new exact mock** in the same folder.
+1. It **proxies** the request to that URL, keeping the query string. Each `*` in the
+   target is replaced by the matching wildcard capture.
+2. It **records** the response as a new exact mock in the same folder and subfolder.
+3. The recording answers **only** the exact path and query it captured; a request
+   with a different or extra query still reaches the proxy.
 
 If no mock matches, Mockzilla returns `404`. Folder settings never turn on proxy
 recording by themselves.

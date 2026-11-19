@@ -3,6 +3,7 @@
 import { FieldTooltip } from '@/components/folder-tooltips';
 import { MockResponseSource } from '@/components/mock-response-source';
 import { MockVariantManager } from '@/components/mock-variant-manager';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
 	Select,
@@ -29,6 +30,9 @@ type ResponseConfigProps = {
 	endpoint?: string;
 	/** Builds the full served URL (host, folder, subfolder, query) for a path. */
 	buildPreviewUrl?: (examplePath: string) => string | null;
+	/** When set, responses come from this upstream and the editors below are fallbacks only. */
+	proxyTargetUrl?: string;
+	onEditProxy?: () => void;
 };
 
 const MATCH_TYPES: MatchType[] = ['exact', 'wildcard', 'substring'];
@@ -56,6 +60,8 @@ export function ResponseConfig({
 	onRequireMatchChange,
 	endpoint,
 	buildPreviewUrl,
+	proxyTargetUrl,
+	onEditProxy,
 }: ResponseConfigProps) {
 	return (
 		<div className="space-y-6">
@@ -65,6 +71,32 @@ export function ResponseConfig({
 					Choose how this endpoint matches and configure its response.
 				</p>
 			</div>
+
+			{proxyTargetUrl && (
+				<div className="flex flex-col gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+					<div className="min-w-0">
+						<p className="font-medium text-blue-700 dark:text-blue-300">
+							Proxy & Record is on
+						</p>
+						<p className="text-xs text-muted-foreground">
+							Matching requests are answered live by{' '}
+							<code className="break-all font-mono">{proxyTargetUrl}</code> and
+							recorded; the response below is not served while the proxy is set.
+						</p>
+					</div>
+					{onEditProxy && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="shrink-0"
+							onClick={onEditProxy}
+						>
+							Edit proxy
+						</Button>
+					)}
+				</div>
+			)}
 
 			<section className="space-y-3 rounded-lg border border-border bg-card p-4 sm:p-6">
 				<div className="flex items-center gap-2">

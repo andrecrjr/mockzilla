@@ -26,6 +26,11 @@ import type {
 	Scenario,
 	Transition,
 } from '@/lib/types';
+import {
+	formatStoredFolderPath,
+	getFolderLookupCandidates,
+	normalizeFolderPath,
+} from '@/lib/utils/folder-paths';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
 	extractCaptureValues,
@@ -42,59 +47,55 @@ import {
 	applyVariantResponse,
 	normalizeMockVariants,
 } from '@/lib/utils/mock-variants';
-import {
-	formatStoredFolderPath,
-	getFolderLookupCandidates,
-	normalizeFolderPath,
-} from '@/lib/utils/folder-paths';
+import { isRecordedMock } from '@/lib/utils/proxy-record';
 import type {
-	ListFoldersArgs,
 	CreateFolderArgs,
-	GetFolderArgs,
-	UpdateFolderArgs,
-	DeleteFolderArgs,
-	ManageFoldersArgs,
-	ListMockSubfoldersArgs,
 	CreateMockSubfolderArgs,
-	GetMockSubfolderArgs,
-	UpdateMockSubfolderArgs,
+	DeleteFolderArgs,
 	DeleteMockSubfolderArgs,
+	GetFolderArgs,
+	GetMockSubfolderArgs,
+	ListFoldersArgs,
+	ListMockSubfoldersArgs,
+	ManageFoldersArgs,
 	ManageMockSubfoldersArgs,
+	UpdateFolderArgs,
+	UpdateMockSubfolderArgs,
 } from './schemas/folders';
-import type {
-	CreateMockArgs,
-	ListMocksArgs,
-	GetMockArgs,
-	UpdateMockArgs,
-	DeleteMockArgs,
-	PreviewMockArgs,
-	ManageMocksArgs,
-} from './schemas/mocks';
-import type {
-	ListWorkflowTransitionsArgs,
-	CreateWorkflowTransitionArgs,
-	UpdateWorkflowTransitionArgs,
-	DeleteWorkflowTransitionArgs,
-	CreateWorkflowScenarioArgs,
-	DeleteWorkflowScenarioArgs,
-	ResetWorkflowStateArgs,
-	InspectWorkflowStateArgs,
-	ListWorkflowScenariosArgs,
-	TestWorkflowArgs,
-	ExportWorkflowArgs,
-	ImportWorkflowArgs,
-	CreateFullWorkflowArgs,
-	EvaluateTemplateArgs,
-	SeedWorkflowStateArgs,
-	ManageScenariosArgs,
-	ManageTransitionsArgs,
-	WorkflowControlArgs,
-} from './schemas/workflows';
 import type {
 	GetLogsArgs,
 	GetRequestTraceArgs,
 	ManageLogsArgs,
 } from './schemas/logs';
+import type {
+	CreateMockArgs,
+	DeleteMockArgs,
+	GetMockArgs,
+	ListMocksArgs,
+	ManageMocksArgs,
+	PreviewMockArgs,
+	UpdateMockArgs,
+} from './schemas/mocks';
+import type {
+	CreateFullWorkflowArgs,
+	CreateWorkflowScenarioArgs,
+	CreateWorkflowTransitionArgs,
+	DeleteWorkflowScenarioArgs,
+	DeleteWorkflowTransitionArgs,
+	EvaluateTemplateArgs,
+	ExportWorkflowArgs,
+	ImportWorkflowArgs,
+	InspectWorkflowStateArgs,
+	ListWorkflowScenariosArgs,
+	ListWorkflowTransitionsArgs,
+	ManageScenariosArgs,
+	ManageTransitionsArgs,
+	ResetWorkflowStateArgs,
+	SeedWorkflowStateArgs,
+	TestWorkflowArgs,
+	UpdateWorkflowTransitionArgs,
+	WorkflowControlArgs,
+} from './schemas/workflows';
 
 // Helpers
 export function generateSlug(name: string): string {
@@ -1037,6 +1038,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		endpoint: getEffectiveMockEndpoint(m, subfoldersById),
 		matchType: (m.matchType as MatchType) || 'exact',
 		queryParams: (m.queryParams as Record<string, string> | null) ?? null,
+		exactQuery: isRecordedMock(m.meta, m.name),
 		_score: 0,
 		_id: m.id,
 	}));
