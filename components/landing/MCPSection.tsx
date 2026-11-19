@@ -25,9 +25,9 @@ export function MCPSection() {
 							</span>
 						</h2>
 						<p className="mt-4 text-lg text-muted-foreground">
-							Mockzilla exposes 24 Model Context Protocol tools, allowing AI
-							agents to interact with your mocks programmatically. Perfect for
-							testing AI-powered workflows.
+							Mockzilla connects AI assistants to your folders and mocks through
+							the Model Context Protocol, so you can create, inspect, and update
+							endpoints programmatically.
 						</p>
 						<div className="mt-6 flex flex-wrap gap-3">
 							{tools.map((tool) => (
@@ -75,10 +75,7 @@ export function MCPSection() {
 							<div className="text-green-600 dark:text-green-400">
 								✓ delete_mock
 							</div>
-							<div className="text-green-600 dark:text-green-400">
-								✓ manage_workflows
-							</div>
-							<div className="text-muted-foreground">+ 17 more tools...</div>
+							<div className="text-muted-foreground">and more MCP tools...</div>
 						</div>
 					</Card>
 				</div>

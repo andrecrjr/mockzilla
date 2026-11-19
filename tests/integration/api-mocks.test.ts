@@ -101,6 +101,40 @@ describe('API /api/mocks', () => {
 		expect(body.id).toBe('mock-123');
 	});
 
+	it('GET normalizes legacy variants for clients', async () => {
+		mockResolvedValue = [
+			{
+				...mockMockData,
+				endpoint: '/files/*',
+				variants: [
+					{
+						key: 'alpha|beta',
+						body: '{"matched":true}',
+						statusCode: 200,
+						bodyType: 'json',
+					},
+				],
+			},
+		];
+
+		const res = await GET(
+			new NextRequest('http://localhost:3000/api/mocks?id=mock-123'),
+		);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.variants).toEqual([
+			{
+				key: 'alpha|beta',
+				captures: ['alpha|beta'],
+				isFallback: false,
+				body: '{"matched":true}',
+				statusCode: 200,
+				bodyType: 'json',
+			},
+		]);
+	});
+
 	it('POST creates a mock', async () => {
 		const payload = {
 			name: 'New Mock',
@@ -154,6 +188,106 @@ describe('API /api/mocks', () => {
 		expect(res.status).toBe(400);
 		expect(body.error).toContain('Endpoint path cannot include search params');
 		expect(latestInsertValue).toBeUndefined();
+	});
+
+	it('POST rejects malformed wildcard variants before persistence', async () => {
+		const payload = {
+			name: 'Invalid Variant Mock',
+			path: '/users/*',
+			method: 'GET',
+			statusCode: 200,
+			response: '{}',
+			folderId: 'folder-123',
+			variants: [
+				{
+					key: '123',
+					body: 'not-json',
+					statusCode: 200,
+					bodyType: 'json',
+				},
+			],
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(400);
+		expect(body.error).toContain('valid JSON body');
+		expect(latestInsertValue).toBeUndefined();
+	});
+
+	it('POST stores structured captures while retaining the legacy key', async () => {
+		const payload = {
+			name: 'Structured Variant Mock',
+			path: '/users/*/status/*',
+			method: 'GET',
+			statusCode: 200,
+			response: '{}',
+			folderId: 'folder-123',
+			variants: [
+				{
+					captures: ['alice', 'active'],
+					body: '{"matched":true}',
+					statusCode: 200,
+					bodyType: 'json',
+				},
+			],
+		};
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		const res = await POST(req);
+
+		expect(res.status).toBe(201);
+		expect(latestInsertValue).toMatchObject({
+			variants: [
+				{
+					key: 'alice|active',
+					captures: ['alice', 'active'],
+					isFallback: false,
+				},
+			],
+		});
+	});
+
+	it('PUT automatically enriches an existing legacy variant', async () => {
+		mockResolvedValue = [
+			{
+				...mockMockData,
+				endpoint: '/users/*/status/*',
+				variants: [
+					{
+						key: 'alice|active',
+						body: '{"matched":true}',
+						statusCode: 200,
+						bodyType: 'json',
+					},
+				],
+			},
+		];
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ name: 'Migrated Mock' }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(200);
+		expect(latestSetValue).toMatchObject({
+			variants: [
+				{
+					key: 'alice|active',
+					captures: ['alice', 'active'],
+					isFallback: false,
+				},
+			],
+		});
 	});
 
 	it('POST rejects a mock subfolder outside the folder', async () => {
@@ -243,6 +377,93 @@ describe('API /api/mocks', () => {
 			response: mockMockData.response,
 			delay: mockMockData.delay,
 		});
+	});
+
+	it('POST turns a proxy payload into meta', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify({
+				name: 'Proxy',
+				path: '/users',
+				method: 'GET',
+				statusCode: 200,
+				response: '{}',
+				folderId: 'folder-123',
+				proxy: {
+					targetUrl: 'https://api.example.com/users',
+					headers: { Authorization: 'Bearer t' },
+					forwardHeaders: false,
+				},
+			}),
+		});
+
+		const res = await POST(req);
+
+		expect(res.status).toBe(201);
+		expect((latestInsertValue as { meta: unknown }).meta).toEqual({
+			proxyTargetUrl: 'https://api.example.com/users',
+			proxyHeaders: { Authorization: 'Bearer t' },
+			proxyForwardHeaders: false,
+		});
+	});
+
+	it('POST rejects an invalid proxy payload', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify({
+				name: 'Proxy',
+				path: '/users',
+				method: 'GET',
+				statusCode: 200,
+				response: '{}',
+				folderId: 'folder-123',
+				proxy: { targetUrl: 'api.example.com' },
+			}),
+		});
+
+		const res = await POST(req);
+
+		expect(res.status).toBe(400);
+		expect(latestInsertValue).toBeUndefined();
+	});
+
+	it('PUT merges a partial proxy update without dropping stored settings', async () => {
+		mockResolvedValue = [
+			{
+				...mockMockData,
+				meta: {
+					proxyTargetUrl: 'https://api.example.com/users',
+					proxyHeaders: { Authorization: 'Bearer t' },
+					note: 'keep',
+				},
+			},
+		];
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ proxy: { queryParams: { api_key: 'K' } } }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(200);
+		expect((latestSetValue as { meta: unknown }).meta).toEqual({
+			proxyTargetUrl: 'https://api.example.com/users',
+			proxyHeaders: { Authorization: 'Bearer t' },
+			proxyQueryParams: { api_key: 'K' },
+			note: 'keep',
+		});
+	});
+
+	it('PUT rejects proxy headers without a target', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ proxy: { headers: { 'X-A': '1' } } }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(400);
+		expect(latestSetValue).toBeUndefined();
 	});
 
 	it('PUT rejects a mock subfolder outside the existing mock folder', async () => {

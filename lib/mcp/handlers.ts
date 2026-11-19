@@ -26,9 +26,14 @@ import type {
 	Scenario,
 	Transition,
 } from '@/lib/types';
+import {
+	formatStoredFolderPath,
+	getFolderLookupCandidates,
+	normalizeFolderPath,
+} from '@/lib/utils/folder-paths';
 import type { MockCandidate } from '@/lib/utils/mock-matcher';
 import {
-	extractCaptureKey,
+	extractCaptureValues,
 	findBestMatch,
 	selectVariant,
 } from '@/lib/utils/mock-matcher';
@@ -39,58 +44,65 @@ import {
 	validateEndpointPathSearchParams,
 } from '@/lib/utils/mock-paths';
 import {
-	formatStoredFolderPath,
-	getFolderLookupCandidates,
-	normalizeFolderPath,
-} from '@/lib/utils/folder-paths';
+	applyVariantResponse,
+	normalizeMockVariants,
+} from '@/lib/utils/mock-variants';
+import {
+	applyProxySettings,
+	buildProxyTargetUrl,
+	getProxyUpstreamConfig,
+	isRecordedMock,
+	type ProxySettingsInput,
+	summarizeProxy,
+} from '@/lib/utils/proxy-record';
 import type {
-	ListFoldersArgs,
 	CreateFolderArgs,
-	GetFolderArgs,
-	UpdateFolderArgs,
-	DeleteFolderArgs,
-	ManageFoldersArgs,
-	ListMockSubfoldersArgs,
 	CreateMockSubfolderArgs,
-	GetMockSubfolderArgs,
-	UpdateMockSubfolderArgs,
+	DeleteFolderArgs,
 	DeleteMockSubfolderArgs,
+	GetFolderArgs,
+	GetMockSubfolderArgs,
+	ListFoldersArgs,
+	ListMockSubfoldersArgs,
+	ManageFoldersArgs,
 	ManageMockSubfoldersArgs,
+	UpdateFolderArgs,
+	UpdateMockSubfolderArgs,
 } from './schemas/folders';
-import type {
-	CreateMockArgs,
-	ListMocksArgs,
-	GetMockArgs,
-	UpdateMockArgs,
-	DeleteMockArgs,
-	PreviewMockArgs,
-	ManageMocksArgs,
-} from './schemas/mocks';
-import type {
-	ListWorkflowTransitionsArgs,
-	CreateWorkflowTransitionArgs,
-	UpdateWorkflowTransitionArgs,
-	DeleteWorkflowTransitionArgs,
-	CreateWorkflowScenarioArgs,
-	DeleteWorkflowScenarioArgs,
-	ResetWorkflowStateArgs,
-	InspectWorkflowStateArgs,
-	ListWorkflowScenariosArgs,
-	TestWorkflowArgs,
-	ExportWorkflowArgs,
-	ImportWorkflowArgs,
-	CreateFullWorkflowArgs,
-	EvaluateTemplateArgs,
-	SeedWorkflowStateArgs,
-	ManageScenariosArgs,
-	ManageTransitionsArgs,
-	WorkflowControlArgs,
-} from './schemas/workflows';
 import type {
 	GetLogsArgs,
 	GetRequestTraceArgs,
 	ManageLogsArgs,
 } from './schemas/logs';
+import type {
+	CreateMockArgs,
+	DeleteMockArgs,
+	GetMockArgs,
+	ListMocksArgs,
+	ManageMocksArgs,
+	PreviewMockArgs,
+	UpdateMockArgs,
+} from './schemas/mocks';
+import type {
+	CreateFullWorkflowArgs,
+	CreateWorkflowScenarioArgs,
+	CreateWorkflowTransitionArgs,
+	DeleteWorkflowScenarioArgs,
+	DeleteWorkflowTransitionArgs,
+	EvaluateTemplateArgs,
+	ExportWorkflowArgs,
+	ImportWorkflowArgs,
+	InspectWorkflowStateArgs,
+	ListWorkflowScenariosArgs,
+	ListWorkflowTransitionsArgs,
+	ManageScenariosArgs,
+	ManageTransitionsArgs,
+	ResetWorkflowStateArgs,
+	SeedWorkflowStateArgs,
+	TestWorkflowArgs,
+	UpdateWorkflowTransitionArgs,
+	WorkflowControlArgs,
+} from './schemas/workflows';
 
 // Helpers
 export function generateSlug(name: string): string {
@@ -568,6 +580,13 @@ export async function callCreateMock(args: CreateMockArgs) {
 		throw new Error('folderSlug or folderId is required');
 	}
 
+	let initialMeta: Record<string, unknown> = {};
+	if (args.proxy) {
+		const applied = applyProxySettings({}, args.proxy as ProxySettingsInput);
+		if (!applied.ok) throw new Error(applied.error);
+		initialMeta = applied.meta;
+	}
+
 	const body: CreateMockRequest = {
 		name: args.name,
 		path: args.path,
@@ -580,7 +599,10 @@ export async function callCreateMock(args: CreateMockArgs) {
 		bodyType: args.bodyType,
 		enabled: args.enabled,
 		queryParams: args.queryParams,
-		variants: args.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			args.variants as MockVariant[] | null,
+			args.path,
+		),
 		wildcardRequireMatch: args.wildcardRequireMatch,
 		jsonSchema: args.jsonSchema ?? undefined,
 		useDynamicResponse: args.useDynamicResponse ?? undefined,
@@ -607,6 +629,7 @@ export async function callCreateMock(args: CreateMockArgs) {
 			useDynamicResponse: body.useDynamicResponse ?? false,
 			echoRequestBody: body.echoRequestBody ?? false,
 			delay: body.delay ?? 0,
+			meta: initialMeta,
 		})
 		.returning();
 
@@ -623,12 +646,16 @@ export async function callCreateMock(args: CreateMockArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -704,12 +731,16 @@ export async function callListMocks(args: ListMocksArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	}));
@@ -736,12 +767,16 @@ export async function callGetMock(args: GetMockArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -768,10 +803,26 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 	if (!pathValidation.valid) {
 		throw new Error(pathValidation.error);
 	}
+	const nextVariants = normalizeMockVariants(
+		args.variants === undefined
+			? (existingMock.variants as MockVariant[] | null)
+			: args.variants,
+		nextPath,
+	);
+	let nextMeta = existingMock.meta;
+	if (args.proxy) {
+		const applied = applyProxySettings(
+			existingMock.meta,
+			args.proxy as ProxySettingsInput,
+		);
+		if (!applied.ok) throw new Error(applied.error);
+		nextMeta = applied.meta;
+	}
 
 	const [row] = await db
 		.update(mockResponses)
 		.set({
+			meta: nextMeta,
 			name: args.name ?? existingMock.name,
 			endpoint: nextPath,
 			method: args.method ?? existingMock.method,
@@ -785,10 +836,7 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 			bodyType: args.bodyType ?? existingMock.bodyType ?? 'json',
 			enabled: args.enabled ?? existingMock.enabled,
 			queryParams: nextQueryParams,
-			variants:
-				args.variants === undefined
-					? (existingMock.variants as MockVariant[] | null)
-					: args.variants,
+			variants: nextVariants,
 			wildcardRequireMatch:
 				args.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
 			jsonSchema:
@@ -817,12 +865,16 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -931,7 +983,7 @@ export async function callCreateSchemaMock(args: {
 			bodyType: 'json',
 			enabled: args.enabled ?? true,
 			queryParams: args.queryParams || null,
-			variants: args.variants || null,
+			variants: normalizeMockVariants(args.variants, args.path),
 			wildcardRequireMatch: args.wildcardRequireMatch ?? false,
 			jsonSchema: args.jsonSchema,
 			useDynamicResponse: true,
@@ -953,12 +1005,16 @@ export async function callCreateSchemaMock(args: {
 		bodyType: row.bodyType || 'json',
 		enabled: row.enabled,
 		queryParams: row.queryParams as Record<string, string> | null,
-		variants: row.variants as MockVariant[] | null,
+		variants: normalizeMockVariants(
+			row.variants as MockVariant[] | null,
+			row.endpoint,
+		),
 		wildcardRequireMatch: row.wildcardRequireMatch,
 		jsonSchema: row.jsonSchema || null,
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -1012,6 +1068,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		endpoint: getEffectiveMockEndpoint(m, subfoldersById),
 		matchType: (m.matchType as MatchType) || 'exact',
 		queryParams: (m.queryParams as Record<string, string> | null) ?? null,
+		exactQuery: isRecordedMock(m.meta, m.name),
 		_score: 0,
 		_id: m.id,
 	}));
@@ -1044,9 +1101,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		};
 	}
 
-	let finalResponse = bestMock.response;
-	let finalStatusCode = bestMock.statusCode;
-	let finalBodyType = bestMock.bodyType || 'json';
+	let responseMock = bestMock;
 	let paramsMap: Record<string, string> = {};
 	const effectiveEndpoint = getEffectiveMockEndpoint(bestMock, subfoldersById);
 
@@ -1056,12 +1111,10 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		if (variants && variants.length > 0) {
 			const variant = selectVariant(variants, mockPath, effectiveEndpoint);
 			if (variant) {
-				finalResponse = variant.body;
-				finalStatusCode = variant.statusCode;
-				finalBodyType = variant.bodyType as 'json' | 'text';
+				responseMock = applyVariantResponse(bestMock, variant);
 
 				const captures =
-					extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
+					extractCaptureValues(mockPath, effectiveEndpoint) || [];
 				for (let i = 0; i < captures.length; i++) {
 					paramsMap[String(i)] = captures[i];
 				}
@@ -1076,15 +1129,47 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		}
 
 		if (Object.keys(paramsMap).length === 0) {
-			const captures =
-				extractCaptureKey(mockPath, effectiveEndpoint)?.split('|') || [];
+			const captures = extractCaptureValues(mockPath, effectiveEndpoint) || [];
 			for (let i = 0; i < captures.length; i++) {
 				paramsMap[String(i)] = captures[i];
 			}
 		}
 	}
 
-	if (bestMock.echoRequestBody) {
+	const proxyTarget = (bestMock.meta as { proxyTargetUrl?: string } | null)
+		?.proxyTargetUrl;
+	if (proxyTarget) {
+		// The live route forwards this request instead of serving the stored body.
+		const { proxy } = summarizeProxy(bestMock.meta, bestMock.name);
+		const upstream = buildProxyTargetUrl(
+			proxyTarget,
+			Object.keys(paramsMap)
+				.sort((a, b) => Number(a) - Number(b))
+				.map((key) => paramsMap[key]),
+			new URLSearchParams(urlQueryParams),
+			proxy?.queryParams ?? getProxyUpstreamConfig(bestMock.meta).queryParams,
+		);
+		return {
+			statusCode: 0,
+			headers: {},
+			isJson: true,
+			body: {
+				proxied: true,
+				note: 'This mock forwards live requests to its proxy target and records each new path + query as an exact mock. The stored response is not served.',
+				matchedMockId: bestMock.id,
+				upstreamUrl: upstream.ok ? upstream.url.toString() : null,
+				upstreamError: upstream.ok ? null : upstream.error,
+				upstreamHeaders: proxy?.headers ?? {},
+				forwardCallerHeaders: proxy?.forwardHeaders ?? true,
+			},
+		};
+	}
+
+	const finalResponse = responseMock.response;
+	const finalStatusCode = responseMock.statusCode;
+	const finalBodyType = responseMock.bodyType || 'json';
+
+	if (responseMock.echoRequestBody) {
 		return {
 			statusCode: finalStatusCode,
 			headers: { 'Content-Type': 'application/json' },
@@ -1102,7 +1187,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 		},
 	};
 
-	if (bestMock.useDynamicResponse && bestMock.jsonSchema) {
+	if (responseMock.useDynamicResponse && responseMock.jsonSchema) {
 		try {
 			const { generateFromSchema } = await import('@/lib/schema-generator');
 			const { faker } = await import('@faker-js/faker');
@@ -1118,7 +1203,7 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 			};
 
 			const generated = generateFromSchema(
-				JSON.parse(bestMock.jsonSchema),
+				JSON.parse(responseMock.jsonSchema),
 				enrichedContext,
 			);
 			return {

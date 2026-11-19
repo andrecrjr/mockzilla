@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { MockCandidate, MockVariant } from '../../lib/utils/mock-matcher';
 import {
 	extractCaptureKey,
+	extractCaptureValues,
 	findBestMatch,
 	matchWildcard,
 	queryParamsMatch,
@@ -78,6 +79,28 @@ describe('matchWildcard', () => {
 // queryParamsMatch
 // -------------------------------------------------------
 describe('queryParamsMatch', () => {
+	test('wildcard query value matches any present value', () => {
+		const required = { status: '*' };
+		expect(queryParamsMatch(required, { status: 'active' })).toBe(true);
+		expect(queryParamsMatch(required, { status: 'banned' })).toBe(true);
+	});
+
+	test('wildcard query value still requires the parameter to be present', () => {
+		expect(queryParamsMatch({ status: '*' }, {})).toBe(false);
+	});
+
+	test('wildcard query values support glob fragments', () => {
+		expect(queryParamsMatch({ status: 'act*' }, { status: 'active' })).toBe(
+			true,
+		);
+		expect(queryParamsMatch({ status: '*ive' }, { status: 'active' })).toBe(
+			true,
+		);
+		expect(queryParamsMatch({ status: 'act*' }, { status: 'banned' })).toBe(
+			false,
+		);
+	});
+
 	test('empty required params always matches', () => {
 		expect(queryParamsMatch({}, {})).toBe(true);
 		expect(queryParamsMatch(null, {})).toBe(true);
@@ -119,6 +142,19 @@ describe('queryParamsMatch', () => {
 // findBestMatch
 // -------------------------------------------------------
 describe('findBestMatch', () => {
+	test('exact query value beats wildcard query value', () => {
+		const candidates: MockCandidate[] = [
+			makeCandidate('/api/users', 'exact', { status: '*' }),
+			makeCandidate('/api/users', 'exact', { status: 'active' }),
+		];
+		const result = findBestMatch(
+			'/api/users',
+			{ status: 'active' },
+			candidates,
+		);
+		expect(result).toBe(candidates[1]);
+	});
+
 	const makeCandidate = (
 		endpoint: string,
 		matchType: string,
@@ -178,7 +214,11 @@ describe('findBestMatch', () => {
 			makeCandidate('/api/users/*', 'wildcard'),
 			makeCandidate('/api/users/*', 'wildcard', { status: 'active' }),
 		];
-		const result = findBestMatch('/api/users/123?status=active', {}, candidates);
+		const result = findBestMatch(
+			'/api/users/123?status=active',
+			{},
+			candidates,
+		);
 		expect(result).toBe(candidates[1]);
 	});
 
@@ -186,7 +226,11 @@ describe('findBestMatch', () => {
 		const candidates: MockCandidate[] = [
 			makeCandidate('/api/users/*?status=active', 'wildcard'),
 		];
-		const result = findBestMatch('/api/users/123?status=active', {}, candidates);
+		const result = findBestMatch(
+			'/api/users/123?status=active',
+			{},
+			candidates,
+		);
 		expect(result).toBe(candidates[0]);
 	});
 
@@ -252,6 +296,26 @@ describe('extractCaptureKey', () => {
 	test("returns null when URL doesn't match pattern", () => {
 		const key = extractCaptureKey('/api/users', '/api/users/*');
 		expect(key).toBeNull();
+	});
+});
+
+describe('extractCaptureValues', () => {
+	test('keeps multiple captures structured', () => {
+		const captures = extractCaptureValues(
+			'/api/users/alice/status/active',
+			'/api/users/*/status/*',
+		);
+
+		expect(captures).toEqual(['alice', 'active']);
+	});
+
+	test('preserves a literal pipe inside a capture', () => {
+		const captures = extractCaptureValues(
+			'/api/files/alpha%7Cbeta',
+			'/api/files/*',
+		);
+
+		expect(captures).toEqual(['alpha%7Cbeta']);
 	});
 });
 
@@ -352,6 +416,100 @@ describe('selectVariant', () => {
 		);
 		expect(result).toEqual(multiVariants[0]);
 	});
+
+	test('selects a variant using structured captures', () => {
+		const variant: MockVariant = {
+			key: 'alice|active',
+			captures: ['alice', 'active'],
+			body: '{"matched": true}',
+			statusCode: 200,
+			bodyType: 'json',
+		};
+
+		const result = selectVariant(
+			[variant],
+			'/api/users/alice/status/active',
+			'/api/users/*/status/*',
+		);
+
+		expect(result).toEqual(variant);
+	});
+
+	test('matches a literal pipe in a structured single capture', () => {
+		const variant: MockVariant = {
+			key: 'alpha|beta',
+			captures: ['alpha|beta'],
+			body: '{"matched": true}',
+			statusCode: 200,
+			bodyType: 'json',
+		};
+
+		const result = selectVariant(
+			[variant],
+			'/api/files/alpha%7Cbeta',
+			'/api/files/*',
+		);
+
+		expect(result).toEqual(variant);
+	});
+
+	test('uses the explicit fallback marker', () => {
+		const variant: MockVariant = {
+			key: '*',
+			captures: [],
+			isFallback: true,
+			body: '{"fallback": true}',
+			statusCode: 404,
+			bodyType: 'json',
+		};
+
+		const result = selectVariant(
+			[variant],
+			'/api/files/unknown',
+			'/api/files/*',
+		);
+
+		expect(result).toEqual(variant);
+	});
+
+	const encodedCaptureCases: ReadonlyArray<{
+		name: string;
+		key: string;
+		encodedCapture: string;
+	}> = [
+		{ name: 'slash', key: 'projects/api', encodedCapture: 'projects%2Fapi' },
+		{ name: 'space', key: 'project notes', encodedCapture: 'project%20notes' },
+		{
+			name: 'percent sign',
+			key: '50% complete',
+			encodedCapture: '50%25%20complete',
+		},
+		{
+			name: 'question mark',
+			key: 'draft?copy',
+			encodedCapture: 'draft%3Fcopy',
+		},
+		{ name: 'Unicode text', key: 'café', encodedCapture: 'caf%C3%A9' },
+	];
+
+	for (const { name, key, encodedCapture } of encodedCaptureCases) {
+		test(`matches an unencoded ${name} key to an encoded URL capture`, () => {
+			const variant: MockVariant = {
+				key,
+				body: '{"matched": true}',
+				statusCode: 200,
+				bodyType: 'json',
+			};
+
+			const result = selectVariant(
+				[variant],
+				`/api/files/${encodedCapture}`,
+				'/api/files/*',
+			);
+
+			expect(result).toEqual(variant);
+		});
+	}
 
 	test('wildcard fallback works with multi-segment captures', () => {
 		const multiVariants: MockVariant[] = [

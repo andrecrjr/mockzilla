@@ -12,19 +12,29 @@ const nextConfig: NextConfig = {
 	...(process.env.DEPLOY_MODE === 'landing'
 		? {}
 		: {
-			async rewrites() {
+			async redirects() {
 				return [
 					{
+						source: '/app/workflows/:path*',
+						destination: '/app',
+						permanent: false,
+					},
+				];
+			},
+			async rewrites() {
+				return [
+					// Legacy llms URL shapes; canonical pages live at /llms/docs/<page>.txt.
+					{
 						source: '/llms.txt/docs/:path*',
-						destination: '/api/llms?path=:path*',
+						destination: '/llms/docs/:path*',
 					},
 					{
 						source: '/llms.txt/llms-full.txt',
 						destination: '/llms-full.txt',
 					},
 					{
-						source: '/docs/:path*/llms.txt',
-						destination: '/api/llms?path=:path*',
+						source: '/docs/llms.txt',
+						destination: '/llms/docs/index.txt',
 					},
 				];
 			},

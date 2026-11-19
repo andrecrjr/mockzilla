@@ -120,6 +120,15 @@ Example:
 ```
 
 ### 3. Mocks (`manage_mocks`)
+
+The MCP schemas for folders, mock subfolders, and mocks expose flat root objects with concrete JSON types so MCP-to-function bridges preserve argument types. Action-specific required fields are validated when the tool executes.
+Pass `statusCode` and `delay` as JSON numbers, and boolean options such as
+`enabled` as JSON booleans. Mock and workflow response status codes must be in
+the inclusive range 200–599; delay must be a non-negative whole number.
+
+This also applies to the workflow and observability tools: transition `id`,
+pagination fields, and response `status` values are JSON numbers; flags are JSON
+booleans.
 Unified tool for defining and testing API responses.
 - `list`: Paginated list of mocks, optionally filtered by folder.
 - `create`: Create a mock. If `jsonSchema` is provided without a `response`, a dynamic response is auto-generated.
@@ -127,9 +136,34 @@ Unified tool for defining and testing API responses.
 - `update`: Merge path, status, or any configuration field into the stored mock. Omitted fields keep their current persisted values, which prevents narrow UI saves such as inline mock-card path edits from rolling back the rest of the mock.
 - `delay`: Response delay is stored in milliseconds and may be any non-negative whole number.
 - `delete`: Delete a mock.
-- `preview`: Test what a mock would return given a path, method, and request context.
+- `preview`: Test what a mock would return given a path, method, and request context. For a Proxy & Record mock it returns `{ proxied: true, upstreamUrl, upstreamHeaders, forwardCallerHeaders }` and makes no network call.
+- `proxy` (on `create` and `update`): Proxy & Record settings `{ targetUrl, headers, queryParams, forwardHeaders }`. Omitted fields are unchanged; `targetUrl: null` turns it off and clears the rest; `headers` and `queryParams` replace the whole stored set. `get`, `list`, `create`, and `update` return `proxy` and `recorded`, with credential values (names matching authorization, api key, token, secret, cookie, password) shown as `***`. Sending `***` back keeps the stored value, so a read-modify-write round trip never destroys a secret. Validation matches the editor (http/https target, valid header names, no managed headers). See `documentation/proxy-and-record.md`.
 
-Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, URL-style endpoint input such as `/users?status=active` remains visible in the Endpoint Path field while `status=active` is synchronized with Advanced Options; saved API payloads still submit `path` and `queryParams` separately.
+Mock `path` values must be endpoint paths only, such as `/users`. Do not include search params in API or MCP `path` values, such as `/users?status=active`; use the structured `queryParams` field for query-string matching. Query-param names are exact, while values support `*` glob matching, so `{ "status": "*" }` matches any request that includes a status value. Create and update calls reject payloads that mix endpoint paths with embedded search params. In the web UI, URL-style endpoint input such as `/users?status=active` remains visible in the Endpoint Path field while `status=active` is synchronized with Advanced Options; saved API payloads still submit `path` and `queryParams` separately. Entering a `*` in the Endpoint Path does not change the match type: it stays `exact` until the user selects `wildcard` in Mock Response (the editor warns when Wildcard is selected without a `*`).
+
+Wildcard `variants` use one `captures` value per `*` in the endpoint, in endpoint
+order. They also accept the legacy static fields (`key`, `body`, `statusCode`,
+`bodyType`) plus optional `jsonSchema`, `useDynamicResponse`, and `isFallback`:
+
+```json
+{
+  "captures": ["alice", "active"],
+  "key": "alice|active",
+  "isFallback": false,
+  "body": "{\"user\":\"alice\"}",
+  "statusCode": 200,
+  "bodyType": "json"
+}
+```
+
+`captures` is the canonical field. `key` is retained for older clients and is
+generated automatically on create/update. A single-wildcard legacy key is kept
+as one value even when it contains `|`; multi-wildcard legacy keys use the old
+pipe separator. Set `isFallback: true` for a catch-all variant; legacy `key: "*"`
+is recognized and normalized automatically. Dynamic variants require valid JSON
+Schema text and use JSON output; a static JSON variant must contain valid JSON.
+MCP preview applies the selected variant's schema and gives the selected variant
+precedence over base echo behavior.
 
 ### 4. Workflow Scenarios (`manage_scenarios`)
 Manage stateful, multi-step scenario containers.

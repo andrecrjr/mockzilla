@@ -119,6 +119,8 @@ export function ExtensionMockTable({
 					method: updatedMock.method,
 					statusCode: updatedMock.statusCode,
 					response: responseBody,
+					variants: updatedMock.variants,
+					wildcardRequireMatch: updatedMock.wildcardRequireMatch,
 					matchType: updatedMock.matchType,
 					enabled: updatedMock.enabled,
 					folderId: folderId,

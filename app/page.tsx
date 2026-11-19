@@ -8,7 +8,40 @@ import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { MCPSection } from '@/components/landing/MCPSection';
 import { QuickInstall } from '@/components/landing/QuickInstall';
 import { faqs } from '@/lib/constants/faq';
+import type { Metadata } from 'next';
 import Script from 'next/script';
+
+export const metadata: Metadata = {
+	title: 'Mockzilla | Self-Hosted API Mock Server',
+	description:
+		'Self-host Mockzilla for static and dynamic API responses with JSON Schema, Faker.js, and MCP. Official Docker image: andrecrjr/mockzilla.',
+	keywords: [
+		'Mockzilla API mock server',
+		'self-hosted API mocking',
+		'Docker mock server',
+		'dynamic API mocks',
+		'JSON Schema API mocks',
+		'andrecrjr/mockzilla',
+	],
+	alternates: { canonical: '/' },
+	openGraph: {
+		title: 'Mockzilla — Self-Hosted API Mock Server',
+		description:
+			'Static and dynamic API mocks with JSON Schema, Faker.js, and MCP. Run this project with its official Docker image, andrecrjr/mockzilla.',
+		url: 'https://mockzilla.dev/',
+		siteName: 'Mockzilla',
+		images: ['/mockzilla-logo.png'],
+		locale: 'en_US',
+		type: 'website',
+	},
+	twitter: {
+		card: 'summary_large_image',
+		title: 'Mockzilla — Self-Hosted API Mock Server',
+		description:
+			'Self-host Mockzilla for dynamic API mocks. Official Docker image: andrecrjr/mockzilla.',
+		images: ['/mockzilla-logo.png'],
+	},
+};
 
 export default function LandingPage() {
 	const softwareAppJsonLd = {
@@ -18,7 +51,9 @@ export default function LandingPage() {
 		operatingSystem: 'Any',
 		applicationCategory: 'DeveloperApplication',
 		description:
-			'Chrome Extension for instant interception. HTTP Server for dynamic mocking. JSON Schema + Faker, MCP integration, and stateful workflows.',
+			'Self-hosted API mocking platform for static and JSON Schema generated responses, with MCP tooling and Chrome extension interception. Official Docker image: andrecrjr/mockzilla.',
+		url: 'https://mockzilla.dev/',
+		sameAs: ['https://github.com/andrecrjr/mockzilla'],
 		offers: {
 			'@type': 'Offer',
 			price: '0',
@@ -28,7 +63,7 @@ export default function LandingPage() {
 			'JSON Schema + Faker.js interpolation',
 			'Chrome Extension interception',
 			'Model Context Protocol (MCP) integration',
-			'Stateful workflow scenarios',
+			'Static and dynamic responses',
 			'Docker-based deployment',
 		],
 	};

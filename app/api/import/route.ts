@@ -5,8 +5,10 @@ import {
 	deriveSubfolderMainPath,
 	orderSubfoldersByHierarchy,
 } from '@/lib/mock-subfolders';
+import { MockVariantSchema } from '@/lib/mcp/schemas/shared';
 import type { ExportData, Folder, LegacyImportFormat, Mock } from '@/lib/types';
 import { normalizeFolderPath } from '@/lib/utils/folder-paths';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
 
 function isLegacyFormat(data: unknown): data is LegacyImportFormat {
 	return (
@@ -118,6 +120,23 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		for (const mock of exportData.mocks) {
+			const variantsResult = MockVariantSchema.array()
+				.nullable()
+				.optional()
+				.safeParse(mock.variants);
+			if (!variantsResult.success) {
+				return NextResponse.json(
+					{
+						error: `Invalid wildcard variants for ${mock.name}: ${
+							variantsResult.error.issues[0]?.message ?? 'invalid value'
+						}`,
+					},
+					{ status: 400 },
+				);
+			}
+		}
+
 		const results = {
 			folders: 0,
 			mocks: 0,
@@ -203,6 +222,7 @@ export async function POST(request: NextRequest) {
 			// Import mocks with updated folder IDs
 			for (const mock of exportData.mocks) {
 				const mappedFolderId = folderIdMap.get(mock.folderId);
+				const variants = normalizeMockVariants(mock.variants, mock.path);
 
 				// If the folder was skipped (e.g. extension folder), skip the mock too
 				if (!mappedFolderId) {
@@ -234,6 +254,9 @@ export async function POST(request: NextRequest) {
 					jsonSchema: mock.jsonSchema,
 					useDynamicResponse: mock.useDynamicResponse ?? false,
 					echoRequestBody: mock.echoRequestBody ?? false,
+					queryParams: mock.queryParams ?? null,
+					variants,
+					wildcardRequireMatch: mock.wildcardRequireMatch ?? false,
 				});
 
 				results.mocks++;

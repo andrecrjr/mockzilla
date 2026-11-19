@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { folders, mockResponses } from '@/lib/db/schema';
+import type { MockVariant } from '@/lib/types';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
 
 interface ExtensionMock {
 	id: string;
@@ -74,14 +76,11 @@ export async function GET(
 				(m) => m.serverMockId === mock.id,
 			);
 
-			const variants = mock.variants
-				? (mock.variants as {
-						key: string;
-						bodyType: string;
-						statusCode: number;
-						body: string;
-					}[])
-				: [];
+			const variants =
+				normalizeMockVariants(
+					mock.variants as MockVariant[] | null,
+					mock.endpoint,
+				) ?? [];
 			const wildcardRequireMatch = mock.wildcardRequireMatch || false;
 
 			if (originalMock) {

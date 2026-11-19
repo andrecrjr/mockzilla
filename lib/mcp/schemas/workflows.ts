@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import {
-	parseJsonOrPassthrough,
-	ConditionSchema,
-	EffectSchema,
-	WorkflowScenarioSchema,
-	WorkflowTransitionSchema,
+import { 
+	parseJsonOrPassthrough, 
+	ConditionSchema, 
+	EffectSchema, 
+	HttpStatusCodeSchema,
+	WorkflowScenarioSchema, 
+	WorkflowTransitionSchema 
 } from './shared';
 
 export const CreateWorkflowTransitionArgs = z.object({
@@ -34,7 +35,7 @@ export const CreateWorkflowTransitionArgs = z.object({
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.object({
-				status: z.number().int().default(200),
+				status: HttpStatusCodeSchema.default(200),
 				body: z.unknown().optional(),
 				headers: z.record(z.string()).optional(),
 			}),
@@ -80,7 +81,7 @@ export const UpdateWorkflowTransitionArgs = z.object({
 			parseJsonOrPassthrough,
 			z
 				.object({
-					status: z.number().int().default(200),
+					status: HttpStatusCodeSchema.default(200),
 					body: z.unknown().optional(),
 					headers: z.record(z.string()).optional(),
 				})
@@ -174,53 +175,23 @@ export type ExportWorkflowArgs = z.infer<typeof ExportWorkflowArgs>;
 
 export const CreateFullWorkflowArgs = z.object({
 	name: z.string().describe('Display name of the scenario'),
-	description: z
-		.string()
-		.optional()
-		.describe('Description of the scenario flow'),
-	transitions: z
-		.array(
-			z.object({
-				name: z.string().describe('Name of the transition step'),
-				description: z
-					.string()
-					.optional()
-					.describe('Description of what this step does'),
-				path: z
-					.string()
-					.describe(
-						'The URL path (e.g. "/users" or "/users/:id"). Supports :param syntax.',
-					),
-				method: z
-					.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
-					.describe('HTTP method for this transition'),
-				conditions: z
-					.preprocess(
-						parseJsonOrPassthrough,
-						z
-							.union([z.record(z.unknown()), z.array(ConditionSchema)])
-							.optional(),
-					)
-					.describe('Rules to trigger this transition.'),
-				effects: z
-					.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional())
-					.describe('Side effects to execute.'),
-				response: z
-					.preprocess(
-						parseJsonOrPassthrough,
-						z.object({
-							status: z.number().int().default(200),
-							body: z.unknown().optional(),
-							headers: z.record(z.string()).optional(),
-						}),
-					)
-					.describe('Response configuration.'),
-				meta: z
-					.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional())
-					.describe('Additional metadata'),
-			}),
-		)
-		.describe('List of transitions to create for this scenario'),
+	description: z.string().optional().describe('Description of the scenario flow'),
+	transitions: z.array(
+		z.object({
+			name: z.string().describe('Name of the transition step'),
+			description: z.string().optional().describe('Description of what this step does'),
+			path: z.string().describe('The URL path (e.g. "/users" or "/users/:id"). Supports :param syntax.'),
+			method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).describe('HTTP method for this transition'),
+			conditions: z.preprocess(parseJsonOrPassthrough, z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional()).describe('Rules to trigger this transition.'),
+			effects: z.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional()).describe('Side effects to execute.'),
+			response: z.preprocess(parseJsonOrPassthrough, z.object({
+				status: HttpStatusCodeSchema.default(200),
+				body: z.unknown().optional(),
+				headers: z.record(z.string()).optional(),
+			})).describe('Response configuration.'),
+			meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()).describe('Additional metadata'),
+		})
+	).describe('List of transitions to create for this scenario'),
 });
 export type CreateFullWorkflowArgs = z.infer<typeof CreateFullWorkflowArgs>;
 
@@ -291,6 +262,26 @@ export const ManageScenariosArgs = z.discriminatedUnion('action', [
 ]);
 export type ManageScenariosArgs = z.infer<typeof ManageScenariosArgs>;
 
+/** Object-shaped MCP transport schema; action-specific validation uses `ManageScenariosArgs`. */
+export const ManageScenariosInputSchema = z.object({
+	action: z.enum(['list', 'create', 'delete', 'export', 'import']),
+	page: z.number().int().min(1).optional(),
+	limit: z.number().int().min(1).max(100).optional(),
+	name: z.string().optional(),
+	description: z.string().optional(),
+	id: z.string().optional(),
+	scenarioId: z.string().optional(),
+	data: z
+		.object({
+			scenarios: z.array(WorkflowScenarioSchema),
+			transitions: z.array(WorkflowTransitionSchema).optional(),
+		})
+		.optional(),
+});
+export type ManageScenariosInputSchema = z.infer<
+	typeof ManageScenariosInputSchema
+>;
+
 export const ManageTransitionsArgs = z.discriminatedUnion('action', [
 	z.object({
 		action: z.literal('list'),
@@ -302,35 +293,15 @@ export const ManageTransitionsArgs = z.discriminatedUnion('action', [
 		name: z.string(),
 		description: z.string().optional(),
 		path: z.string(),
-		method: z.enum([
-			'GET',
-			'POST',
-			'PUT',
-			'PATCH',
-			'DELETE',
-			'HEAD',
-			'OPTIONS',
-		]),
-		conditions: z.preprocess(
-			parseJsonOrPassthrough,
-			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
-		),
-		effects: z.preprocess(
-			parseJsonOrPassthrough,
-			z.array(EffectSchema).optional(),
-		),
-		response: z.preprocess(
-			parseJsonOrPassthrough,
-			z.object({
-				status: z.number().int().default(200),
-				body: z.unknown().optional(),
-				headers: z.record(z.string()).optional(),
-			}),
-		),
-		meta: z.preprocess(
-			parseJsonOrPassthrough,
-			z.record(z.unknown()).optional(),
-		),
+		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+		conditions: z.preprocess(parseJsonOrPassthrough, z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional()),
+		effects: z.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional()),
+		response: z.preprocess(parseJsonOrPassthrough, z.object({
+			status: HttpStatusCodeSchema.default(200),
+			body: z.unknown().optional(),
+			headers: z.record(z.string()).optional(),
+		})),
+		meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 	}),
 	z.object({
 		action: z.literal('update'),
@@ -338,31 +309,15 @@ export const ManageTransitionsArgs = z.discriminatedUnion('action', [
 		name: z.string().optional(),
 		description: z.string().optional(),
 		path: z.string().optional(),
-		method: z
-			.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
-			.optional(),
-		conditions: z.preprocess(
-			parseJsonOrPassthrough,
-			z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
-		),
-		effects: z.preprocess(
-			parseJsonOrPassthrough,
-			z.array(EffectSchema).optional(),
-		),
-		response: z.preprocess(
-			parseJsonOrPassthrough,
-			z
-				.object({
-					status: z.number().int().default(200),
-					body: z.unknown().optional(),
-					headers: z.record(z.string()).optional(),
-				})
-				.optional(),
-		),
-		meta: z.preprocess(
-			parseJsonOrPassthrough,
-			z.record(z.unknown()).optional(),
-		),
+		method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']).optional(),
+		conditions: z.preprocess(parseJsonOrPassthrough, z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional()),
+		effects: z.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional()),
+		response: z.preprocess(parseJsonOrPassthrough, z.object({
+			status: HttpStatusCodeSchema.default(200),
+			body: z.unknown().optional(),
+			headers: z.record(z.string()).optional(),
+		}).optional()),
+		meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
 	}),
 	z.object({
 		action: z.literal('delete'),
@@ -372,7 +327,52 @@ export const ManageTransitionsArgs = z.discriminatedUnion('action', [
 		action: z.literal('create_full'),
 		name: z.string(),
 		description: z.string().optional(),
-		transitions: z.array(
+		transitions: z.array(z.object({
+			name: z.string(),
+			description: z.string().optional(),
+			path: z.string(),
+			method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
+			conditions: z.preprocess(parseJsonOrPassthrough, z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional()),
+			effects: z.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional()),
+			response: z.preprocess(parseJsonOrPassthrough, z.object({
+				status: HttpStatusCodeSchema.default(200),
+				body: z.unknown().optional(),
+				headers: z.record(z.string()).optional(),
+			})),
+			meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
+		})),
+	}),
+]);
+export type ManageTransitionsArgs = z.infer<typeof ManageTransitionsArgs>;
+
+export const ManageTransitionsInputSchema = z.object({
+	action: z.enum(['list', 'create', 'update', 'delete', 'create_full']),
+	id: z.number().int().optional(),
+	scenarioId: z.string().optional(),
+	name: z.string().optional(),
+	description: z.string().optional(),
+	path: z.string().optional(),
+	method: z
+		.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+		.optional(),
+	conditions: z.preprocess(
+		parseJsonOrPassthrough,
+		z.union([z.record(z.unknown()), z.array(ConditionSchema)]).optional(),
+	),
+	effects: z.preprocess(parseJsonOrPassthrough, z.array(EffectSchema).optional()),
+	response: z.preprocess(
+		parseJsonOrPassthrough,
+		z
+			.object({
+				status: HttpStatusCodeSchema.default(200),
+				body: z.unknown().optional(),
+				headers: z.record(z.string()).optional(),
+			})
+			.optional(),
+	),
+	meta: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
+	transitions: z
+		.array(
 			z.object({
 				name: z.string(),
 				description: z.string().optional(),
@@ -397,7 +397,7 @@ export const ManageTransitionsArgs = z.discriminatedUnion('action', [
 				response: z.preprocess(
 					parseJsonOrPassthrough,
 					z.object({
-						status: z.number().int().default(200),
+						status: HttpStatusCodeSchema.default(200),
 						body: z.unknown().optional(),
 						headers: z.record(z.string()).optional(),
 					}),
@@ -407,10 +407,12 @@ export const ManageTransitionsArgs = z.discriminatedUnion('action', [
 					z.record(z.unknown()).optional(),
 				),
 			}),
-		),
-	}),
-]);
-export type ManageTransitionsArgs = z.infer<typeof ManageTransitionsArgs>;
+		)
+		.optional(),
+});
+export type ManageTransitionsInputSchema = z.infer<
+	typeof ManageTransitionsInputSchema
+>;
 
 export const WorkflowControlArgs = z.discriminatedUnion('action', [
 	z.object({
@@ -462,3 +464,36 @@ export const WorkflowControlArgs = z.discriminatedUnion('action', [
 	}),
 ]);
 export type WorkflowControlArgs = z.infer<typeof WorkflowControlArgs>;
+
+export const WorkflowControlInputSchema = z.object({
+	action: z.enum(['reset', 'inspect', 'seed', 'test', 'evaluate_template']),
+	scenarioId: z.string().optional(),
+	state: z.record(z.unknown()).optional(),
+	tables: z.record(z.array(z.unknown())).optional(),
+	path: z.string().optional(),
+	method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional(),
+	body: z.preprocess(parseJsonOrPassthrough, z.record(z.unknown()).optional()),
+	query: z.record(z.string()).optional(),
+	headers: z.preprocess(
+		parseJsonOrPassthrough,
+		z.record(z.string()).optional(),
+	),
+	template: z.unknown().optional(),
+	context: z
+		.object({
+			state: z.record(z.unknown()).optional(),
+			tables: z.record(z.array(z.unknown())).optional(),
+			input: z
+				.object({
+					body: z.unknown().optional(),
+					query: z.record(z.string()).optional(),
+					params: z.record(z.string()).optional(),
+					headers: z.record(z.string()).optional(),
+				})
+				.optional(),
+		})
+		.optional(),
+});
+export type WorkflowControlInputSchema = z.infer<
+	typeof WorkflowControlInputSchema
+>;

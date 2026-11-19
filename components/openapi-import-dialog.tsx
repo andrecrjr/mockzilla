@@ -52,11 +52,22 @@ export function OpenApiImportDialog({
 				);
 			}
 
-			const result = await response.json();
+			const result: {
+				importedCount: number;
+				updatedCount?: number;
+				warnings?: string[];
+			} = await response.json();
 
+			const updated = result.updatedCount ?? 0;
 			toast.success('Import Successful', {
-				description: `Imported ${result.importedCount} mocks into folder.`,
+				description:
+					updated > 0
+						? `Created ${result.importedCount} and updated ${updated} mocks.`
+						: `Imported ${result.importedCount} mocks into folder.`,
 			});
+			for (const warning of result.warnings ?? []) {
+				toast.warning('Import Warning', { description: warning });
+			}
 
 			if (onSuccess) {
 				onSuccess();
@@ -104,7 +115,7 @@ export function OpenApiImportDialog({
 							Paste your OpenAPI YAML or JSON specification below. We'll
 							automatically create a folder and mocks for each route.{' '}
 							<Link
-								href="/docs#openapi-import"
+								href="/docs/guides/openapi-import"
 								className="text-primary hover:underline inline-flex items-center gap-1"
 							>
 								Learn more <HelpCircle className="h-3 w-3" />

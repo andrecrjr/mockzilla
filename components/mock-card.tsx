@@ -21,6 +21,7 @@ import {
 	splitPathSearchParams,
 } from '@/lib/utils/mock-paths';
 import { openUrlInNewContext } from '@/lib/utils/open-url';
+import { isRecordedMock } from '@/lib/utils/proxy-record';
 
 interface MockCardProps {
 	mock: Mock;
@@ -247,6 +248,15 @@ export function MockCard({
 							<Badge variant="outline" className="text-xs">
 								{mock.matchType || 'exact'}
 							</Badge>
+							{isRecordedMock(mock.meta, mock.name) && (
+								<Badge
+									variant="secondary"
+									className="border-violet-500/20 bg-violet-500/10 text-xs text-violet-600 dark:text-violet-400"
+									title="Saved by Proxy & Record. It answers only this exact path and query."
+								>
+									Recorded
+								</Badge>
+							)}
 							{proxyTargetUrl && (
 								<Badge
 									variant="secondary"

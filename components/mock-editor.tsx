@@ -1,12 +1,18 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-	ResponseConfig,
+	AdvancedOptions,
 	type QueryParamField,
-} from '@/components/mock-response-config';
+} from '@/components/mock-advanced-options';
+import {
+	keyValueRowsToRecord,
+	type ProxyOptionsValue,
+	recordToKeyValueRows,
+} from '@/components/mock-proxy-options';
+import { ResponseConfig } from '@/components/mock-response-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,8 +39,19 @@ import {
 	normalizeAbsolutePath,
 	splitPathSearchParams,
 } from '@/lib/utils/mock-paths';
+import {
+	alignVariantCaptures,
+	getWildcardCount,
+	normalizeMockVariants,
+} from '@/lib/utils/mock-variants';
+import {
+	getProxyUpstreamConfig,
+	validateProxyHeaderName,
+	validateProxyTargetUrl,
+} from '@/lib/utils/proxy-record';
+import { getStatusCodeOptions } from '@/lib/utils/status-codes';
 
-type MockFormValues = {
+export type MockFormValues = {
 	name: string;
 	path: string;
 	method: HttpMethod;
@@ -82,23 +99,6 @@ const HTTP_METHODS: HttpMethod[] = [
 
 const ECHO_REQUEST_BODY_METHODS: HttpMethod[] = ['POST', 'PUT', 'PATCH'];
 
-const STATUS_CODES = [
-	{ value: '200', label: '200 - OK' },
-	{ value: '201', label: '201 - Created' },
-	{ value: '202', label: '202 - Accepted' },
-	{ value: '204', label: '204 - No Content' },
-	{ value: '400', label: '400 - Bad Request' },
-	{ value: '401', label: '401 - Unauthorized' },
-	{ value: '403', label: '403 - Forbidden' },
-	{ value: '404', label: '404 - Not Found' },
-	{ value: '405', label: '405 - Method Not Allowed' },
-	{ value: '409', label: '409 - Conflict' },
-	{ value: '422', label: '422 - Unprocessable Entity' },
-	{ value: '500', label: '500 - Internal Server Error' },
-	{ value: '502', label: '502 - Bad Gateway' },
-	{ value: '503', label: '503 - Service Unavailable' },
-];
-
 const createQueryParamField = (
 	key: string,
 	value: string,
@@ -108,44 +108,6 @@ const createQueryParamField = (
 	key,
 	value,
 });
-
-const createQueryParamId = () => {
-	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-		return crypto.randomUUID();
-	}
-	return `query-param-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-};
-
-function mergeQueryParamFields(
-	current: QueryParamField[],
-	incoming: Record<string, string>,
-): QueryParamField[] {
-	const next = current.map((param) => ({ ...param }));
-	const indexByKey = new Map<string, number>();
-
-	next.forEach((param, index) => {
-		const key = param.key.trim();
-		if (key) indexByKey.set(key, index);
-	});
-
-	for (const [key, value] of Object.entries(incoming)) {
-		const trimmedKey = key.trim();
-		if (!trimmedKey) continue;
-		const existingIndex = indexByKey.get(trimmedKey);
-		if (existingIndex === undefined) {
-			indexByKey.set(trimmedKey, next.length);
-			next.push({ id: createQueryParamId(), key: trimmedKey, value });
-		} else {
-			next[existingIndex] = {
-				...next[existingIndex],
-				key: trimmedKey,
-				value,
-			};
-		}
-	}
-
-	return next;
-}
 
 function serializeQueryParams(
 	queryParams: Record<string, string> | null | undefined,
@@ -177,6 +139,14 @@ function buildQueryParamsFromFields(
 	return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
+function buildQueryParamFields(
+	queryParams: Record<string, string>,
+): QueryParamField[] {
+	return Object.entries(queryParams).map(([key, value], index) =>
+		createQueryParamField(key, value, index),
+	);
+}
+
 function replacePathQueryParams(
 	path: string,
 	queryParams: Record<string, string> | null | undefined,
@@ -196,6 +166,32 @@ function getEndpointInputParts(value: string) {
 		}
 	}
 	return splitPathSearchParams(value);
+}
+
+function buildProxyOptions(meta: unknown): ProxyOptionsValue {
+	const source =
+		meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : {};
+	const upstream = getProxyUpstreamConfig(meta);
+	return {
+		targetUrl:
+			typeof source.proxyTargetUrl === 'string' ? source.proxyTargetUrl : '',
+		headers: recordToKeyValueRows(upstream.headers, 'proxy-header'),
+		queryParams: recordToKeyValueRows(upstream.queryParams, 'proxy-param'),
+		forwardHeaders: upstream.forwardHeaders,
+	};
+}
+
+/** Proxy-related `meta` keys; unset keys are undefined so saving clears them. */
+function buildProxyMeta(proxy: ProxyOptionsValue) {
+	const targetUrl = proxy.targetUrl.trim();
+	return {
+		proxyTargetUrl: targetUrl || undefined,
+		proxyHeaders: targetUrl ? keyValueRowsToRecord(proxy.headers) : undefined,
+		proxyQueryParams: targetUrl
+			? keyValueRowsToRecord(proxy.queryParams)
+			: undefined,
+		proxyForwardHeaders: targetUrl && !proxy.forwardHeaders ? false : undefined,
+	};
 }
 
 function formatEndpointPathForStorage(
@@ -247,12 +243,13 @@ export function MockEditor({
 	const [delay, setDelay] = useState<string>(
 		initial?.delay ? String(initial.delay) : '0',
 	);
-	const [proxyTargetUrl, setProxyTargetUrl] = useState<string>(
-		(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ?? '',
+	const [proxy, setProxy] = useState<ProxyOptionsValue>(() =>
+		buildProxyOptions(initial?.meta),
 	);
+	const proxyTargetUrl = proxy.targetUrl;
 
-	const [activeTab, setActiveTab] = useState<'manual' | 'schema' | 'advanced'>(
-		initial?.jsonSchema ? 'schema' : 'manual',
+	const [activeSection, setActiveSection] = useState<'response' | 'advanced'>(
+		'response',
 	);
 	const [response, setResponse] = useState(initial?.response ?? '');
 	const [jsonSchema, setJsonSchema] = useState(initial?.jsonSchema ?? '');
@@ -276,7 +273,11 @@ export function MockEditor({
 		);
 	});
 	const [variants, setVariants] = useState<MockVariant[]>(
-		(initial?.variants as MockVariant[] | null | undefined) ?? [],
+		() =>
+			normalizeMockVariants(
+				(initial?.variants as MockVariant[] | null | undefined) ?? null,
+				initial?.path ?? '',
+			) ?? [],
 	);
 	const [wildcardRequireMatch, setWildcardRequireMatch] = useState<boolean>(
 		Boolean(initial?.wildcardRequireMatch),
@@ -304,23 +305,19 @@ export function MockEditor({
 		setUseDynamicResponse(Boolean(initial.useDynamicResponse));
 		setEchoRequestBody(Boolean(initial.echoRequestBody));
 		setDelay(initial.delay ? String(initial.delay) : '0');
-		setProxyTargetUrl(
-			(initial.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ??
-				'',
-		);
+		setProxy(buildProxyOptions(initial.meta));
 		setMatchType((initial.matchType as MatchType) ?? 'exact');
 		const qp = initial.queryParams as Record<string, string> | null | undefined;
 		setPath(appendQueryParamsToPath(initial.path ?? '', qp));
-		setQueryParams(
-			qp
-				? Object.entries(qp).map(([key, value], index) =>
-						createQueryParamField(key, value, index),
-					)
-				: [],
+		setQueryParams(qp ? buildQueryParamFields(qp) : []);
+		setVariants(
+			normalizeMockVariants(
+				(initial.variants as MockVariant[] | null | undefined) ?? null,
+				initial.path ?? '',
+			) ?? [],
 		);
-		setVariants((initial.variants as MockVariant[] | null | undefined) ?? []);
 		setWildcardRequireMatch(Boolean(initial.wildcardRequireMatch));
-		setActiveTab(initial.jsonSchema ? 'schema' : 'manual');
+		setActiveSection('response');
 	}, [initial, initialRevision, mode, defaultFolderId, defaultMockFolderId]);
 
 	const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -334,26 +331,35 @@ export function MockEditor({
 		);
 	}, [mockSubfolders, mockFolderId]);
 
-	const previewUrl = useMemo(() => {
-		const baseSlug = previewSlug ?? selectedFolder?.slug;
-		if (!baseSlug) return null;
-		if (!path.startsWith('/') || path.length <= 1) return null;
-		const endpointPath = path.includes('?')
-			? getEndpointInputParts(path).path
-			: path;
-		const effectivePath = getServedMockPath(
-			selectedMockSubfolder?.path ?? '/',
-			endpointPath,
-			baseSlug,
-		);
-		return `${origin}${buildMockApiBasePath(baseSlug)}${effectivePath}`;
-	}, [
-		origin,
-		previewSlug,
-		selectedFolder?.slug,
-		selectedMockSubfolder?.path,
-		path,
-	]);
+	const buildServedUrl = useCallback(
+		(endpointPath: string): string | null => {
+			const baseSlug = previewSlug ?? selectedFolder?.slug;
+			if (!baseSlug) return null;
+			if (!endpointPath.startsWith('/') || endpointPath.length <= 1) {
+				return null;
+			}
+			const effectivePath = getServedMockPath(
+				selectedMockSubfolder?.path ?? '/',
+				endpointPath,
+				baseSlug,
+			);
+			return `${origin}${buildMockApiBasePath(baseSlug)}${effectivePath}`;
+		},
+		[origin, previewSlug, selectedFolder?.slug, selectedMockSubfolder?.path],
+	);
+
+	const buildVariantPreviewUrl = (examplePath: string): string | null => {
+		const url = buildServedUrl(examplePath);
+		return url ? appendQueryParamsToUrl(url, buildQueryParamsString()) : null;
+	};
+
+	const previewUrl = useMemo(
+		() =>
+			buildServedUrl(
+				path.includes('?') ? getEndpointInputParts(path).path : path,
+			),
+		[buildServedUrl, path],
+	);
 
 	const showFolder =
 		showFolderSelect ?? (mode === 'create' && !defaultFolderId);
@@ -370,6 +376,14 @@ export function MockEditor({
 	};
 	const isEchoRequestBodyEnabled =
 		ECHO_REQUEST_BODY_METHODS.includes(method) && echoRequestBody;
+	const advancedSettingsCount =
+		queryParams.filter((param) => param.key.trim()).length +
+		(Number.parseInt(delay || '0', 10) > 0 ? 1 : 0) +
+		(proxyTargetUrl.trim() ? 1 : 0) +
+		(isEchoRequestBodyEnabled ? 1 : 0);
+	const handlePathChange = (nextPath: string) => {
+		setPath(nextPath);
+	};
 
 	useEffect(() => {
 		setPath((currentPath) => {
@@ -390,16 +404,10 @@ export function MockEditor({
 			selectedMockSubfolder?.path ?? '/',
 			previewSlug ?? selectedFolder?.slug,
 		);
-		if (!path.includes('?')) {
-			setPath(nextPath);
-			return;
-		}
 		setPath(`${nextPath}${serializeQueryParams(parsed.queryParams)}`);
+		setQueryParams(buildQueryParamFields(parsed.queryParams));
 		if (Object.keys(parsed.queryParams).length > 0) {
-			setQueryParams((current) =>
-				mergeQueryParamFields(current, parsed.queryParams),
-			);
-			setActiveTab('advanced');
+			setActiveSection('advanced');
 		}
 	};
 
@@ -409,19 +417,26 @@ export function MockEditor({
 
 		event.preventDefault();
 		const parsed = getEndpointInputParts(pasted);
-		setPath(
+		handlePathChange(
 			`${formatEndpointPathForStorage(
 				parsed.path,
 				selectedMockSubfolder?.path ?? '/',
 				previewSlug ?? selectedFolder?.slug,
 			)}${serializeQueryParams(parsed.queryParams)}`,
 		);
+		setQueryParams(buildQueryParamFields(parsed.queryParams));
 		if (Object.keys(parsed.queryParams).length > 0) {
-			setQueryParams((current) =>
-				mergeQueryParamFields(current, parsed.queryParams),
-			);
-			setActiveTab('advanced');
+			setActiveSection('advanced');
 		}
+	};
+
+	const getAlignedVariants = (endpointPath: string) => {
+		const wildcardCount = getWildcardCount(endpointPath);
+		return (
+			normalizeMockVariants(variants, endpointPath)?.map((variant) =>
+				alignVariantCaptures(variant, wildcardCount),
+			) ?? null
+		);
 	};
 
 	const validateBeforeSubmit = (pathToValidate = path): boolean => {
@@ -433,7 +448,19 @@ export function MockEditor({
 			toast.error('Error', { description: 'Path must start with /' });
 			return false;
 		}
-		if (!isEchoRequestBodyEnabled) {
+		const proxyError =
+			validateProxyTargetUrl(proxyTargetUrl) ??
+			(proxyTargetUrl.trim()
+				? proxy.headers
+						.map((header) => validateProxyHeaderName(header.key))
+						.find(Boolean)
+				: null);
+		if (proxyError) {
+			setActiveSection('advanced');
+			toast.error('Invalid proxy settings', { description: proxyError });
+			return false;
+		}
+		if (!isEchoRequestBodyEnabled && matchType !== 'wildcard') {
 			try {
 				if (useDynamicResponse) {
 					const validation = validateSchema(jsonSchema);
@@ -449,17 +476,70 @@ export function MockEditor({
 				return false;
 			}
 		}
+		if (matchType === 'wildcard') {
+			try {
+				const normalizedVariants = getAlignedVariants(pathToValidate) ?? [];
+				const wildcardCount = getWildcardCount(pathToValidate);
+				if (
+					wildcardCount === 0 &&
+					normalizedVariants.some((variant) => !variant.isFallback)
+				) {
+					throw new Error(
+						'Add * to the endpoint path before creating specific variants',
+					);
+				}
+				let specificNumber = 0;
+				for (const variant of normalizedVariants) {
+					if (!variant.isFallback) specificNumber += 1;
+					const variantLabel = variant.isFallback
+						? 'Fallback response'
+						: `Variant ${specificNumber}`;
+					if (
+						!variant.isFallback &&
+						(variant.captures.length !== wildcardCount ||
+							variant.captures.some((capture) => !capture.trim()))
+					) {
+						throw new Error(`${variantLabel} needs a value for every wildcard`);
+					}
+					if (variant.useDynamicResponse) {
+						if (variant.bodyType !== 'json') {
+							throw new Error(`${variantLabel} must use JSON body type`);
+						}
+						const validation = validateSchema(variant.jsonSchema ?? '');
+						if (!validation.valid) {
+							throw new Error(
+								`${variantLabel}: ${validation.error || 'invalid JSON Schema'}`,
+							);
+						}
+						JSON.parse(variant.jsonSchema ?? '');
+					} else if (variant.bodyType === 'json') {
+						try {
+							JSON.parse(variant.body);
+						} catch {
+							throw new Error(`${variantLabel} has invalid JSON`);
+						}
+					}
+				}
+			} catch (error) {
+				toast.error('Error', {
+					description:
+						error instanceof Error
+							? error.message
+							: 'Please provide valid variant responses',
+				});
+				return false;
+			}
+		}
 		return true;
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		const parsedPath = path.includes('?') ? getEndpointInputParts(path) : null;
-		const submitQueryParams = parsedPath
-			? mergeQueryParamFields(queryParams, parsedPath.queryParams)
-			: queryParams;
-		const submitPath = parsedPath?.path ?? path;
+		const parsedPath = getEndpointInputParts(path);
+		const submitQueryParams = buildQueryParamFields(parsedPath.queryParams);
+		const submitPath = parsedPath.path;
 		if (!validateBeforeSubmit(submitPath)) return;
+		const normalizedVariants = getAlignedVariants(submitPath);
 
 		let formattedPath = formatEndpointPathForStorage(
 			submitPath,
@@ -486,9 +566,12 @@ export function MockEditor({
 			delay,
 			meta: {
 				...initial?.meta,
-				proxyTargetUrl: proxyTargetUrl.trim() || undefined,
+				...buildProxyMeta(proxy),
 			},
-			variants: variants.length > 0 ? variants : null,
+			variants:
+				matchType === 'wildcard' && normalizedVariants?.length
+					? normalizedVariants
+					: null,
 			wildcardRequireMatch,
 		};
 		await onSubmit({
@@ -582,7 +665,7 @@ export function MockEditor({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										{STATUS_CODES.map((code) => (
+										{getStatusCodeOptions(statusCode).map((code) => (
 											<SelectItem key={code.value} value={code.value}>
 												{code.label}
 											</SelectItem>
@@ -593,27 +676,11 @@ export function MockEditor({
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="create-delay">Response Delay (ms)</Label>
-							<Input
-								id="create-delay"
-								type="number"
-								min="0"
-								step="1"
-								value={delay}
-								onChange={(e) => setDelay(e.target.value)}
-								placeholder="e.g., 500"
-							/>
-							<p className="text-[10px] text-muted-foreground">
-								Simulate network latency/throttling in milliseconds.
-							</p>
-						</div>
-
-						<div className="space-y-2">
 							<Label htmlFor="create-path">Endpoint Path</Label>
 							<Input
 								id="create-path"
 								value={path}
-								onChange={(e) => setPath(e.target.value)}
+								onChange={(e) => handlePathChange(e.target.value)}
 								onBlur={extractPathQueryParams}
 								onPaste={handlePathPaste}
 								placeholder="/users"
@@ -631,56 +698,73 @@ export function MockEditor({
 								</p>
 							)}
 						</div>
-
-						<div className="space-y-2 pt-4 border-t border-border/50">
-							<Label htmlFor="create-proxy">Proxy Target URL (Optional)</Label>
-							<Input
-								id="create-proxy"
-								value={proxyTargetUrl}
-								onChange={(e) => setProxyTargetUrl(e.target.value)}
-								placeholder="e.g., https://api.example.com/v1/users"
-								className="font-mono text-sm"
-							/>
-							<p className="text-[10px] text-muted-foreground">
-								If set, Mockzilla will proxy directly to this full URL
-								(preserving query params).
-							</p>
-						</div>
 					</div>
 
-					{/* Right Column - Response Config with Tabs */}
-					<div className="space-y-6 col-span-3">
-						<ResponseConfig
-							method={method}
-							echoRequestBody={echoRequestBody}
-							onEchoRequestBodyChange={setEchoRequestBody}
-							response={response}
-							onResponseChange={setResponse}
-							jsonSchema={jsonSchema}
-							onJsonSchemaChange={setJsonSchema}
-							useDynamicResponse={useDynamicResponse}
-							onUseDynamicResponseChange={setUseDynamicResponse}
-							activeTab={activeTab}
-							onActiveTabChange={(newTab) => {
-								setActiveTab(newTab);
-							}}
-							// Advanced Options props
-							matchType={matchType}
-							onMatchTypeChange={(newMatchType) => {
-								setMatchType(newMatchType);
-								if (newMatchType === 'wildcard') {
-									setActiveTab('advanced'); // Switch to advanced tab when wildcard selected
-								}
-							}}
-							queryParams={queryParams}
-							onQueryParamsChange={(newParams) => setQueryParams(newParams)}
-							// MockVariantManager props
-							variants={variants}
-							onVariantsChange={setVariants}
-							requireMatch={wildcardRequireMatch}
-							onRequireMatchChange={setWildcardRequireMatch}
-							endpoint={path}
-						/>
+					{/* Right Column - Mock Response and Advanced Options */}
+					<div className="col-span-3 space-y-4">
+						<div className="flex gap-2 rounded-lg border border-border bg-muted/30 p-1.5">
+							<Button
+								type="button"
+								variant={activeSection === 'response' ? 'secondary' : 'ghost'}
+								className="flex-1"
+								aria-pressed={activeSection === 'response'}
+								onClick={() => setActiveSection('response')}
+							>
+								Mock Response
+							</Button>
+							<Button
+								type="button"
+								variant={activeSection === 'advanced' ? 'secondary' : 'ghost'}
+								className="flex-1"
+								aria-pressed={activeSection === 'advanced'}
+								onClick={() => setActiveSection('advanced')}
+							>
+								Advanced Options
+								{advancedSettingsCount > 0 && (
+									<span
+										aria-hidden="true"
+										className="ml-1 rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary"
+										title={`${advancedSettingsCount} advanced setting${advancedSettingsCount === 1 ? '' : 's'} active`}
+									>
+										{advancedSettingsCount}
+									</span>
+								)}
+							</Button>
+						</div>
+
+						<div hidden={activeSection !== 'response'}>
+							<ResponseConfig
+								response={response}
+								onResponseChange={setResponse}
+								jsonSchema={jsonSchema}
+								onJsonSchemaChange={setJsonSchema}
+								useDynamicResponse={useDynamicResponse}
+								onUseDynamicResponseChange={setUseDynamicResponse}
+								matchType={matchType}
+								onMatchTypeChange={setMatchType}
+								variants={variants}
+								onVariantsChange={setVariants}
+								requireMatch={wildcardRequireMatch}
+								onRequireMatchChange={setWildcardRequireMatch}
+								endpoint={path}
+								buildPreviewUrl={buildVariantPreviewUrl}
+								proxyTargetUrl={proxyTargetUrl.trim()}
+								onEditProxy={() => setActiveSection('advanced')}
+							/>
+						</div>
+						<div hidden={activeSection !== 'advanced'}>
+							<AdvancedOptions
+								method={method}
+								queryParams={queryParams}
+								onQueryParamsChange={setQueryParams}
+								echoRequestBody={echoRequestBody}
+								onEchoRequestBodyChange={setEchoRequestBody}
+								delay={delay}
+								onDelayChange={setDelay}
+								proxy={proxy}
+								onProxyChange={setProxy}
+							/>
+						</div>
 					</div>
 				</div>
 

@@ -298,7 +298,7 @@ function StateSetEditor({
 					label="States"
 					description="Set or update states for this scenario. State is a persistent key-value store."
 					example='{ "isLoggedIn": true, "userId": "{{ input.body.id }}" }'
-					docsLink="/docs/workflows#state-set"
+					docsLink="/docs/reference/workflow-syntax#2-effects"
 				/>
 			</Label>
 			<KeyValueEditor

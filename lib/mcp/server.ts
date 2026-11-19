@@ -3,6 +3,7 @@ import { registerFolderTools } from './tools/folders';
 import { registerMockTools } from './tools/mocks';
 import { registerWorkflowTools } from './tools/workflows';
 import { registerLogTools } from './tools/logs';
+import { registerActionToolListing } from './tool-listing';
 
 /**
  * Registers all MCP tools for Mockzilla.
@@ -14,4 +15,5 @@ export function registerAllTools(server: McpServer) {
 	registerMockTools(server);
 	registerWorkflowTools(server);
 	registerLogTools(server);
+	registerActionToolListing(server);
 }

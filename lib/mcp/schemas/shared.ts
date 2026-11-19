@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const HttpStatusCodeSchema = z.number().int().min(200).max(599);
+export const NonNegativeIntegerSchema = z.number().int().nonnegative();
+
 export const parseJsonOrPassthrough = (val: unknown) => {
 	if (typeof val === 'string') {
 		try {
@@ -11,12 +14,116 @@ export const parseJsonOrPassthrough = (val: unknown) => {
 	return val;
 };
 
-export const MockVariantSchema = z.object({
-	key: z.string(),
-	body: z.string(),
-	statusCode: z.number().int(),
-	bodyType: z.enum(['json', 'text']),
-});
+export const ProxySettingsSchema = z
+	.object({
+		targetUrl: z
+			.string()
+			.nullable()
+			.optional()
+			.describe(
+				'Full http(s) URL requests are forwarded to; "*" is replaced by wildcard captures. null turns Proxy & Record off and removes the other proxy settings.',
+			),
+		headers: z
+			.record(z.string())
+			.nullable()
+			.optional()
+			.describe(
+				'Headers sent upstream (e.g. {"Authorization":"Bearer ..."}), replacing incoming headers of the same name. Replaces the whole stored set; "***" keeps a stored value; null clears.',
+			),
+		queryParams: z
+			.record(z.string())
+			.nullable()
+			.optional()
+			.describe(
+				'Query params sent upstream (e.g. {"api_key":"..."}), replacing incoming params of the same name. Replaces the whole stored set; "***" keeps a stored value; null clears.',
+			),
+		forwardHeaders: z
+			.boolean()
+			.nullable()
+			.optional()
+			.describe(
+				'false sends only `headers` upstream (no caller headers or cookies). Default true.',
+			),
+	})
+	.describe(
+		'Proxy & Record settings. Omitted fields are unchanged. Responses show credential values as "***".',
+	);
+export type ProxySettings = z.infer<typeof ProxySettingsSchema>;
+
+export const MockVariantSchema = z
+	.object({
+		key: z.string().min(1).optional(),
+		captures: z.array(z.string()).optional(),
+		isFallback: z.boolean().optional(),
+		body: z.string(),
+		statusCode: HttpStatusCodeSchema,
+		bodyType: z.enum(['json', 'text']),
+		jsonSchema: z.string().nullable().optional(),
+		useDynamicResponse: z.boolean().optional(),
+	})
+	.superRefine((variant, context) => {
+		if (!variant.isFallback && !variant.key && !variant.captures) {
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['captures'],
+				message: 'Variant requires captures or a legacy key',
+			});
+		}
+
+		if (variant.useDynamicResponse) {
+			if (!variant.jsonSchema?.trim()) {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['jsonSchema'],
+					message: 'Dynamic variants require a JSON Schema',
+				});
+				return;
+			}
+			try {
+				const parsedSchema: unknown = JSON.parse(variant.jsonSchema);
+				const hasSchemaShape =
+					typeof parsedSchema === 'object' &&
+					parsedSchema !== null &&
+					!Array.isArray(parsedSchema) &&
+					(['type', 'properties', '$ref'] as const).some((key) =>
+						Object.hasOwn(parsedSchema, key),
+					);
+				if (!hasSchemaShape) {
+					context.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ['jsonSchema'],
+						message: 'jsonSchema must define type, properties, or $ref',
+					});
+				}
+			} catch {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['jsonSchema'],
+					message: 'jsonSchema must be valid JSON',
+				});
+			}
+			if (variant.bodyType !== 'json') {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['bodyType'],
+					message: 'Dynamic variants must use JSON body type',
+				});
+			}
+			return;
+		}
+
+		if (variant.bodyType === 'json') {
+			try {
+				JSON.parse(variant.body);
+			} catch {
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['body'],
+					message: 'JSON variants require a valid JSON body',
+				});
+			}
+		}
+	});
 export type MockVariantSchema = z.infer<typeof MockVariantSchema>;
 
 export const ConditionSchema = z.object({
@@ -118,7 +225,7 @@ export const WorkflowTransitionSchema = z.object({
 		.preprocess(
 			parseJsonOrPassthrough,
 			z.object({
-				status: z.number().int().default(200),
+				status: HttpStatusCodeSchema.default(200),
 				body: z.unknown().optional(),
 				headers: z.record(z.string()).optional(),
 			}),

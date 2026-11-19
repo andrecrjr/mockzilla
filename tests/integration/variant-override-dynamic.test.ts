@@ -146,4 +146,54 @@ describe('Mock Serving — variant override dynamic', () => {
 		// Should return dynamic response from schema
 		expect(body).toEqual({ dynamic: true });
 	});
+
+	it('generates a dynamic response from the selected variant schema', async () => {
+		const wildcardMock = {
+			id: 'm1',
+			folderId: 'folder-1',
+			endpoint: '/users/*',
+			method: 'GET',
+			statusCode: 200,
+			response: JSON.stringify({ parent: true }),
+			bodyType: 'json',
+			matchType: 'wildcard',
+			enabled: true,
+			queryParams: null,
+			jsonSchema: JSON.stringify({
+				type: 'object',
+				properties: { parent: { type: 'boolean', const: true } },
+				required: ['parent'],
+			}),
+			useDynamicResponse: true,
+			variants: [
+				{
+					key: '123',
+					body: JSON.stringify({ fallback: true }),
+					statusCode: 202,
+					bodyType: 'json',
+					jsonSchema: JSON.stringify({
+						type: 'object',
+						properties: { variant: { type: 'boolean', const: true } },
+						required: ['variant'],
+					}),
+					useDynamicResponse: true,
+				},
+			],
+		};
+
+		let selectCall = 0;
+		mockDb.select = mock(() => {
+			selectCall++;
+			if (selectCall === 1) return createMockBuilder([mockFolder]);
+			if (selectCall === 2) return createMockBuilder([wildcardMock]);
+			return createMockBuilder([]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users/123');
+		const params = Promise.resolve({ path: ['api', 'users', '123'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(202);
+		expect(await res.json()).toEqual({ variant: true });
+	});
 });

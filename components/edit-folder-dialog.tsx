@@ -116,7 +116,7 @@ export function EditFolderDialog({ folder, onUpdate }: EditFolderDialogProps) {
 							<DialogDescription>
 								Update the folder details.{' '}
 								<Link
-									href="/docs#overview"
+									href="/docs"
 									className="text-primary hover:underline inline-flex items-center gap-1"
 								>
 									Learn more <HelpCircle className="h-3 w-3" />

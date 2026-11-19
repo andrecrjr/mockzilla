@@ -1,58 +1,61 @@
 # Proxy & Record Mode
 
-Mockzilla's "Proxy & Record" mode allows you to automatically capture live API traffic and convert it into mock endpoints. This is ideal for quickly bootstrapping a mock server from an existing backend or for capturing complex edge cases from real responses.
+User guide: `content/docs/guides/proxy-and-record.mdx` (served at `/docs/guides/proxy-and-record`). This file covers the implementation.
 
-## How it Works
+## Flow
 
-Proxy & Record is configured on individual mocks. If a matching mock has a
-**Proxy Target URL** in `meta.proxyTargetUrl`, Mockzilla proxies that request to
-the target instead of returning the mock's static response.
+`app/api/mock/[...path]/route.ts` → `buildResponse()` → `handleProxyAndRecord()` when the matched mock has `meta.proxyTargetUrl`. Wildcard captures (`paramsMap`) are passed in so `*` in the target can be substituted.
 
-1. **Matched Request**: A request must match an existing mock by method, path,
-   match type, and query params.
-2. **Live Fetch**: Mockzilla forwards the request to the exact **Proxy Target URL** configured in the mock, preserving query parameters, method, headers, and request body. The original mock path is NOT appended to the target URL.
-3. **Auto-Record**: The live response is returned to the client and saved as a new exact-match mock in the same folder, using the original request path.
-4. **No Folder Fallback**: If no mock matches, Mockzilla returns `404`; folder
-   metadata does not enable proxy recording.
+1. `buildProxyTargetUrl()` validates the target (http/https only), replaces each `*` with the next capture, merges the incoming query, then applies `meta.proxyQueryParams` on top (configured values win). Invalid targets return `502 { error: 'Invalid proxy target URL' }` instead of throwing.
+2. `buildProxyRequestHeaders()` forwards request headers (unless `meta.proxyForwardHeaders === false`), then applies `meta.proxyHeaders` on top; names compare case-insensitively. Incoming headers forwarded, except `host`, hop-by-hop headers (`connection`, `keep-alive`, `transfer-encoding`, `te`, `trailer`, `upgrade`, `proxy-*`), `content-length`, and `expect`. Node's fetch rejects some of these.
+3. The upstream response is recorded as an exact mock:
+   - `name`: `buildRecordedMockName()` → `Recorded: GET /users?page=1`
+   - `folderId` and `mockFolderId` from the proxy mock; `endpoint` relative to that subfolder (`getMockFolderRelativePath`)
+   - `queryParams`: the request's query
+   - `meta`: `{ recordedFrom: <proxy mock id>, recordedAt, recordedTarget }`
+   Recording failures are logged and do not block the live response.
+4. The live status/body/content type are returned. Statuses that forbid a body (204/304…) return no body.
+5. Fetch failures return `502 { error: 'Proxy request failed', details, target }`.
 
-## Configuration
+TLS verification is no longer disabled. The old code set `process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'` process-wide on the first proxied request. For a self-signed upstream, set that env var on the container explicitly.
 
-### Via Dashboard
+### Upstream settings (`meta`)
 
-1. Create or edit a mock endpoint.
-2. Under the basic fields, enter a **Proxy Target URL**.
-3. Save the mock.
+| Key | Type | Meaning |
+| :--- | :--- | :--- |
+| `proxyTargetUrl` | string | Upstream URL; `*` is replaced by wildcard captures |
+| `proxyHeaders` | `Record<string,string>` | Sent upstream, replacing incoming headers of the same name |
+| `proxyQueryParams` | `Record<string,string>` | Added upstream, replacing incoming params of the same name |
+| `proxyForwardHeaders` | boolean | `false` sends only `proxyHeaders`; unset means forward |
 
-### Via API
+`getProxyUpstreamConfig()` reads them defensively; `validateProxyHeaderName()` rejects invalid names and headers the proxy manages. Values are stored in plain text in `meta`, so they appear in exports and API responses. They are never copied to recordings, and the 502 body, logs, and `recordedTarget` meta contain only the upstream origin and path, because configured query values can hold secrets. The editor UI is `components/mock-proxy-options.tsx` (masked rows with show/hide for sensitive names).
 
-Pass `proxyTargetUrl` inside the mock `meta` object in the request body.
+### Setting it from REST, MCP, and the CLI
 
-```bash
-curl -X PUT "http://localhost:3000/api/mocks?id={mock-id}" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "name": "Specific Proxy", 
-       "meta": { "proxyTargetUrl": "https://api.example.com" }
-     }'
-```
+All three use one merge function, `applyProxySettings(existingMeta, input)` in `lib/utils/proxy-record.ts`, so behavior is identical:
 
-## Features
+- REST `POST/PUT /api/mocks` accept a `proxy` object next to `meta`. `meta`, when present, replaces first; `proxy` then merges on top. Errors are `400`. The dashboard still sends full `meta` (clearing a key means omitting it).
+- MCP `manage_mocks` `create|update` take `proxy`; output includes `proxy` and `recorded` through `summarizeProxy()`, which masks sensitive values as `***` (`REDACTED_VALUE`). `***` sent back for an existing name keeps the stored value. `preview` returns the upstream URL (credentials masked) without calling it.
+- CLI `--proxy-url`, `--proxy-headers[-file]`, `--proxy-params[-file]`, `--[no-]forward-headers`, `--clear-proxy` build the same `proxy` payload. The CLI does not mask output.
 
-- **Transparent Proxying**: Method, headers, and body are preserved during the proxy request.
-- **Smart Body Detection**: Automatically detects if the response is JSON or plain text based on the `Content-Type` header.
-- **Immediate Availability**: The recorded mock is active immediately and visible in the dashboard for further customization.
-- **Mock Scoped**: Each proxy recorder is attached to one mock, so different endpoints can proxy to different upstream services inside the same folder.
+`proxy` semantics: omitted = unchanged, `null` = clear, `targetUrl: null` = off and clears headers, params, and forwarding. `headers`/`queryParams` replace the whole map. Headers, params, or `forwardHeaders: false` without a target are rejected.
 
-## Use Cases
+## Matching recordings
 
-- **Backend Replacement**: Set the proxy to your staging server, hit all your app's features once, and you have a full mock environment ready for offline dev.
-- **Edge Case Capture**: Point the proxy to a server that is currently exhibiting a bug. Once Mockzilla records the faulty response, you can test your frontend fix against it repeatedly.
-- **API Versioning**: Record responses from `v1` of an API to ensure your app remains compatible while you develop against `v2`.
+`isRecordedMock(meta, name)` (`lib/utils/proxy-record.ts`) identifies recordings by `meta.recordedFrom` or the legacy `Auto-captured: ` name prefix. Both matcher callers (the serve route and the MCP preview in `lib/mcp/handlers.ts`) set `MockCandidate.exactQuery` for recordings. `scoreCandidate()` then rejects requests that carry query keys the recording did not capture. Without this, a recording of `/users` with no query answered every `/users?…` request, so new queries were never proxied.
 
-## Precedence
+Ties between a recording and its proxy mock go to the recording (`sortMocksForMatchTieBreakers`: non-proxy first, then newest).
 
-When multiple mocks match the same incoming request, Mockzilla follows these rules:
+## UI
 
-1. **Specificity**: Mocks with more matching query parameters take precedence.
-2. **Recorded vs. Proxy**: If specificity is equal, a mock **without** a `proxyTargetUrl` (e.g., a recorded mock) takes precedence over one **with** a `proxyTargetUrl`. This ensures that once a response is captured, subsequent requests use the captured mock instead of proxying again.
-3. **Recency**: If all else is equal, the most recently created mock is picked.
+- `components/mock-proxy-options.tsx` (rendered by `mock-advanced-options.tsx`): **Proxy & Record** section with help text, the `*` hint, a "recording is on" note, inline validation, and key/value rows for upstream headers and query params (sensitive names masked). `MockEditor` blocks saving an invalid target or header name and switches to Advanced Options.
+- `components/mock-response-config.tsx`: "Proxy & Record is on" notice with an **Edit proxy** button while a target is set.
+- `components/mock-card.tsx`: **Recorded** badge on recordings; the existing **Proxy:** badge on proxy mocks.
+
+## Tests
+
+- `tests/unit/proxy-record.test.ts`: URL validation and wildcard substitution, header filtering, naming, recording detection, and the exact-query matching rule.
+- `tests/integration/proxy-and-record.test.ts`: forwarding, overrides, recording placement, wildcard substitution, and failures without exposing secrets.
+- `tests/integration/api-mocks.test.ts` and `tests/integration/mcp-mocks-proxy.test.ts`: proxy setting validation and merging through REST and MCP, including masked secrets.
+- `tests/components/mock-proxy-options.test.tsx`: target and header validation, and sensitive header editing, masking, and removal.
+- `tests/unit/cli.test.ts`: proxy flags, clearing, and conflicting options.

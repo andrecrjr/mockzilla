@@ -1,0 +1,55 @@
+---
+title: Mockzilla CLI
+description: Install the Mockzilla command-line client and connect it to your server.
+---
+
+# Mockzilla CLI
+
+The `mockzilla` CLI manages folders and mocks through a running Mockzilla server.
+It is a small, dependency-free Node.js client; installing it does not install or
+start the server. You need Node.js 18.18 or newer.
+
+The CLI is installed from the Mockzilla GitHub repository. It is not published to
+the npm registry as `mockzilla`.
+
+## Run a command once
+
+Use `npx` to run the CLI without a global install:
+
+```bash
+npx --yes github:andrecrjr/mockzilla health
+```
+
+## Install it globally
+
+With npm:
+
+```bash
+npm install --global github:andrecrjr/mockzilla
+```
+
+Or with Bun:
+
+```bash
+bun install --global github:andrecrjr/mockzilla
+```
+
+After installation, make sure your package manager's global bin directory is on
+`PATH`, then use the `mockzilla` command directly.
+
+## Connect to a server
+
+Start Mockzilla, then save the server URL and check the connection:
+
+```bash
+mockzilla config set --url http://localhost:36666
+mockzilla health
+mockzilla folders list
+```
+
+The URL can also be set per command with `--url`, or for the current shell with
+`MOCKZILLA_URL`. The default is `http://localhost:36666`.
+
+For mock payloads, wildcard variants, dynamic schemas, proxy settings, and the
+complete command list, see the
+[CLI reference on GitHub](https://github.com/andrecrjr/mockzilla/blob/main/documentation/cli.md).

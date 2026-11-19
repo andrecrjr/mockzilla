@@ -47,7 +47,7 @@ export function Hero() {
 					</p>
 					<p className="text-sm text-muted-foreground max-w-2xl mx-auto mb-8">
 						Mock APIs in 30 seconds with JSON Schema + Faker, MCP integration,
-						and stateful workflows.
+						and flexible route matching.
 					</p>
 
 					{/* CTA Buttons */}

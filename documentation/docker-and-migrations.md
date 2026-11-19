@@ -19,6 +19,10 @@ All development commands should be executed via Docker to ensure environment con
 
 Docker development runs the Next.js dev server with the default Next compiler. The Compose app service pins this through `START_CMD`. The dev image copies in a real Node 24 binary and runs the Next.js server process on Node inside the Bun-based container. This matches the desktop sidecar runtime and avoids Bun runtime issues in Next's dev server. Bun remains the package manager and script runner for project commands.
 
+### LAN development origins
+
+When opening the Docker development server from another device, set `NODE_ORIGINS` in `.env` to the device's hostname or IP address. Use commas for multiple hosts. Next.js accepts explicit hosts and scoped wildcard domains (for example, `*.example.test`); it does not support a universal `*` origin.
+
 CI runs `make prod-build` after lint, typecheck, and tests pass. This validates the production Docker image and Next.js standalone build on every pull request to `main` without pushing an image. CD publishes Docker images only after semantic-release creates a new version on `main`.
 
 ## Docker Development Initialization

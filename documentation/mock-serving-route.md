@@ -52,24 +52,52 @@ The route fetches all enabled mocks for the folder and method, then evaluates th
 3. **Find best match**: Uses `findBestMatch()` to score and rank candidates.
 4. **Select variant**: For wildcard mocks, selects the appropriate variant if configured.
 
+Scoring (`scoreCandidate` in `lib/utils/mock-matcher.ts`): match type (exact 300,
+wildcard 200, substring 100) + 10 per required query param + 1 per query value
+without `*` + endpoint path length. The highest score wins; ties go to non-proxy mocks,
+then the newest `createdAt` (`sortMocksForMatchTieBreakers`). Variants never affect
+which mock wins. Wildcard patterns compile to lazy `(.+?)` groups anchored only at the
+end (unless the endpoint contains `://`), so a `*` can span `/` and `/products/*` also
+matches `/shop/products/1`. User-facing examples live in
+`content/docs/reference/routing-and-matching.mdx`.
+
+The web editor keeps this configuration in one **Mock Response** area. Match Type is
+exact by default. Exact and substring mocks show the base response source selector;
+wildcard mocks hide that source editor and show variants as the primary response
+configuration. Query parameters, echo, delay, and proxy settings live in the separate
+**Advanced Options** panel.
+
 For mocks in subfolders, the matcher uses the subfolder's canonical `path` plus the mock's relative path. The subfolder path is derived from the nested internal segment hierarchy, with `mainPath` kept as a compatibility field.
 
 ### Endpoint Paths and Search Params
 
-Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. The web UI keeps URL-style endpoint input visible in the path field, such as `/users?status=active`, while also copying those search params into Advanced Options. Advanced Options query-param edits also update the visible endpoint path and preview. On save, the frontend submits the API-safe path and structured `queryParams` separately. Create and update APIs reject persisted mock paths that include `?` because storage keeps endpoint paths separate from the query-param matcher.
+Stored mock paths are endpoint paths only. Search params are extracted from the incoming request URL and matched against the mock's structured `queryParams` field. Query-param names are exact, while configured values support `*` glob matching (`status: "*"` matches any present status; `act*` matches `active`). The web UI keeps URL-style endpoint input visible in the path field, such as `/users?status=active`, while also copying those search params into Advanced Options. Advanced Options query-param edits also update the visible endpoint path and preview. Conversely, when the endpoint input loses focus, its query string is authoritative: removing a parameter there removes the corresponding Advanced Options field. On save, the frontend submits the API-safe path and structured `queryParams` separately. Create and update APIs reject persisted mock paths that include `?` because storage keeps endpoint paths separate from the query-param matcher.
 
 Wildcard captures are extracted from the normalized path only. For example, `/users/123?status=active` matched against `/users/*` exposes `input.params.0 = "123"` and `input.query.status = "active"`; the query string is not included in the wildcard capture.
 
 #### Variant Selection for Wildcards
 
-For mocks using `matchType: 'wildcard'`, Mockzilla supports multiple response variants based on the captured wildcard value:
+For mocks using `matchType: 'wildcard'`, Mockzilla supports multiple response variants based on the captured wildcard values:
 
-1. **Extract Key**: The captured wildcard segment(s) are joined by `|` to form a key (e.g., `/users/123` matches `/users/*` with key `123`).
-2. **Match Variant**: 
-   - Tries to find a variant with an exact match for the key.
-   - Falls back to a variant with key `*` (catch-all) if available.
-3. **Override Response**: If a variant is matched, its `body`, `statusCode`, and `bodyType` override the default mock configuration. 
-   - **Note**: When a variant is matched, `useDynamicResponse` is automatically disabled for that request to ensure the variant's static body is returned.
+1. **Extract captures**: Each `*` produces one value, in endpoint order. For example, `/users/alice/status/active` matched against `/users/*/status/*` produces `['alice', 'active']`. The values are also exposed directly as `input.params.0`, `input.params.1`, and so on; a literal `|` inside a value is preserved.
+2. **Match variant**:
+   - New variants use a `captures` array and must match every captured value in order.
+   - Older variants using `key` are normalized automatically. A single-wildcard legacy key is treated as one complete value, while multi-wildcard legacy keys continue to interpret `|` as the old separator.
+   - A variant with `isFallback: true` handles any captured values not matched by a specific variant. Legacy `key: '*'` is migrated to the same fallback behavior.
+   - URL-encoded captures are decoded for comparison, so variant values may use ordinary characters directly: enter `projects/api` rather than `projects%2Fapi`.
+3. **Override response**: If a variant is matched, its `body`, `statusCode`, and
+   `bodyType` override the default mock configuration.
+   - Legacy variants without extra fields remain static.
+   - A variant with `useDynamicResponse: true` uses that variant's `jsonSchema` and
+     returns freshly generated JSON for each request.
+   - A selected variant is a complete response source, so it bypasses the base
+     `echoRequestBody` setting. If no variant matches, the base response and echo
+     behavior are used unless `wildcardRequireMatch` returns a 404.
+
+New REST, MCP, import, and export writes store both `captures` and a generated
+legacy `key` so older clients continue to work. Reads normalize legacy records
+without requiring a destructive database migration; an update persists the
+normalized shape automatically.
 
 ### Proxy & Record
 
@@ -87,8 +115,12 @@ Once a match is found, the route builds the response based on the mock configura
 ### Static Response
 Returns the configured `response` body with the specified `statusCode` and content type (`json` or `text`).
 
+For HTTP status codes `204`, `205`, and `304`, Mockzilla returns an empty body as required by HTTP, regardless of the configured response body.
+
 ### Echo Request Body
 If `echoRequestBody` is enabled, the response is exactly the request body received.
+When a wildcard variant matches, the variant response takes precedence over base
+echo. Proxy configuration still takes precedence at the endpoint level.
 
 ### Dynamic Response
 If `useDynamicResponse` is enabled, generates fresh JSON from the configured `jsonSchema` on each request using the schema generator utility.
@@ -142,6 +174,6 @@ OPTIONS requests receive a 204 response for CORS preflight handling.
 
 ## Related Documentation
 
-- [Schema Interpolation](/documentation/schema-interpolation.md) - How `{$.path}` templates resolve
+- [Schema Interpolation](/documentation/schema-interpolation.md) - How `{{$.path}}` templates resolve
 - [Test Schemas](/documentation/test-schemas.md) - Sample schemas for dynamic generation
 - [Mock Matcher](/lib/utils/mock-matcher.ts) - Matching logic for wildcard and substring types

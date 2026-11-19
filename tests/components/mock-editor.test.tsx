@@ -58,7 +58,9 @@ describe('MockEditor', () => {
 			screen.getByText(/\/api\/mock\/ticket-management\/app\/ticket-type$/),
 		).toBeDefined();
 		expect(
-			screen.queryByText(/\/api\/mock\/ticket-management\/app\/ticket-management/),
+			screen.queryByText(
+				/\/api\/mock\/ticket-management\/app\/ticket-management/,
+			),
 		).toBeNull();
 	});
 
@@ -141,6 +143,177 @@ describe('MockEditor', () => {
 		);
 	});
 
+	it('opens Mock Response by default when editing a mock with advanced settings', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users',
+					response: '{}',
+					statusCode: '200',
+					queryParams: { page: '2' },
+					delay: '300',
+					meta: { proxyTargetUrl: 'https://example.com/users' },
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(
+			screen.getByRole('heading', { name: 'Mock Response' }),
+		).toBeDefined();
+		expect(
+			screen.queryByRole('heading', { name: 'Advanced Options' }),
+		).toBeNull();
+	});
+
+	it('keeps exact matching by default when the endpoint path contains a wildcard', async () => {
+		const onSubmit = mock(async () => undefined);
+
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				initial={{ name: 'Users', response: '{}', statusCode: '200' }}
+				onSubmit={onSubmit}
+			/>,
+		);
+
+		fireEvent.change(screen.getByLabelText('Endpoint Path'), {
+			target: { value: '/users/*' },
+		});
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Create Mock Endpoint' }),
+		);
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({ matchType: 'exact', path: '/users/*' }),
+		);
+	});
+
+	it('keeps exact matching when an existing wildcard path has no match type', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '{}',
+					statusCode: '200',
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(screen.getByLabelText('Match Type').textContent).toContain('Exact');
+	});
+
+	it('previews wildcard variants as the full served URL with query params', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				previewSlug="shop"
+				initial={{
+					name: 'Orders',
+					path: '/users/*/orders/*',
+					queryParams: { status: 'open' },
+					response: '{}',
+					matchType: 'wildcard',
+					statusCode: '200',
+					variants: [
+						{
+							key: '7|3',
+							captures: ['7', '3'],
+							body: '{}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					],
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(
+			screen.getByText(/\/api\/mock\/shop\/users\/7\/orders\/3\?status=open$/),
+		).toBeDefined();
+	});
+
+	it('submits wildcard variants without requiring a hidden base response', async () => {
+		const onSubmit = mock(async () => undefined);
+
+		render(
+			<MockEditor
+				mode="create"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '',
+					matchType: 'wildcard',
+					statusCode: '200',
+					variants: [
+						{
+							key: 'test',
+							body: '{"id":1}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					],
+				}}
+				onSubmit={onSubmit}
+			/>,
+		);
+
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Create Mock Endpoint' }),
+		);
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+	});
+
+	it('shows variants as the response editor for wildcard matching', () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users/*',
+					response: '{"source":"manual"}',
+					jsonSchema: '{"type":"object"}',
+					matchType: 'wildcard',
+					statusCode: '200',
+					variants: [
+						{
+							key: '123',
+							body: '{"source":"variant"}',
+							statusCode: 200,
+							bodyType: 'json',
+						},
+					],
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		expect(screen.getAllByText('Mock Response').length).toBeGreaterThan(1);
+		expect(
+			screen.getAllByRole('textbox', { name: 'Manual JSON response' }).length,
+		).toBe(1);
+		expect(
+			screen.queryAllByRole('textbox', { name: 'Dynamic response schema' })
+				.length,
+		).toBe(0);
+		expect(screen.getAllByText('Active response source').length).toBe(1);
+		expect(screen.getByLabelText('Wildcard capture 1')).toBeDefined();
+	});
+
 	it('does not split query params while a user is still typing', () => {
 		render(
 			<MockEditor
@@ -187,6 +360,64 @@ describe('MockEditor', () => {
 		expect(screen.getByDisplayValue('1')).toBeDefined();
 	});
 
+	it('removes Advanced Options query params deleted from the endpoint path on blur', async () => {
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users',
+					response: '{}',
+					statusCode: '200',
+					queryParams: { status: 'active', page: '1' },
+				}}
+				onSubmit={mock(async () => undefined)}
+			/>,
+		);
+
+		const pathInput = screen.getByLabelText('Endpoint Path');
+		fireEvent.change(pathInput, { target: { value: '/users?status=active' } });
+		fireEvent.blur(pathInput);
+
+		await waitFor(() => expect(screen.queryByDisplayValue('page')).toBeNull());
+		expect(screen.queryByDisplayValue('1')).toBeNull();
+		expect(screen.getByDisplayValue('status')).toBeDefined();
+		expect(screen.getByDisplayValue('active')).toBeDefined();
+	});
+
+	it('does not submit query params removed from the endpoint path before blur', async () => {
+		const onSubmit = mock(async () => undefined);
+		render(
+			<MockEditor
+				mode="edit"
+				defaultFolderId="folder-1"
+				initial={{
+					name: 'Users',
+					path: '/users',
+					response: '{}',
+					statusCode: '200',
+					queryParams: { status: 'active', page: '1' },
+				}}
+				onSubmit={onSubmit}
+			/>,
+		);
+
+		fireEvent.change(screen.getByLabelText('Endpoint Path'), {
+			target: { value: '/users?status=active' },
+		});
+		const form = screen
+			.getByRole('button', { name: 'Save Changes' })
+			.closest('form');
+		if (!form) throw new Error('Mock editor form was not found');
+		fireEvent.submit(form);
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({ queryParams: { status: 'active' } }),
+		);
+	});
+
 	it('hydrates the endpoint path with configured query params in the frontend', () => {
 		render(
 			<MockEditor
@@ -231,12 +462,16 @@ describe('MockEditor', () => {
 			/>,
 		);
 
-		const pathInput = screen.getByLabelText('Endpoint Path') as HTMLInputElement;
+		const pathInput = screen.getByLabelText(
+			'Endpoint Path',
+		) as HTMLInputElement;
 		fireEvent.change(pathInput, {
 			target: { value: '/users/*?status=active' },
 		});
 		fireEvent.blur(pathInput);
-		await waitFor(() => expect(screen.getByDisplayValue('active')).toBeDefined());
+		await waitFor(() =>
+			expect(screen.getByDisplayValue('active')).toBeDefined(),
+		);
 		fireEvent.change(screen.getByDisplayValue('active'), {
 			target: { value: 'inactive' },
 		});

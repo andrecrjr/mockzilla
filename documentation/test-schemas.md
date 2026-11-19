@@ -4,7 +4,7 @@ This directory contains test schemas to verify the string interpolation and fiel
 
 ## High-Fidelity Production Patterns
 
-For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [High-Fidelity Patterns Guide](/documentation/json-schema-faker.md#High-Fidelity-Patterns).
+For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [High-Fidelity Patterns Guide](/documentation/json-schema-faker.md#high-fidelity-patterns).
 
 ## Test Case 1: Simple Field Reference
 
@@ -19,7 +19,7 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
       "format": "uuid"
     },
     "message": {
-      "const": "Your ticket ID is {$.id}"
+      "const": "Your ticket ID is {{$.id}}"
     }
   }
 }
@@ -51,7 +51,7 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
       }
     },
     "greeting": {
-      "const": "Hello, {$.user.firstName} {$.user.lastName}!"
+      "const": "Hello, {{$.user.firstName}} {{$.user.lastName}}!"
     }
   }
 }
@@ -88,7 +88,7 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
       }
     },
     "featuredProduct": {
-      "const": "{$.items[0].name}"
+      "const": "{{$.items[0].name}}"
     }
   }
 }
@@ -119,7 +119,7 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
       "format": "uuid"
     },
     "statusMessage": {
-      "const": "Order {$.orderId} for customer {$.customerId} has tracking {$.trackingNumber}"
+      "const": "Order {{$.orderId}} for customer {{$.customerId}} has tracking {{$.trackingNumber}}"
     }
   }
 }
@@ -144,7 +144,7 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
         "format": "uuid"
       },
       "message": {
-        "const": "Your ticket was opened as {$.id}"
+        "const": "Your ticket was opened as {{$.id}}"
       },
       "status_slug": {
         "enum": ["online", "impactado", "inoperante"]
@@ -158,31 +158,32 @@ For complex stateful mocks (Dashboards, Feeds, Paginated APIs), refer to the [Hi
           },
           "serialNumber": {
             "type": "string",
-            "faker": "string.alphanumeric"
+            "faker": { "string.alphanumeric": 10 }
           }
         }
       },
       "confirmationCode": {
-        "const": "CONF-{$.equipment.serialNumber}"
+        "const": "CONF-{{$.equipment.serialNumber}}"
       },
       "summary": {
-        "const": "Ticket {$.id} for equipment {$.equipment.name}"
+        "const": "Ticket {{$.id}} for equipment {{$.equipment.name}}"
       }
     }
   }
 }
 ```
 
-**Expected:** Array of tickets where each ticket's message and summary reference its own IDs and equipment details.
+**Expected (current behavior):** Not supported. `$` always points at the root of the generated value, which is the array here, so `{{$.id}}` and `{{$.equipment.name}}` stay as literal text in every item. Per-item references only work when the referenced fields sit on the root object, as in Test Cases 1–4.
 
 ---
 
 ## Best Practices
 
 ### Required Fields
-By default, Mockzilla is configured with `fillProperties: false` to ensure that only the properties you explicitly define are generated. Because of this, **you must include all properties you want to see in the `required` array**. 
-
-If a property is not in the `required` list, it may not be generated even if it is defined in `properties`.
+Mockzilla configures JSF with `fillProperties: false` (no extra properties beyond
+`properties`) and `alwaysFakeOptionals: true`. Every property listed in `properties`
+is generated, whether or not it appears in `required`. Keep `required` accurate for
+the contract, but it does not control which fields appear.
 
 ```json
 {
@@ -217,7 +218,7 @@ const schema = {
   type: "object",
   properties: {
     id: { type: "string", format: "uuid" },
-    message: { const: "Your ID is {$.id}" }
+    message: { const: "Your ID is {{$.id}}" }
   }
 }
 

@@ -1,52 +1,93 @@
+import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import * as yaml from 'yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { db } from '@/lib/db';
 import { folders, mockResponses, mockSubfolders } from '@/lib/db/schema';
 import { generateFromSchema } from '@/lib/schema-generator';
-import type { HttpMethod, MatchType } from '@/lib/types';
+import type { BodyType, HttpMethod, MatchType, MockVariant } from '@/lib/types';
 import { deriveSubfolderMainPath } from '@/lib/mock-subfolders';
 import { normalizeFolderPath } from '@/lib/utils/folder-paths';
+import { joinMockPaths, normalizeAbsolutePath } from '@/lib/utils/mock-paths';
+import {
+	normalizeMockVariant,
+	normalizeMockVariants,
+} from '@/lib/utils/mock-variants';
+
+/**
+ * Query parameter added to imported error-response mocks. A request such as
+ * `GET /users/1?__status=404` selects the mock generated from the spec's 404.
+ */
+const ERROR_STATUS_QUERY_PARAM = '__status';
+
+const HTTP_METHODS = [
+	'get',
+	'post',
+	'put',
+	'patch',
+	'delete',
+	'head',
+	'options',
+] as const;
 
 /**
  * Basic OpenAPI types for dereferenced spec
  */
+interface OpenApiServer {
+	url?: string;
+	variables?: Record<string, { default?: string }>;
+}
+
 interface OpenApiSpec {
 	info?: {
 		title?: string;
 		description?: string;
 	};
-	paths?: Record<string, Record<string, OpenApiOperation>>;
+	/** OpenAPI 3.x */
+	servers?: OpenApiServer[];
+	/** Swagger 2.0 */
+	basePath?: string;
+	paths?: Record<string, OpenApiPathItem>;
 }
+
+interface OpenApiParameter {
+	name: string;
+	in: string;
+	required?: boolean;
+	schema?: {
+		default?: unknown;
+	};
+	example?: unknown;
+}
+
+type OpenApiPathItem = {
+	parameters?: OpenApiParameter[];
+} & Partial<Record<(typeof HTTP_METHODS)[number], OpenApiOperation>>;
 
 interface OpenApiOperation {
 	summary?: string;
 	operationId?: string;
-	parameters?: Array<{
-		name: string;
-		in: string;
-		schema?: {
-			default?: unknown;
-		};
-		example?: unknown;
-	}>;
+	parameters?: OpenApiParameter[];
 	responses?: Record<string, OpenApiResponse>;
 }
 
-interface OpenApiResponse {
-	description?: string;
-	content?: Record<
-		string,
-		{
-			schema?: unknown;
-			example?: unknown;
-			examples?: Record<string, { value?: unknown }>;
-		}
-	>;
+interface OpenApiMediaType {
 	schema?: unknown;
 	example?: unknown;
 	examples?: Record<string, { value?: unknown }>;
 }
+
+interface OpenApiResponse {
+	description?: string;
+	content?: Record<string, OpenApiMediaType>;
+	/** Swagger 2.0 */
+	schema?: unknown;
+	example?: unknown;
+	examples?: Record<string, { value?: unknown }>;
+}
+
+type MockResponseRow = typeof mockResponses.$inferSelect;
+type ImportTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function generateSlug(name: string): string {
 	return name
@@ -216,19 +257,379 @@ function generateFallbackResponse(
 }
 
 /**
+ * Returns the path part of the spec's server URL (OpenAPI 3 `servers[0].url`,
+ * with variable defaults substituted) or Swagger 2 `basePath`. Real API calls
+ * include this prefix, so imported mocks are served under it too.
+ */
+function getServerBasePath(spec: OpenApiSpec): string {
+	if (typeof spec.basePath === 'string' && spec.basePath.trim()) {
+		return normalizeAbsolutePath(spec.basePath);
+	}
+
+	const server = spec.servers?.[0];
+	if (!server?.url) return '/';
+
+	const url = server.url.replace(
+		/\{([^}]+)\}/g,
+		(_match, name: string) => server.variables?.[name]?.default ?? '',
+	);
+	try {
+		const { pathname } = new URL(url, 'http://placeholder.local');
+		return normalizeAbsolutePath(decodeURIComponent(pathname));
+	} catch {
+		return '/';
+	}
+}
+
+/** Parses `200`, `404`, and range keys such as `2XX` (→ 200). */
+function parseStatusCode(code: string): number | null {
+	if (/^[1-5]\d\d$/.test(code)) return Number.parseInt(code, 10);
+	const range = /^([1-5])xx$/i.exec(code);
+	return range ? Number.parseInt(range[1], 10) * 100 : null;
+}
+
+/**
+ * Picks the success response: `200`, then `201`, then the first other 2xx
+ * code, then a `2XX` range, then `default` (served as 200).
+ */
+function selectSuccessResponse(responses: Record<string, OpenApiResponse>): {
+	key: string | null;
+	statusCode: number;
+	response?: OpenApiResponse;
+} {
+	const keys = Object.keys(responses);
+	const key =
+		['200', '201'].find((code) => code in responses) ??
+		keys.find((code) => /^2\d\d$/.test(code)) ??
+		keys.find((code) => /^2xx$/i.test(code)) ??
+		null;
+
+	if (key) {
+		return {
+			key,
+			statusCode: parseStatusCode(key) ?? 200,
+			response: responses[key],
+		};
+	}
+	return { key: null, statusCode: 200, response: responses.default };
+}
+
+/** Error responses (4xx/5xx, including `4XX` ranges) to import as their own mocks. */
+function selectErrorResponses(
+	responses: Record<string, OpenApiResponse>,
+): Array<{ statusCode: number; response: OpenApiResponse }> {
+	const byStatus = new Map<number, OpenApiResponse>();
+	for (const [code, response] of Object.entries(responses)) {
+		const statusCode = parseStatusCode(code);
+		if (statusCode === null || statusCode < 400) continue;
+		// An exact code (404) wins over a range (4XX) that maps to the same status.
+		if (!byStatus.has(statusCode) || /^\d+$/.test(code)) {
+			byStatus.set(statusCode, response);
+		}
+	}
+	return [...byStatus.entries()]
+		.sort(([a], [b]) => a - b)
+		.map(([statusCode, response]) => ({ statusCode, response }));
+}
+
+function isJsonMediaType(mediaType: string): boolean {
+	const base = mediaType.split(';')[0].trim().toLowerCase();
+	return (
+		base === '*/*' || base === 'application/json' || /[/+]json$/.test(base)
+	);
+}
+
+/**
+ * Chooses the media type to mock: `application/json`, then any other JSON
+ * type (`application/problem+json`, `*\/*`), then `text/*`. Swagger 2.0
+ * responses keep their schema and examples on the response itself.
+ */
+function selectMediaContent(response: OpenApiResponse | undefined): {
+	media: OpenApiMediaType;
+	bodyType: BodyType;
+} {
+	if (!response) return { media: {}, bodyType: 'json' };
+
+	const content = response.content;
+	if (content && Object.keys(content).length > 0) {
+		const types = Object.keys(content);
+		const jsonType =
+			types.find((type) => type.split(';')[0].trim() === 'application/json') ??
+			types.find(isJsonMediaType);
+		if (jsonType) return { media: content[jsonType] ?? {}, bodyType: 'json' };
+
+		const textType = types.find((type) =>
+			type.toLowerCase().startsWith('text/'),
+		);
+		if (textType) return { media: content[textType] ?? {}, bodyType: 'text' };
+
+		return { media: {}, bodyType: 'json' };
+	}
+
+	return {
+		media: {
+			schema: response.schema,
+			example: response.example,
+			examples: response.examples,
+		},
+		bodyType: 'json',
+	};
+}
+
+/** Operation parameters override path-level parameters with the same name and location. */
+function mergeParameters(
+	pathParameters: OpenApiParameter[] | undefined,
+	operationParameters: OpenApiParameter[] | undefined,
+): OpenApiParameter[] {
+	const merged = new Map<string, OpenApiParameter>();
+	for (const parameter of [
+		...(pathParameters ?? []),
+		...(operationParameters ?? []),
+	]) {
+		if (!parameter?.name || !parameter.in) continue;
+		merged.set(`${parameter.in}:${parameter.name}`, parameter);
+	}
+	return [...merged.values()];
+}
+
+/**
+ * Required query parameters become match filters with a `*` value: the key
+ * must be present, any value matches. Optional parameters are not filters.
+ */
+function getRequiredQueryParams(
+	parameters: OpenApiParameter[],
+): Record<string, string> {
+	const queryParams: Record<string, string> = {};
+	for (const parameter of parameters) {
+		if (parameter.in === 'query' && parameter.required === true) {
+			queryParams[parameter.name] = '*';
+		}
+	}
+	return queryParams;
+}
+
+/**
+ * External `$ref`s are not fetched (see POST), so they stay in the
+ * dereferenced spec. Replace them with an empty schema so generation still
+ * works; returns how many were removed.
+ */
+function stripUnresolvedRefs(
+	value: unknown,
+	visited = new WeakSet<object>(),
+): number {
+	if (!value || typeof value !== 'object' || visited.has(value)) return 0;
+	visited.add(value);
+
+	let removed = 0;
+	const entries = Array.isArray(value)
+		? value.entries()
+		: Object.entries(value as Record<string, unknown>);
+	for (const [key, child] of entries) {
+		if (
+			child &&
+			typeof child === 'object' &&
+			!Array.isArray(child) &&
+			typeof (child as { $ref?: unknown }).$ref === 'string'
+		) {
+			(value as Record<string | number, unknown>)[key] = {};
+			removed++;
+		} else {
+			removed += stripUnresolvedRefs(child, visited);
+		}
+	}
+	return removed;
+}
+
+function getFirstExample(
+	examples: Record<string, { value?: unknown }> | undefined,
+): unknown {
+	if (!examples || typeof examples !== 'object') return undefined;
+	const first = Object.values(examples)[0];
+	if (first === undefined) return undefined;
+	return first && typeof first === 'object' && 'value' in first
+		? first.value
+		: first;
+}
+
+/** Builds the stored response for one OpenAPI response object. */
+function buildResponseBody(
+	response: OpenApiResponse | undefined,
+	options: { echoWhenEmpty: boolean },
+): {
+	response: string;
+	bodyType: BodyType;
+	jsonSchema: string | null;
+	echoRequestBody: boolean;
+} {
+	const { media, bodyType } = selectMediaContent(response);
+	const schema = media.schema;
+	const example =
+		media.example !== undefined
+			? media.example
+			: getFirstExample(media.examples);
+
+	if (bodyType === 'text') {
+		let text = typeof example === 'string' ? example : '';
+		if (!text && schema) {
+			try {
+				const generated: unknown = JSON.parse(
+					generateFromSchema(
+						limitArrayItems(schema) as Record<string, unknown>,
+					),
+				);
+				text =
+					typeof generated === 'string' ? generated : JSON.stringify(generated);
+			} catch {
+				text = '';
+			}
+		}
+		return {
+			response: text,
+			bodyType,
+			jsonSchema: null,
+			echoRequestBody: false,
+		};
+	}
+
+	if (schema) {
+		let body: string;
+		try {
+			body = generateFromSchema(
+				limitArrayItems(schema) as Record<string, unknown>,
+			);
+		} catch (genError) {
+			console.error('[API] Generation error during OpenAPI import:', genError);
+			body = JSON.stringify(
+				generateFallbackResponse(schema as Record<string, unknown>),
+				null,
+				2,
+			);
+		}
+		// Use safeStringify to prevent crashes on circular references
+		return {
+			response: body,
+			bodyType,
+			jsonSchema: safeStringify(schema),
+			echoRequestBody: false,
+		};
+	}
+
+	if (example !== undefined) {
+		return {
+			response: JSON.stringify(example, null, 2),
+			bodyType,
+			jsonSchema: null,
+			echoRequestBody: false,
+		};
+	}
+
+	return {
+		response: '{}',
+		bodyType,
+		jsonSchema: null,
+		echoRequestBody: options.echoWhenEmpty,
+	};
+}
+
+/**
+ * Identity used to match an imported operation with a mock from an earlier
+ * import of the same spec. Error mocks also carry their `__status` value.
+ */
+function getImportIdentity(mock: {
+	method: string;
+	endpoint: string;
+	mockFolderId: string | null;
+	queryParams: unknown;
+}): string {
+	const queryParams =
+		mock.queryParams && typeof mock.queryParams === 'object'
+			? (mock.queryParams as Record<string, unknown>)
+			: {};
+	const status = queryParams[ERROR_STATUS_QUERY_PARAM];
+	return [
+		mock.method,
+		mock.endpoint,
+		mock.mockFolderId ?? '',
+		typeof status === 'string' ? status : '',
+	].join(' ');
+}
+
+/**
+ * Re-import keeps variants the user added for specific captures and replaces
+ * only the fallback. A fallback the user switched to Dynamic Response keeps
+ * its schema and dynamic mode.
+ */
+function mergeImportedVariants(
+	existing: MockVariant[] | null,
+	imported: MockVariant[] | null,
+	endpoint: string,
+): MockVariant[] | null {
+	if (!imported) return existing && existing.length > 0 ? existing : null;
+	const previous = normalizeMockVariants(existing, endpoint) ?? [];
+	const previousFallback = previous.find((variant) => variant.isFallback);
+	const specific = previous.filter((variant) => !variant.isFallback);
+
+	const merged = imported.map((variant) => {
+		const normalized = normalizeMockVariant(variant, endpoint);
+		if (normalized.isFallback && previousFallback?.useDynamicResponse) {
+			return {
+				...normalized,
+				jsonSchema: previousFallback.jsonSchema,
+				useDynamicResponse: true,
+				bodyType: 'json' as const,
+			};
+		}
+		return normalized;
+	});
+	return [...specific, ...merged];
+}
+
+/**
  * Processes OpenAPI paths and methods, creating mock responses in the database.
  * This is the "wiring" logic that converts the dereferenced spec into Mockzilla records.
  */
+interface ImportResult {
+	mocksCount: number;
+	updatedCount: number;
+	skippedCount: number;
+	subfoldersCount: number;
+}
+
 async function processOpenApiPaths(
 	spec: OpenApiSpec,
 	folderId: string,
-	tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-): Promise<{ mocksCount: number; subfoldersCount: number }> {
+	tx: ImportTx,
+): Promise<ImportResult> {
 	let mocksCount = 0;
+	let updatedCount = 0;
+	let skippedCount = 0;
 	let subfoldersCount = 0;
 	const subfolderIdByMainPath = new Map<string, string>();
 
-	if (!spec.paths) return { mocksCount: 0, subfoldersCount: 0 };
+	if (!spec.paths) {
+		return {
+			mocksCount: 0,
+			updatedCount: 0,
+			skippedCount: 0,
+			subfoldersCount: 0,
+		};
+	}
+
+	// Mocks from earlier imports of this folder, matched by getImportIdentity so a
+	// re-import updates them instead of adding duplicates.
+	const existingRows = (await tx
+		.select()
+		.from(mockResponses)
+		.where(eq(mockResponses.folderId, folderId))) as MockResponseRow[];
+	const existingByIdentity = new Map<string, MockResponseRow>();
+	for (const row of existingRows) {
+		if (!row?.id || !row.method || typeof row.endpoint !== 'string') continue;
+		const identity = getImportIdentity(row);
+		if (!existingByIdentity.has(identity))
+			existingByIdentity.set(identity, row);
+	}
+	const importedIdentities = new Set<string>();
+	const basePath = getServerBasePath(spec);
 
 	async function ensureSubfolder(
 		name: string,
@@ -290,131 +691,162 @@ async function processOpenApiPaths(
 		return lastId;
 	}
 
-	for (const [path, methods] of Object.entries(spec.paths)) {
-		for (const [method, operation] of Object.entries(methods)) {
-			if (
-				!['get', 'post', 'put', 'patch', 'delete', 'head', 'options'].includes(
-					method.toLowerCase(),
-				)
-			) {
-				continue;
-			}
+	interface ImportedMock {
+		name: string;
+		endpoint: string;
+		method: HttpMethod;
+		statusCode: number;
+		response: string;
+		mockFolderId: string | null;
+		matchType: MatchType;
+		bodyType: BodyType;
+		queryParams: Record<string, string> | null;
+		variants: MockVariant[] | null;
+		jsonSchema: string | null;
+		echoRequestBody: boolean;
+	}
 
-			const op = operation;
-			// Normalize path: remove trailing slash for consistency
-			const normalizedPath =
-				path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
-			const subfolderSegments = getStaticSubfolderSegments(normalizedPath);
-			const mockFolderId = await ensureSubfolderPath(subfolderSegments);
-			const relativePath = getRelativeMockPath(
-				normalizedPath,
-				subfolderSegments,
-			);
-			const { endpoint, matchType } =
-				convertOpenApiPathToMockzilla(relativePath);
+	/** Inserts a new mock, or updates the one from an earlier import. */
+	async function saveImportedMock(mock: ImportedMock): Promise<void> {
+		const identity = getImportIdentity(mock);
+		// Two operations can map to the same mock (e.g. `/users/{id}` and
+		// `/users/{name}` both become `/users/*`); keep the first.
+		if (importedIdentities.has(identity)) {
+			skippedCount++;
+			return;
+		}
+		importedIdentities.add(identity);
 
-			// Try to find a successful response (200, 201, or first 2xx)
-			const responses = op.responses || {};
-			const successCode =
-				Object.keys(responses).find((code) => code.startsWith('2')) || '200';
-			const successResponse = responses[successCode] || responses.default;
-
-			const jsonContent = successResponse?.content?.['application/json'];
-			// Support both OpenAPI 3.x (jsonContent.schema) and Swagger 2.0 (successResponse.schema)
-			const schema = jsonContent?.schema || successResponse?.schema;
-			const examples = jsonContent?.examples || successResponse?.examples;
-			const example = jsonContent?.example || successResponse?.example;
-
-			// Extract query parameters
-			const queryParams: Record<string, unknown> = {};
-			if (op.parameters) {
-				for (const param of op.parameters) {
-					if (param.in === 'query') {
-						queryParams[param.name] =
-							param.schema?.default ?? param.example ?? '';
-					}
-				}
-			}
-
-			let responseBody = '{}';
-			let jsonSchema = null;
-			let useDynamicResponse = false;
-			let echoRequestBody = false;
-
-			const isWriteMethod = ['POST', 'PUT', 'PATCH'].includes(
-				method.toUpperCase(),
-			);
-			let variants = null;
-
-			if (schema) {
-				// With $RefParser, schemas are already dereferenced, so no need to manual component injection
-				try {
-					const limitedSchema = limitArrayItems(schema) as Record<
-						string,
-						unknown
-					>;
-					responseBody = generateFromSchema(limitedSchema);
-				} catch (genError) {
-					console.error(
-						`[API] Generation error for ${method.toUpperCase()} ${path}:`,
-						genError,
-					);
-					responseBody = JSON.stringify(
-						generateFallbackResponse(schema as Record<string, unknown>),
-						null,
-						2,
-					);
-				}
-				// Use safeStringify to prevent crashes on circular references
-				jsonSchema = safeStringify(schema);
-			} else if (examples && typeof examples === 'object') {
-				const firstExampleKey = Object.keys(examples)[0];
-				const firstExample = examples[firstExampleKey];
-				responseBody = JSON.stringify(
-					firstExample.value || firstExample,
-					null,
-					2,
-				);
-			} else if (example !== undefined) {
-				responseBody = JSON.stringify(example, null, 2);
-			} else if (isWriteMethod) {
-				echoRequestBody = true;
-			}
-
-			if (matchType === 'wildcard') {
-				variants = [
-					{
-						key: '*',
-						body: responseBody,
-						statusCode: Number.parseInt(successCode, 10) || 200,
-						bodyType: 'json',
-					},
-				];
-			}
-
+		const existing = existingByIdentity.get(identity);
+		if (!existing) {
 			await tx.insert(mockResponses).values({
-				name: op.summary || op.operationId || `${method.toUpperCase()} ${path}`,
-				endpoint,
-				method: method.toUpperCase() as HttpMethod,
-				statusCode: Number.parseInt(successCode, 10) || 200,
-				response: responseBody,
+				...mock,
 				folderId,
-				mockFolderId,
-				matchType: matchType as MatchType,
-				bodyType: 'json',
 				enabled: true,
-				queryParams: Object.keys(queryParams).length > 0 ? queryParams : null,
-				variants,
-				jsonSchema,
-				useDynamicResponse,
-				echoRequestBody,
+				useDynamicResponse: false,
+			});
+			mocksCount++;
+			return;
+		}
+
+		// Spec-derived fields are refreshed. User settings (enabled, delay, proxy
+		// meta, dynamic mode, and specific variants) are kept.
+		const keepsDynamicSchema =
+			existing.useDynamicResponse === true && mock.jsonSchema === null;
+		await tx
+			.update(mockResponses)
+			.set({
+				name: mock.name,
+				statusCode: mock.statusCode,
+				response: mock.response,
+				matchType: mock.matchType,
+				bodyType: existing.useDynamicResponse ? 'json' : mock.bodyType,
+				queryParams: mock.queryParams,
+				variants: mergeImportedVariants(
+					existing.variants as MockVariant[] | null,
+					mock.variants,
+					mock.endpoint,
+				),
+				jsonSchema: keepsDynamicSchema ? existing.jsonSchema : mock.jsonSchema,
+				echoRequestBody: mock.echoRequestBody,
+				updatedAt: new Date(),
+			})
+			.where(eq(mockResponses.id, existing.id));
+		updatedCount++;
+	}
+
+	for (const [path, pathItem] of Object.entries(spec.paths)) {
+		if (!pathItem || typeof pathItem !== 'object') continue;
+
+		// Normalize path: remove trailing slash, then add the server base path.
+		const specPath =
+			path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+		const normalizedPath =
+			basePath === '/' ? specPath : joinMockPaths(basePath, specPath);
+		const subfolderSegments = getStaticSubfolderSegments(normalizedPath);
+		const relativePath = getRelativeMockPath(normalizedPath, subfolderSegments);
+		const { endpoint, matchType } = convertOpenApiPathToMockzilla(relativePath);
+		let mockFolderId: string | null | undefined;
+
+		for (const method of HTTP_METHODS) {
+			const op = pathItem[method];
+			if (!op || typeof op !== 'object') continue;
+
+			// Create subfolders only for paths that have at least one operation.
+			if (mockFolderId === undefined) {
+				mockFolderId = await ensureSubfolderPath(subfolderSegments);
+			}
+
+			const httpMethod = method.toUpperCase() as HttpMethod;
+			const name = op.summary || op.operationId || `${httpMethod} ${path}`;
+			const responses = op.responses || {};
+			const success = selectSuccessResponse(responses);
+			const body = buildResponseBody(success.response, {
+				echoWhenEmpty: ['POST', 'PUT', 'PATCH'].includes(httpMethod),
 			});
 
-			mocksCount++;
+			const requiredQueryParams = getRequiredQueryParams(
+				mergeParameters(pathItem.parameters, op.parameters),
+			);
+			const hasQueryParams = Object.keys(requiredQueryParams).length > 0;
+
+			const variants: MockVariant[] | null =
+				matchType === 'wildcard'
+					? [
+							{
+								key: '*',
+								captures: [],
+								isFallback: true,
+								body: body.response,
+								statusCode: success.statusCode,
+								bodyType: body.bodyType,
+							},
+						]
+					: null;
+
+			await saveImportedMock({
+				name,
+				endpoint,
+				method: httpMethod,
+				statusCode: success.statusCode,
+				response: body.response,
+				mockFolderId,
+				matchType: matchType as MatchType,
+				bodyType: body.bodyType,
+				queryParams: hasQueryParams ? requiredQueryParams : null,
+				variants: normalizeMockVariants(variants, endpoint),
+				jsonSchema: body.jsonSchema,
+				echoRequestBody: body.echoRequestBody,
+			});
+
+			// Each 4xx/5xx response becomes a sibling mock selected with
+			// `?__status=<code>`. The required query row outscores the base mock.
+			for (const error of selectErrorResponses(responses)) {
+				const errorBody = buildResponseBody(error.response, {
+					echoWhenEmpty: false,
+				});
+				await saveImportedMock({
+					name: `${name} (${error.statusCode})`,
+					endpoint,
+					method: httpMethod,
+					statusCode: error.statusCode,
+					response: errorBody.response,
+					mockFolderId,
+					matchType: matchType as MatchType,
+					bodyType: errorBody.bodyType,
+					queryParams: {
+						...requiredQueryParams,
+						[ERROR_STATUS_QUERY_PARAM]: String(error.statusCode),
+					},
+					variants: null,
+					jsonSchema: errorBody.jsonSchema,
+					echoRequestBody: false,
+				});
+			}
 		}
 	}
 
-	return { mocksCount, subfoldersCount };
+	return { mocksCount, updatedCount, skippedCount, subfoldersCount };
 }
 
 export async function POST(request: NextRequest) {
@@ -441,17 +873,21 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Use $RefParser to dereference the spec, resolving all internal and external references.
-		// This is the core of our robust, spec-driven logic.
+		// Use $RefParser to dereference internal (`#/...`) references. External
+		// references are NOT resolved: following them would make the server fetch
+		// arbitrary URLs or files named by the uploaded spec (SSRF). They are
+		// replaced with empty schemas below and reported as a warning.
 		let dereferencedSpec: OpenApiSpec;
+		let unresolvedRefCount = 0;
 		try {
 			// We pass a dummy base URL to prevent errors in some environments (like happy-dom)
 			// that can't resolve a base for a root object.
 			dereferencedSpec = (await $RefParser.dereference(
 				'http://mockzilla.local/',
 				parsedSpec as Record<string, unknown>,
-				{},
+				{ resolve: { external: false } },
 			)) as OpenApiSpec;
+			unresolvedRefCount = stripUnresolvedRefs(dereferencedSpec.paths);
 		} catch (refError) {
 			console.error('[API] Dereference error:', refError);
 			return NextResponse.json(
@@ -470,6 +906,8 @@ export async function POST(request: NextRequest) {
 
 		let folderId = '';
 		let importedCount = 0;
+		let updatedCount = 0;
+		let skippedCount = 0;
 		let importedSubfoldersCount = 0;
 
 		await db.transaction(async (tx) => {
@@ -497,14 +935,31 @@ export async function POST(request: NextRequest) {
 				tx,
 			);
 			importedCount = importResult.mocksCount;
+			updatedCount = importResult.updatedCount;
+			skippedCount = importResult.skippedCount;
 			importedSubfoldersCount = importResult.subfoldersCount;
 		});
+
+		const warnings: string[] = [];
+		if (unresolvedRefCount > 0) {
+			warnings.push(
+				`${unresolvedRefCount} external $ref(s) were not resolved and were replaced with empty schemas. Inline or bundle external references before importing.`,
+			);
+		}
+		if (skippedCount > 0) {
+			warnings.push(
+				`${skippedCount} operation(s) mapped to the same mock as an earlier operation and were skipped.`,
+			);
+		}
 
 		return NextResponse.json({
 			success: true,
 			folderId,
 			importedCount,
+			updatedCount,
+			skippedCount,
 			importedSubfoldersCount,
+			warnings,
 		});
 	} catch (error: unknown) {
 		console.error('[API] OpenAPI Import error:', error);

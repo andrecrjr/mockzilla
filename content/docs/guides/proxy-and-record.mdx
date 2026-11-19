@@ -1,58 +1,145 @@
-# Proxy & Record Mode
+---
+title: Proxy & Record
+description: Proxy one mock to a live API and record each response as a new exact mock.
+---
 
-Mockzilla's "Proxy & Record" mode allows you to automatically capture live API traffic and convert it into mock endpoints. This is ideal for quickly bootstrapping a mock server from an existing backend or for capturing complex edge cases from real responses.
+# Proxy & Record
 
-## How it Works
+Proxy & Record forwards matching requests to a live API and saves each response as
+a mock. Point a mock at your staging server, click through your app once, and you
+have an offline copy of every response you used.
 
-Proxy & Record is configured on individual mocks. If a matching mock has a
-**Proxy Target URL** in `meta.proxyTargetUrl`, Mockzilla proxies that request to
-the target instead of returning the mock's static response.
+## Set it up
 
-1. **Matched Request**: A request must match an existing mock by method, path,
-   match type, and query params.
-2. **Live Fetch**: Mockzilla forwards the request to the exact **Proxy Target URL** configured in the mock, preserving query parameters, method, headers, and request body. The original mock path is NOT appended to the target URL.
-3. **Auto-Record**: The live response is returned to the client and saved as a new exact-match mock in the same folder, using the original request path.
-4. **No Folder Fallback**: If no mock matches, Mockzilla returns `404`; folder
-   metadata does not enable proxy recording.
+1. Create or edit a mock whose path and method match the requests you want to
+   capture (for example `GET /users`, or `GET /users/*` for many IDs).
+2. Open **Advanced Options** and fill in **Proxy & Record** with a full URL,
+   including `http://` or `https://`.
+3. Save. The **Mock Response** tab now shows a **Proxy & Record is on** notice: the
+   mock's own response is not served while a proxy target is set.
 
-## Precedence
-
-When multiple mocks match the same incoming request, Mockzilla follows these rules:
-
-1. **Specificity**: Mocks with more matching query parameters take precedence.
-2. **Recorded vs. Proxy**: If specificity is equal, a mock **without** a `proxyTargetUrl` (e.g., a recorded mock) takes precedence over one **with** a `proxyTargetUrl`. This ensures that once a response is captured, subsequent requests use the captured mock instead of proxying again.
-3. **Recency**: If all else is equal, the most recently created mock is picked.
-
-## Configuration
-
-### Via Dashboard
-
-1. Create or edit a mock endpoint.
-2. Under the basic fields, enter a **Proxy Target URL**.
-3. Save the mock.
-
-### Via API
-
-Pass `proxyTargetUrl` inside the mock `meta` object in the request body.
+Via the REST API, set `meta.proxyTargetUrl`:
 
 ```bash
-curl -X PUT "http://localhost:3000/api/mocks?id={mock-id}" \
+curl -X PUT "http://localhost:36666/api/mocks?id={mock-id}" \
      -H "Content-Type: application/json" \
-     -d '{
-       "name": "Specific Proxy", 
-       "meta": { "proxyTargetUrl": "https://api.example.com" }
-     }'
+     -d '{ "meta": { "proxyTargetUrl": "https://api.example.com/v1/users" } }'
 ```
 
-## Features
+## Send your own headers and parameters
 
-- **Transparent Proxying**: Method, headers, and body are preserved during the proxy request.
-- **Smart Body Detection**: Automatically detects if the response is JSON or plain text based on the `Content-Type` header.
-- **Immediate Availability**: The recorded mock is active immediately and visible in the dashboard for further customization.
-- **Mock Scoped**: Each proxy recorder is attached to one mock, so different endpoints can proxy to different upstream services inside the same folder.
+With a proxy target set, **Advanced Options** also lets you define what the upstream
+receives, so your app does not need to know any credentials:
 
-## Use Cases
+- **Upstream headers**: for example `Authorization: Bearer <token>`, an API key, or
+  a custom `Accept`. They replace any incoming header with the same name.
+- **Also forward the caller's headers**: on by default. Turn it off to send **only**
+  the headers you listed, which keeps browser cookies and tokens away from the API.
+- **Upstream query parameters**: for example `api_key=…`. They are added to every
+  request and replace an incoming parameter with the same name.
 
-- **Backend Replacement**: Set the proxy to your staging server, hit all your app's features once, and you have a full mock environment ready for offline dev.
-- **Edge Case Capture**: Point the proxy to a server that is currently exhibiting a bug. Once Mockzilla records the faulty response, you can test your frontend fix against it repeatedly.
-- **API Versioning**: Record responses from `v1` of an API to ensure your app remains compatible while you develop against `v2`.
+Sensitive-looking values (Authorization, API keys, tokens, cookies) are masked in the
+editor with a show/hide toggle. `Host`, `Content-Length`, `Connection`, and similar
+headers are managed by Mockzilla and cannot be set.
+
+Configured values are not part of the recording's match key and are not written
+to the recorded mock, so a replay needs no credentials. They **are** stored with
+the proxy mock and appear in exports and API responses, so use test credentials or a
+token you can revoke. Via the API, set `meta.proxyHeaders`, `meta.proxyQueryParams`,
+and `meta.proxyForwardHeaders`:
+
+```bash
+curl -X PUT "http://localhost:36666/api/mocks?id={mock-id}" \
+     -H "Content-Type: application/json" \
+     -d '{ "meta": {
+       "proxyTargetUrl": "https://api.example.com/v1/users",
+       "proxyHeaders": { "Authorization": "Bearer <token>" },
+       "proxyQueryParams": { "api_key": "<key>" },
+       "proxyForwardHeaders": false
+     } }'
+```
+
+### From the CLI or an AI agent
+
+The same settings are available outside the dashboard. In the CLI:
+
+```bash
+printf '{"Authorization":"Bearer <token>"}' | \
+  mockzilla mocks update {mock-id} \
+    --proxy-url https://api.example.com/v1/users \
+    --proxy-headers-file - --no-forward-headers
+```
+
+Over MCP, pass `proxy` to `manage_mocks`:
+
+```json
+{ "action": "update", "id": "{mock-id}",
+  "proxy": { "targetUrl": "https://api.example.com/v1/users",
+             "headers": { "Authorization": "Bearer <token>" } } }
+```
+
+Both are partial updates, so changing one setting keeps the others. MCP replies show
+credential values as `***`; send `***` back to keep a stored value. Use
+`--clear-proxy` (CLI) or `"targetUrl": null` (MCP) to turn the proxy off.
+
+## What happens on each request
+
+1. **Match.** The request must match the proxy mock by method, path, match type,
+   and query params. With no matching mock, Mockzilla returns `404`.
+2. **Forward.** Mockzilla calls the **exact** target URL with the incoming method,
+   body, query string, and headers, plus any configured upstream headers and
+   parameters. `Host` and hop-by-hop headers such as `Connection` and
+   `Content-Length` are not forwarded. The mock path is **not** appended to the
+   target.
+3. **Record.** The live status and body are returned to the client and saved as a
+   new mock named `Recorded: GET /users?page=1`, marked with a **Recorded** badge.
+   It is an exact mock in the same folder and subfolder as the proxy mock.
+4. **Replay.** The next request with the same method, path, and query is served from
+   the recording. A request with a different query reaches the proxy again and
+   creates another recording.
+
+Error responses (for example a `404` or `500` from the upstream) are recorded too,
+so you can replay a bug. Delete the recording to fetch the live response again.
+
+## Wildcards in the target
+
+The target URL is used as-is unless it contains `*`. Each `*` is replaced by the
+matching wildcard capture from the request, in order:
+
+| Mock path | Proxy target | Request | Upstream call |
+| :--- | :--- | :--- | :--- |
+| `/users` | `https://api.example.com/users` | `/users?page=2` | `https://api.example.com/users?page=2` |
+| `/users/*` | `https://api.example.com/users/*` | `/users/42` | `https://api.example.com/users/42` |
+| `/users/*` | `https://api.example.com/users` | `/users/42` | `https://api.example.com/users` (every ID hits the same URL) |
+
+## How recordings are matched
+
+A recording answers **only** the exact query it captured: a recording of `/users`
+with no query does not answer `/users?page=3`, which goes to the proxy and is
+recorded separately. The request body is not part of matching, so a `POST`
+recording answers later `POST`s to the same path and query regardless of body.
+
+When a recording and the proxy mock both match, the recording wins. See
+[Routing & Matching](/docs/reference/routing-and-matching#strategy-precedence) for
+the full scoring rules.
+
+## Troubleshooting
+
+| Response | Cause | Fix |
+| :--- | :--- | :--- |
+| `502` `Invalid proxy target URL` | The target is missing `http://` or `https://` | Edit the proxy URL in **Advanced Options** |
+| `502` `Proxy request failed` | The upstream could not be reached (DNS, refused connection, TLS) | Check the target from the Mockzilla host; the `target` field shows the origin and path (configured query values are never echoed) |
+| Upstream answers `401` or `403` | The API needs credentials the caller did not send | Add an `Authorization` header under **Upstream headers** |
+| Old data keeps coming back | A recording matches the request | Edit or delete the **Recorded** mock |
+
+TLS certificates are verified. For a self-signed upstream in local development,
+start Mockzilla with `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
+## Use cases
+
+- **Backend replacement**: proxy to staging, use every feature once, then work
+  offline against the recordings.
+- **Edge-case capture**: record a faulty response while the bug is live, then test
+  your frontend fix against it repeatedly.
+- **API versioning**: record `v1` responses to keep compatibility while you build
+  against `v2`.

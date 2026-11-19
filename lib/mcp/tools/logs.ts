@@ -1,5 +1,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ManageLogsArgs } from '../schemas/logs';
+import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import { ManageLogsArgs, ManageLogsInputSchema } from '../schemas/logs';
+
+function asMcpInputSchema(schema: unknown): AnySchema {
+	return schema as AnySchema;
+}
 
 export function registerLogTools(server: McpServer) {
 	server.registerTool(
@@ -7,11 +12,11 @@ export function registerLogTools(server: McpServer) {
 		{
 			title: 'Manage Logs',
 			description: 'Retrieve, trace, and clear application logs.',
-			inputSchema: ManageLogsArgs as any,
+			inputSchema: asMcpInputSchema(ManageLogsInputSchema),
 		},
-		async (args: any) => {
+		async (args: unknown) => {
 			const { callManageLogs } = await import('../handlers');
-			const result = await callManageLogs(args);
+			const result = await callManageLogs(ManageLogsArgs.parse(args));
 			return {
 				content: [{ type: 'text' as const, text: JSON.stringify(result) }],
 			};

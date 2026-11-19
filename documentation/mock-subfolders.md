@@ -138,6 +138,8 @@ The folder page shows the current subfolder level:
 - SWR fetchers use `cache: 'no-store'` and throw on non-2xx responses, preventing failed requests from being treated as valid cached data.
 - Mock creation and duplication invalidate every paginated `/api/mocks?folderId=...` cache variant, including subfolder, page, limit, and search parameters.
 - Folder and mock creation optimistically insert the server-created record into the active SWR list before background revalidation completes, so the previous list is not shown as the immediate result.
+- The current level lives in the `?mockFolderId=` query param. `buildFolderHref(folderPath, mockFolderId)` (`lib/utils/folder-paths.ts`) keeps it, so the full mock editor's back link ("Back to {subfolder}"), its post-save redirect (to the mock's saved subfolder), and the create dialog's redirect return to the subfolder instead of the folder root.
+- The full editor page relies on `MockEditor`'s match-type-aware validation and does not re-validate the base response, so wildcard and echo mocks with an empty base body save correctly.
 - The subfolder edit dialog derives the parent path from the saved subfolder path, so nested paths like `/app/ticket-management` preview correctly even before the full subfolder tree finishes loading.
 
 Deleting a non-empty subfolder returns `409`; move or delete its child mocks/subfolders first.

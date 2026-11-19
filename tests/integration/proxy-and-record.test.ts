@@ -152,9 +152,7 @@ describe('Proxy and Record Integration', () => {
 		expect(body).toEqual({ proxy: 'success' });
 
 		const fetchUrl = new URL(String(mockFetch.mock.calls[0]?.[0]));
-		expect(fetchUrl.href).toBe(
-			'https://mock-target.com/base?via=test',
-		);
+		expect(fetchUrl.href).toBe('https://mock-target.com/base?via=test');
 
 		const fetchOptions = mockFetch.mock.calls[0]?.[1] as
 			| RequestInit
@@ -206,11 +204,14 @@ describe('Proxy and Record Integration', () => {
 		);
 
 		const body = JSON.stringify({ title: 'test' });
-		const req = new NextRequest('http://localhost:3000/api/mock/proxy-api/posts', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body,
-		});
+		const req = new NextRequest(
+			'http://localhost:3000/api/mock/proxy-api/posts',
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body,
+			},
+		);
 
 		const res = await POST(req, {
 			params: Promise.resolve({ path: ['proxy-api', 'posts'] }),
@@ -248,13 +249,227 @@ describe('Proxy and Record Integration', () => {
 		});
 		mockFetch.mockRejectedValue(new Error('DNS failure'));
 
-		const req = new NextRequest('http://localhost:3000/api/mock/proxy-api/fail', {
-			method: 'GET',
-		});
+		const req = new NextRequest(
+			'http://localhost:3000/api/mock/proxy-api/fail',
+			{
+				method: 'GET',
+			},
+		);
 		const res = await GET(req, {
 			params: Promise.resolve({ path: ['proxy-api', 'fail'] }),
 		});
 
 		expect(res.status).toBe(502);
+	});
+
+	describe('upstream configuration', () => {
+		const baseProxyMock = {
+			id: 'mock-proxy-cfg',
+			name: 'Configured Proxy',
+			endpoint: '/users',
+			method: 'GET' as const,
+			statusCode: 200,
+			response: '{}',
+			folderId: folderWithoutProxyMeta.id,
+			mockFolderId: null as string | null,
+			enabled: true,
+			matchType: 'exact' as const,
+			queryParams: null,
+			delay: 0,
+		};
+
+		/** select() order in the route: folder, mocks, subfolders, then proxy subfolders. */
+		const serveWith = (
+			proxyMock: Record<string, unknown>,
+			subfolders: unknown[] = [],
+		) => {
+			let callCount = 0;
+			mockDb.select.mockImplementation(() => {
+				callCount++;
+				if (callCount === 1) return createMockBuilder([folderWithoutProxyMeta]);
+				if (callCount === 2) return createMockBuilder([proxyMock]);
+				return createMockBuilder(subfolders);
+			});
+		};
+
+		const call = (
+			url: string,
+			segments: string[],
+			init?: ConstructorParameters<typeof NextRequest>[1],
+		) =>
+			GET(new NextRequest(url, { method: 'GET', ...init }), {
+				params: Promise.resolve({ path: segments }),
+			});
+
+		it('applies configured headers and params over the caller values', async () => {
+			serveWith({
+				...baseProxyMock,
+				meta: {
+					proxyTargetUrl: 'https://api.example.com/users',
+					proxyHeaders: { Authorization: 'Bearer stored' },
+					proxyQueryParams: { api_key: 'SECRET' },
+				},
+			});
+			mockFetch.mockResolvedValue(Response.json({ ok: true }));
+
+			const res = await call(
+				'http://localhost:3000/api/mock/proxy-api/users?page=2&api_key=caller',
+				['proxy-api', 'users'],
+				{ headers: { Authorization: 'Bearer caller', 'X-Session': 'sid-1' } },
+			);
+
+			expect(res.status).toBe(200);
+			const fetchUrl = new URL(String(mockFetch.mock.calls[0]?.[0]));
+			expect(fetchUrl.searchParams.get('api_key')).toBe('SECRET');
+			expect(fetchUrl.searchParams.get('page')).toBe('2');
+			const headers = mockFetch.mock.calls[0]?.[1]?.headers as Record<
+				string,
+				string
+			>;
+			expect(headers.authorization).toBe('Bearer stored');
+			// Caller headers still pass through (happy-dom drops `Cookie` itself).
+			expect(headers['x-session']).toBe('sid-1');
+
+			const recorded = insertValuesSpy.mock.calls[0]?.[0] as Record<
+				string,
+				unknown
+			>;
+			// The recording keys on the caller's query and never stores the secret.
+			expect(recorded.queryParams).toEqual({ page: '2', api_key: 'caller' });
+			expect(JSON.stringify(recorded)).not.toContain('SECRET');
+			expect(JSON.stringify(recorded)).not.toContain('Bearer stored');
+			expect((recorded.meta as Record<string, unknown>).recordedTarget).toBe(
+				'https://api.example.com/users',
+			);
+			expect((recorded.meta as Record<string, unknown>).recordedFrom).toBe(
+				'mock-proxy-cfg',
+			);
+		});
+
+		it('sends only configured headers when forwarding is off', async () => {
+			serveWith({
+				...baseProxyMock,
+				meta: {
+					proxyTargetUrl: 'https://api.example.com/users',
+					proxyHeaders: { Authorization: 'Bearer only' },
+					proxyForwardHeaders: false,
+				},
+			});
+			mockFetch.mockResolvedValue(Response.json({ ok: true }));
+
+			await call(
+				'http://localhost:3000/api/mock/proxy-api/users',
+				['proxy-api', 'users'],
+				{ headers: { Cookie: 'sid=1', 'X-Custom': 'a' } },
+			);
+
+			const headers = mockFetch.mock.calls[0]?.[1]?.headers as Record<
+				string,
+				string
+			>;
+			expect(headers).toEqual({ authorization: 'Bearer only' });
+		});
+
+		it('returns 502 for an invalid target without calling upstream', async () => {
+			serveWith({
+				...baseProxyMock,
+				meta: { proxyTargetUrl: 'api.example.com/users' },
+			});
+
+			const res = await call('http://localhost:3000/api/mock/proxy-api/users', [
+				'proxy-api',
+				'users',
+			]);
+			const body = await res.json();
+
+			expect(res.status).toBe(502);
+			expect(body.error).toBe('Invalid proxy target URL');
+			expect(mockFetch).not.toHaveBeenCalled();
+			expect(insertValuesSpy).not.toHaveBeenCalled();
+		});
+
+		it('does not echo configured params when the upstream is unreachable', async () => {
+			serveWith({
+				...baseProxyMock,
+				meta: {
+					proxyTargetUrl: 'https://api.example.com/users',
+					proxyQueryParams: { api_key: 'SECRET' },
+				},
+			});
+			mockFetch.mockRejectedValue(new Error('ECONNREFUSED'));
+
+			const res = await call('http://localhost:3000/api/mock/proxy-api/users', [
+				'proxy-api',
+				'users',
+			]);
+			const body = await res.json();
+
+			expect(res.status).toBe(502);
+			expect(body.target).toBe('https://api.example.com/users');
+			expect(JSON.stringify(body)).not.toContain('SECRET');
+		});
+
+		it('substitutes wildcard captures into the target', async () => {
+			serveWith({
+				...baseProxyMock,
+				endpoint: '/items/*',
+				matchType: 'wildcard' as const,
+				meta: { proxyTargetUrl: 'https://api.example.com/items/*' },
+			});
+			mockFetch.mockResolvedValue(Response.json({ ok: true }));
+
+			await call('http://localhost:3000/api/mock/proxy-api/items/42', [
+				'proxy-api',
+				'items',
+				'42',
+			]);
+
+			expect(String(mockFetch.mock.calls[0]?.[0])).toBe(
+				'https://api.example.com/items/42',
+			);
+			const recorded = insertValuesSpy.mock.calls[0]?.[0] as Record<
+				string,
+				unknown
+			>;
+			expect(recorded.endpoint).toBe('/items/42');
+			expect(recorded.matchType).toBe('exact');
+		});
+
+		it('records into the proxy mock subfolder with a relative path', async () => {
+			const subfolder = {
+				id: 'sub-1',
+				folderId: folderWithoutProxyMeta.id,
+				parentId: null,
+				name: 'v2',
+				slug: 'v2',
+				segment: 'v2',
+				path: '/v2',
+				mainPath: '/v2',
+			};
+			serveWith(
+				{
+					...baseProxyMock,
+					endpoint: '/profile',
+					mockFolderId: 'sub-1',
+					meta: { proxyTargetUrl: 'https://api.example.com/me' },
+				},
+				[subfolder],
+			);
+			mockFetch.mockResolvedValue(Response.json({ ok: true }));
+
+			const res = await call(
+				'http://localhost:3000/api/mock/proxy-api/v2/profile',
+				['proxy-api', 'v2', 'profile'],
+			);
+
+			expect(res.status).toBe(200);
+			const recorded = insertValuesSpy.mock.calls[0]?.[0] as Record<
+				string,
+				unknown
+			>;
+			expect(recorded.mockFolderId).toBe('sub-1');
+			expect(recorded.endpoint).toBe('/profile');
+			expect(recorded.name).toBe('Recorded: GET /v2/profile');
+		});
 	});
 });

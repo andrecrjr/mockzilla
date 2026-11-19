@@ -2,7 +2,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import {
 	ManageFoldersArgs,
+	ManageFoldersInputSchema,
 	ManageMockSubfoldersArgs,
+	ManageMockSubfoldersInputSchema,
 } from '../schemas/folders';
 
 function asMcpInputSchema(schema: unknown): AnySchema {
@@ -16,7 +18,7 @@ export function registerFolderTools(server: McpServer) {
 			title: 'Manage Folders',
 			description:
 				'Perform CRUD operations on folders (list, create, get, update, delete).',
-			inputSchema: asMcpInputSchema(ManageFoldersArgs),
+			inputSchema: asMcpInputSchema(ManageFoldersInputSchema),
 		},
 		async (args: unknown) => {
 			const { callManageFolders } = await import('../handlers');
@@ -33,7 +35,7 @@ export function registerFolderTools(server: McpServer) {
 			title: 'Manage Mock Subfolders',
 			description:
 				'Perform CRUD operations on mock subfolders nested inside a top-level folder.',
-			inputSchema: asMcpInputSchema(ManageMockSubfoldersArgs),
+			inputSchema: asMcpInputSchema(ManageMockSubfoldersInputSchema),
 		},
 		async (args: unknown) => {
 			const { callManageMockSubfolders } = await import('../handlers');

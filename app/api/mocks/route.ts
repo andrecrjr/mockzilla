@@ -2,15 +2,29 @@ import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
+import { MockVariantSchema } from '@/lib/mcp/schemas/shared';
 import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
-import type { CreateMockRequest, UpdateMockRequest } from '@/lib/types';
+import type {
+	CreateMockRequest,
+	MockVariant,
+	UpdateMockRequest,
+} from '@/lib/types';
 import {
 	joinMockPaths,
 	validateEndpointPathSearchParams,
 } from '@/lib/utils/mock-paths';
+import { normalizeMockVariants } from '@/lib/utils/mock-variants';
+import { applyProxySettings } from '@/lib/utils/proxy-record';
 
 type MockResponseRow = typeof mockResponses.$inferSelect;
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
+
+function validateVariants(value: unknown): string | null {
+	if (value === undefined || value === null) return null;
+	const result = MockVariantSchema.array().safeParse(value);
+	if (result.success) return null;
+	return result.error.issues[0]?.message ?? 'Invalid wildcard variants';
+}
 
 function formatMock(
 	mock: MockResponseRow,
@@ -22,6 +36,10 @@ function formatMock(
 	const effectivePath = joinMockPaths(
 		subfolder?.mainPath ?? '/',
 		mock.endpoint,
+	);
+	const variants = normalizeMockVariants(
+		mock.variants as MockVariant[] | null,
+		effectivePath,
 	);
 	return {
 		id: mock.id,
@@ -43,7 +61,7 @@ function formatMock(
 		delay: mock.delay,
 		meta: mock.meta,
 		queryParams: mock.queryParams,
-		variants: mock.variants,
+		variants,
 		wildcardRequireMatch: mock.wildcardRequireMatch,
 		createdAt: mock.createdAt.toISOString(),
 		updatedAt: mock.updatedAt?.toISOString(),
@@ -218,6 +236,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body: CreateMockRequest = await request.json();
+		const variantsError = validateVariants(body.variants);
+		if (variantsError) {
+			return NextResponse.json(
+				{ error: `Invalid wildcard variants: ${variantsError}` },
+				{ status: 400 },
+			);
+		}
 		const pathValidation = validateEndpointPathSearchParams(
 			body.path,
 			body.queryParams,
@@ -234,6 +259,16 @@ export async function POST(request: NextRequest) {
 			body.mockFolderId,
 		);
 		if (ownershipError) return ownershipError;
+		const variants = normalizeMockVariants(body.variants, body.path);
+
+		let initialMeta: Record<string, unknown> = body.meta ?? {};
+		if (body.proxy) {
+			const applied = applyProxySettings(initialMeta, body.proxy);
+			if (!applied.ok) {
+				return NextResponse.json({ error: applied.error }, { status: 400 });
+			}
+			initialMeta = applied.meta;
+		}
 
 		const [newMock] = await db
 			.insert(mockResponses)
@@ -249,13 +284,13 @@ export async function POST(request: NextRequest) {
 				bodyType: body.bodyType || 'json',
 				enabled: body.enabled ?? true,
 				queryParams: body.queryParams,
-				variants: body.variants,
+				variants,
 				wildcardRequireMatch: body.wildcardRequireMatch,
 				jsonSchema: body.jsonSchema,
 				useDynamicResponse: body.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody,
 				delay: body.delay ?? 0,
-				meta: body.meta ?? {},
+				meta: initialMeta,
 			})
 			.returning();
 
@@ -288,6 +323,15 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body: UpdateMockRequest = await request.json();
+		if (Object.hasOwn(body, 'variants')) {
+			const variantsError = validateVariants(body.variants);
+			if (variantsError) {
+				return NextResponse.json(
+					{ error: `Invalid wildcard variants: ${variantsError}` },
+					{ status: 400 },
+				);
+			}
+		}
 
 		const [existingMock] = await db
 			.select()
@@ -321,6 +365,21 @@ export async function PUT(request: NextRequest) {
 			nextMockFolderId,
 		);
 		if (ownershipError) return ownershipError;
+		const nextVariants = normalizeMockVariants(
+			Object.hasOwn(body, 'variants')
+				? body.variants
+				: (existingMock.variants as MockVariant[] | null),
+			nextPath,
+		);
+
+		let nextMeta = Object.hasOwn(body, 'meta') ? body.meta : existingMock.meta;
+		if (body.proxy) {
+			const applied = applyProxySettings(nextMeta, body.proxy);
+			if (!applied.ok) {
+				return NextResponse.json({ error: applied.error }, { status: 400 });
+			}
+			nextMeta = applied.meta;
+		}
 
 		const [updatedMock] = await db
 			.update(mockResponses)
@@ -335,9 +394,7 @@ export async function PUT(request: NextRequest) {
 				queryParams: Object.hasOwn(body, 'queryParams')
 					? nextQueryParams
 					: existingMock.queryParams,
-				variants: Object.hasOwn(body, 'variants')
-					? body.variants
-					: existingMock.variants,
+				variants: nextVariants,
 				wildcardRequireMatch:
 					body.wildcardRequireMatch ?? existingMock.wildcardRequireMatch,
 				jsonSchema: Object.hasOwn(body, 'jsonSchema')
@@ -347,7 +404,7 @@ export async function PUT(request: NextRequest) {
 					body.useDynamicResponse ?? existingMock.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody ?? existingMock.echoRequestBody,
 				delay: body.delay ?? existingMock.delay,
-				meta: Object.hasOwn(body, 'meta') ? body.meta : existingMock.meta,
+				meta: nextMeta,
 				bodyType: body.bodyType ?? existingMock.bodyType ?? 'json',
 				enabled: body.enabled ?? existingMock.enabled,
 				updatedAt: new Date(),

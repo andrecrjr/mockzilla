@@ -1,17 +1,18 @@
-import type { MatchType } from '@/lib/types';
+import type { MatchType, MockVariant } from '@/lib/types';
 import { splitPathSearchParams } from './mock-paths';
+import { normalizeMockVariant } from './mock-variants';
 
-export interface MockVariant {
-	key: string;
-	body: string;
-	statusCode: number;
-	bodyType: string;
-}
+export type { MockVariant } from '@/lib/types';
 
 export interface MockCandidate {
 	endpoint: string;
 	matchType: MatchType;
 	queryParams: Record<string, string> | null;
+	/**
+	 * When true the request must carry exactly the required query keys, no
+	 * more (used by Proxy & Record recordings, which answer one exact query).
+	 */
+	exactQuery?: boolean;
 	_score: number;
 	_id?: string;
 }
@@ -22,6 +23,16 @@ export interface MockCandidate {
 
 function escapeRegex(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function queryParamValueMatches(expected: string, actual: string): boolean {
+	const expectedValue = String(expected ?? '');
+	const actualValue = String(actual ?? '');
+
+	if (!expectedValue.includes('*')) return expectedValue === actualValue;
+
+	const pattern = expectedValue.split('*').map(escapeRegex).join('.*');
+	return new RegExp(`^${pattern}$`).test(actualValue);
 }
 
 export function wildcardToRegex(p: string): RegExp {
@@ -54,8 +65,8 @@ export function queryParamsMatch(
 ): boolean {
 	if (!required || Object.keys(required).length === 0) return true;
 	for (const [key, value] of Object.entries(required)) {
-		// Compare as strings to handle numeric defaults in database
-		if (String(actual[key] ?? '') !== String(value ?? '')) return false;
+		if (!Object.hasOwn(actual, key)) return false;
+		if (!queryParamValueMatches(value, actual[key])) return false;
 	}
 	return true;
 }
@@ -119,12 +130,24 @@ function scoreCandidate(
 	if (!queryParamsMatch(requiredQueryParams, actualQueryParams)) {
 		return 0;
 	}
+	if (
+		candidate.exactQuery &&
+		Object.keys(actualQueryParams).some(
+			(key) => !Object.hasOwn(requiredQueryParams, key),
+		)
+	) {
+		return 0;
+	}
 
 	let score = MATCH_TYPE_SCORE[candidate.matchType];
 
 	// Bonus for having query params requirement met (more specific)
 	if (Object.keys(requiredQueryParams).length > 0) {
 		score += Object.keys(requiredQueryParams).length * 10;
+		// Exact query values are more specific than wildcard values.
+		score += Object.values(requiredQueryParams).filter(
+			(value) => !String(value ?? '').includes('*'),
+		).length;
 	}
 
 	// Tie-breaker: longer endpoint is more specific
@@ -157,18 +180,39 @@ export function findBestMatch(
 // Variant selection (mirrors Chrome extension logic)
 // -------------------------------------------------------
 
-/**
- * Extracts the capture key from a URL matched against a wildcard pattern.
- * The key is formed by joining all captured wildcard segments with pipe.
- * Example: pattern "/api/users/WILDCARD" matching "/api/users/123" returns "123"
- * Example: pattern "/api/users/WILDCARD/status/WILDCARD" matching "/api/users/alice/status/active" returns "alice|active"
- */
-export function extractCaptureKey(url: string, pattern: string): string | null {
+/** Extracts wildcard values in endpoint order without serializing them. */
+export function extractCaptureValues(
+	url: string,
+	pattern: string,
+): string[] | null {
 	const parsedUrl = splitPathSearchParams(url);
 	const parsedPattern = splitPathSearchParams(pattern);
 	const result = matchWildcard(parsedUrl.path, parsedPattern.path);
 	if (!result.ok || result.captures.length === 0) return null;
-	return result.captures.join('|');
+	return result.captures;
+}
+
+/**
+ * Legacy capture-key helper. New code should use extractCaptureValues so URL
+ * values never need a delimiter. The pipe format remains for compatibility.
+ */
+export function extractCaptureKey(url: string, pattern: string): string | null {
+	return extractCaptureValues(url, pattern)?.join('|') ?? null;
+}
+
+/**
+ * Normalizes a key for variant lookup without changing the capture value that
+ * is later exposed to response templates. This lets users enter ordinary URL
+ * characters (for example `/`) in a variant key while also supporting an
+ * encoded request value such as `%2F`.
+ */
+function normalizeVariantKey(key: string): string {
+	try {
+		return decodeURIComponent(key);
+	} catch {
+		// Keep malformed percent sequences matchable as literal text.
+		return key;
+	}
 }
 
 /**
@@ -183,13 +227,27 @@ export function selectVariant(
 ): MockVariant | null {
 	if (!variants || variants.length === 0) return null;
 
-	const key = extractCaptureKey(urlPath, endpointPattern);
-	if (key === null) return null;
+	const captures = extractCaptureValues(urlPath, endpointPattern);
+	if (captures === null) return null;
 
-	// Try exact match first
-	const exactMatch = variants.find((v) => v.key === key);
+	const normalizedCaptures = captures.map(normalizeVariantKey);
+	const exactMatch = variants.find((variant) => {
+		const normalizedVariant = normalizeMockVariant(variant, endpointPattern);
+		return (
+			!normalizedVariant.isFallback &&
+			normalizedVariant.captures.length === normalizedCaptures.length &&
+			normalizedVariant.captures.every(
+				(capture, index) =>
+					normalizeVariantKey(capture) === normalizedCaptures[index],
+			)
+		);
+	});
 	if (exactMatch) return exactMatch;
 
-	// Fall back to wildcard catch-all variant
-	return variants.find((v) => v.key === '*') ?? null;
+	// Fall back to an explicitly marked or legacy wildcard variant.
+	return (
+		variants.find(
+			(variant) => normalizeMockVariant(variant, endpointPattern).isFallback,
+		) ?? null
+	);
 }
