@@ -14,6 +14,42 @@ export const parseJsonOrPassthrough = (val: unknown) => {
 	return val;
 };
 
+export const ProxySettingsSchema = z
+	.object({
+		targetUrl: z
+			.string()
+			.nullable()
+			.optional()
+			.describe(
+				'Full http(s) URL requests are forwarded to; "*" is replaced by wildcard captures. null turns Proxy & Record off and removes the other proxy settings.',
+			),
+		headers: z
+			.record(z.string())
+			.nullable()
+			.optional()
+			.describe(
+				'Headers sent upstream (e.g. {"Authorization":"Bearer ..."}), replacing incoming headers of the same name. Replaces the whole stored set; "***" keeps a stored value; null clears.',
+			),
+		queryParams: z
+			.record(z.string())
+			.nullable()
+			.optional()
+			.describe(
+				'Query params sent upstream (e.g. {"api_key":"..."}), replacing incoming params of the same name. Replaces the whole stored set; "***" keeps a stored value; null clears.',
+			),
+		forwardHeaders: z
+			.boolean()
+			.nullable()
+			.optional()
+			.describe(
+				'false sends only `headers` upstream (no caller headers or cookies). Default true.',
+			),
+	})
+	.describe(
+		'Proxy & Record settings. Omitted fields are unchanged. Responses show credential values as "***".',
+	);
+export type ProxySettings = z.infer<typeof ProxySettingsSchema>;
+
 export const MockVariantSchema = z
 	.object({
 		key: z.string().min(1).optional(),

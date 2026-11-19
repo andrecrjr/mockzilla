@@ -7,6 +7,11 @@ import {
 	AdvancedOptions,
 	type QueryParamField,
 } from '@/components/mock-advanced-options';
+import {
+	keyValueRowsToRecord,
+	type ProxyOptionsValue,
+	recordToKeyValueRows,
+} from '@/components/mock-proxy-options';
 import { ResponseConfig } from '@/components/mock-response-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +44,11 @@ import {
 	getWildcardCount,
 	normalizeMockVariants,
 } from '@/lib/utils/mock-variants';
-import { validateProxyTargetUrl } from '@/lib/utils/proxy-record';
+import {
+	getProxyUpstreamConfig,
+	validateProxyHeaderName,
+	validateProxyTargetUrl,
+} from '@/lib/utils/proxy-record';
 import { getStatusCodeOptions } from '@/lib/utils/status-codes';
 
 export type MockFormValues = {
@@ -159,6 +168,32 @@ function getEndpointInputParts(value: string) {
 	return splitPathSearchParams(value);
 }
 
+function buildProxyOptions(meta: unknown): ProxyOptionsValue {
+	const source =
+		meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : {};
+	const upstream = getProxyUpstreamConfig(meta);
+	return {
+		targetUrl:
+			typeof source.proxyTargetUrl === 'string' ? source.proxyTargetUrl : '',
+		headers: recordToKeyValueRows(upstream.headers, 'proxy-header'),
+		queryParams: recordToKeyValueRows(upstream.queryParams, 'proxy-param'),
+		forwardHeaders: upstream.forwardHeaders,
+	};
+}
+
+/** Proxy-related `meta` keys; unset keys are undefined so saving clears them. */
+function buildProxyMeta(proxy: ProxyOptionsValue) {
+	const targetUrl = proxy.targetUrl.trim();
+	return {
+		proxyTargetUrl: targetUrl || undefined,
+		proxyHeaders: targetUrl ? keyValueRowsToRecord(proxy.headers) : undefined,
+		proxyQueryParams: targetUrl
+			? keyValueRowsToRecord(proxy.queryParams)
+			: undefined,
+		proxyForwardHeaders: targetUrl && !proxy.forwardHeaders ? false : undefined,
+	};
+}
+
 function formatEndpointPathForStorage(
 	path: string,
 	mockFolderMainPath: string | null | undefined,
@@ -208,9 +243,10 @@ export function MockEditor({
 	const [delay, setDelay] = useState<string>(
 		initial?.delay ? String(initial.delay) : '0',
 	);
-	const [proxyTargetUrl, setProxyTargetUrl] = useState<string>(
-		(initial?.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ?? '',
+	const [proxy, setProxy] = useState<ProxyOptionsValue>(() =>
+		buildProxyOptions(initial?.meta),
 	);
+	const proxyTargetUrl = proxy.targetUrl;
 
 	const [activeSection, setActiveSection] = useState<'response' | 'advanced'>(
 		'response',
@@ -269,10 +305,7 @@ export function MockEditor({
 		setUseDynamicResponse(Boolean(initial.useDynamicResponse));
 		setEchoRequestBody(Boolean(initial.echoRequestBody));
 		setDelay(initial.delay ? String(initial.delay) : '0');
-		setProxyTargetUrl(
-			(initial.meta as { proxyTargetUrl?: string } | null)?.proxyTargetUrl ??
-				'',
-		);
+		setProxy(buildProxyOptions(initial.meta));
 		setMatchType((initial.matchType as MatchType) ?? 'exact');
 		const qp = initial.queryParams as Record<string, string> | null | undefined;
 		setPath(appendQueryParamsToPath(initial.path ?? '', qp));
@@ -415,10 +448,16 @@ export function MockEditor({
 			toast.error('Error', { description: 'Path must start with /' });
 			return false;
 		}
-		const proxyError = validateProxyTargetUrl(proxyTargetUrl);
+		const proxyError =
+			validateProxyTargetUrl(proxyTargetUrl) ??
+			(proxyTargetUrl.trim()
+				? proxy.headers
+						.map((header) => validateProxyHeaderName(header.key))
+						.find(Boolean)
+				: null);
 		if (proxyError) {
 			setActiveSection('advanced');
-			toast.error('Invalid proxy target', { description: proxyError });
+			toast.error('Invalid proxy settings', { description: proxyError });
 			return false;
 		}
 		if (!isEchoRequestBodyEnabled && matchType !== 'wildcard') {
@@ -527,7 +566,7 @@ export function MockEditor({
 			delay,
 			meta: {
 				...initial?.meta,
-				proxyTargetUrl: proxyTargetUrl.trim() || undefined,
+				...buildProxyMeta(proxy),
 			},
 			variants:
 				matchType === 'wildcard' && normalizedVariants?.length
@@ -722,8 +761,8 @@ export function MockEditor({
 								onEchoRequestBodyChange={setEchoRequestBody}
 								delay={delay}
 								onDelayChange={setDelay}
-								proxyTargetUrl={proxyTargetUrl}
-								onProxyTargetUrlChange={setProxyTargetUrl}
+								proxy={proxy}
+								onProxyChange={setProxy}
 							/>
 						</div>
 					</div>

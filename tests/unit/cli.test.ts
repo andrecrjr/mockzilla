@@ -136,6 +136,75 @@ describe('mockzilla CLI', () => {
 		);
 	});
 
+	it('sends proxy flags as a partial proxy payload', async () => {
+		const result = output();
+		const bodies: unknown[] = [];
+		const fetchImpl: CliOptions['fetch'] = async (_input, init) => {
+			bodies.push(JSON.parse(String(init?.body)));
+			return Response.json({ id: 'mock-1' });
+		};
+
+		const exitCode = await run(
+			[
+				'mocks',
+				'update',
+				'mock-1',
+				'--proxy-url',
+				'https://api.example.com/users',
+				'--proxy-headers-file',
+				'-',
+				'--proxy-params',
+				'{"api_key":"K1"}',
+				'--no-forward-headers',
+				'--json',
+			],
+			options(result, {
+				fetch: fetchImpl,
+				input: '{"Authorization":"Bearer token"}',
+			}),
+		);
+
+		expect(exitCode).toBe(0);
+		expect(bodies[0]).toEqual({
+			proxy: {
+				targetUrl: 'https://api.example.com/users',
+				headers: { Authorization: 'Bearer token' },
+				queryParams: { api_key: 'K1' },
+				forwardHeaders: false,
+			},
+		});
+	});
+
+	it('clears the proxy and rejects conflicting proxy flags', async () => {
+		const clearResult = output();
+		const bodies: unknown[] = [];
+		await run(
+			['mocks', 'update', 'mock-1', '--clear-proxy', '--json'],
+			options(clearResult, {
+				fetch: async (_input, init) => {
+					bodies.push(JSON.parse(String(init?.body)));
+					return Response.json({ id: 'mock-1' });
+				},
+			}),
+		);
+		expect(bodies[0]).toEqual({ proxy: { targetUrl: null } });
+
+		const conflict = output();
+		const exitCode = await run(
+			[
+				'mocks',
+				'update',
+				'mock-1',
+				'--clear-proxy',
+				'--proxy-url',
+				'https://api.example.com',
+				'--json',
+			],
+			options(conflict, { fetch: async () => Response.json({}) }),
+		);
+		expect(exitCode).not.toBe(0);
+	});
+
 	it('reports API failures with the agent hint', async () => {
 		const result = output();
 		const fetchImpl: CliOptions['fetch'] = async () =>

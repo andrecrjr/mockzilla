@@ -2,12 +2,15 @@
 
 import { Plus, X } from 'lucide-react';
 import { FieldTooltip } from '@/components/folder-tooltips';
+import {
+	ProxyOptions,
+	type ProxyOptionsValue,
+} from '@/components/mock-proxy-options';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { HttpMethod } from '@/lib/types';
-import { validateProxyTargetUrl } from '@/lib/utils/proxy-record';
 
 export type QueryParamField = {
 	id: string;
@@ -23,8 +26,8 @@ type AdvancedOptionsProps = {
 	onEchoRequestBodyChange: (value: boolean) => void;
 	delay: string;
 	onDelayChange: (value: string) => void;
-	proxyTargetUrl: string;
-	onProxyTargetUrlChange: (value: string) => void;
+	proxy: ProxyOptionsValue;
+	onProxyChange: (value: ProxyOptionsValue) => void;
 };
 
 const createQueryParamId = () => {
@@ -42,10 +45,9 @@ export function AdvancedOptions({
 	onEchoRequestBodyChange,
 	delay,
 	onDelayChange,
-	proxyTargetUrl,
-	onProxyTargetUrlChange,
+	proxy,
+	onProxyChange,
 }: AdvancedOptionsProps) {
-	const proxyError = validateProxyTargetUrl(proxyTargetUrl);
 	const isEchoMethod = ['POST', 'PUT', 'PATCH'].includes(method);
 
 	const addParam = () => {
@@ -193,57 +195,7 @@ export function AdvancedOptions({
 					</section>
 				)}
 
-				<section className="space-y-3 border-t border-border pt-6">
-					<div className="flex items-center gap-2">
-						<Label htmlFor="create-proxy" className="text-base font-semibold">
-							Proxy & Record
-						</Label>
-						<span className="text-xs text-muted-foreground">Optional</span>
-						<FieldTooltip
-							label="Proxy & Record"
-							description="Matching requests are forwarded to this URL. Each new path + query combination is saved as an exact mock in this folder, and identical requests are then served from that recording."
-							example="https://api.example.com/v1/users/* → * is replaced by the wildcard capture"
-							docsLink="/docs/guides/proxy-and-record"
-						/>
-					</div>
-					<Input
-						id="create-proxy"
-						value={proxyTargetUrl}
-						onChange={(event) => onProxyTargetUrlChange(event.target.value)}
-						placeholder="https://api.example.com/v1/users"
-						className="font-mono text-sm"
-						aria-invalid={Boolean(proxyError)}
-						aria-describedby="create-proxy-help"
-					/>
-					{proxyError ? (
-						<p
-							id="create-proxy-help"
-							className="text-xs text-destructive"
-							role="alert"
-						>
-							{proxyError}
-						</p>
-					) : (
-						<div
-							id="create-proxy-help"
-							className="space-y-1 text-xs text-muted-foreground"
-						>
-							<p>
-								Requests go to this exact URL (the mock path is not appended)
-								with the incoming method, headers, body, and query string. Use{' '}
-								<code className="font-mono">*</code> to insert a wildcard
-								capture, e.g. <code className="font-mono">/users/*</code>.
-							</p>
-							{proxyTargetUrl.trim() && (
-								<p className="text-blue-600 dark:text-blue-400">
-									Recording is on: the first request for each path + query is
-									saved as a “Recorded:” mock in this folder; repeats are served
-									from it.
-								</p>
-							)}
-						</div>
-					)}
-				</section>
+				<ProxyOptions value={proxy} onChange={onProxyChange} />
 			</div>
 		</div>
 	);

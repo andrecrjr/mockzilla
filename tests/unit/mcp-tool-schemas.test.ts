@@ -1,7 +1,7 @@
+import { afterEach, describe, expect, it } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { afterEach, describe, expect, it } from 'bun:test';
 import { registerAllTools } from '../../lib/mcp/server';
 
 const connections: Array<{ client: Client; server: McpServer }> = [];
@@ -10,10 +10,9 @@ type JsonSchema = Record<string, unknown>;
 
 afterEach(async () => {
 	await Promise.all(
-		connections.splice(0).flatMap(({ client, server }) => [
-			client.close(),
-			server.close(),
-		]),
+		connections
+			.splice(0)
+			.flatMap(({ client, server }) => [client.close(), server.close()]),
 	);
 });
 
@@ -22,7 +21,8 @@ async function listRegisteredTools() {
 	registerAllTools(server);
 
 	const client = new Client({ name: 'test-client', version: '1.0.0' });
-	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+	const [clientTransport, serverTransport] =
+		InMemoryTransport.createLinkedPair();
 	await Promise.all([
 		server.connect(serverTransport),
 		client.connect(clientTransport),
@@ -37,7 +37,8 @@ async function connectedClient() {
 	registerAllTools(server);
 
 	const client = new Client({ name: 'test-client', version: '1.0.0' });
-	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+	const [clientTransport, serverTransport] =
+		InMemoryTransport.createLinkedPair();
 	await Promise.all([
 		server.connect(serverTransport),
 		client.connect(clientTransport),
@@ -72,8 +73,9 @@ function actionVariant(schema: JsonSchema, action: string): JsonSchema {
 	expect(Array.isArray(variants)).toBe(true);
 	const variant = (variants as JsonSchema[]).find((candidate) => {
 		const properties = candidate.properties as JsonSchema | undefined;
-		return properties?.action &&
-			(properties.action as JsonSchema).const === action;
+		return (
+			properties?.action && (properties.action as JsonSchema).const === action
+		);
 	});
 	expect(variant).toBeDefined();
 	return variant as JsonSchema;
@@ -130,6 +132,20 @@ describe('MCP tool schemas', () => {
 		expect((listLogs.properties as JsonSchema).limit).toMatchObject({
 			type: 'integer',
 		});
+	});
+
+	it('advertises Proxy & Record settings on manage_mocks', async () => {
+		const { tools } = await listRegisteredTools();
+		const manageMocks = tools.find((tool) => tool.name === 'manage_mocks')
+			?.inputSchema as JsonSchema;
+		const proxy = (manageMocks.properties as JsonSchema).proxy as JsonSchema;
+		expect(proxy.type).toBe('object');
+		expect(Object.keys(proxy.properties as JsonSchema).sort()).toEqual([
+			'forwardHeaders',
+			'headers',
+			'queryParams',
+			'targetUrl',
+		]);
 	});
 
 	it('keeps statusCode numeric through an MCP tool call', async () => {

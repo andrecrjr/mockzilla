@@ -2,18 +2,19 @@ import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { mockResponses, mockSubfolders } from '@/lib/db/schema';
+import { MockVariantSchema } from '@/lib/mcp/schemas/shared';
 import { withCanonicalSubfolderMainPaths } from '@/lib/mock-subfolders';
 import type {
 	CreateMockRequest,
 	MockVariant,
 	UpdateMockRequest,
 } from '@/lib/types';
-import { MockVariantSchema } from '@/lib/mcp/schemas/shared';
 import {
 	joinMockPaths,
 	validateEndpointPathSearchParams,
 } from '@/lib/utils/mock-paths';
 import { normalizeMockVariants } from '@/lib/utils/mock-variants';
+import { applyProxySettings } from '@/lib/utils/proxy-record';
 
 type MockResponseRow = typeof mockResponses.$inferSelect;
 type MockSubfolderRow = typeof mockSubfolders.$inferSelect;
@@ -260,6 +261,15 @@ export async function POST(request: NextRequest) {
 		if (ownershipError) return ownershipError;
 		const variants = normalizeMockVariants(body.variants, body.path);
 
+		let initialMeta: Record<string, unknown> = body.meta ?? {};
+		if (body.proxy) {
+			const applied = applyProxySettings(initialMeta, body.proxy);
+			if (!applied.ok) {
+				return NextResponse.json({ error: applied.error }, { status: 400 });
+			}
+			initialMeta = applied.meta;
+		}
+
 		const [newMock] = await db
 			.insert(mockResponses)
 			.values({
@@ -280,7 +290,7 @@ export async function POST(request: NextRequest) {
 				useDynamicResponse: body.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody,
 				delay: body.delay ?? 0,
-				meta: body.meta ?? {},
+				meta: initialMeta,
 			})
 			.returning();
 
@@ -362,6 +372,15 @@ export async function PUT(request: NextRequest) {
 			nextPath,
 		);
 
+		let nextMeta = Object.hasOwn(body, 'meta') ? body.meta : existingMock.meta;
+		if (body.proxy) {
+			const applied = applyProxySettings(nextMeta, body.proxy);
+			if (!applied.ok) {
+				return NextResponse.json({ error: applied.error }, { status: 400 });
+			}
+			nextMeta = applied.meta;
+		}
+
 		const [updatedMock] = await db
 			.update(mockResponses)
 			.set({
@@ -385,7 +404,7 @@ export async function PUT(request: NextRequest) {
 					body.useDynamicResponse ?? existingMock.useDynamicResponse,
 				echoRequestBody: body.echoRequestBody ?? existingMock.echoRequestBody,
 				delay: body.delay ?? existingMock.delay,
-				meta: Object.hasOwn(body, 'meta') ? body.meta : existingMock.meta,
+				meta: nextMeta,
 				bodyType: body.bodyType ?? existingMock.bodyType ?? 'json',
 				enabled: body.enabled ?? existingMock.enabled,
 				updatedAt: new Date(),

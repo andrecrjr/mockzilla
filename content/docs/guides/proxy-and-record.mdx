@@ -26,14 +26,71 @@ curl -X PUT "http://localhost:36666/api/mocks?id={mock-id}" \
      -d '{ "meta": { "proxyTargetUrl": "https://api.example.com/v1/users" } }'
 ```
 
+## Send your own headers and parameters
+
+With a proxy target set, **Advanced Options** also lets you define what the upstream
+receives, so your app does not need to know any credentials:
+
+- **Upstream headers**: for example `Authorization: Bearer <token>`, an API key, or
+  a custom `Accept`. They replace any incoming header with the same name.
+- **Also forward the caller's headers**: on by default. Turn it off to send **only**
+  the headers you listed, which keeps browser cookies and tokens away from the API.
+- **Upstream query parameters**: for example `api_key=…`. They are added to every
+  request and replace an incoming parameter with the same name.
+
+Sensitive-looking values (Authorization, API keys, tokens, cookies) are masked in the
+editor with a show/hide toggle. `Host`, `Content-Length`, `Connection`, and similar
+headers are managed by Mockzilla and cannot be set.
+
+Configured values are not part of the recording's match key and are not written
+to the recorded mock, so a replay needs no credentials. They **are** stored with
+the proxy mock and appear in exports and API responses, so use test credentials or a
+token you can revoke. Via the API, set `meta.proxyHeaders`, `meta.proxyQueryParams`,
+and `meta.proxyForwardHeaders`:
+
+```bash
+curl -X PUT "http://localhost:36666/api/mocks?id={mock-id}" \
+     -H "Content-Type: application/json" \
+     -d '{ "meta": {
+       "proxyTargetUrl": "https://api.example.com/v1/users",
+       "proxyHeaders": { "Authorization": "Bearer <token>" },
+       "proxyQueryParams": { "api_key": "<key>" },
+       "proxyForwardHeaders": false
+     } }'
+```
+
+### From the CLI or an AI agent
+
+The same settings are available outside the dashboard. In the CLI:
+
+```bash
+printf '{"Authorization":"Bearer <token>"}' | \
+  mockzilla mocks update {mock-id} \
+    --proxy-url https://api.example.com/v1/users \
+    --proxy-headers-file - --no-forward-headers
+```
+
+Over MCP, pass `proxy` to `manage_mocks`:
+
+```json
+{ "action": "update", "id": "{mock-id}",
+  "proxy": { "targetUrl": "https://api.example.com/v1/users",
+             "headers": { "Authorization": "Bearer <token>" } } }
+```
+
+Both are partial updates, so changing one setting keeps the others. MCP replies show
+credential values as `***`; send `***` back to keep a stored value. Use
+`--clear-proxy` (CLI) or `"targetUrl": null` (MCP) to turn the proxy off.
+
 ## What happens on each request
 
 1. **Match.** The request must match the proxy mock by method, path, match type,
    and query params. With no matching mock, Mockzilla returns `404`.
 2. **Forward.** Mockzilla calls the **exact** target URL with the incoming method,
-   body, query string, and headers. `Host` and hop-by-hop headers such as
-   `Connection` and `Content-Length` are not forwarded. The mock path is **not**
-   appended to the target.
+   body, query string, and headers, plus any configured upstream headers and
+   parameters. `Host` and hop-by-hop headers such as `Connection` and
+   `Content-Length` are not forwarded. The mock path is **not** appended to the
+   target.
 3. **Record.** The live status and body are returned to the client and saved as a
    new mock named `Recorded: GET /users?page=1`, marked with a **Recorded** badge.
    It is an exact mock in the same folder and subfolder as the proxy mock.
@@ -71,7 +128,8 @@ the full scoring rules.
 | Response | Cause | Fix |
 | :--- | :--- | :--- |
 | `502` `Invalid proxy target URL` | The target is missing `http://` or `https://` | Edit the proxy URL in **Advanced Options** |
-| `502` `Proxy request failed` | The upstream could not be reached (DNS, refused connection, TLS) | Check the target from the Mockzilla host; the `target` field shows the exact URL |
+| `502` `Proxy request failed` | The upstream could not be reached (DNS, refused connection, TLS) | Check the target from the Mockzilla host; the `target` field shows the origin and path (configured query values are never echoed) |
+| Upstream answers `401` or `403` | The API needs credentials the caller did not send | Add an `Authorization` header under **Upstream headers** |
 | Old data keeps coming back | A recording matches the request | Edit or delete the **Recorded** mock |
 
 TLS certificates are verified. For a self-signed upstream in local development,

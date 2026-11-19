@@ -16,10 +16,12 @@ import { readAgentSkill } from './skill.mjs';
 
 const BOOLEAN_OPTIONS = new Set([
 	'all',
+	'clear-proxy',
 	'disabled',
 	'dynamic',
 	'echo-request-body',
 	'enabled',
+	'forward-headers',
 	'help',
 	'json',
 	'no-require-match',
@@ -48,6 +50,11 @@ const ALLOWED_OPTIONS = new Set([
 	'name',
 	'page',
 	'path',
+	'proxy-headers',
+	'proxy-headers-file',
+	'proxy-params',
+	'proxy-params-file',
+	'proxy-url',
 	'query',
 	'query-params',
 	'query-params-file',
@@ -484,6 +491,7 @@ async function readMockPayload(options, dependencies, isCreate) {
 			if (target) payload[target] = getBoolean(options, name);
 		}
 	}
+	await applyProxyOptions(payload, options, dependencies);
 	if (options.has('disabled')) payload.enabled = false;
 	if (options.has('no-require-match')) payload.wildcardRequireMatch = false;
 
@@ -543,6 +551,54 @@ function validateUpdatePayload(payload) {
 			'status code',
 		);
 	return payload;
+}
+
+/**
+ * Turns the --proxy-* options into a partial `proxy` payload that the server
+ * merges into the mock's existing settings.
+ *
+ * @param {Record<string, unknown>} payload
+ * @param {ParsedOptions} options
+ * @param {CliDependencies} dependencies
+ * @returns {Promise<void>}
+ */
+async function applyProxyOptions(payload, options, dependencies) {
+	/** @type {Record<string, unknown>} */
+	const proxy = {};
+	if (getBoolean(options, 'clear-proxy')) proxy.targetUrl = null;
+	const targetUrl = getOption(options, 'proxy-url');
+	if (targetUrl) {
+		if (proxy.targetUrl === null) {
+			throw new Error('Use either --proxy-url or --clear-proxy, not both.');
+		}
+		proxy.targetUrl = String(targetUrl);
+	}
+	for (const [name, key] of [
+		['proxy-headers', 'headers'],
+		['proxy-params', 'queryParams'],
+	]) {
+		if (getOption(options, name) && getOption(options, `${name}-file`)) {
+			throw new Error(`Use either --${name} or --${name}-file, not both.`);
+		}
+		if (getOption(options, name)) {
+			proxy[key] = parseJsonOption(options, name);
+		}
+		await applyFileOption(proxy, options, `${name}-file`, key, dependencies, true);
+		const value = proxy[key];
+		if (
+			value !== undefined &&
+			value !== null &&
+			(typeof value !== 'object' || Array.isArray(value))
+		) {
+			throw new Error(`--${name} must be a JSON object of strings.`);
+		}
+	}
+	if (options.has('forward-headers')) {
+		proxy.forwardHeaders = getBoolean(options, 'forward-headers');
+	}
+	if (Object.keys(proxy).length > 0) {
+		payload.proxy = { ...(payload.proxy ?? {}), ...proxy };
+	}
 }
 
 /**
@@ -836,6 +892,15 @@ Options:
   --json            Print machine-readable JSON
   --yes             Confirm destructive commands
   --file <path|->   Read a mock JSON payload from a file or stdin
+
+Proxy & Record (mocks create|update):
+  --proxy-url <url>             Forward matching requests to this URL ("*" = wildcard capture)
+  --proxy-headers <json>        Headers sent upstream, e.g. '{"Authorization":"Bearer ..."}'
+  --proxy-headers-file <path|-> Same, read from a file or stdin (keeps secrets out of shell history)
+  --proxy-params <json>         Query params sent upstream
+  --proxy-params-file <path|->  Same, read from a file or stdin
+  --no-forward-headers          Send only --proxy-headers upstream (no caller headers/cookies)
+  --clear-proxy                 Turn Proxy & Record off
 
 Run \`mockzilla agent-skill\` for the full agent-facing workflow.
 `;

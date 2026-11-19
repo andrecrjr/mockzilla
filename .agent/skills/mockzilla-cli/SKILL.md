@@ -81,6 +81,23 @@ mockzilla mocks delete <mock-id> --yes --json
 
 folderSlug is resolved to the server folder ID before a REST create request. For complex mocks, put the complete object in a file and use flags only for small overrides such as name, path, method, status-code, match-type, response, body-type, dynamic, and folder-slug.
 
+## Proxy & Record
+
+Forward a mock to a live API and save each response as an exact mock. Flags on `mocks create|update` become a partial `proxy` payload that the server merges, so an update that changes one thing keeps the rest:
+
+~~~bash
+mockzilla mocks update <mock-id> --proxy-url https://api.example.com/v1/users
+printf '{"Authorization":"Bearer <token>"}' | mockzilla mocks update <mock-id> --proxy-headers-file -
+mockzilla mocks update <mock-id> --proxy-params '{"api_key":"<key>"}'
+mockzilla mocks update <mock-id> --no-forward-headers   # send only --proxy-headers upstream
+mockzilla mocks update <mock-id> --clear-proxy          # turn it off
+~~~
+
+- `--proxy-headers` and `--proxy-params` replace the whole stored set. `*` in the URL is replaced by wildcard captures.
+- Prefer the `-file` forms (or stdin) for credentials so they stay out of shell history. Credentials are stored in plain text and the CLI prints the stored mock as is.
+- `Host`, `Content-Length`, `Connection` and similar headers are set by Mockzilla and are rejected.
+- Mocks named `Recorded: …` are the saved responses. They answer only their exact path and query; delete one to fetch the live response again.
+
 Destructive commands require yes in non-interactive shells. Every failure includes an agent discovery hint; see Diagnose a mismatch.
 
 ## Choose the match type first

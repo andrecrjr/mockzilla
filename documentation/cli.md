@@ -41,6 +41,10 @@ mockzilla agent-skill
 
 `--file -` reads one JSON object from stdin. Common mock fields can also be overridden with flags: `--name`, `--path`, `--method`, `--status-code`, `--folder-id`, `--folder-slug`, `--response`, `--response-file`, `--match-type`, `--body-type`, `--json-schema`, `--json-schema-file`, `--variants-file`, `--enabled`, `--dynamic`, `--echo-request-body`, `--wildcard-require-match`, and `--no-require-match`.
 
+## Proxy & Record flags
+
+`mocks create|update` accept `--proxy-url <url>`, `--proxy-headers <json>` or `--proxy-headers-file <path|->`, `--proxy-params <json>` or `--proxy-params-file <path|->`, `--forward-headers` / `--no-forward-headers`, and `--clear-proxy`. They are sent as a partial `proxy` payload that the server merges into the mock's `meta` (`applyProxySettings`), so an update never drops unrelated proxy settings. `--clear-proxy` with `--proxy-url`, or an inline value together with its `-file` form, is rejected. Use the `-file` forms for credentials. The CLI prints the stored mock unredacted; only MCP masks credentials.
+
 ## Mock payloads
 
 Create a static exact mock:

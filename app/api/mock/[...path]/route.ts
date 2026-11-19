@@ -24,6 +24,7 @@ import {
 	buildProxyRequestHeaders,
 	buildProxyTargetUrl,
 	buildRecordedMockName,
+	getProxyUpstreamConfig,
 	isRecordedMock,
 } from '@/lib/utils/proxy-record';
 
@@ -367,10 +368,12 @@ async function handleProxyAndRecord(
 	log: Logger,
 ): Promise<NextResponse> {
 	const method = (request.method as HttpMethod) || 'GET';
+	const upstream = getProxyUpstreamConfig(proxyMock.meta);
 	const target = buildProxyTargetUrl(
 		targetUrlString,
 		captures,
 		request.nextUrl.searchParams,
+		upstream.queryParams,
 	);
 	if (!target.ok) {
 		log.warn({ targetUrlString }, target.error);
@@ -384,31 +387,31 @@ async function handleProxyAndRecord(
 		);
 	}
 	const targetUrl = target.url;
-	log.info(
-		{ targetUrl: targetUrl.toString(), mockPath },
-		'Proxying request to target',
-	);
+	// Configured query params may hold secrets, so never echo them back or log them.
+	const safeTarget = `${targetUrl.origin}${targetUrl.pathname}`;
+	log.info({ targetUrl: safeTarget, mockPath }, 'Proxying request to target');
 
 	let response: Response;
 	try {
 		response = await fetch(targetUrl.toString(), {
 			method,
-			headers: buildProxyRequestHeaders(request.headers),
+			headers: buildProxyRequestHeaders(
+				request.headers,
+				upstream.headers,
+				upstream.forwardHeaders,
+			),
 			body: ['GET', 'HEAD'].includes(method)
 				? null
 				: await request.clone().text(),
 			redirect: 'follow',
 		});
 	} catch (error) {
-		log.error(
-			{ err: error, targetUrl: targetUrl.toString() },
-			'Proxy request failed',
-		);
+		log.error({ err: error, targetUrl: safeTarget }, 'Proxy request failed');
 		return NextResponse.json(
 			{
 				error: 'Proxy request failed',
 				details: String(error),
-				target: targetUrl.toString(),
+				target: safeTarget,
 			},
 			{ status: 502 },
 		);
@@ -453,7 +456,8 @@ async function handleProxyAndRecord(
 			meta: {
 				recordedFrom: proxyMock.id,
 				recordedAt: new Date().toISOString(),
-				recordedTarget: targetUrl.toString(),
+				// Origin and path only: configured query params may hold secrets.
+				recordedTarget: `${targetUrl.origin}${targetUrl.pathname}`,
 			},
 		});
 		log.info(

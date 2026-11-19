@@ -1,3 +1,4 @@
+import type { ProxySettingsInput } from './utils/proxy-record';
 import type { Condition, Effect } from './workflow-types';
 
 export type HttpMethod =
@@ -94,6 +95,8 @@ export interface CreateMockRequest {
 	echoRequestBody?: boolean;
 	delay?: number;
 	meta?: Record<string, unknown>;
+	/** Partial Proxy & Record settings merged into `meta` (see applyProxySettings). */
+	proxy?: ProxySettingsInput;
 }
 
 export interface CreateFolderRequest {
@@ -127,6 +130,8 @@ export interface UpdateMockRequest {
 	echoRequestBody?: boolean;
 	delay?: number;
 	meta?: Record<string, unknown>;
+	/** Partial Proxy & Record settings merged into `meta` (see applyProxySettings). */
+	proxy?: ProxySettingsInput;
 }
 
 export interface ExportData {
@@ -187,7 +192,7 @@ export interface WorkflowExportData {
 
 export type {
 	Condition,
+	ConditionTrace,
 	Effect,
 	MatchContext,
-	ConditionTrace,
 } from './workflow-types';

@@ -47,7 +47,14 @@ import {
 	applyVariantResponse,
 	normalizeMockVariants,
 } from '@/lib/utils/mock-variants';
-import { isRecordedMock } from '@/lib/utils/proxy-record';
+import {
+	applyProxySettings,
+	buildProxyTargetUrl,
+	getProxyUpstreamConfig,
+	isRecordedMock,
+	type ProxySettingsInput,
+	summarizeProxy,
+} from '@/lib/utils/proxy-record';
 import type {
 	CreateFolderArgs,
 	CreateMockSubfolderArgs,
@@ -573,6 +580,13 @@ export async function callCreateMock(args: CreateMockArgs) {
 		throw new Error('folderSlug or folderId is required');
 	}
 
+	let initialMeta: Record<string, unknown> = {};
+	if (args.proxy) {
+		const applied = applyProxySettings({}, args.proxy as ProxySettingsInput);
+		if (!applied.ok) throw new Error(applied.error);
+		initialMeta = applied.meta;
+	}
+
 	const body: CreateMockRequest = {
 		name: args.name,
 		path: args.path,
@@ -615,6 +629,7 @@ export async function callCreateMock(args: CreateMockArgs) {
 			useDynamicResponse: body.useDynamicResponse ?? false,
 			echoRequestBody: body.echoRequestBody ?? false,
 			delay: body.delay ?? 0,
+			meta: initialMeta,
 		})
 		.returning();
 
@@ -640,6 +655,7 @@ export async function callCreateMock(args: CreateMockArgs) {
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -724,6 +740,7 @@ export async function callListMocks(args: ListMocksArgs) {
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	}));
@@ -759,6 +776,7 @@ export async function callGetMock(args: GetMockArgs) {
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -791,10 +809,20 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 			: args.variants,
 		nextPath,
 	);
+	let nextMeta = existingMock.meta;
+	if (args.proxy) {
+		const applied = applyProxySettings(
+			existingMock.meta,
+			args.proxy as ProxySettingsInput,
+		);
+		if (!applied.ok) throw new Error(applied.error);
+		nextMeta = applied.meta;
+	}
 
 	const [row] = await db
 		.update(mockResponses)
 		.set({
+			meta: nextMeta,
 			name: args.name ?? existingMock.name,
 			endpoint: nextPath,
 			method: args.method ?? existingMock.method,
@@ -846,6 +874,7 @@ export async function callUpdateMock(args: UpdateMockArgs) {
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -985,6 +1014,7 @@ export async function callCreateSchemaMock(args: {
 		useDynamicResponse: row.useDynamicResponse,
 		echoRequestBody: row.echoRequestBody,
 		delay: row.delay,
+		...summarizeProxy(row.meta, row.name),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt?.toISOString() || null,
 	};
@@ -1104,6 +1134,35 @@ export async function callPreviewMock(args: PreviewMockArgs) {
 				paramsMap[String(i)] = captures[i];
 			}
 		}
+	}
+
+	const proxyTarget = (bestMock.meta as { proxyTargetUrl?: string } | null)
+		?.proxyTargetUrl;
+	if (proxyTarget) {
+		// The live route forwards this request instead of serving the stored body.
+		const { proxy } = summarizeProxy(bestMock.meta, bestMock.name);
+		const upstream = buildProxyTargetUrl(
+			proxyTarget,
+			Object.keys(paramsMap)
+				.sort((a, b) => Number(a) - Number(b))
+				.map((key) => paramsMap[key]),
+			new URLSearchParams(urlQueryParams),
+			proxy?.queryParams ?? getProxyUpstreamConfig(bestMock.meta).queryParams,
+		);
+		return {
+			statusCode: 0,
+			headers: {},
+			isJson: true,
+			body: {
+				proxied: true,
+				note: 'This mock forwards live requests to its proxy target and records each new path + query as an exact mock. The stored response is not served.',
+				matchedMockId: bestMock.id,
+				upstreamUrl: upstream.ok ? upstream.url.toString() : null,
+				upstreamError: upstream.ok ? null : upstream.error,
+				upstreamHeaders: proxy?.headers ?? {},
+				forwardCallerHeaders: proxy?.forwardHeaders ?? true,
+			},
+		};
 	}
 
 	const finalResponse = responseMock.response;
