@@ -23,6 +23,13 @@ mockzilla config show
 
 The default URL is `http://localhost:36666`. Precedence is `--url`, `MOCKZILLA_URL`, saved config, then the default. Use `--json` for machine-readable output. `mockzilla agent-skill` prints the CLI-specific agent instructions.
 
+Verify a global installation and its bundled instructions with:
+
+```bash
+mockzilla --version
+mockzilla agent-skill
+```
+
 Check the latest published release with `mockzilla update check`. It compares the installed version with GitHub's latest release and prints global Bun/npm install commands if a newer release exists. The check is opt-in, reports published releases rather than unreleased branch commits, and does not update the CLI automatically. Re-run the install command to upgrade.
 
 ## Commands
