@@ -42,23 +42,26 @@ The mock server and dashboard will be available at http://localhost:36666
 
 ## Mockzilla CLI
 
-Install the dependency-free CLI directly from this GitHub repository:
+The dependency-free CLI runs on Node.js 18.18 or newer. Install it directly from
+this GitHub repository (it is not published to the npm registry):
 
 ```bash
 npx --yes github:andrecrjr/mockzilla health
-# or
-pnpm dlx github:andrecrjr/mockzilla health
 ```
 
-Configure the server once, then manage folders and mocks from the terminal:
+For a persistent `mockzilla` command, install globally with npm or Bun:
 
 ```bash
-npx --yes github:andrecrjr/mockzilla config set --url http://localhost:36666
-npx --yes github:andrecrjr/mockzilla folders list
-npx --yes github:andrecrjr/mockzilla mocks create --file mock.json
+npm install --global github:andrecrjr/mockzilla
+# or
+bun install --global github:andrecrjr/mockzilla
 ```
 
-For a persistent `mockzilla` command, install the Git package with `pnpm add --global github:andrecrjr/mockzilla`. Use `mockzilla agent-skill` to print the agent-facing Markdown instructions, or read the [CLI guide](/documentation/cli.md) for payloads, wildcard variants, JSON Schema responses, and automation.
+Then connect it to your running server with
+`mockzilla config set --url http://localhost:36666`. Use `mockzilla agent-skill`
+to print the agent-facing Markdown instructions. The [CLI guide](https://github.com/andrecrjr/mockzilla/blob/main/documentation/cli.md)
+covers payloads, wildcard variants, schemas, and automation; see the
+[installation guide](https://mockzilla.dev/docs/getting-started/cli) for setup.
 
 ## Configuration
 

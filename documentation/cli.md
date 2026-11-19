@@ -4,12 +4,18 @@ The `mockzilla` CLI is a dependency-free Node.js client for the Mockzilla REST A
 
 ## Install and connect
 
-Node.js 18.18 or newer is required.
+Node.js 18.18 or newer is required. The CLI is installed from this GitHub
+repository; it is not published to the npm registry as `mockzilla`.
 
 ```bash
 npx --yes github:andrecrjr/mockzilla health
-pnpm dlx github:andrecrjr/mockzilla health
-pnpm add --global github:andrecrjr/mockzilla
+```
+
+Install globally with npm or Bun:
+
+```bash
+npm install --global github:andrecrjr/mockzilla
+bun install --global github:andrecrjr/mockzilla
 ```
 
 Set the default server URL once:
