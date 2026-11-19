@@ -56,6 +56,9 @@ describe('mockzilla CLI', () => {
 		expect(result.stderr).toEqual([]);
 		expect(result.stdout.join('')).toContain('name: mockzilla-cli');
 		expect(result.stdout.join('')).toContain('mockzilla mocks create');
+		expect(result.stdout.join('')).toContain('mockzilla update check');
+		expect(result.stdout.join('')).toContain('Standard workflow');
+		expect(result.stdout.join('')).toContain('Diagnose a mismatch');
 	});
 
 	it('ends human errors with an agent discovery hint', () => {
@@ -134,6 +137,243 @@ describe('mockzilla CLI', () => {
 		expect(JSON.parse(String(requests[1]?.init?.body))).not.toHaveProperty(
 			'folderSlug',
 		);
+	});
+
+	it('lists and creates mock subfolders by folder slug', async () => {
+		const requests: Array<{ url: string; init?: RequestInit }> = [];
+		const fetchImpl: CliOptions['fetch'] = async (input, init) => {
+			const url = String(input);
+			requests.push({ url, init });
+			if (url.includes('/api/folders?slug=demo')) {
+				return Response.json({ id: 'folder-1' });
+			}
+			return Response.json({ id: 'subfolder-1' }, { status: 201 });
+		};
+
+		const listResult = output();
+		expect(
+			await run(
+				[
+					'subfolders',
+					'list',
+					'--folder-slug',
+					'demo',
+					'--parent-id',
+					'root',
+					'--json',
+				],
+				options(listResult, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(requests[1]?.url).toContain(
+			'/api/mock-subfolders?folderId=folder-1&parentId=root',
+		);
+
+		const createResult = output();
+		expect(
+			await run(
+				[
+					'subfolders',
+					'create',
+					'--folder-slug',
+					'demo',
+					'--parent-id',
+					'subfolder-parent',
+					'--name',
+					'Details',
+					'--path',
+					'details',
+					'--json',
+				],
+				options(createResult, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(requests[3]?.url).toEndWith('/api/mock-subfolders');
+		expect(JSON.parse(String(requests[3]?.init?.body))).toEqual({
+			folderId: 'folder-1',
+			parentId: 'subfolder-parent',
+			name: 'Details',
+			path: 'details',
+		});
+	});
+
+	it('moves subfolders to root and requires confirmation before deletion', async () => {
+		const requests: Array<{ url: string; init?: RequestInit }> = [];
+		const fetchImpl: CliOptions['fetch'] = async (input, init) => {
+			requests.push({ url: String(input), init });
+			return Response.json({ success: true });
+		};
+
+		const updateResult = output();
+		expect(
+			await run(
+				[
+					'subfolders',
+					'update',
+					'subfolder-1',
+					'--parent-id',
+					'root',
+					'--json',
+				],
+				options(updateResult, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({
+			parentId: null,
+		});
+
+		const deleteResult = output();
+		expect(
+			await run(
+				['subfolders', 'delete', 'subfolder-1', '--yes', '--json'],
+				options(deleteResult, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(requests[1]?.init?.method).toBe('DELETE');
+
+		const noConfirmationResult = output();
+		expect(
+			await run(
+				['subfolders', 'delete', 'subfolder-2', '--json'],
+				options(noConfirmationResult, { fetch: fetchImpl }),
+			),
+		).toBe(1);
+		expect(requests).toHaveLength(2);
+	});
+
+	it('filters mock lists by subfolder', async () => {
+		const requests: string[] = [];
+		const fetchImpl: CliOptions['fetch'] = async (input) => {
+			const url = String(input);
+			requests.push(url);
+			return url.includes('/api/folders?slug=demo')
+				? Response.json({ id: 'folder-1' })
+				: Response.json({ data: [] });
+		};
+
+		const result = output();
+		expect(
+			await run(
+				[
+					'mocks',
+					'list',
+					'--folder-slug',
+					'demo',
+					'--mock-folder-id',
+					'subfolder-1',
+					'--json',
+				],
+				options(result, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(requests[1]).toContain(
+			'/api/mocks?folderId=folder-1&mockFolderId=subfolder-1',
+		);
+	});
+
+	it('imports JSON data and OpenAPI specs from stdin', async () => {
+		const requests: Array<{ url: string; init?: RequestInit }> = [];
+		const fetchImpl: CliOptions['fetch'] = async (input, init) => {
+			requests.push({ url: String(input), init });
+			return Response.json({ success: true });
+		};
+
+		const importPayload = { folders: [], mocks: [] };
+		const importResult = output();
+		expect(
+			await run(
+				['import', '--file', '-', '--json'],
+				options(importResult, {
+					fetch: fetchImpl,
+					input: JSON.stringify(importPayload),
+				}),
+			),
+		).toBe(0);
+		expect(requests[0]?.url).toEndWith('/api/import');
+		expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(importPayload);
+
+		const spec = 'openapi: 3.0.0\ninfo:\n  title: Demo\npaths: {}\n';
+		const openApiResult = output();
+		expect(
+			await run(
+				['openapi', 'import', '--file', '-', '--json'],
+				options(openApiResult, { fetch: fetchImpl, input: spec }),
+			),
+		).toBe(0);
+		expect(requests[1]?.url).toEndWith('/api/import/openapi');
+		expect(JSON.parse(String(requests[1]?.init?.body))).toEqual({ spec });
+	});
+
+	it('exports all mock data to a file', async () => {
+		const directory = await mkdtemp(join(tmpdir(), 'mockzilla-cli-export-'));
+		temporaryDirectories.push(directory);
+		const file = join(directory, 'backup.json');
+		const exportPayload = { folders: [], mockSubfolders: [], mocks: [] };
+		const result = output();
+		const fetchImpl: CliOptions['fetch'] = async (input) => {
+			expect(String(input)).toEndWith('/api/export');
+			return Response.json(exportPayload);
+		};
+
+		expect(
+			await run(
+				['export', '--output', file, '--json'],
+				options(result, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(exportPayload);
+		expect(JSON.parse(result.stdout.join(''))).toEqual({
+			exported: true,
+			output: file,
+		});
+	});
+
+	it('checks the latest published version without updating itself', async () => {
+		const packageJson = JSON.parse(
+			await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+		) as { version: string };
+		const [major, minor, patch] = packageJson.version.split('.').map(Number);
+		const releaseTags = [
+			`v${packageJson.version}`,
+			`v${major}.${minor}.${patch + 1}`,
+		];
+		const requests: string[] = [];
+		const fetchImpl: CliOptions['fetch'] = async (input) => {
+			requests.push(String(input));
+			return Response.json({ tag_name: releaseTags[requests.length - 1] });
+		};
+
+		const currentResult = output();
+		expect(
+			await run(
+				['update', 'check', '--json'],
+				options(currentResult, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(JSON.parse(currentResult.stdout.join(''))).toMatchObject({
+			currentVersion: packageJson.version,
+			latestVersion: packageJson.version,
+			status: 'up-to-date',
+			updateAvailable: false,
+		});
+
+		const updateResult = output();
+		expect(
+			await run(
+				['update', 'check', '--json'],
+				options(updateResult, { fetch: fetchImpl }),
+			),
+		).toBe(0);
+		expect(JSON.parse(updateResult.stdout.join(''))).toMatchObject({
+			latestVersion: `${major}.${minor}.${patch + 1}`,
+			status: 'update-available',
+			updateAvailable: true,
+			installWithBun: 'bun add --global github:andrecrjr/mockzilla',
+		});
+		expect(requests).toEqual([
+			'https://api.github.com/repos/andrecrjr/mockzilla/releases/latest',
+			'https://api.github.com/repos/andrecrjr/mockzilla/releases/latest',
+		]);
 	});
 
 	it('sends proxy flags as a partial proxy payload', async () => {

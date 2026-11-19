@@ -1,6 +1,6 @@
 // @ts-check
 
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 
 import {
@@ -48,6 +48,8 @@ const ALLOWED_OPTIONS = new Set([
 	'method',
 	'mock-folder-id',
 	'name',
+	'parent-id',
+	'output',
 	'page',
 	'path',
 	'proxy-headers',
@@ -189,8 +191,23 @@ async function execute(parsed, dependencies) {
 	if (command === 'health') {
 		return request(dependencies, parsed.options, '/api/health');
 	}
+	if (command === 'update' && action === 'check') {
+		return executeUpdateCheck(dependencies);
+	}
+	if (command === 'export') {
+		return executeExport(parsed.options, dependencies);
+	}
+	if (command === 'import') {
+		return executeImport(parsed.options, dependencies);
+	}
+	if (command === 'openapi' && action === 'import') {
+		return executeOpenApiImport(parsed.options, dependencies);
+	}
 	if (command === 'folders') {
 		return executeFolders(action, identifier, parsed.options, dependencies);
+	}
+	if (command === 'subfolders') {
+		return executeSubfolders(action, identifier, parsed.options, dependencies);
 	}
 	if (command === 'mocks') {
 		return executeMocks(action, identifier, parsed.options, dependencies);
@@ -291,6 +308,193 @@ async function executeFolders(action, identifier, options, dependencies) {
  * @param {CliDependencies} dependencies
  * @returns {Promise<unknown>}
  */
+async function executeSubfolders(action, identifier, options, dependencies) {
+	const client = await getClient(options, dependencies);
+	if (action === 'list') {
+		const folderId = await resolveFolderIdOption(client, options);
+		const query = new URLSearchParams({ folderId });
+		if (getOption(options, 'parent-id')) {
+			query.set('parentId', getRequiredOption(options, 'parent-id'));
+		}
+		if (getBoolean(options, 'all')) query.set('all', 'true');
+		return client.request(`/api/mock-subfolders?${query}`);
+	}
+	if (action === 'get') {
+		const id = requireIdentifier(identifier, 'subfolder ID');
+		return client.request(`/api/mock-subfolders?id=${encodeURIComponent(id)}`);
+	}
+	if (action === 'create') {
+		/** @type {Record<string, unknown>} */
+		const payload = {
+			folderId: await resolveFolderIdOption(client, options),
+			name: getRequiredOption(options, 'name'),
+		};
+		setOptionString(payload, 'path', options, 'path');
+		if (options.has('parent-id')) {
+			payload.parentId = normalizeParentId(
+				getRequiredOption(options, 'parent-id'),
+			);
+		}
+		return client.request('/api/mock-subfolders', jsonRequest('POST', payload));
+	}
+	if (action === 'update') {
+		const id = requireIdentifier(identifier, 'subfolder ID');
+		/** @type {Record<string, unknown>} */
+		const payload = {};
+		setOptionString(payload, 'name', options, 'name');
+		setOptionString(payload, 'path', options, 'path');
+		if (options.has('parent-id')) {
+			payload.parentId = normalizeParentId(
+				getRequiredOption(options, 'parent-id'),
+			);
+		}
+		if (Object.keys(payload).length === 0) {
+			throw new Error(
+				'Subfolder update requires --name, --path, or --parent-id.',
+			);
+		}
+		return client.request(
+			`/api/mock-subfolders?id=${encodeURIComponent(id)}`,
+			jsonRequest('PUT', payload),
+		);
+	}
+	if (action === 'delete') {
+		const id = requireIdentifier(identifier, 'subfolder ID');
+		await confirmDeletion(`subfolder ${id}`, options);
+		await client.request(`/api/mock-subfolders?id=${encodeURIComponent(id)}`, {
+			method: 'DELETE',
+		});
+		return { deleted: true, id };
+	}
+	throw new Error('Usage: mockzilla subfolders list|get|create|update|delete.');
+}
+
+/**
+ * @param {ParsedOptions} options
+ * @param {CliDependencies} dependencies
+ * @returns {Promise<unknown>}
+ */
+async function executeExport(options, dependencies) {
+	const client = await getClient(options, dependencies);
+	const data = await client.request('/api/export');
+	const output = getOption(options, 'output');
+	if (output !== undefined) {
+		await writeFile(String(output), `${JSON.stringify(data, null, 2)}\n`);
+		return { exported: true, output: String(output) };
+	}
+	return data;
+}
+
+/**
+ * @param {ParsedOptions} options
+ * @param {CliDependencies} dependencies
+ * @returns {Promise<unknown>}
+ */
+async function executeImport(options, dependencies) {
+	const payload = parseJsonText(
+		await readInputFile(getRequiredOption(options, 'file'), dependencies),
+		'--file',
+	);
+	if (!isRecord(payload)) throw new Error('--file must contain a JSON object.');
+	const client = await getClient(options, dependencies);
+	return client.request('/api/import', jsonRequest('POST', payload));
+}
+
+/**
+ * @param {ParsedOptions} options
+ * @param {CliDependencies} dependencies
+ * @returns {Promise<unknown>}
+ */
+async function executeOpenApiImport(options, dependencies) {
+	const spec = await readInputFile(
+		getRequiredOption(options, 'file'),
+		dependencies,
+	);
+	const client = await getClient(options, dependencies);
+	return client.request('/api/import/openapi', jsonRequest('POST', { spec }));
+}
+
+/**
+ * Checks the latest published GitHub release without updating the local CLI.
+ * @param {CliDependencies} dependencies
+ * @returns {Promise<unknown>}
+ */
+async function executeUpdateCheck(dependencies) {
+	const response = await (dependencies.fetch || fetch)(
+		'https://api.github.com/repos/andrecrjr/mockzilla/releases/latest',
+		{
+			headers: {
+				Accept: 'application/vnd.github+json',
+				'User-Agent': 'mockzilla-cli',
+			},
+		},
+	);
+	if (!response.ok) {
+		throw new Error(
+			`GitHub release check failed with status ${response.status}.`,
+		);
+	}
+	const release = await response.json();
+	if (!isRecord(release) || typeof release.tag_name !== 'string') {
+		throw new Error('GitHub latest release did not include a version tag.');
+	}
+
+	const currentVersion = await getPackageVersion();
+	const latestVersion = normalizeVersionTag(release.tag_name);
+	const comparison = compareVersions(currentVersion, latestVersion);
+	return {
+		currentVersion,
+		latestVersion,
+		status:
+			comparison < 0
+				? 'update-available'
+				: comparison === 0
+					? 'up-to-date'
+					: 'newer-than-latest-release',
+		updateAvailable: comparison < 0,
+		...(comparison < 0
+			? {
+					installWithBun: 'bun add --global github:andrecrjr/mockzilla',
+					installWithNpm: 'npm install --global github:andrecrjr/mockzilla',
+				}
+			: {}),
+	};
+}
+
+/**
+ * @param {string} tag
+ * @returns {string}
+ */
+function normalizeVersionTag(tag) {
+	const version = tag.startsWith('v') ? tag.slice(1) : tag;
+	if (!/^\d+\.\d+\.\d+$/.test(version)) {
+		throw new Error(`Unsupported Mockzilla release version: ${tag}`);
+	}
+	return version;
+}
+
+/**
+ * @param {string} current
+ * @param {string} latest
+ * @returns {number}
+ */
+function compareVersions(current, latest) {
+	const currentParts = normalizeVersionTag(current).split('.').map(Number);
+	const latestParts = normalizeVersionTag(latest).split('.').map(Number);
+	for (let index = 0; index < 3; index += 1) {
+		const difference = currentParts[index] - latestParts[index];
+		if (difference !== 0) return difference;
+	}
+	return 0;
+}
+
+/**
+ * @param {string | undefined} action
+ * @param {string | undefined} identifier
+ * @param {ParsedOptions} options
+ * @param {CliDependencies} dependencies
+ * @returns {Promise<unknown>}
+ */
 async function executeMocks(action, identifier, options, dependencies) {
 	const client = await getClient(options, dependencies);
 	if (action === 'list') {
@@ -307,6 +511,9 @@ async function executeMocks(action, identifier, options, dependencies) {
 					getRequiredOption(options, 'folder-slug'),
 				),
 			);
+		}
+		if (getOption(options, 'mock-folder-id')) {
+			query.set('mockFolderId', getRequiredOption(options, 'mock-folder-id'));
 		}
 		if (getOption(options, 'query'))
 			query.set('q', getRequiredOption(options, 'query'));
@@ -583,7 +790,14 @@ async function applyProxyOptions(payload, options, dependencies) {
 		if (getOption(options, name)) {
 			proxy[key] = parseJsonOption(options, name);
 		}
-		await applyFileOption(proxy, options, `${name}-file`, key, dependencies, true);
+		await applyFileOption(
+			proxy,
+			options,
+			`${name}-file`,
+			key,
+			dependencies,
+			true,
+		);
 		const value = proxy[key];
 		if (
 			value !== undefined &&
@@ -684,6 +898,30 @@ async function resolveFolderSlug(client, slug) {
 		throw new Error(`Folder lookup returned no ID for slug: ${slug}`);
 	}
 	return result.id;
+}
+
+/**
+ * @param {ReturnType<typeof createClient>} client
+ * @param {ParsedOptions} options
+ * @returns {Promise<string>}
+ */
+async function resolveFolderIdOption(client, options) {
+	const folderId = getOption(options, 'folder-id');
+	const folderSlug = getOption(options, 'folder-slug');
+	if (folderId && folderSlug) {
+		throw new Error('Choose either --folder-id or --folder-slug.');
+	}
+	if (folderId) return String(folderId);
+	if (folderSlug) return resolveFolderSlug(client, String(folderSlug));
+	throw new Error('Subfolder commands require --folder-id or --folder-slug.');
+}
+
+/**
+ * @param {string} parentId
+ * @returns {string | null}
+ */
+function normalizeParentId(parentId) {
+	return parentId === 'root' ? null : parentId;
 }
 
 /**
@@ -883,7 +1121,12 @@ const HELP_TEXT = `Mockzilla CLI
 Usage:
   mockzilla config set --url <url>
   mockzilla health
+  mockzilla update check
+  mockzilla export [--output <file>]
+  mockzilla import --file <path|->
+  mockzilla openapi import --file <path|->
   mockzilla folders list|create|get|update|delete
+  mockzilla subfolders list|get|create|update|delete
   mockzilla mocks list|get|create|update|delete
   mockzilla agent-skill
 
@@ -891,7 +1134,8 @@ Options:
   --url <url>       Override the server URL for one command
   --json            Print machine-readable JSON
   --yes             Confirm destructive commands
-  --file <path|->   Read a mock JSON payload from a file or stdin
+  --file <path|->   Read JSON, OpenAPI, or mock data from a file or stdin
+  --output <file>   Write an export to a file
 
 Proxy & Record (mocks create|update):
   --proxy-url <url>             Forward matching requests to this URL ("*" = wildcard capture)

@@ -1,4 +1,4 @@
 interface:
   display_name: "Mockzilla CLI"
-  short_description: "Manage Mockzilla folders and mocks from a terminal."
-  default_prompt: "Use $mockzilla-cli to configure Mockzilla and manage folders, mocks, variants, and dynamic responses from the terminal."
+  short_description: "Manage Mockzilla through its terminal client."
+  default_prompt: "Use $mockzilla-cli to check for CLI updates, configure the server, manage folders and mocks, import data or OpenAPI specs, and verify responses through the Mockzilla CLI."

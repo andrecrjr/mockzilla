@@ -54,13 +54,15 @@ For a persistent `mockzilla` command, install globally with npm or Bun:
 ```bash
 npm install --global github:andrecrjr/mockzilla
 # or
-bun install --global github:andrecrjr/mockzilla
+bun add --global github:andrecrjr/mockzilla
 ```
 
 Then connect it to your running server with
 `mockzilla config set --url http://localhost:36666`. Use `mockzilla agent-skill`
-to print the agent-facing Markdown instructions. The [CLI guide](https://github.com/andrecrjr/mockzilla/blob/main/documentation/cli.md)
-covers payloads, wildcard variants, schemas, and automation; see the
+to print the agent-facing Markdown instructions and `mockzilla update check` to
+check for a newer published release. Re-run the printed install command to
+upgrade. The [CLI guide](https://github.com/andrecrjr/mockzilla/blob/main/documentation/cli.md)
+covers payloads, import/export, wildcard variants, schemas, and automation; see the
 [installation guide](https://mockzilla.dev/docs/getting-started/cli) for setup.
 
 ## Configuration
@@ -82,7 +84,7 @@ Available experts:
 - Workflow Architect: Stateful scenarios and business logic.
 - Spec Translator: Fast bootstrapping from OpenAPI/technical specifications.
 - Logic Doctor: Forensic debugging and state repair.
-- Mockzilla CLI: Terminal workflows for folders, mocks, variants, and dynamic responses.
+- Mockzilla CLI: Terminal workflows for folders, subfolders, mocks, imports/exports, OpenAPI, variants, and dynamic responses.
 
 ## Self-Hosting Stack
 

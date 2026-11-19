@@ -280,7 +280,7 @@ Tags: #skills #automation #creator #architect
   - `mockzilla-workflow-architect`: Expert for stateful API workflows and scenarios.
   - `mockzilla-spec-translator`: Expert for rapid project bootstrapping from OpenAPI/Markdown specs.
   - `mockzilla-logic-doctor`: Forensic specialist for debugging workflow matching and state.
-  - `mockzilla-cli`: Dependency-free terminal client for configuring the server and managing folders, mocks, variants, and dynamic responses.
+  - `mockzilla-cli`: CLI-only workflow for release checks, server configuration, folders/subfolders, mocks, import/export, OpenAPI import, variants, and serving checks.
 - Usage: "Use [skill-name] to [task description]".
 - Related Docs: `documentation/skills.md`.
 

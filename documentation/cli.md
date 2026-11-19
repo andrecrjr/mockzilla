@@ -1,59 +1,51 @@
 # Mockzilla CLI
 
-The `mockzilla` CLI is a dependency-free Node.js client for the Mockzilla REST API. It is distributed from the repository so agents and developers can use it without installing the dashboard dependencies.
+The `mockzilla` command is a dependency-free Node.js client for managing data on a running Mockzilla server. It is distributed from this GitHub repository and is not published to the npm registry as `mockzilla`.
 
 ## Install and connect
 
-Node.js 18.18 or newer is required. The CLI is installed from this GitHub
-repository; it is not published to the npm registry as `mockzilla`.
+Node.js 18.18 or newer is required. Run once with `npx`, or install globally with Bun or npm:
 
 ```bash
 npx --yes github:andrecrjr/mockzilla health
-```
-
-Install globally with npm or Bun:
-
-```bash
+bun add --global github:andrecrjr/mockzilla
+# or
 npm install --global github:andrecrjr/mockzilla
-bun install --global github:andrecrjr/mockzilla
 ```
 
-Set the default server URL once:
+Configure the server URL:
 
 ```bash
 mockzilla config set --url http://localhost:36666
+mockzilla health
 mockzilla config show
-mockzilla config clear
 ```
 
-The URL precedence is `--url`, `MOCKZILLA_URL`, the saved profile, then `http://localhost:36666`. Use `--json` for automation. Human errors include a hint to run `mockzilla agent-skill`; JSON errors include an `agentHint` property.
+The default URL is `http://localhost:36666`. Precedence is `--url`, `MOCKZILLA_URL`, saved config, then the default. Use `--json` for machine-readable output. `mockzilla agent-skill` prints the CLI-specific agent instructions.
+
+Check the latest published release with `mockzilla update check`. It compares the installed version with GitHub's latest release and prints global Bun/npm install commands if a newer release exists. The check is opt-in, reports published releases rather than unreleased branch commits, and does not update the CLI automatically. Re-run the install command to upgrade.
 
 ## Commands
 
 ```text
+mockzilla config set --url <url>
+mockzilla config show|clear
 mockzilla health
-mockzilla folders list [--query <text>] [--page <n>] [--limit <n>]
-mockzilla folders get <slug>
-mockzilla folders create --name <name> [--slug <slug>] [--description <text>]
-mockzilla folders update <id> [--name <name>] [--slug <slug>] [--description <text>]
-mockzilla folders delete <id> --yes
-mockzilla mocks list [--folder-id <id>|--folder-slug <slug>] [--query <text>]
-mockzilla mocks get <id>
-mockzilla mocks create --file <path|->
-mockzilla mocks update <id> --file <path|->
-mockzilla mocks delete <id> --yes
+mockzilla update check
+mockzilla folders list|get|create|update|delete
+mockzilla subfolders list|get|create|update|delete
+mockzilla mocks list|get|create|update|delete
+mockzilla export [--output <file>]
+mockzilla import --file <json-file|->
+mockzilla openapi import --file <json-or-yaml-file|->
 mockzilla agent-skill
 ```
 
-`--file -` reads one JSON object from stdin. Common mock fields can also be overridden with flags: `--name`, `--path`, `--method`, `--status-code`, `--folder-id`, `--folder-slug`, `--response`, `--response-file`, `--match-type`, `--body-type`, `--json-schema`, `--json-schema-file`, `--variants-file`, `--enabled`, `--dynamic`, `--echo-request-body`, `--wildcard-require-match`, and `--no-require-match`.
+`folders get` accepts a folder slug; update and delete accept an ID. `mocks list` supports `--folder-id` or `--folder-slug`, `--mock-folder-id`, `--query`, `--page`, and `--limit`. Use `--mock-folder-id root` for root-level mocks. `subfolders list` requires `--folder-id` or `--folder-slug`, accepts `--parent-id root|<id>`, and supports `--all`. Create and update subfolders accept `--name`, `--path`, and `--parent-id` where applicable. Deleting a folder, subfolder, or mock requires confirmation; pass `--yes` for automation.
 
-## Proxy & Record flags
+## Create mocks
 
-`mocks create|update` accept `--proxy-url <url>`, `--proxy-headers <json>` or `--proxy-headers-file <path|->`, `--proxy-params <json>` or `--proxy-params-file <path|->`, `--forward-headers` / `--no-forward-headers`, and `--clear-proxy`. They are sent as a partial `proxy` payload that the server merges into the mock's `meta` (`applyProxySettings`), so an update never drops unrelated proxy settings. `--clear-proxy` with `--proxy-url`, or an inline value together with its `-file` form, is rejected. Use the `-file` forms for credentials. The CLI prints the stored mock unredacted; only MCP masks credentials.
-
-## Mock payloads
-
-Create a static exact mock:
+Pass a complete mock definition using `--file`, or read it from stdin with `--file -`:
 
 ```json
 {
@@ -68,53 +60,78 @@ Create a static exact mock:
 }
 ```
 
-For dynamic responses, provide `jsonSchema` as a JSON string and set `useDynamicResponse` to `true`. The CLI supplies `{}` as the required static fallback when creating a schema-only mock.
-
-Wildcard paths use `*`, and variants use canonical `captures` arrays in wildcard order:
-
-```json
-{
-  "name": "User",
-  "path": "/users/*/orders/*",
-  "method": "GET",
-  "folderSlug": "demo",
-  "matchType": "wildcard",
-  "response": "{}",
-  "variants": [
-    {
-      "captures": ["alice", "101"],
-      "statusCode": 200,
-      "bodyType": "json",
-      "body": "{\"user\":\"alice\",\"order\":101}"
-    }
-  ]
-}
+```bash
+mockzilla mocks create --file mock.json --json
+mockzilla mocks update <mock-id> --file changes.json --json
+mockzilla mocks get <mock-id> --json
+mockzilla mocks list --folder-slug demo --json
+mockzilla mocks delete <mock-id> --yes --json
 ```
 
-Use `isFallback: true` for an explicit catch-all variant. Legacy `key: "*"` remains accepted by the server and is normalized on read.
+Common flags can override fields in the file: `--name`, `--path`, `--method`, `--status-code`, `--folder-id`, `--folder-slug`, `--mock-folder-id`, `--response`, `--response-file`, `--match-type`, `--body-type`, `--json-schema`, `--json-schema-file`, `--variants-file`, `--query-params`, `--query-params-file`, `--enabled`, `--disabled`, `--dynamic`, `--echo-request-body`, and `--wildcard-require-match` / `--no-require-match`.
 
-## Response and route testing
-
-The complete terminal workflow is rendered by `mockzilla agent-skill`. Its behavior rules are important when a path contains `*`:
-
-- `exact` is the default. A wildcard-looking path remains exact unless `matchType: "wildcard"` is set.
-- Score = path type (`exact` 300, `wildcard` 200, `substring` 100) + 10 per required query parameter + 1 per query value without `*` + endpoint path length. Ties go to non-proxy mocks, then the newest mock. See the [routing reference](../content/docs/reference/routing-and-matching.mdx#strategy-precedence) for worked examples.
-- Dynamic responses attach a JSON Schema through `jsonSchema` plus `useDynamicResponse: true`; `bodyType` must be `json` and `response` is the generation fallback.
-- Wildcard variants use ordered `captures` arrays. Use `isFallback: true` for an explicit fallback, and use `wildcardRequireMatch` when an unknown capture must return 404.
-- A selected variant overrides the base response source, status, body type, schema, dynamic mode, and echo behavior.
-
-Query parameters are matched separately from path wildcards. Parameter names are exact, but values support `*` glob matching: `queryParams: { "status": "*" }` matches `?status=active`, `?status=banned`, or any other present status value. The parameter must still be present. Exact query values are more specific than wildcard values when the other matching factors are equal. Values are available to Dynamic Response templates as `{{$.query.name}}`.
-
-For a schema file and a real serving request:
+To place a mock inside a subfolder, pass its ID as `mockFolderId` in the JSON or use `--mock-folder-id`. The mock path is relative to that subfolder. For nested folders:
 
 ```bash
-mockzilla mocks create --file mock.json --json-schema-file schema.json --dynamic --json
-mockzilla mocks get <id> --json
-curl -sS -D - http://localhost:36666/api/mock/demo/users/123
+mockzilla subfolders create --folder-slug demo --name Users --path users --json
+mockzilla subfolders create --folder-slug demo --parent-id <users-id> \
+  --name Details --path details --json
+mockzilla subfolders list --folder-slug demo --all --json
+mockzilla mocks create --file mock.json --mock-folder-id <details-id> --json
+mockzilla mocks list --folder-slug demo --mock-folder-id <details-id> --json
 ```
 
-The skill also documents Faker keywords, request interpolation (`{{$.params.[0]}}`, query, headers, and body), schema test matrices, fallback behavior, and mismatch diagnosis. The maintained schema references are [test schemas](test-schemas.md), [JSON Schema Faker](json-schema-faker.md), [schema interpolation](schema-interpolation.md), and [wildcard variants](wildcard-variants-audit.md).
+The server supports multi-segment subfolder paths and creates missing ancestors. `--parent-id root` places a subfolder at the top level. A subfolder can be deleted only after its child subfolders and mocks are removed.
 
-## Agent skill
+## Dynamic responses and variants
 
-`mockzilla agent-skill` prints `.agent/skills/mockzilla-cli/SKILL.md` to stdout. This lets an agent load the exact terminal workflow from a Git checkout without writing into its skill directory. The same skill is packaged with the CLI install.
+Dynamic responses use a JSON Schema. Store the raw schema object in a separate file and attach it on create:
+
+```bash
+mockzilla mocks create --file mock.json \
+  --json-schema-file user.schema.json --dynamic --json
+```
+
+Set `useDynamicResponse: true` and `bodyType: "json"`. Keep `response` as a valid static fallback; a schema-only create gets `{}` as its fallback. Templates such as `{{$.params.[0]}}`, `{{$.query.page}}`, `{{$.headers.[x-trace-id]}}`, and `{{$.body.name}}` read request data during response generation.
+
+Wildcard paths require `matchType: "wildcard"`; an asterisk in an exact path is literal. Variants use ordered `captures` arrays and an optional `isFallback: true` catch-all. Set `wildcardRequireMatch: true` to return 404 when no variant matches. The selected variant replaces the base response configuration. See [routing and matching](../content/docs/reference/routing-and-matching.mdx), [dynamic wildcard mocks](../content/docs/guides/dynamic-wildcard-mocks.mdx), [schema interpolation](schema-interpolation.md), and [wildcard variants](wildcard-variants-audit.md) for server semantics.
+
+## Proxy and record
+
+`mocks create|update` accept `--proxy-url`, `--proxy-headers` or `--proxy-headers-file`, `--proxy-params` or `--proxy-params-file`, `--no-forward-headers`, and `--clear-proxy`. These options update a partial proxy configuration while preserving unrelated mock metadata.
+
+Use file options for credentials so they stay out of shell history. Proxy credentials are stored with the mock, and CLI output is not redacted. Transport-managed headers such as `Host`, `Content-Length`, and `Connection` are rejected.
+
+## Import and export
+
+Export folders, subfolders, and mocks to a JSON file, then import a file in the supported export format or legacy groups/rules format:
+
+```bash
+mockzilla export --output backup.json
+mockzilla import --file backup.json --json
+```
+
+Import adds mocks, so importing the same backup repeatedly can create duplicates. Review the target server before repeating an import.
+
+OpenAPI 3.x and Swagger 2.0 specs can be imported from JSON or YAML. The server creates or updates a folder from the spec title and creates mocks and static subfolders from its operations:
+
+```bash
+mockzilla openapi import --file openapi.yaml --json
+```
+
+Review returned warnings and counts, then inspect the created records with `folders` and `mocks`. Re-import updates operations with matching identity and preserves selected user settings. See [OpenAPI import](openapi-import.md) for conversion behavior.
+
+## Test a mock
+
+The CLI does not have a non-mutating match preview. Send a real request to the serving route to exercise matching and response generation:
+
+```bash
+mockzilla health
+mockzilla mocks get <mock-id> --json
+curl -i http://localhost:36666/api/mock/demo/health
+curl -i 'http://localhost:36666/api/mock/demo/users/42?page=2'
+```
+
+For dynamic responses, call twice and verify generated fields vary while request-derived fields remain stable. For wildcard variants, try a known capture and an unknown capture. For subfolder mocks, include the subfolder path after the top-level folder slug.
+
+The CLI manages folders, subfolders, mocks, imports, and exports. It does not expose workflow/scenario state, request-log tracing, or the MCP non-mutating preview operation.

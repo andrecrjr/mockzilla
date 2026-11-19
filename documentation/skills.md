@@ -1,12 +1,12 @@
 # Agent Skills
 
-Agent Skills are specialized instruction sets (located in `.agent/skills/`) that supercharge AI agents with expert Mockzilla knowledge. Instead of just having access to raw tools, a skill-enabled agent understands our **Action-Driven** philosophy and knows exactly how to build high-fidelity simulations.
+Agent Skills are specialized instruction sets in `.agent/skills/`. The four Mockzilla specialist skills use MCP tools. `mockzilla-cli` is a separate terminal workflow for users and agents who want to manage Mockzilla through its executable.
 
 ---
 
 ## Maintenance Contract
 
-Skills should instruct agents to use the consolidated MCP manager tools:
+MCP-focused skills should use the consolidated manager tools:
 
 | Area | Tool |
 | :--- | :--- |
@@ -18,9 +18,11 @@ Skills should instruct agents to use the consolidated MCP manager tools:
 | Workflow state/testing | `workflow_control` |
 | Logs and traces | `manage_logs` |
 
-Use only the current manager tools and actions listed above. The canonical contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
+Use only the current manager tools and actions listed above. Their canonical contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
 
-Each skill starts with a **Look up docs fast (llms.txt)** section: fetch `/llms.txt` for the index and quick reference, then only the relevant `/llms/docs/<page>.txt` pages, and `/llms-full.txt` only when everything is needed. When adding a skill, list the pages most relevant to it. See `documentation/llms-txt.md`.
+The `mockzilla-cli` skill is independent: it teaches the `mockzilla` executable and `curl`, and must not substitute MCP tool instructions. It is appropriate for CLI-specific requests such as “use the Mockzilla CLI” or “manage this mock from the terminal.” If a task has no CLI command or documented REST path, the skill states that limit.
+
+MCP-focused skills start with a **Look up docs fast (llms.txt)** section: fetch `/llms.txt` for the index, then only relevant `/llms/docs/<page>.txt` pages. Use `/llms-full.txt` only when the full manual is needed. See `documentation/llms-txt.md`.
 
 Each skill also has `agents/openai.yaml` metadata for UI display and default prompts. Keep that metadata aligned with the corresponding `SKILL.md` frontmatter.
 
@@ -54,8 +56,8 @@ Forensic specialist for debugging complex workflow matching and state issues.
 - **Verify with**: `manage_logs` (action: `trace`) and `workflow_control` (actions: `test`, `inspect`).
 
 ### 5. Mockzilla CLI (`mockzilla-cli`)
-Terminal specialist for configuring a Mockzilla server and managing folders, mocks, wildcard variants, and JSON Schema responses through the dependency-free CLI.
-- **Best for**: Agents running without MCP access, CI setup, reproducible REST CRUD, and shell automation.
+Terminal specialist for checking CLI releases, configuring a Mockzilla server, managing folders/subfolders and mocks, importing/exporting data, importing OpenAPI, and verifying responses through the dependency-free CLI.
+- **Best for**: Requests explicitly asking for the Mockzilla CLI, CI setup, reproducible terminal work, and shell automation.
 - **Entry point**: `mockzilla agent-skill` prints the current Markdown instructions.
 
 ---
@@ -74,7 +76,7 @@ When you run this command, you will be able to select one or more of the followi
 - **Mockzilla Workflow Architect**: Expert for stateful, interactive API scenarios and business logic.
 - **Mockzilla Spec Translator**: High-velocity architect for project bootstrapping from OpenAPI or technical specs.
 - **Mockzilla Logic Doctor**: Forensic specialist for debugging complex workflow matching and state issues.
-- **Mockzilla CLI**: Terminal workflows for folders, mocks, variants, and dynamic responses.
+- **Mockzilla CLI**: Terminal workflows for folders, subfolders, mocks, import/export, OpenAPI, variants, and dynamic responses.
 
 ---
 
@@ -89,6 +91,9 @@ Skills are activated through **Inference-based Activation**. You don't need to m
 
 > **"Design a stateful checkout flow using mockzilla-workflow-architect."**
 > *The agent will load the workflow best practices and use the proper `state.set` and `db.push` effects.*
+
+> **"Use mockzilla-cli to import this OpenAPI file, create a mock in its subfolder, and verify the response."**
+> *The agent will use the `mockzilla` commands and a real serving request from the terminal.*
 
 ### Tips for Success:
 - **Mention the skill name**: It helps the agent identify the best expert for the task.

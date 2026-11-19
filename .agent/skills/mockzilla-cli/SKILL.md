@@ -1,535 +1,335 @@
 ---
 name: mockzilla-cli
-description: Use when an agent needs to configure Mockzilla from a terminal, attach JSON Schemas, test dynamic responses, or manage exact, substring, wildcard, and variant mocks without MCP access.
+description: Use the Mockzilla terminal client to configure a server, inspect and manage folders, subfolders and mocks, import data or OpenAPI specs, check for CLI updates, and verify served responses.
 ---
 
-# Mockzilla CLI Skill
+# Mockzilla CLI Playbook
 
-Use the mockzilla CLI for reproducible, terminal-only Mockzilla work. It talks to the running Mockzilla REST API and is suitable for humans, shell scripts, CI, and agents that do not have MCP access.
+Use this skill when the user asks to work with Mockzilla through the `mockzilla` command line or in a terminal-only workflow. Treat it as an operating guide: inspect first, make a focused change, then verify persisted configuration and the live response.
 
-This skill covers the complete response path: route matching, response sources, JSON Schema generation, request interpolation, wildcard captures, variants, and curl verification. Read the whole skill before changing a mock whose path contains an asterisk or whose response is schema-driven.
+This is a CLI workflow. Use `mockzilla` for configuration and data changes, and `curl` for a real serving request. Do not replace the CLI steps with MCP calls. If the user requests an operation the CLI and its documented REST endpoints do not expose, say so plainly.
 
-## Look up docs fast (llms.txt)
+## Standard workflow
 
-The running server publishes LLM-ready Markdown docs (default `http://localhost:36666`, or the configured Mockzilla URL):
+1. **Connect.** Run `mockzilla health`. If the server URL is wrong, configure it or set `MOCKZILLA_URL`.
+2. **Inspect.** List the target folder and mocks before creating anything. Reuse matching records where appropriate; repeated creates and data imports can add duplicates.
+3. **Plan the route.** Decide whether the endpoint is exact, wildcard, or intentionally broad substring matching. Decide separately whether query parameters filter the mock or only supply request data.
+4. **Prepare the payload.** Put full mock definitions, schemas, variants, query maps, and credentials in files. Use stdin for generated payloads. Avoid complex shell-escaped JSON.
+5. **Apply the smallest change.** Use `mocks update <id>` for an existing mock. Use `--json` when capturing IDs or passing output to another tool.
+6. **Verify stored state.** Read the changed record with `mocks get`, or list its folder/subfolder and confirm the new record is there.
+7. **Exercise the real route.** Send the actual method, path, query, headers, and body with `curl`. Test the intended match plus the relevant fallback or mismatch case.
 
-1. Fetch `/llms.txt` once: quick reference plus an index of every page.
-2. Fetch only the page you need at `/llms/docs/<page>.txt`. Most useful here: `/llms/docs/reference/routing-and-matching.txt`, `/llms/docs/guides/dynamic-wildcard-mocks.txt`, `/llms/docs/reference/dynamic-interpolation.txt`.
-3. Use `/llms-full.txt` (~90 KB, every page) only when you need the whole manual.
+Finish by reporting what changed, the IDs or URLs that matter, and what request you used to verify it. Do not describe a stored mock as tested if only `mocks get` was run.
 
-Prefer these over guessing syntax or behavior; they track the shipped server.
+## Install and update
 
-## Scope and boundaries
+The CLI is a dependency-free Node.js client and requires Node.js 18.18 or newer. The package is installed from GitHub, not from the npm registry as `mockzilla`.
 
-Use this skill for:
+Run one command without a global install:
 
-- configuring a Mockzilla URL and checking server health;
-- creating, reading, updating, listing, and deleting folders and mocks;
-- attaching static JSON/text responses or JSON Schemas;
-- testing dynamic responses, request interpolation, wildcard variants, and fallback behavior;
-- diagnosing why a request matched the wrong mock or returned the base response.
+```bash
+npx --yes github:andrecrjr/mockzilla health
+```
 
-Use the UI when the task is primarily visual editor work. Use the workflow/state skill for stateful scenario transitions and database effects. Use the mock-maker skill when a high-fidelity domain schema must be designed first. The CLI remains the execution and curl-test path for all of them.
+Install globally with Bun or npm:
 
-## Start here
+```bash
+bun add --global github:andrecrjr/mockzilla
+npm install --global github:andrecrjr/mockzilla
+```
 
-~~~bash
+Check the current CLI and latest published release:
+
+```bash
+mockzilla --version
+mockzilla update check
+```
+
+The check compares the installed package version with GitHub's latest release. It runs only when requested and reports published releases, not unreleased commits on a development branch. If an update is available, rerun the printed Bun or npm global-install command. The CLI does not poll in the background or update itself.
+
+## Connect and choose a server
+
+```bash
 mockzilla config set --url http://localhost:36666
 mockzilla health
+mockzilla config show
+```
+
+The default is `http://localhost:36666`. URL precedence is `--url`, `MOCKZILLA_URL`, saved configuration, then the default. An explicit URL applies to one command:
+
+```bash
+mockzilla --url http://localhost:36666 folders list --json
+```
+
+Use `--json` for machine-readable output. A list response may contain a `data` array and pagination metadata. Human output is a compact table; JSON preserves the API response. Errors in JSON mode include an `agentHint` field. Run `mockzilla agent-skill` to print the instructions packaged with the installed CLI.
+
+## Command reference
+
+```text
+mockzilla config set --url <url>
+mockzilla config show|clear
+mockzilla health
+mockzilla update check
+mockzilla folders list|get|create|update|delete
+mockzilla subfolders list|get|create|update|delete
+mockzilla mocks list|get|create|update|delete
+mockzilla export [--output <file>]
+mockzilla import --file <json-file|->
+mockzilla openapi import --file <json-or-yaml-file|->
+mockzilla agent-skill
+```
+
+Folder `get` takes a slug; folder `update` and `delete` take an ID. Subfolder `get`, `update`, and `delete` take a subfolder ID. Mock `get`, `update`, and `delete` take a mock ID. Every delete asks for confirmation in a terminal and requires `--yes` in a non-interactive script.
+
+### Inspect existing data
+
+```bash
 mockzilla folders list --json
-~~~
-
-The CLI stores one default server URL. The url flag overrides it for one command; MOCKZILLA_URL is useful in automation. Use the json flag whenever another tool must parse output. Configuration precedence is command flag, environment variable, then saved config.
-
-The CLI can be installed without cloning the repository:
-
-~~~bash
-npx --yes github:andrecrjr/mockzilla health
-pnpm dlx github:andrecrjr/mockzilla health
-~~~
-
-Do not use npm or yarn in this repository. The package is a Node CLI and does not require the Next.js development dependencies to run.
-
-## Command map
-
-~~~text
-config set --url <url>       Save the default server URL
-config get                   Show the configured URL
-health                       Check the server
-folders list|get|create|update|delete
-mocks list|get|create|update|delete
-agent-skill                  Print this Markdown for another agent
-~~~
-
-Create a folder before creating a mock:
-
-~~~bash
-mockzilla folders create --name Demo --slug demo
-mockzilla folders list --json
-~~~
-
-Mock payloads can come from a JSON file or stdin:
-
-~~~bash
-mockzilla mocks create --file mock.json --json
-mockzilla mocks create --file - --json < mock.json
-mockzilla mocks update <mock-id> --file mock.json --json
-mockzilla mocks get <mock-id> --json
+mockzilla folders get demo --json
 mockzilla mocks list --folder-slug demo --json
-mockzilla mocks delete <mock-id> --yes --json
-~~~
+mockzilla mocks list --folder-slug demo --mock-folder-id root --json
+mockzilla mocks get <mock-id> --json
+```
 
-folderSlug is resolved to the server folder ID before a REST create request. For complex mocks, put the complete object in a file and use flags only for small overrides such as name, path, method, status-code, match-type, response, body-type, dynamic, and folder-slug.
+`mocks list` accepts `--folder-id` or `--folder-slug`, `--mock-folder-id`, `--query`, `--page`, and `--limit`. `--mock-folder-id root` means mocks at the top level of that folder. A subfolder ID selects its mocks.
 
-## Proxy & Record
+## Create or edit folders, subfolders, and mocks
 
-Forward a mock to a live API and save each response as an exact mock. Flags on `mocks create|update` become a partial `proxy` payload that the server merges, so an update that changes one thing keeps the rest:
+Create a top-level folder before adding mocks:
 
-~~~bash
-mockzilla mocks update <mock-id> --proxy-url https://api.example.com/v1/users
-printf '{"Authorization":"Bearer <token>"}' | mockzilla mocks update <mock-id> --proxy-headers-file -
-mockzilla mocks update <mock-id> --proxy-params '{"api_key":"<key>"}'
-mockzilla mocks update <mock-id> --no-forward-headers   # send only --proxy-headers upstream
-mockzilla mocks update <mock-id> --clear-proxy          # turn it off
-~~~
+```bash
+mockzilla folders create --name Demo --slug demo --json
+mockzilla folders update <folder-id> --description 'Local test fixtures' --json
+```
 
-- `--proxy-headers` and `--proxy-params` replace the whole stored set. `*` in the URL is replaced by wildcard captures.
-- Prefer the `-file` forms (or stdin) for credentials so they stay out of shell history. Credentials are stored in plain text and the CLI prints the stored mock as is.
-- `Host`, `Content-Length`, `Connection` and similar headers are set by Mockzilla and are rejected.
-- Mocks named `Recorded: …` are the saved responses. They answer only their exact path and query; delete one to fetch the live response again.
+Create nested subfolders. `--parent-id root` means top level; omitting `--parent-id` on create also creates a root subfolder.
 
-Destructive commands require yes in non-interactive shells. Every failure includes an agent discovery hint; see Diagnose a mismatch.
+```bash
+mockzilla subfolders create --folder-slug demo \
+  --name Users --path users --json
+mockzilla subfolders create --folder-slug demo --parent-id <users-id> \
+  --name Details --path details --json
+mockzilla subfolders list --folder-slug demo --all --json
+mockzilla subfolders update <details-id> --parent-id root --json
+```
 
-## Choose the match type first
+Subfolder `--path` may contain several segments. The server resolves existing ancestors and creates missing segments. It is the effective path within the top-level folder. A subfolder can be deleted only after its child subfolders and mocks have been removed; a failed delete returns a conflict.
 
-exact is the default. A path containing an asterisk does not become wildcard matching automatically: set matchType to wildcard explicitly.
+Use a JSON file for the full mock payload. `folderSlug` is resolved to a folder ID on create. The mock path is relative to the selected subfolder.
 
-| Match type | How it matches | Use it when | Do not use it when |
-| --- | --- | --- | --- |
-| exact | The request path equals the endpoint | The endpoint is fixed, such as /health, /users, or /users/test | The endpoint contains a variable path value |
-| wildcard | Asterisk characters capture values in endpoint order | One mock should serve paths such as /users/* or /users/*/orders/* | The path is fixed or you need arbitrary substring matching |
-| substring | The request path contains the endpoint text | A deliberately broad legacy/fragment match is required | A path parameter or precise API route can be expressed with exact/wildcard |
-
-Matching score is path type (exact 300, wildcard 200, substring 100) plus 10 per required query parameter, plus 1 per query value without *, plus the endpoint path length. Ties go to non-proxy mocks, then the newest mock. With equal query requirements an exact /users/test mock wins over a wildcard /users/* mock even when the wildcard has a test variant, because variants are chosen only after a mock wins. A wildcard mock with about ten more required query parameters can still outscore an exact path. Query-parameter requirements are checked as part of matching; a mock with no required query parameters can match any query string. Wildcard endpoints are anchored to the end of the path only, and each * can span /, so /products/* also matches /shop/products/1; use the full prefix.
-
-Examples:
-
-~~~json
+```json
 {
-  "name": "Fixed test user",
-  "path": "/users/test",
-  "method": "GET",
-  "matchType": "exact",
-  "folderSlug": "demo",
-  "statusCode": 200,
-  "bodyType": "json",
-  "response": "{\"source\":\"exact\"}"
-}
-~~~
-
-~~~json
-{
-  "name": "Any user",
-  "path": "/users/*",
-  "method": "GET",
-  "matchType": "wildcard",
-  "folderSlug": "demo",
-  "statusCode": 200,
-  "bodyType": "json",
-  "response": "{\"source\":\"wildcard-base\"}"
-}
-~~~
-
-If matchType is omitted from the second object, the asterisk is treated as part of an exact endpoint. Its variants will not run.
-
-### Search parameters are a separate matcher
-
-Search parameters can be present in every request and are available to Dynamic Response templates, but they are not path wildcard captures. Keep these two uses separate:
-
-- Path wildcard: `/users/*` captures a path value and exposes it as `input.params.0`.
-- Query input: `?status=active` is available as `input.query.status`.
-- Structured `queryParams`: filters which mock wins. Parameter names are exact, while configured values support `*` glob matching. `queryParams: { "status": "*" }` matches any present status value; `act*` matches values such as `active`.
-- A query string in a persisted API path is not the wildcard-query escape hatch. API and MCP writes keep the endpoint path and `queryParams` separate; the server removes the query before applying path match types.
-
-The wildcard still requires the parameter to be present, including when its value is empty. Exact query values are more specific than wildcard values when both mocks match the same path. Query parameter names remain exact; use a concrete name such as `status`, not `*`. Dynamic responses can read the actual value with `{{$.query.status}}`.
-
-## Choose the response source
-
-Every mock has a response source. Keep the source decision separate from the route decision.
-
-### Static/manual response
-
-Use a static response when the body must be deterministic, when a test asserts an exact payload, or when a schema would add no value.
-
-- response is a string, not an object.
-- bodyType json requires valid JSON.
-- bodyType text accepts arbitrary text.
-- statusCode must be between 200 and 599.
-
-~~~json
-{
-  "name": "Static health",
+  "name": "Health",
   "path": "/health",
   "method": "GET",
   "folderSlug": "demo",
-  "matchType": "exact",
   "statusCode": 200,
   "bodyType": "json",
   "response": "{\"ok\":true}"
 }
-~~~
+```
 
-### Dynamic Response from JSON Schema
+```bash
+mockzilla mocks create --file mock.json --json
+mockzilla mocks update <mock-id> --file changes.json --json
+mockzilla mocks create --file mock.json --mock-folder-id <details-id> --json
+mockzilla mocks list --folder-slug demo --mock-folder-id <details-id> --json
+```
 
-Use Dynamic Response when each request should receive generated values, the payload has a reusable contract, or the response needs request data. Attach the schema to jsonSchema and set useDynamicResponse to true.
+For inline changes, flags override corresponding fields from `--file`. Common flags include `--name`, `--path`, `--method`, `--status-code`, `--folder-id`, `--folder-slug`, `--mock-folder-id`, `--response`, `--response-file`, `--body-type`, `--match-type`, `--json-schema`, `--json-schema-file`, `--variants-file`, `--query-params`, `--query-params-file`, `--enabled`, `--disabled`, `--dynamic`, `--echo-request-body`, `--wildcard-require-match`, and `--no-require-match`.
 
-- jsonSchema is stored as a JSON string in the API payload.
-- bodyType must be json for dynamic output.
-- Keep response as a valid static fallback. For REST creates, a schema-only mock is given response: "{}" by the CLI because the database still has a non-null static response column.
-- If generation fails, Mockzilla serves the static fallback body; the route does not silently return an invalid JSON document.
-- If response is present, do not rely on inference: set useDynamicResponse to true explicitly.
+`--file -` reads JSON from stdin. The CLI accepts one complete JSON object for a mock. Create defaults are status `200`, `matchType: "exact"`, and `bodyType: "json"`. The mock API stores `response` as a string. For updates, the CLI cannot change the top-level folder; use `mockFolderId` only to place the mock in a subfolder of that same folder.
 
-~~~json
+Example generated payload:
+
+```bash
+mockzilla mocks create --file - --json <<'JSON'
 {
-  "name": "Generated user",
-  "path": "/users",
-  "method": "GET",
-  "folderSlug": "demo",
-  "matchType": "exact",
-  "statusCode": 200,
-  "bodyType": "json",
-  "response": "{}",
-  "useDynamicResponse": true,
-  "jsonSchema": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"format\":\"uuid\"},\"email\":{\"type\":\"string\",\"format\":\"email\"}},\"required\":[\"id\",\"email\"]}"
-}
-~~~
-
-Attach a schema from a file instead of escaping it into a shell argument:
-
-~~~bash
-mockzilla mocks create \
-  --file mock.json \
-  --json-schema-file schema.json \
-  --dynamic \
-  --json
-~~~
-
-schema.json must contain the raw JSON Schema object. The CLI sends its text as the jsonSchema field. A jsonSchema object in a JSON payload is also normalized by the CLI, but the string form is the portable REST contract.
-
-### Request-body echo
-
-Use echoRequestBody true for a simple POST/PUT/PATCH echo test. Do not combine it with a dynamic variant expectation without testing precedence: a selected variant replaces the base response configuration and disables base echo for that request.
-
-~~~json
-{
-  "name": "Echo update",
-  "path": "/users/*",
+  "name": "Echo request",
+  "path": "/echo",
   "method": "POST",
   "folderSlug": "demo",
-  "matchType": "wildcard",
-  "statusCode": 200,
-  "bodyType": "json",
   "response": "{}",
   "echoRequestBody": true
 }
-~~~
+JSON
+```
 
-## Attach (mount) schemas correctly
+## Pick matching rules deliberately
 
-The schema is mounted on a mock, not on the folder and not as the response object. The minimum dynamic attachment is:
+`exact` is the default. An asterisk in a path is literal until `matchType: "wildcard"` is set. Use `substring` only when a deliberately broad path-fragment match is wanted.
 
-~~~text
-mock.json          -> the mock definition
-schema.json        -> one JSON Schema object
-dynamic            -> use schema generation
-json-schema-file   -> copy schema.json into jsonSchema
-~~~
+| Type | Example | Meaning |
+| --- | --- | --- |
+| `exact` | `/users/test` | The full request path must match. |
+| `wildcard` | `/users/*/orders/*` | Asterisks capture path values in order. |
+| `substring` | `/users` | The path may contain this fragment. |
 
-For a base mock, use:
+Matching uses a score: exact/wildcard/substring contribute 300/200/100; each required query parameter contributes 10; each configured query value without `*` contributes 1; endpoint length is also added. Ties prefer a non-proxy mock, then the newest mock. This means a wildcard with many query requirements can outrank an exact path. Add `queryParams` only when those values should constrain which mock wins.
 
-~~~bash
-mockzilla mocks create --file mock.json --json-schema-file schema.json --dynamic --json
-~~~
+Path wildcards and search parameters are separate:
 
-For a wildcard variant, put jsonSchema inside that variant object. A variant schema is independent from the base schema and must include its own body, statusCode, bodyType, and useDynamicResponse fields:
+- `/users/*` captures a path value, available as `{{$.params.[0]}}`.
+- `?status=active` is request data, available as `{{$.query.status}}`.
+- `queryParams: { "status": "*" }` requires `status` to be present, while accepting any value. Parameter names are exact; configured values support `*` glob matching.
+- A mock with no required query parameters can match requests with any query string.
 
-~~~json
+Wildcard `*` can span `/` and matching is anchored at the end of the path. Use the full route prefix: `/shop/products/*`, not `/products/*`, if the API path includes `/shop`.
+
+An exact mock can win before a wildcard mock's variants are considered. If `/users/test` is both an exact route and a capture for `/users/*`, inspect both records when diagnosing which response was selected.
+
+## Configure static and dynamic responses
+
+### Static JSON or text
+
+Use static output when tests need a deterministic body. JSON response content must parse as JSON; text bodies may contain arbitrary text. Keep the response string in the file to avoid shell escaping.
+
+### Dynamic response from a schema
+
+Attach the schema to the mock itself. Save the raw JSON Schema object in `user.schema.json`; the CLI sends its text in `jsonSchema`.
+
+```json
 {
-  "captures": ["test"],
-  "isFallback": false,
-  "body": "{}",
-  "statusCode": 200,
-  "bodyType": "json",
-  "useDynamicResponse": true,
-  "jsonSchema": "{\"type\":\"object\",\"properties\":{\"id\":{\"const\":\"test\"}},\"required\":[\"id\"]}"
-}
-~~~
-
-Use variants-file variants.json when the array is large. The file must contain a JSON array of variant objects. The server validates every dynamic variant schema. A dynamic variant needs a non-empty valid schema and JSON body type; a static JSON variant needs parseable body JSON.
-
-Useful file flags:
-
-~~~text
---file <path|->                 Complete mock object; - means stdin
---response-file <path>          Static response body
---json-schema-file <path>       Raw JSON Schema text
---variants-file <path>          JSON array of wildcard variants
---query-params-file <path>      JSON query-parameter requirements
---wildcard-require-match        Return 404 when no wildcard variant matches
---no-require-match              Use the base response when no variant matches
-~~~
-
-## Build reliable JSON Schemas
-
-Start with an explicit root type. Use required for fields consumers must always receive, even though the current generator also produces many optional properties. For arrays, always declare items; an array constraint without an item schema is a common source of invalid or empty test data.
-
-~~~json
-{
-  "type": "object",
-  "properties": {
-    "id": { "type": "string", "format": "uuid" },
-    "name": { "type": "string", "minLength": 1 },
-    "role": { "type": "string", "enum": ["admin", "member"] },
-    "active": { "type": "boolean" },
-    "tags": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 1,
-      "maxItems": 3
-    }
-  },
-  "required": ["id", "name", "role", "active", "tags"]
-}
-~~~
-
-Supported and useful constructs include object properties, nested objects, arrays, required, enum, const, string/number bounds, formats, oneOf, anyOf, allOf, and Faker keywords. Keep schemas portable: prefer explicit type, bounded arrays, and a small maxItems for test speed.
-
-Faker examples:
-
-~~~json
-{
-  "type": "object",
-  "properties": {
-    "firstName": { "type": "string", "faker": "person.firstName" },
-    "product": { "type": "string", "faker": "commerce.productName" },
-    "amount": {
-      "type": "number",
-      "faker": { "finance.amount": { "min": 100, "max": 1000, "dec": 2, "symbol": "" } }
-    }
-  },
-  "required": ["firstName", "product", "amount"]
-}
-~~~
-
-The generator uses JSON Schema Faker with deterministic fixed probabilities, uses defaults/examples, always fakes optional properties, and caps array size from MOCKZILLA_MAX_ITEMS (default 1000). Do not create unbounded arrays in a mock intended for curl or CI.
-
-## Dynamic interpolation and request context
-
-Dynamic generation first creates a schema-shaped value and then replaces templates. Use {{$.path}} request references for type-preserving values; single-brace {$.path} is not resolved. The dollar alias points to request input in this context.
-
-Common request context:
-
-~~~text
-{{input.params.0}}          First wildcard capture
-{{$.params.[0]}}             Same capture with bracket syntax
-{{input.query.page}}         Query parameter
-{{$.headers.[x-trace-id]}}   Request header with a hyphen
-{{input.body.name}}          JSON request-body field
-{{faker.internet.email}}     Direct Faker template
-~~~
-
-Example schema that reflects the request:
-
-~~~json
-{
-  "type": "object",
-  "properties": {
-    "userId": { "const": "{{$.params.[0]}}" },
-    "page": { "const": "{{$.query.page}}" },
-    "requestName": { "const": "{{$.body.name}}" }
-  },
-  "required": ["userId", "page", "requestName"]
-}
-~~~
-
-Use Handlebars logic (each, if, and helpers such as math, eq, default, json, and faker) when the response needs loops, conditionals, or text around a value. Keep a response as valid JSON when possible so Mockzilla can preserve numbers, booleans, objects, and arrays instead of converting them to strings.
-
-## Wildcards and variants
-
-Set matchType to wildcard and use one asterisk per capture position:
-
-~~~text
-/users/*                 -> captures ["123"]
-/users/*/orders/*        -> captures ["123", "abc"]
-~~~
-
-The canonical variant shape is:
-
-~~~json
-{
-  "captures": ["test"],
-  "isFallback": false,
-  "body": "{\"source\":\"test\"}",
-  "statusCode": 200,
-  "bodyType": "json",
-  "useDynamicResponse": false,
-  "jsonSchema": null
-}
-~~~
-
-Rules:
-
-- Match uses the complete captures array in order. A variant for ["a", "b"] does not match ["a"].
-- isFallback true is the explicit catch-all variant. Legacy key "*" is accepted and normalized.
-- Do not encode new variants as pipe-delimited keys. The captures array preserves a literal pipe inside a URL value. Legacy multi-capture key values remain compatibility input only.
-- A fallback is not a partial key. captures ["alice", "*"] is not the canonical fallback form.
-- If no variant matches and wildcardRequireMatch is false or omitted, the base mock response is used.
-- If no variant matches and wildcardRequireMatch is true, the server returns 404 with No matching variant found.
-- A selected variant overrides base body, status, body type, schema, dynamic mode, and echo behavior.
-- A static variant can override a dynamic base. A dynamic variant can override a static base or another dynamic base.
-
-Complete wildcard example with a static exact variant, dynamic variant, and fallback:
-
-~~~json
-{
-  "name": "Users by id",
+  "name": "Generated user",
   "path": "/users/*",
   "method": "GET",
   "folderSlug": "demo",
   "matchType": "wildcard",
-  "response": "{\"source\":\"base\"}",
-  "statusCode": 200,
+  "response": "{}",
   "bodyType": "json",
-  "wildcardRequireMatch": false,
-  "variants": [
-    {
-      "captures": ["test"],
-      "body": "{\"source\":\"static-test\"}",
-      "statusCode": 200,
-      "bodyType": "json"
-    },
-    {
-      "captures": ["dynamic"],
-      "body": "{}",
-      "statusCode": 202,
-      "bodyType": "json",
-      "useDynamicResponse": true,
-      "jsonSchema": "{\"type\":\"object\",\"properties\":{\"capture\":{\"const\":\"{{$.params.[0]}}\"},\"requestId\":{\"type\":\"string\",\"format\":\"uuid\"}},\"required\":[\"capture\",\"requestId\"]}"
-    },
-    {
-      "isFallback": true,
-      "body": "{\"source\":\"fallback\"}",
-      "statusCode": 404,
-      "bodyType": "json"
-    }
-  ]
+  "useDynamicResponse": true
 }
-~~~
+```
 
-The test request can still be served by a separate exact /users/test mock, because exact route priority is evaluated before wildcard variants.
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": { "const": "{{$.params.[0]}}" },
+    "email": { "type": "string", "format": "email" },
+    "active": { "type": "boolean" },
+    "tags": { "type": "array", "items": { "type": "string" }, "maxItems": 3 }
+  },
+  "required": ["id", "email", "active", "tags"]
+}
+```
 
-## Test schemas and routes with curl
-
-The CLI has no hidden schema test mode: create the mock, inspect the stored configuration, then call the actual serving route. Always test both the matching path and the failure/fallback path.
-
-Basic dynamic test:
-
-~~~bash
-mockzilla mocks create \
-  --file mock.json \
-  --json-schema-file schema.json \
-  --dynamic \
-  --json
-
+```bash
+mockzilla mocks create --file mock.json \
+  --json-schema-file user.schema.json --dynamic --json
 mockzilla mocks get <mock-id> --json
+```
 
-curl -sS -D - http://localhost:36666/api/mock/demo/users
-curl -sS -D - http://localhost:36666/api/mock/demo/users
-~~~
+Dynamic mode requires `bodyType: "json"`. Keep a valid static `response` as fallback; the CLI supplies `{}` only when creating a schema-backed mock with no response. Use `required`, explicit array `items`, and bounded `maxItems` for reliable, compact test data.
 
-Call twice and compare generated fields. UUIDs, Faker values, and unconstrained generated values should normally change; const, enum, and request references should remain stable.
+For request-derived fields, use type-preserving templates such as `{{$.params.[0]}}`, `{{$.query.page}}`, `{{$.headers.[x-trace-id]}}`, and `{{$.body.name}}`. Use Handlebars blocks and helpers when a response needs loops or conditionals. Read the current server's interpolation guide before relying on advanced template syntax.
 
-Wildcard and variant matrix:
+### Wildcard variants
 
-~~~bash
-# Exact path should win if /users/test is also configured as an exact mock.
-curl -sS -D - http://localhost:36666/api/mock/demo/users/test
+Variants are chosen after the mock itself wins route matching. Store one capture value per `*`, in order. Use `isFallback: true` for a catch-all; do not use partial capture arrays as fallbacks.
 
-# A named wildcard variant should select its captures entry.
-curl -sS -D - http://localhost:36666/api/mock/demo/users/dynamic
+```json
+{
+  "captures": ["42"],
+  "isFallback": false,
+  "body": "{\"id\":42,\"name\":\"Ada\"}",
+  "statusCode": 200,
+  "bodyType": "json"
+}
+```
 
-# Unknown capture uses the base response or explicit fallback.
-curl -sS -D - http://localhost:36666/api/mock/demo/users/unknown
+```json
+{
+  "isFallback": true,
+  "body": "{\"id\":0,\"name\":\"Unknown\"}",
+  "statusCode": 404,
+  "bodyType": "json"
+}
+```
 
-# With wildcardRequireMatch=true, the previous request must be 404 instead.
-curl -sS -D - 'http://localhost:36666/api/mock/demo/users/unknown?trace=1'
+Put large variant arrays in `variants.json` and pass `--variants-file variants.json`. Dynamic variants need their own JSON schema, `useDynamicResponse: true`, JSON body type, and a valid body fallback. A selected variant replaces the base body, status, body type, schema, dynamic mode, and echo behavior. Set `wildcardRequireMatch: true` when an unmatched capture should return 404 instead of the base response.
 
-# Multi-capture route: /teams/acme/users/42 -> ["acme", "42"]
-curl -sS -D - http://localhost:36666/api/mock/demo/teams/acme/users/42
+### Echo the request body
 
-# Query context is available to dynamic templates.
-curl -sS -D - 'http://localhost:36666/api/mock/demo/users/dynamic?page=2'
-~~~
+Set `echoRequestBody: true` for a direct POST/PUT/PATCH echo mock. A selected wildcard variant overrides base echo settings; test that case separately.
 
-Verify all of these, not just the body:
+## Proxy and record
 
-1. HTTP status is the selected base/variant statusCode.
-2. Content-Type is JSON for JSON sources and text for text sources.
-3. Dynamic values satisfy the schema and request references resolve.
-4. Variant selection changes status/body/schema as a unit.
-5. Exact, wildcard, and substring priority is the intended one.
-6. Unknown wildcard captures use the intended base, fallback, or 404 behavior.
-7. A literal pipe in a capture remains one capture value.
+Proxy flags on `mocks create|update` set a partial proxy configuration; updating the target does not clear unrelated metadata:
 
-Useful source examples are maintained in documentation/test-schemas.md, documentation/json-schema-faker.md, documentation/schema-interpolation.md, and documentation/wildcard-variants-audit.md.
+```bash
+mockzilla mocks update <mock-id> --proxy-url https://api.example.com/v1/users
+mockzilla mocks update <mock-id> --proxy-headers-file headers.json
+mockzilla mocks update <mock-id> --proxy-params '{"api_key":"test"}'
+mockzilla mocks update <mock-id> --no-forward-headers
+mockzilla mocks update <mock-id> --clear-proxy
+```
+
+`--proxy-headers` and `--proxy-params` replace their stored maps. Use the `-file` options for credentials so secrets stay out of shell history. Proxy credentials are stored in the mock and CLI output is not redacted. Transport-managed headers such as `Host`, `Content-Length`, and `Connection` are rejected. A `*` in the proxy URL is replaced with wildcard captures.
+
+Proxy & Record saves upstream responses as exact mocks named `Recorded: …`. A saved response only answers its exact path and query. Delete the recorded mock to fetch from the upstream target again.
+
+## Import, export, and OpenAPI
+
+Export folders, subfolders, and mocks before a larger change:
+
+```bash
+mockzilla export --output backup.json
+```
+
+Import a Mockzilla export or legacy groups/rules file:
+
+```bash
+mockzilla import --file backup.json --json
+```
+
+Import adds mock records. Re-importing the same backup may duplicate mocks, so inspect the target first and do not repeat a failed-looking import before checking the result.
+
+Import OpenAPI 3.x or Swagger 2.0 JSON/YAML:
+
+```bash
+mockzilla openapi import --file openapi.yaml --json
+```
+
+The server creates or updates the folder based on the spec title, creates subfolders for safe static path prefixes, converts path parameters to wildcards, and builds response bodies from examples or schemas. It returns counts and warnings; inspect them, then list the created folder and mocks. External `$ref` targets are not fetched and are reported as warnings. Re-import updates matching operations and preserves selected user settings.
+
+## Verify the actual HTTP response
+
+The CLI has no non-mutating `preview` command. A real request verifies the selected mock, variant, delay, and dynamic response together. Use the same top-level folder and effective subfolder path as the client will call.
+
+GET example:
+
+```bash
+mockzilla health
+mockzilla mocks get <mock-id> --json
+curl -i http://localhost:36666/api/mock/demo/health
+curl -i 'http://localhost:36666/api/mock/demo/users/42?page=2'
+```
+
+POST example:
+
+```bash
+curl -i -X POST http://localhost:36666/api/mock/demo/echo \
+  -H 'content-type: application/json' \
+  --data '{"name":"Ada"}'
+```
+
+For dynamic responses, call twice: generated values should vary, while constants and request references should remain stable. For a wildcard route, request a named capture, a second capture if the path has two `*` segments, and an unknown capture. If query conditions exist, try both a matching and a missing/different value.
 
 ## Diagnose a mismatch
 
-When a request does not behave as expected, inspect in this order:
-
-1. mockzilla health and the configured URL.
-2. Folder slug and the serving URL shape: /api/mock/{folderSlug}/{mockPath...}.
-3. HTTP method; matching is method-specific.
-4. matchType; wildcard paths must explicitly say wildcard.
-5. Exact route priority; a fixed mock can hide a wildcard mock.
-6. Query requirements and their string values.
-7. Number and order of wildcard captures.
-8. Canonical captures versus legacy pipe-delimited key.
-9. wildcardRequireMatch and whether a fallback exists.
-10. Dynamic fields: valid schema JSON, explicit type, array items, bounded arrays, JSON body type, and useDynamicResponse true.
-11. Static fallback body; it is what the server returns when schema generation fails.
-
-Common symptoms:
-
-| Symptom | Likely cause |
+| Symptom | Check |
 | --- | --- |
-| /users/test returns the fixed response | Exact matching correctly outranks /users/* |
-| /users/123 returns no wildcard variant | The mock is still exact, captures differ, or the variant is not canonical |
-| Unknown wildcard path returns base body | No variant matched and wildcardRequireMatch is disabled |
-| Unknown wildcard path returns 404 | wildcardRequireMatch is enabled with no matching/fallback variant |
-| Dynamic variant returns base-looking JSON | Variant schema failed and its static body was used |
-| Dynamic mock returns {} | Schema-only REST fallback was used, or dynamic mode was not enabled |
-| Dynamic request returns text/invalid JSON | bodyType is not json, or the schema/template produced an invalid body |
-| A schema array is empty or huge | Missing items, or no practical minItems/maxItems bounds |
-| A pipe in a user id changes variant matching | Legacy key parsing was used; migrate to captures: ["value|with|pipes"] |
+| 404 / no mock found | `health`; `mocks list`; method; effective folder+subfolder path; enabled status; required query params. |
+| Another response wins | Exact/wildcard/substring score, query specificity, proxy tie-break, and newer mocks. Inspect all candidates in that folder. |
+| Base body appears | Confirm `matchType: "wildcard"`, exact ordered `captures`, and that an exact route did not win first. |
+| Wrong wildcard variant | Capture count and order; use `isFallback: true` for catch-all. |
+| Schema output falls back | Confirm `useDynamicResponse`, valid `jsonSchema`, `bodyType: "json"`, and a valid static response fallback. |
+| Import reports warnings | Read the returned warning list; unresolved external refs are deliberately not downloaded. |
+| CLI API request fails | Read the error and `agentHint`; recheck `mockzilla health`, selected server URL, and file JSON. |
 
-For any CLI error, run:
+The CLI does not expose workflow/scenario state, request-log tracing, or the MCP-only non-mutating matcher preview. Do not claim those operations were performed through the CLI.
 
-~~~bash
-mockzilla agent-skill
-~~~
+## Server documentation
 
-The command prints the current skill. Human-readable errors end with an Agent guidance line. JSON errors stay machine-readable and contain agentHint: mockzilla agent-skill.
-
-## Completion checklist
-
-- [ ] mockzilla health succeeds against the intended URL.
-- [ ] Folder exists and folderSlug resolves to it.
-- [ ] matchType is explicit whenever the route is wildcard or substring.
-- [ ] Response source is intentional: static, dynamic schema, echo, or variant override.
-- [ ] Dynamic schemas are attached through jsonSchema, are valid JSON, and use bodyType json.
-- [ ] Schemas have explicit types, required contract fields, array items, and bounded collections.
-- [ ] Wildcard variants use canonical captures arrays and an explicit fallback when needed.
-- [ ] Exact-over-wildcard-over-substring behavior has been tested with curl.
-- [ ] Named variant, unknown capture, fallback/404, query context, and repeated dynamic calls have been tested.
-- [ ] mockzilla mocks get <id> --json confirms what the server stored.
+Read `/llms.txt` from the configured Mockzilla server for its current documentation index. Fetch only the relevant page listed there, such as `/llms/docs/reference/routing-and-matching.txt`, `/llms/docs/guides/dynamic-wildcard-mocks.txt`, or `/llms/docs/reference/dynamic-interpolation.txt`. Server behavior documentation takes precedence over assumptions based on a different CLI or server version.
