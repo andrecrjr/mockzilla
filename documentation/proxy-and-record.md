@@ -55,4 +55,7 @@ Ties between a recording and its proxy mock go to the recording (`sortMocksForMa
 ## Tests
 
 - `tests/unit/proxy-record.test.ts`: URL validation and wildcard substitution, header filtering, naming, recording detection, and the exact-query matching rule.
-- `tests/integration/proxy-and-record.test.ts`: GET/POST proxy and record, 404 with no match, and a 502 on upstream failure.
+- `tests/integration/proxy-and-record.test.ts`: forwarding, overrides, recording placement, wildcard substitution, and failures without exposing secrets.
+- `tests/integration/api-mocks.test.ts` and `tests/integration/mcp-mocks-proxy.test.ts`: proxy setting validation and merging through REST and MCP, including masked secrets.
+- `tests/components/mock-proxy-options.test.tsx`: target and header validation, and sensitive header editing, masking, and removal.
+- `tests/unit/cli.test.ts`: proxy flags, clearing, and conflicting options.

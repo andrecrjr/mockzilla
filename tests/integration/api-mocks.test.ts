@@ -379,6 +379,93 @@ describe('API /api/mocks', () => {
 		});
 	});
 
+	it('POST turns a proxy payload into meta', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify({
+				name: 'Proxy',
+				path: '/users',
+				method: 'GET',
+				statusCode: 200,
+				response: '{}',
+				folderId: 'folder-123',
+				proxy: {
+					targetUrl: 'https://api.example.com/users',
+					headers: { Authorization: 'Bearer t' },
+					forwardHeaders: false,
+				},
+			}),
+		});
+
+		const res = await POST(req);
+
+		expect(res.status).toBe(201);
+		expect((latestInsertValue as { meta: unknown }).meta).toEqual({
+			proxyTargetUrl: 'https://api.example.com/users',
+			proxyHeaders: { Authorization: 'Bearer t' },
+			proxyForwardHeaders: false,
+		});
+	});
+
+	it('POST rejects an invalid proxy payload', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks', {
+			method: 'POST',
+			body: JSON.stringify({
+				name: 'Proxy',
+				path: '/users',
+				method: 'GET',
+				statusCode: 200,
+				response: '{}',
+				folderId: 'folder-123',
+				proxy: { targetUrl: 'api.example.com' },
+			}),
+		});
+
+		const res = await POST(req);
+
+		expect(res.status).toBe(400);
+		expect(latestInsertValue).toBeUndefined();
+	});
+
+	it('PUT merges a partial proxy update without dropping stored settings', async () => {
+		mockResolvedValue = [
+			{
+				...mockMockData,
+				meta: {
+					proxyTargetUrl: 'https://api.example.com/users',
+					proxyHeaders: { Authorization: 'Bearer t' },
+					note: 'keep',
+				},
+			},
+		];
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ proxy: { queryParams: { api_key: 'K' } } }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(200);
+		expect((latestSetValue as { meta: unknown }).meta).toEqual({
+			proxyTargetUrl: 'https://api.example.com/users',
+			proxyHeaders: { Authorization: 'Bearer t' },
+			proxyQueryParams: { api_key: 'K' },
+			note: 'keep',
+		});
+	});
+
+	it('PUT rejects proxy headers without a target', async () => {
+		const req = new NextRequest('http://localhost:3000/api/mocks?id=mock-123', {
+			method: 'PUT',
+			body: JSON.stringify({ proxy: { headers: { 'X-A': '1' } } }),
+		});
+
+		const res = await PUT(req);
+
+		expect(res.status).toBe(400);
+		expect(latestSetValue).toBeUndefined();
+	});
+
 	it('PUT rejects a mock subfolder outside the existing mock folder', async () => {
 		let callCount = 0;
 		mockDb.select = mock((args: { count: unknown } | null) => {
