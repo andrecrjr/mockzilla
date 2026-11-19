@@ -9,6 +9,16 @@ Use the mockzilla CLI for reproducible, terminal-only Mockzilla work. It talks t
 
 This skill covers the complete response path: route matching, response sources, JSON Schema generation, request interpolation, wildcard captures, variants, and curl verification. Read the whole skill before changing a mock whose path contains an asterisk or whose response is schema-driven.
 
+## Look up docs fast (llms.txt)
+
+The running server publishes LLM-ready Markdown docs (default `http://localhost:36666`, or the configured Mockzilla URL):
+
+1. Fetch `/llms.txt` once: quick reference plus an index of every page.
+2. Fetch only the page you need at `/llms/docs/<page>.txt`. Most useful here: `/llms/docs/reference/routing-and-matching.txt`, `/llms/docs/guides/dynamic-wildcard-mocks.txt`, `/llms/docs/reference/dynamic-interpolation.txt`.
+3. Use `/llms-full.txt` (~90 KB, every page) only when you need the whole manual.
+
+Prefer these over guessing syntax or behavior; they track the shipped server.
+
 ## Scope and boundaries
 
 Use this skill for:

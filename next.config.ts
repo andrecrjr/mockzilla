@@ -23,17 +23,18 @@ const nextConfig: NextConfig = {
 			},
 			async rewrites() {
 				return [
+					// Legacy llms URL shapes; canonical pages live at /llms/docs/<page>.txt.
 					{
 						source: '/llms.txt/docs/:path*',
-						destination: '/api/llms?path=:path*',
+						destination: '/llms/docs/:path*',
 					},
 					{
 						source: '/llms.txt/llms-full.txt',
 						destination: '/llms-full.txt',
 					},
 					{
-						source: '/docs/:path*/llms.txt',
-						destination: '/api/llms?path=:path*',
+						source: '/docs/llms.txt',
+						destination: '/llms/docs/index.txt',
 					},
 				];
 			},

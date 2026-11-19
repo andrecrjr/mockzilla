@@ -11,6 +11,16 @@ description: Use when designing Mockzilla stateful scenarios, workflow transitio
 > This skill handles **How the API Behaves** (logic).
 > For data generation (what the fields contain), use `mockzilla-mock-maker`.
 
+## Look up docs fast (llms.txt)
+
+The running server publishes LLM-ready Markdown docs (default `http://localhost:36666`, or the configured Mockzilla URL):
+
+1. Fetch `/llms.txt` once: quick reference plus an index of every page.
+2. Fetch only the page you need at `/llms/docs/<page>.txt`. Most useful here: `/llms/docs/reference/dynamic-interpolation.txt`, `/llms/docs/reference/routing-and-matching.txt`.
+3. Use `/llms-full.txt` (~90 KB, every page) only when you need the whole manual.
+
+Prefer these over guessing syntax or behavior; they track the shipped server.
+
 ## 📜 External References
 
 - [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools and actions.

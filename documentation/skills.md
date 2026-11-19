@@ -20,6 +20,8 @@ Skills should instruct agents to use the consolidated MCP manager tools:
 
 Use only the current manager tools and actions listed above. The canonical contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
 
+Each skill starts with a **Look up docs fast (llms.txt)** section: fetch `/llms.txt` for the index and quick reference, then only the relevant `/llms/docs/<page>.txt` pages, and `/llms-full.txt` only when everything is needed. When adding a skill, list the pages most relevant to it. See `documentation/llms-txt.md`.
+
 Each skill also has `agents/openai.yaml` metadata for UI display and default prompts. Keep that metadata aligned with the corresponding `SKILL.md` frontmatter.
 
 ---
