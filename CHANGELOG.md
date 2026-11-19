@@ -1,3 +1,22 @@
+# [1.1.0](https://github.com/andrecrjr/mockzilla/compare/v1.0.7...v1.1.0) (2026-11-19)
+
+
+### Bug Fixes
+
+* **llms:** serve correct per-page docs and clean Markdown for agents ([9bf8f78](https://github.com/andrecrjr/mockzilla/commit/9bf8f78dd3031f17427d4f539a4c3e585db7b6d5))
+* **mock-editor:** polish wildcard variant UX and subfolder navigation ([daa5603](https://github.com/andrecrjr/mockzilla/commit/daa5603b6aeb5c9facee6c5d4a03fbb59a07d0a0))
+* **openapi:** make re-import idempotent and import specs more accurately; audit docs ([33914bb](https://github.com/andrecrjr/mockzilla/commit/33914bb3f57d465cad9df592f5f793b4cec7bd69))
+* **proxy:** harden Proxy & Record and clarify its UX ([26df8b4](https://github.com/andrecrjr/mockzilla/commit/26df8b4a01932b2c7ee3d073f974a88591a171a9))
+
+
+### Features
+
+* add Mockzilla CLI and query wildcards ([2d4388a](https://github.com/andrecrjr/mockzilla/commit/2d4388a1b0c2655b984d53e2ebe4202acc6c964b))
+* **cli:** add subfolders, imports, and release checks ([892c8c6](https://github.com/andrecrjr/mockzilla/commit/892c8c6d84c988e3f8736f55595a7e78c07a5aa2))
+* **landing:** clarify official Docker image ([39dfaae](https://github.com/andrecrjr/mockzilla/commit/39dfaaec87bfa5db061914ac61e95c69f140ce03))
+* overhaul mock variants and response configuration ([805d559](https://github.com/andrecrjr/mockzilla/commit/805d559c18faa232740508f561afdf4f2940542e))
+* **proxy:** configurable upstream headers/params, with MCP and CLI support ([a2311ac](https://github.com/andrecrjr/mockzilla/commit/a2311ac9d9f6acffdf6c7212fb8ecfb05e62fa0a))
+
 ## [1.0.7](https://github.com/andrecrjr/mockzilla/compare/v1.0.6...v1.0.7) (2026-07-31)
 
 
