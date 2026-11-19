@@ -3,8 +3,8 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import { FieldTooltip } from '@/components/folder-tooltips';
+import { MockResponseSource } from '@/components/mock-response-source';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
 	Select,
@@ -14,83 +14,96 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import {
-	RequireMatchIndicator,
-	VariantPatternPreview,
-} from '@/components/visual-pattern-preview';
+import { VariantPathEditor } from '@/components/visual-pattern-preview';
 import type { MockVariant } from '@/lib/types';
-
-const STATUS_CODES = [
-	{ value: '200', label: '200 - OK' },
-	{ value: '201', label: '201 - Created' },
-	{ value: '202', label: '202 - Accepted' },
-	{ value: '204', label: '204 - No Content' },
-	{ value: '400', label: '400 - Bad Request' },
-	{ value: '401', label: '401 - Unauthorized' },
-	{ value: '403', label: '403 - Forbidden' },
-	{ value: '404', label: '404 - Not Found' },
-	{ value: '405', label: '405 - Method Not Allowed' },
-	{ value: '409', label: '409 - Conflict' },
-	{ value: '422', label: '422 - Unprocessable Entity' },
-	{ value: '500', label: '500 - Internal Server Error' },
-	{ value: '502', label: '502 - Bad Gateway' },
-	{ value: '503', label: '503 - Service Unavailable' },
-];
+import {
+	getWildcardCount,
+	legacyKeyFromCaptures,
+	normalizeMockVariant,
+} from '@/lib/utils/mock-variants';
+import { getStatusCodeOptions } from '@/lib/utils/status-codes';
 
 type VariantCardProps = {
 	variant: MockVariant;
 	index: number;
+	/** 1-based position among specific (non-fallback) variants. */
+	displayNumber: number;
+	endpoint: string;
+	buildPreviewUrl?: (examplePath: string) => string | null;
 	onUpdate: (variant: MockVariant) => void;
 	onDelete: () => void;
-	endpoint?: string;
 };
 
 function VariantCard({
 	variant,
 	index,
+	displayNumber,
+	endpoint,
+	buildPreviewUrl,
 	onUpdate,
 	onDelete,
-	endpoint,
 }: VariantCardProps) {
+	const normalizedVariant = normalizeMockVariant(variant, endpoint);
+	const updateCaptures = (captures: string[]) => {
+		onUpdate({
+			...normalizedVariant,
+			key: legacyKeyFromCaptures(captures),
+			captures,
+			isFallback: false,
+		});
+	};
+
 	return (
 		<div className="space-y-4 rounded-lg border border-border bg-card p-6">
-			<div className="flex items-center justify-between">
-				<span className="text-sm font-semibold">Variant {index + 1}</span>
-				<Button type="button" variant="ghost" size="icon" onClick={onDelete}>
+			<div className="flex items-start justify-between gap-4">
+				<div>
+					<div className="flex items-center gap-2">
+						<span className="text-sm font-semibold">
+							{normalizedVariant.isFallback
+								? 'Fallback response'
+								: `Variant ${displayNumber}`}
+						</span>
+						<span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							{normalizedVariant.isFallback ? 'Any value' : 'Specific path'}
+						</span>
+					</div>
+					<p className="mt-1 text-xs text-muted-foreground">
+						{normalizedVariant.isFallback
+							? 'Used when no specific variant matches.'
+							: 'Return this response for one exact set of captured values.'}
+					</p>
+				</div>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					onClick={onDelete}
+					aria-label={
+						normalizedVariant.isFallback
+							? 'Delete fallback response'
+							: `Delete variant ${displayNumber}`
+					}
+					title="Delete variant"
+				>
 					<Trash2 className="h-4 w-4 text-destructive" />
 				</Button>
 			</div>
 
-			<div className="grid grid-cols-2 gap-4">
-				<div className="space-y-2">
-					<div className="flex items-center gap-2">
-						<Label htmlFor={`variant-key-${index}`}>Capture Key</Label>
-						<FieldTooltip
-							label="Capture Key"
-							description="The URL segment(s) captured by * in your endpoint. Multiple wildcards are pipe-separated. Enter ordinary characters directly (for example /, not %2F). Use * as a catch-all fallback."
-							example="123 for /users/123, projects/api for /files/projects%2Fapi, alice|42 for /users/*/posts/*"
-							docsLink="/docs#wildcard-variants"
-						/>
-					</div>
-					<Input
-						id={`variant-key-${index}`}
-						value={variant.key ?? ''}
-						onChange={(e) => onUpdate({ ...variant, key: e.target.value })}
-						placeholder="e.g., 123, projects/api, or alice|active"
-					/>
-					{endpoint && (
-						<VariantPatternPreview endpoint={endpoint} variant={variant} />
-					)}
-				</div>
+			<VariantPathEditor
+				endpoint={endpoint}
+				buildPreviewUrl={buildPreviewUrl}
+				variant={normalizedVariant}
+				onCapturesChange={updateCaptures}
+			/>
 
+			<div className="grid gap-4 sm:grid-cols-2">
 				<div className="space-y-2">
 					<Label htmlFor={`variant-status-${index}`}>Status Code</Label>
 					<Select
-						value={String(variant.statusCode)}
+						value={String(normalizedVariant.statusCode)}
 						onValueChange={(value) => {
 							onUpdate({
-								...variant,
+								...normalizedVariant,
 								statusCode: Number.parseInt(value, 10),
 							});
 						}}
@@ -99,54 +112,44 @@ function VariantCard({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							{STATUS_CODES.map((code) => (
-								<SelectItem key={code.value} value={code.value}>
-									{code.label}
-								</SelectItem>
-							))}
+							{getStatusCodeOptions(normalizedVariant.statusCode).map(
+								(code) => (
+									<SelectItem key={code.value} value={code.value}>
+										{code.label}
+									</SelectItem>
+								),
+							)}
 						</SelectContent>
 					</Select>
 				</div>
 			</div>
 
 			<div className="space-y-2">
-				<div className="flex items-center gap-2">
-					<Label htmlFor={`variant-body-${index}`}>Response Body</Label>
-					<FieldTooltip
-						label="Response Body"
-						description="Static response for this variant. Supports {$.path} interpolation if you reference other fields."
-						example='{"id": "{$.userId}", "name": "Alice"}'
-						docsLink="/docs#wildcard-variants"
-					/>
-				</div>
-				<Textarea
-					id={`variant-body-${index}`}
-					value={variant.body}
-					onChange={(e) => onUpdate({ ...variant, body: e.target.value })}
-					placeholder='{"message": "Variant response"}'
-					className="font-mono text-sm h-[150px]"
-					rows={6}
+				<Label className="text-sm font-semibold">Variant Response</Label>
+				<MockResponseSource
+					response={normalizedVariant.body}
+					onResponseChange={(body) => onUpdate({ ...normalizedVariant, body })}
+					jsonSchema={normalizedVariant.jsonSchema ?? ''}
+					onJsonSchemaChange={(jsonSchema) =>
+						onUpdate({ ...normalizedVariant, jsonSchema })
+					}
+					useDynamicResponse={normalizedVariant.useDynamicResponse === true}
+					onUseDynamicResponseChange={(useDynamicResponse) =>
+						onUpdate({
+							...normalizedVariant,
+							useDynamicResponse,
+							bodyType: useDynamicResponse
+								? 'json'
+								: normalizedVariant.bodyType,
+						})
+					}
+					bodyType={normalizedVariant.bodyType}
+					onBodyTypeChange={(bodyType) =>
+						onUpdate({ ...normalizedVariant, bodyType })
+					}
+					idPrefix={`variant-${index}`}
 				/>
 			</div>
-
-			<div className="space-y-2">
-				<Label htmlFor={`variant-body-type-${index}`}>Body Type</Label>
-				<Select
-					value={variant.bodyType}
-					onValueChange={(value) => {
-						onUpdate({ ...variant, bodyType: value });
-					}}
-				>
-					<SelectTrigger id={`variant-body-type-${index}`}>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="json">JSON</SelectItem>
-						<SelectItem value="text">Text</SelectItem>
-					</SelectContent>
-				</Select>
-			</div>
-
 		</div>
 	);
 }
@@ -157,6 +160,7 @@ type MockVariantManagerProps = {
 	requireMatch: boolean;
 	onRequireMatchChange: (value: boolean) => void;
 	endpoint?: string;
+	buildPreviewUrl?: (examplePath: string) => string | null;
 };
 
 export function MockVariantManager({
@@ -164,10 +168,26 @@ export function MockVariantManager({
 	onVariantsChange,
 	requireMatch,
 	onRequireMatchChange,
-	endpoint,
+	endpoint = '',
+	buildPreviewUrl,
 }: MockVariantManagerProps) {
 	const variantIdsRef = useRef(new WeakMap<MockVariant, string>());
 	const nextVariantIdRef = useRef(0);
+	const wildcardCount = getWildcardCount(endpoint);
+	const normalizedVariants = variants.map((variant) =>
+		normalizeMockVariant(variant, endpoint),
+	);
+	const fallbackIndex = normalizedVariants.findIndex(
+		(variant) => variant.isFallback,
+	);
+	const hasFallback = fallbackIndex !== -1;
+	const specificCount = variants.length - (hasFallback ? 1 : 0);
+	let specificNumber = 0;
+	const displayNumbers = normalizedVariants.map((variant) => {
+		if (variant.isFallback) return 0;
+		specificNumber += 1;
+		return specificNumber;
+	});
 
 	const getVariantId = (variant: MockVariant): string => {
 		const existingId = variantIdsRef.current.get(variant);
@@ -180,10 +200,31 @@ export function MockVariantManager({
 	};
 
 	const addVariant = () => {
+		const newVariant: MockVariant = {
+			key: '',
+			captures: Array.from({ length: wildcardCount }, () => ''),
+			isFallback: false,
+			body: '{}',
+			statusCode: 200,
+			bodyType: 'json',
+		};
+		// Keep the fallback last so the list reads in matching order.
+		const insertAt = hasFallback ? fallbackIndex : variants.length;
+		onVariantsChange([
+			...variants.slice(0, insertAt),
+			newVariant,
+			...variants.slice(insertAt),
+		]);
+	};
+
+	const addFallback = () => {
+		if (hasFallback) return;
 		onVariantsChange([
 			...variants,
 			{
-				key: '',
+				key: '*',
+				captures: [],
+				isFallback: true,
 				body: '{}',
 				statusCode: 200,
 				bodyType: 'json',
@@ -203,78 +244,120 @@ export function MockVariantManager({
 		onVariantsChange(variants.filter((_, i) => i !== index));
 	};
 
+	const noMatchDescription = hasFallback
+		? 'The fallback response handles every unmatched request, so this setting has no effect.'
+		: variants.length === 0
+			? 'Until you add a variant, every request returns the base mock response.'
+			: requireMatch
+				? 'Requests without a matching variant return 404 Not Found.'
+				: 'Requests without a matching variant return the base mock response, which is not editable in wildcard mode. Add a fallback to control it.';
+
+	const countSummary =
+		variants.length === 0
+			? 'No variants configured yet.'
+			: [
+					`${specificCount} specific variant${specificCount === 1 ? '' : 's'}`,
+					hasFallback ? 'fallback configured' : 'no fallback',
+				].join(' · ');
+
 	return (
 		<div className="space-y-6">
 			<div className="space-y-1">
 				<h3 className="text-lg font-semibold">Wildcard Variants</h3>
 				<p className="text-sm text-muted-foreground">
-					Configure different responses based on captured URL segments.
+					Requests try specific variants first, then the fallback.
 				</p>
 			</div>
 
-			<div className="space-y-4 rounded-lg border border-border p-6 bg-card">
-				<div className="flex items-center space-x-2">
+			<div className="space-y-4 rounded-lg border border-border bg-card p-6">
+				<div className="flex items-start gap-3">
 					<Switch
-						checked={requireMatch}
+						id="wildcard-require-match"
+						checked={requireMatch && !hasFallback}
 						onCheckedChange={onRequireMatchChange}
+						disabled={hasFallback}
 					/>
 					<div className="space-y-0.5">
 						<div className="flex items-center gap-2">
 							<Label
-								className="cursor-pointer font-medium"
-								onClick={() => onRequireMatchChange(!requireMatch)}
+								htmlFor="wildcard-require-match"
+								className={
+									hasFallback
+										? 'font-medium text-muted-foreground'
+										: 'cursor-pointer font-medium'
+								}
 							>
-								Require Match
+								Return 404 when no variant matches
 							</Label>
 							<FieldTooltip
-								label="Require Match"
-								description="When enabled, returns 404 if no variant matches the captured URL segments. When disabled, falls back to the base mock response."
-								example="OFF = fallback to base body, ON = 404 Not Found"
-								docsLink="/docs#wildcard-variants"
+								label="No-match behavior"
+								description="Matching order: specific variant, then fallback response. Without a fallback, unmatched requests return 404 when this is on, or the base mock response when it is off."
+								example="Fallback present = toggle ignored"
+								docsLink="/docs/guides/dynamic-wildcard-mocks#give-selected-ids-their-own-response"
 							/>
 						</div>
-						<p className="text-xs text-muted-foreground">
-							Return 404 when no variant matches the captured URL segments
+						<p
+							className={
+								!hasFallback && (!requireMatch || variants.length === 0)
+									? 'text-xs text-amber-600 dark:text-amber-400'
+									: 'text-xs text-muted-foreground'
+							}
+						>
+							{noMatchDescription}
 						</p>
 					</div>
 				</div>
 
-				<div className="flex items-center justify-between pt-4 border-t border-border">
-					<p className="text-sm text-muted-foreground">
-						{variants.length === 0
-							? 'No variants yet. Add a variant to handle different captured URL segments.'
-							: `${variants.length} variant${variants.length === 1 ? '' : 's'} configured`}
-					</p>
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={addVariant}
-					>
-						<Plus className="mr-1 h-3 w-3" />
-						Add Variant
-					</Button>
+				<div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+					<p className="text-sm text-muted-foreground">{countSummary}</p>
+					<div className="flex flex-wrap gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={addVariant}
+							disabled={wildcardCount === 0}
+							title={
+								wildcardCount === 0
+									? 'Add * to the endpoint path to create specific variants'
+									: undefined
+							}
+						>
+							<Plus className="mr-1 h-3 w-3" />
+							Add specific variant
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={addFallback}
+							disabled={hasFallback}
+							title={
+								hasFallback ? 'A fallback response already exists' : undefined
+							}
+						>
+							<Plus className="mr-1 h-3 w-3" />
+							Add fallback
+						</Button>
+					</div>
 				</div>
 
 				{variants.length > 0 && (
-					<div className="space-y-4 mt-4">
+					<div className="mt-4 space-y-4">
 						{variants.map((variant, index) => (
 							<VariantCard
 								key={getVariantId(variant)}
 								variant={variant}
 								index={index}
-								onUpdate={(v) => updateVariant(index, v)}
+								displayNumber={displayNumbers[index]}
+								onUpdate={(updatedVariant) =>
+									updateVariant(index, updatedVariant)
+								}
 								onDelete={() => deleteVariant(index)}
 								endpoint={endpoint}
+								buildPreviewUrl={buildPreviewUrl}
 							/>
 						))}
-					</div>
-				)}
-
-				{/* Require Match Indicator */}
-				{variants.length > 0 && (
-					<div className="mt-2">
-						<RequireMatchIndicator requireMatch={requireMatch} />
 					</div>
 				)}
 			</div>

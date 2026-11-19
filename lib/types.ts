@@ -1,3 +1,4 @@
+import type { ProxySettingsInput } from './utils/proxy-record';
 import type { Condition, Effect } from './workflow-types';
 
 export type HttpMethod =
@@ -12,10 +13,17 @@ export type MatchType = 'exact' | 'substring' | 'wildcard';
 export type BodyType = 'json' | 'text';
 
 export interface MockVariant {
-	key: string;
+	/** Legacy compatibility key. New clients should also provide captures. */
+	key?: string;
+	/** One value for each wildcard in the endpoint, in endpoint order. */
+	captures?: string[];
+	/** Explicit catch-all variant marker; legacy `key: '*'` remains supported. */
+	isFallback?: boolean;
 	body: string;
 	statusCode: number;
-	bodyType: string;
+	bodyType: BodyType;
+	jsonSchema?: string | null;
+	useDynamicResponse?: boolean;
 }
 
 export interface Folder {
@@ -87,6 +95,8 @@ export interface CreateMockRequest {
 	echoRequestBody?: boolean;
 	delay?: number;
 	meta?: Record<string, unknown>;
+	/** Partial Proxy & Record settings merged into `meta` (see applyProxySettings). */
+	proxy?: ProxySettingsInput;
 }
 
 export interface CreateFolderRequest {
@@ -120,6 +130,8 @@ export interface UpdateMockRequest {
 	echoRequestBody?: boolean;
 	delay?: number;
 	meta?: Record<string, unknown>;
+	/** Partial Proxy & Record settings merged into `meta` (see applyProxySettings). */
+	proxy?: ProxySettingsInput;
 }
 
 export interface ExportData {
@@ -180,7 +192,7 @@ export interface WorkflowExportData {
 
 export type {
 	Condition,
+	ConditionTrace,
 	Effect,
 	MatchContext,
-	ConditionTrace,
 } from './workflow-types';

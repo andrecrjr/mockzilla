@@ -2,9 +2,22 @@
 	"name": "mockzilla",
 	"version": "1.0.7",
 	"private": true,
+	"description": "Mockzilla dashboard and dependency-free CLI for managing API mocks",
+	"bin": {
+		"mockzilla": "./cli/bin/mockzilla.mjs"
+	},
+	"files": [
+		"cli",
+		".agent/skills/mockzilla-cli",
+		"README.md",
+		"LICENSE.txt"
+	],
+	"engines": {
+		"node": ">=18.18"
+	},
 	"scripts": {
 		"dev": "next dev --webpack -p 36666",
-		"build": "next build",
+		"app:build": "next build",
 		"start": "next start -p 36666",
 		"lint": "biome lint .",
 		"desktop:dev": "bunx @tauri-apps/cli@2.11.3 dev",
@@ -18,7 +31,7 @@
 		"typecheck": "tsc --noEmit",
 		"test": "bun test"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"@apidevtools/json-schema-ref-parser": "^15.3.5",
 		"@electric-sql/pglite": "^0.3.15",
 		"@faker-js/faker": "^10.2.0",
@@ -91,9 +104,7 @@
 		"tailwindcss-animate": "^1.0.7",
 		"vaul": "^0.9.9",
 		"yaml": "^2.8.3",
-		"zod": "3.25.76"
-	},
-	"devDependencies": {
+		"zod": "3.25.76",
 		"@biomejs/biome": "2.3.8",
 		"@happy-dom/global-registrator": "^20.3.0",
 		"@mdx-js/loader": "^3.1.1",

@@ -180,6 +180,69 @@ describe('Mock Serving — matchType & search params', () => {
 	});
 
 	// --- Wildcard match ---
+	it('queryParams wildcard matches any present status value', async () => {
+		const anyStatusMock = {
+			id: 'm1',
+			folderId: 'folder-1',
+			endpoint: '/users',
+			method: 'GET',
+			statusCode: 200,
+			response: JSON.stringify({ status: 'any' }),
+			bodyType: 'json',
+			matchType: 'exact',
+			queryParams: { status: '*' },
+			enabled: true,
+			echoRequestBody: false,
+			useDynamicResponse: false,
+		};
+
+		let selectCall = 0;
+		mockDb.select = mock(() => {
+			selectCall++;
+			if (selectCall === 1) return createMockBuilder([mockFolder]);
+			return createMockBuilder([anyStatusMock]);
+		});
+
+		const req = new NextRequest(
+			'http://localhost:3000/api/mock/api/users?status=banned',
+		);
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body).toEqual({ status: 'any' });
+	});
+
+	it('queryParams wildcard still requires the query parameter', async () => {
+		const anyStatusMock = {
+			id: 'm1',
+			folderId: 'folder-1',
+			endpoint: '/users',
+			method: 'GET',
+			statusCode: 200,
+			response: JSON.stringify({ status: 'any' }),
+			bodyType: 'json',
+			matchType: 'exact',
+			queryParams: { status: '*' },
+			enabled: true,
+			echoRequestBody: false,
+			useDynamicResponse: false,
+		};
+
+		let selectCall = 0;
+		mockDb.select = mock(() => {
+			selectCall++;
+			if (selectCall === 1) return createMockBuilder([mockFolder]);
+			return createMockBuilder([anyStatusMock]);
+		});
+
+		const req = new NextRequest('http://localhost:3000/api/mock/api/users');
+		const params = Promise.resolve({ path: ['api', 'users'] });
+
+		const res = await GET(req, { params });
+		expect(res.status).toBe(404);
+	});
 
 	it('wildcard match: matches path with wildcard', async () => {
 		const wildcardMock = {
@@ -248,7 +311,8 @@ describe('Mock Serving — matchType & search params', () => {
 		mockDb.select = mock(() => {
 			selectCall++;
 			if (selectCall === 1) return createMockBuilder([mockFolder]);
-			if (selectCall === 2) return createMockBuilder([wildcardActive, wildcardBanned]);
+			if (selectCall === 2)
+				return createMockBuilder([wildcardActive, wildcardBanned]);
 			return createMockBuilder([]);
 		});
 

@@ -51,6 +51,36 @@ export function QuickInstall() {
 						<div className="bg-black/30 rounded-lg p-3 mb-4 font-mono text-xs text-green-400 break-all">
 							$ {dockerCommand}
 						</div>
+						<p className="text-xs text-white/70 mb-4">
+							This project uses the official{' '}
+							<a
+								href="https://hub.docker.com/r/andrecrjr/mockzilla"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="underline hover:text-white"
+							>
+								andrecrjr/mockzilla
+							</a>{' '}
+							image. The similarly named{' '}
+							<a
+								href="https://hub.docker.com/r/mockzilla/mockzilla"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="underline hover:text-white"
+							>
+								mockzilla/mockzilla
+							</a>{' '}
+							belongs to a separate Go-based OpenAPI mock server at{' '}
+							<a
+								href="https://mockzilla.org"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="underline hover:text-white"
+							>
+								mockzilla.org
+							</a>
+							.
+						</p>
 
 						<div className="flex gap-3">
 							<Button

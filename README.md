@@ -19,16 +19,16 @@ A powerful self-hosted API mocking platform for development and testing. Deploy 
 
 ## Quick Start
 
-### In-Memory with PGLite (Recommended for Development)
+### Embedded PGlite (Recommended for Development)
 
-Start instantly with ephemeral storage:
+Start instantly. Data lives inside the container and is lost when the container is removed:
 ```bash
 docker run -p 36666:36666 andrecrjr/mockzilla:latest
 ```
 
 To persist data between container restarts:
 ```bash
-docker run -p 36666:36666 -v mockzilla-data:/data andrecrjr/mockzilla:latest
+docker run -p 36666:36666 -v mockzilla-data:/app/data andrecrjr/mockzilla:latest
 ```
 
 ### Persistent with External PostgreSQL (Recommended for Production)
@@ -39,6 +39,31 @@ docker run -p 36666:36666 -e DATABASE_URL=postgresql://username:password@host:54
 ```
 
 The mock server and dashboard will be available at http://localhost:36666
+
+## Mockzilla CLI
+
+The dependency-free CLI runs on Node.js 18.18 or newer. Install it directly from
+this GitHub repository (it is not published to the npm registry):
+
+```bash
+npx --yes github:andrecrjr/mockzilla health
+```
+
+For a persistent `mockzilla` command, install globally with npm or Bun:
+
+```bash
+npm install --global github:andrecrjr/mockzilla
+# or
+bun add --global github:andrecrjr/mockzilla
+```
+
+Then connect it to your running server with
+`mockzilla config set --url http://localhost:36666`. Use `mockzilla agent-skill`
+to print the agent-facing Markdown instructions and `mockzilla update check` to
+check for a newer published release. Re-run the printed install command to
+upgrade. The [CLI guide](https://github.com/andrecrjr/mockzilla/blob/main/documentation/cli.md)
+covers payloads, import/export, wildcard variants, schemas, and automation; see the
+[installation guide](https://mockzilla.dev/docs/getting-started/cli) for setup.
 
 ## Configuration
 
@@ -59,6 +84,7 @@ Available experts:
 - Workflow Architect: Stateful scenarios and business logic.
 - Spec Translator: Fast bootstrapping from OpenAPI/technical specifications.
 - Logic Doctor: Forensic debugging and state repair.
+- Mockzilla CLI: Terminal workflows for folders, subfolders, mocks, imports/exports, OpenAPI, variants, and dynamic responses.
 
 ## Self-Hosting Stack
 

@@ -34,6 +34,15 @@ export function proxy(request: NextRequest) {
 		return NextResponse.redirect(new URL('/app', request.url));
 	}
 
+	// Scoped docs for LLMs: /docs/<page>/llms.txt → /llms/docs/<page>.txt.
+	// Done here because Next rewrites cannot pass a multi-segment param.
+	const scopedLlms = pathname.match(/^\/docs\/(.+)\/llms\.txt$/);
+	if (scopedLlms) {
+		return NextResponse.rewrite(
+			new URL(`/llms/docs/${scopedLlms[1]}.txt`, request.url),
+		);
+	}
+
 	// If not an API route, pass through
 	if (!pathname.startsWith('/api/')) {
 		return NextResponse.next();

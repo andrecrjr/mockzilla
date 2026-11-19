@@ -50,7 +50,7 @@ Modern Faker uses **object notation** for named parameters. This is the preferre
 | **🌐 Internet** | `email`, `userName`, `password`, `url`, `ipv4` | Digital identities, networking. |
 | **💰 Finance** | `amount`, `accountNumber`, `currencyCode`, `iban` | Transactions, banking, pricing. |
 | **📍 Location**| `streetAddress`, `city`, `zipCode`, `country`, `latitude` | Map data, shipping addresses. |
-| **📅 Date** | `recent`, `future`, `past`, `birthdate`, `weekday` | Timestamps, schedules. |
+| **📅 Date** | `recent`, `future`, `past`, `birthdate`, `weekday` | Timestamps, schedules. Add `"format": "date-time"` (or `"date"`) to get ISO output. |
 | **📦 Lorem** | `word`, `sentence`, `paragraph`, `slug` | Placeholder text, blog content. |
 | **🔢 System** | `string.uuid`, `string.alphanumeric`, `number.int` | IDs, tokens, counts. |
 | **🖼️ Image** | `url`, `avatar`, `dataUri` | Mocking visual assets. |
@@ -67,7 +67,7 @@ Templates for complex UI states and interactive components.
 {
   "type": "object",
   "properties": {
-    "welcomeMessage": { "const": "Welcome back, {$.user.firstName}!" },
+    "welcomeMessage": { "const": "Welcome back, {{$.user.firstName}}!" },
     "user": {
       "type": "object",
       "properties": {
@@ -171,6 +171,7 @@ Standardized patterns for robust API responses.
     "detail": { "const": "Your request parameters failed validation." },
     "errors": {
       "type": "array",
+      "minItems": 2, "maxItems": 2,
       "items": {
         "type": "object",
         "properties": {
@@ -196,7 +197,7 @@ Ready-to-use schemas for specific domains.
   "properties": {
     "endToEndId": { "type": "string", "pattern": "^E[0-9]{8}[0-9]{4}[0-9]{4}[0-9]{4}[a-zA-Z0-9]{11}$" },
     "amount": { "type": "string", "faker": { "finance.amount": { "min": 1, "max": 10000, "dec": 2 } } },
-    "timestamp": { "type": "string", "faker": "date.recent" },
+    "timestamp": { "type": "string", "format": "date-time", "faker": "date.recent" },
     "status": { "enum": ["CONCLUIDO", "REPROVADO", "EM_PROCESSAMENTO"] }
   }
 }
@@ -209,7 +210,7 @@ Ready-to-use schemas for specific domains.
   "properties": {
     "patientId": { "type": "string", "faker": "string.uuid" },
     "fullName": { "type": "string", "faker": "person.fullName" },
-    "birthDate": { "type": "string", "faker": "date.birthdate" },
+    "birthDate": { "type": "string", "format": "date", "faker": "date.birthdate" },
     "bloodType": { "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] }
   }
 }

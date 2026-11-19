@@ -1,6 +1,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { MetadataRoute } from 'next';
+import { isHiddenDoc } from '@/lib/llms-utils';
 
 export const dynamic = 'force-static';
 
@@ -16,6 +17,7 @@ function getMdxPaths(dir: string, baseDir: string = dir): string[] {
 			if (statSync(fullPath).isDirectory()) {
 				results = [...results, ...getMdxPaths(fullPath, baseDir)];
 			} else if (item.endsWith('.mdx') && !item.startsWith('_meta')) {
+				if (isHiddenDoc(fullPath)) continue;
 				const relativePath = path
 					.relative(baseDir, fullPath)
 					.replace(/\.mdx$/, '');

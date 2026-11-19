@@ -134,7 +134,7 @@ Mockzilla configures JSF with several default options to ensure high-quality dat
 | `useDefaultValue` | `true` | Uses the `default` keyword if present in the schema. |
 | `useExamplesValue` | `true` | Uses the `examples` keyword if present (picks a random example). |
 | `minItems` | `1` | Forces at least 1 item in arrays if not specified. |
-| `maxItems` | `1000` | Limits arrays to 1000 items if not specified. |
+| `maxItems` | `MOCKZILLA_MAX_ITEMS` (default `1000`) | Default array maximum when the schema does not specify one. |
 
 ---
 
@@ -143,7 +143,7 @@ Mockzilla configures JSF with several default options to ensure high-quality dat
 Mockzilla provides the request context to the schema generator, allowing you to reference request data and **even use Faker directly** in your schema templates.
 
 ### Faker in Templates
-You can now call Faker methods directly within your templates using `{{faker.method.submethod}}` or `{faker.method.submethod}`.
+You can now call Faker methods directly within your templates using `{{faker.method.submethod}}`.
 
 **Example: Direct Faker Call**
 ```json
@@ -158,7 +158,7 @@ You can now call Faker methods directly within your templates using `{{faker.met
 
 ### Referencing Query Parameters
 
-You can access query parameters using the `{$.query.paramName}` syntax.
+You can access query parameters using the `{{$.query.paramName}}` syntax. Values are strings; a missing key leaves the template text in place, so use `{{default $.query.page "1"}}` or require the key.
 
 **Example: Paginated Response echoing query params**
 ```json
@@ -169,8 +169,8 @@ You can access query parameters using the `{$.query.paramName}` syntax.
     "meta": {
       "type": "object",
       "properties": {
-        "page": { "const": "{$.query.page}" },
-        "limit": { "const": "{$.query.limit}" }
+        "page": { "const": "{{$.query.page}}" },
+        "limit": { "const": "{{$.query.limit}}" }
       }
     }
   }
@@ -206,5 +206,5 @@ Mockzilla supports all standard JSON Schema formats plus these additional OpenAP
 - **Mandatory `items`**: For `type: "array"`, an `items` subschema MUST be provided if you use validation keywords like `minItems`. Without it, generation will fail.
 - **Empty Properties**: Ensure every property has a defined `type`. If you use constraints like `minLength` without `type: "string"`, compatibility with other tools may vary.
 - **Circular References**: JSF and Mockzilla's interpolation engine both have protections against circular references.
-- **Array Size Capped**: If your array never grows beyond 5 items despite settings, it's due to the global `maxItems: 5` limit in the generator.
-- **Consistency**: Use [Schema Interpolation](schema-interpolation.md) (`{$.path}`) to match values across your object.
+- **Array size**: Set `maxItems` explicitly. Without it, the generator uses `MOCKZILLA_MAX_ITEMS` (default 1000); set both `minItems` and `maxItems` to 0 for an empty array. OpenAPI import separately caps its generated static body at 3 items.
+- **Consistency**: Use [Schema Interpolation](schema-interpolation.md) (`{{$.path}}`) to match values across your object.

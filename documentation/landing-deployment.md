@@ -45,7 +45,7 @@ metadata and the top-level LLM documentation files:
 - `/sitemap.xml`
 - `/llms.txt`
 - `/llms-full.txt`
-- `/llms/docs/**/*.txt` (static scoped documentation context)
+- `/llms/docs/**/*.txt` (static scoped documentation context; root is `/llms/docs/index.txt`, see `documentation/llms-txt.md`)
 
 | Route       | Accessible |
 |-------------|------------|

@@ -103,8 +103,13 @@ You can call Faker methods directly within your templates using `{{faker.method.
 }
 ```
 
-### Referencing Query Parameters
-Access query parameters using the `{$.query.paramName}` syntax.
+### Referencing Path Captures and Query Parameters
+Use double-brace interpolation in a string `const` to copy request values into a generated response. The first wildcard capture is `$.params.[0]`; query values use `$.query.paramName`. Query values are strings.
+
+Interpolation copies a value into the response. It does not convert a query value to
+a number or use `limit` to resize an array; configure array length with `minItems`
+and `maxItems`. If a query key must exist, require it in Advanced Options →
+Query Parameters (for example, `page = *`).
 
 ```json
 {
@@ -113,13 +118,16 @@ Access query parameters using the `{$.query.paramName}` syntax.
     "meta": {
       "type": "object",
       "properties": {
-        "page": { "const": "{$.query.page}" },
-        "limit": { "const": "{$.query.limit}" }
+        "productId": { "type": "string", "const": "{{$.params.[0]}}" },
+        "page": { "type": "string", "const": "{{$.query.page}}" },
+        "limit": { "type": "string", "const": "{{$.query.limit}}" }
       }
     }
   }
 }
 ```
+
+For an end-to-end wildcard and query-parameter example, see [Dynamic Wildcard Mocks](/docs/guides/dynamic-wildcard-mocks).
 
 ---
 
@@ -127,17 +135,32 @@ Access query parameters using the `{$.query.paramName}` syntax.
 
 | Format | Generator |
 | :--- | :--- |
+| `date-time` | ISO timestamp (built in) |
+| `date` | ISO date such as `1932-04-12` (built in) |
+| `email` | Random address (built in). Use `"faker": "internet.email"` for realistic names. |
+| `uuid` | UUID (built in) |
 | `password` | `faker.internet.password()` |
-| `email` | `faker.internet.email()` |
-| `uuid` | `faker.string.uuid()` |
 | `phone` | `faker.phone.number()` |
 | `uri` | `faker.internet.url()` |
-| `ipv4` / `ipv6` | IP Addresses |
+| `hostname` | `faker.internet.domainName()` |
+| `ipv4` / `ipv6` | `faker.internet.ipv4()` / `faker.internet.ipv6()` |
+| `country` / `country-code` | `faker.location.country()` / `faker.location.countryCode()` |
+| `currency` / `currency-symbol` | `faker.finance.currencyCode()` / `faker.finance.currencySymbol()` |
+| `credit-card` | `faker.finance.creditCardNumber()` |
+| `user-agent` / `mac` / `color` | `faker.internet.userAgent()` / `faker.internet.mac()` / `faker.color.human()` |
+| `byte` / `binary` | 10 random alphanumeric characters |
+
+Faker date methods such as `date.past` return a JavaScript date string
+(`Thu Nov 27 2025 09:22:33 GMT…`). Add `"format": "date-time"` next to the `faker`
+keyword to get an ISO timestamp instead.
 
 ---
 
 ## Best Practices
 
-- **Mandatory `items`**: For `type: "array"`, an `items` subschema **must** be provided.
+- **Mandatory `items`**: For `type: "array"`, an `items` subschema **must** be provided. Without it, generation fails and Mockzilla returns the mock's static response instead.
+- **Always set `maxItems`**: Arrays always generate exactly `maxItems` items. With no `maxItems`, an array generates `MOCKZILLA_MAX_ITEMS` (default 1000) items. For an empty array, set `minItems` and `maxItems` to `0`.
+- **Optional fields are generated**: Every property in `properties` appears in the output, whether or not it is in `required`.
 - **Explicit Types**: Always specify a `type` for every property to ensure consistent generation.
-- **Array Size Capped**: By default, Mockzilla's OpenAPI import caps auto-generated arrays at `maxItems: 3` for performance. You can manually increase this in the dashboard.
+- **OpenAPI import cap**: OpenAPI import generates its static body with arrays capped at 3 items. The stored schema is not changed, so add `maxItems` before you switch an imported mock to **Dynamic Response**.
+- **Faker arguments**: Methods with arguments need object or array notation. `"faker": "string.alphanumeric"` returns a single character; use `{ "string.alphanumeric": 10 }` for ten.

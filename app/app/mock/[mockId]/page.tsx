@@ -6,13 +6,12 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
-import { MockEditor } from '@/components/mock-editor';
+import { MockEditor, type MockFormValues } from '@/components/mock-editor';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { validateSchema } from '@/lib/schema-generator';
-import type { Folder, Mock, MockSubfolder } from '@/lib/types';
 import { swrFetcher } from '@/lib/swr-fetcher';
+import type { Folder, Mock, MockSubfolder } from '@/lib/types';
 import {
 	buildFolderHref,
 	buildMockEditorHref,
@@ -47,28 +46,7 @@ export default function EditMockPage() {
 
 	const [isLoading, setIsLoading] = useState(false);
 
-	const handleUpdate = async (values: {
-		name: string;
-		path: string;
-		method: string;
-		statusCode: string;
-		response: string;
-		mockFolderId?: string | null;
-		matchType?: string;
-		queryParams?: Record<string, string> | null;
-		jsonSchema?: string;
-		useDynamicResponse?: boolean;
-		echoRequestBody?: boolean;
-		delay?: string;
-		variants?: Array<{
-			key: string;
-			body: string;
-			statusCode: number;
-			bodyType: string;
-		}> | null;
-		wildcardRequireMatch?: boolean;
-		meta?: Record<string, unknown>;
-	}) => {
+	const handleUpdate = async (values: MockFormValues) => {
 		if (!mock || !folder) return;
 		setIsLoading(true);
 		try {
@@ -77,21 +55,7 @@ export default function EditMockPage() {
 				setIsLoading(false);
 				return;
 			}
-			try {
-				if (values.useDynamicResponse) {
-					const validation = validateSchema(values.jsonSchema || '');
-					if (!validation.valid) {
-						throw new Error(validation.error || 'Invalid JSON Schema');
-					}
-					JSON.parse(values.jsonSchema || '');
-				} else {
-					JSON.parse(values.response);
-				}
-			} catch {
-				toast.error('Error', { description: 'Please provide valid JSON' });
-				setIsLoading(false);
-				return;
-			}
+			// Response validation (match-type aware) already ran in MockEditor.
 			const res = await fetch(`/api/mocks?id=${mock.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -137,7 +101,7 @@ export default function EditMockPage() {
 						: current,
 				{ revalidate: true },
 			);
-			router.push(buildFolderHref(folder.slug));
+			router.push(buildFolderHref(folder.slug, updatedMock.mockFolderId));
 		} catch (error: unknown) {
 			toast.error('Error', {
 				description:
@@ -219,9 +183,12 @@ export default function EditMockPage() {
 				<div className="mb-8 flex items-center justify-between">
 					<div className="flex items-center gap-4">
 						<Button variant="ghost" asChild>
-							<Link href={buildFolderHref(folder.slug)}>
+							<Link href={buildFolderHref(folder.slug, mock.mockFolderId)}>
 								<ArrowLeft className="mr-2 h-4 w-4" />
-								Back to {folder?.name}
+								Back to{' '}
+								{mockSubfolders.find(
+									(subfolder) => subfolder.id === mock.mockFolderId,
+								)?.name ?? folder.name}
 							</Link>
 						</Button>
 						<h1 className="text-2xl font-bold text-foreground">Edit Mock</h1>

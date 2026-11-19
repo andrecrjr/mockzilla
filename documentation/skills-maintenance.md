@@ -10,10 +10,11 @@ This page records the maintenance rules for `.agent/skills/`.
 | `mockzilla-workflow-architect` | Stateful workflow design, transitions, mini-DB effects, and fallback behavior. |
 | `mockzilla-spec-translator` | Translating OpenAPI, Swagger, Jira, or endpoint inventories into Mockzilla setup. |
 | `mockzilla-logic-doctor` | Forensics for transition matching, state drift, request traces, and broken interpolation. |
+| `mockzilla-cli` | Release checks, terminal configuration, folders/subfolders, mocks, data import/export, OpenAPI import, and serving checks. |
 
-## Manager Tool Rule
+## MCP Manager Tool Rule
 
-Skills must prefer the consolidated MCP manager tools documented in `documentation/mcp.md`:
+MCP-focused skills must prefer the consolidated manager tools documented in `documentation/mcp.md`:
 
 - `manage_folders`
 - `manage_mock_subfolders`
@@ -24,6 +25,8 @@ Skills must prefer the consolidated MCP manager tools documented in `documentati
 - `manage_logs`
 
 Use only the current consolidated manager tools and actions. Their contract lives in `.agent/skills/shared/mcp-manager-tools.md`.
+
+The `mockzilla-cli` skill is a separate terminal workflow. It teaches the dependency-free `mockzilla` executable and `curl`; it does not call manager tools or blend MCP instructions into its CLI workflow. It can be used whenever the request explicitly asks for the Mockzilla CLI, even when MCP is available.
 
 ## Metadata Rule
 
@@ -51,7 +54,7 @@ Move long examples, domain templates, and detailed reference material into files
 After changing skills:
 
 - Search `.agent/skills` for stale tool names or unsupported actions.
-- Confirm every skill still links to the shared manager tools contract.
+- Confirm MCP-focused skills still link to the shared manager tools contract; keep the CLI skill independent.
 - Confirm `agents/openai.yaml` descriptions match `SKILL.md`.
 - Update `documentation/skills.md` when user-facing skill behavior changes.
 - Run local checks when code changed. Markdown-only skill updates do not require database or Docker commands.

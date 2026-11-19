@@ -1,6 +1,11 @@
-import { NextResponse } from 'next/server';
 import path from 'node:path';
-import { getDocsHierarchy, type DocSection } from '@/lib/llms-utils';
+import { NextResponse } from 'next/server';
+import {
+	AGENT_QUICK_REFERENCE,
+	type DocSection,
+	getDocsHierarchy,
+	LLMS_SUMMARY,
+} from '@/lib/llms-utils';
 
 export const dynamic = 'force-static';
 
@@ -26,9 +31,10 @@ export async function GET() {
 		const docsDir = path.join(process.cwd(), 'content/docs');
 		const hierarchy = getDocsHierarchy(docsDir);
 
-		let fullContent = '# Mockzilla Full Documentation\n';
+		let fullContent = `# Mockzilla Full Documentation\n\n> ${LLMS_SUMMARY}\n\n`;
+		fullContent += AGENT_QUICK_REFERENCE;
 		fullContent +=
-			'> This file contains the complete documentation for Mockzilla, organized by the actual site structure.\n\n';
+			'\nAll documentation pages follow, in site order. Index: /llms.txt\n';
 
 		fullContent += flattenToContent(hierarchy);
 

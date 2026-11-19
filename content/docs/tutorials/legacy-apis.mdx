@@ -17,30 +17,32 @@ Instead of reading a 400-page manual for the legacy API, make a real request usi
 
 1. **Open the Legacy Dashboard:** Go to the third-party sandbox.
 2. **Trigger the Request:** Click around to trigger the API calls (e.g., "Fetch Account Details").
-3. **Capture & Sync:** Open the Mockzilla Chrome Extension, find that exact request, and click **"Sync to Dashboard."**
+3. **Capture & Sync:** Open the Mockzilla Chrome Extension, find that request, and sync it to your Mockzilla server (see [Browser Extension Sync](/docs/guides/browser-extension-sync)).
 
-Mockzilla automatically creates a new folder and a new mock with the exact headers, status code, and JSON payload the real API returned.
+Mockzilla creates an extension folder and a mock with the method, path, status code, and response body the real API returned. Response headers are not stored.
 
 ## 2. The Refinement Phase: Snapshot to Living Mock
 
 The captured data is static. To make it useful for testing multiple scenarios, transform it into a **Dynamic Mock**.
 
 1. Go to the Mockzilla Dashboard.
-2. Edit the newly captured mock. Change the path to a wildcard (e.g., `GET /v1/accounts/:id`).
-3. Switch to the **JSON Schema** tab. Mockzilla can convert that static payload into a dynamic blueprint:
+2. Edit the newly captured mock. Change the endpoint to `/v1/accounts/*` and set **Match Type** to **Wildcard**, so one mock serves every account ID.
+3. Under **Wildcard Variants**, click **Add fallback**, select **Dynamic Response**, and write a schema based on the captured payload. Mockzilla doesn't convert a payload into a schema for you; write it by hand or ask an AI agent:
 
 ```json
 {
   "type": "object",
   "properties": {
-    "account_id": { "type": "string", "faker": "string.uuid" },
+    "account_id": { "type": "string", "const": "{{$.params.[0]}}" },
     "status": { "type": "string", "enum": ["ACTIVE", "FROZEN", "PENDING"] },
-    "balance": { "type": "number", "minimum": 0, "maximum": 10000 },
+    "balance": { "type": "number", "minimum": 0, "maximum": 10000, "multipleOf": 0.01 },
     "currency": { "type": "string", "const": "USD" }
   },
   "required": ["account_id", "status", "balance"]
 }
 ```
+
+`account_id` echoes the ID from the URL, so `/v1/accounts/acc-7` returns `"account_id": "acc-7"`. The other fields are generated fresh on each request.
 
 ## 3. The Result: A Local Playground for the Team
 
@@ -49,7 +51,7 @@ Now, point your app to `http://localhost:36666/api/mock/legacy-api/...`.
 - **Speed:** 3-second legacy calls now take 5ms locally.
 - **Reliability:** CI/CD pipelines never fail because the sandbox is down.
 - **Cost:** Avoid hitting rate limits or usage charges for third-party sandboxes.
-- **Team Portability:** Since Mockzilla runs in Docker, you can commit the `data/` folder to Git. Your entire team gets the exact same mocked environment instantly.
+- **Team Portability:** Use **Export** on the dashboard to save your folders and mocks as JSON, then commit that file to Git. Teammates use **Import** on their own Mockzilla server to get the same mocks.
 
 <div className="mt-8 p-6 bg-primary/10 rounded-xl border border-primary/20">
   <h3 className="text-xl font-bold mb-2">🤖 Do it with AI</h3>

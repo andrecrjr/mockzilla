@@ -1,25 +1,24 @@
-import { NextResponse } from 'next/server';
 import path from 'node:path';
-import { getDocsHierarchy, type DocSection } from '@/lib/llms-utils';
+import { NextResponse } from 'next/server';
+import {
+	AGENT_QUICK_REFERENCE,
+	type DocSection,
+	getDocsHierarchy,
+	LLMS_SUMMARY,
+	toLlmsTxtPath,
+} from '@/lib/llms-utils';
 
 export const dynamic = 'force-static';
 
-function flattenToLinks(
-	sections: DocSection[],
-	baseUrl: string,
-	scopedPathPrefix: string,
-): string {
+function flattenToLinks(sections: DocSection[], baseUrl: string): string {
 	let output = '';
 	for (const section of sections) {
 		const description = section.description ? `: ${section.description}` : '';
 		if (section.items) {
 			output += `\n## ${section.title}\n`;
-			if (section.description) {
-				output += `> ${section.description}\n\n`;
-			}
-			output += flattenToLinks(section.items, baseUrl, scopedPathPrefix);
+			output += flattenToLinks(section.items, baseUrl);
 		} else {
-			output += `- [${section.title}](${baseUrl}${scopedPathPrefix}${section.path}.txt)${description}\n`;
+			output += `- [${section.title}](${baseUrl}${toLlmsTxtPath(section.path)})${description}\n`;
 		}
 	}
 	return output;
@@ -30,21 +29,18 @@ export async function GET() {
 		const docsDir = path.join(process.cwd(), 'content/docs');
 		const hierarchy = getDocsHierarchy(docsDir);
 
-		// Use environment variable for base URL or default to relative for internal agents
-		// In a real deployment, you'd use your actual domain
+		// Relative links unless a public base URL is configured.
 		const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-		const isLanding = process.env.DEPLOY_MODE === 'landing';
-		const scopedPathPrefix = isLanding ? '/llms' : '/llms.txt';
-		const fullDocumentationPath = isLanding
-			? '/llms-full.txt'
-			: '/llms.txt/llms-full.txt';
 
-		let content = `# Mockzilla Documentation\n`;
-		content += `> High-fidelity API mocking and stateful workflow simulation.\n\n`;
-		content += `- [llms-full.txt](${baseUrl}${fullDocumentationPath}): The full documentation content in a single file.\n`;
-		content += `> Tip: Every route in the documentation also supports its own \`/llms.txt\` endpoint for scoped context.\n\n`;
+		const rootPages = hierarchy.filter((section) => !section.items);
+		const sections = hierarchy.filter((section) => section.items);
 
-		content += flattenToLinks(hierarchy, baseUrl, scopedPathPrefix);
+		let content = `# Mockzilla\n\n> ${LLMS_SUMMARY}\n\n`;
+		content += AGENT_QUICK_REFERENCE;
+		content += '\n## Overview\n';
+		content += `- [llms-full.txt](${baseUrl}/llms-full.txt): Every documentation page in a single Markdown file.\n`;
+		content += flattenToLinks(rootPages, baseUrl);
+		content += flattenToLinks(sections, baseUrl);
 
 		return new NextResponse(content, {
 			headers: {

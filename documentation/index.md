@@ -10,8 +10,12 @@ High-performance mocking server for JSON and stateful API workflows.
 - [Workflow Mode](/documentation/workflow-mode.md) - Stateful transitions and mini-db logic.
 - [Proxy & Record Mode](/documentation/proxy-and-record.md) - Capture live traffic and auto-generate mocks.
 - [Mock Subfolders](/documentation/mock-subfolders.md) - Nested mock organization and effective serving paths.
-- [Schema Interpolation](/documentation/schema-interpolation.md) - `{$.path}` and `{{input.*}}` templates.
+- [Schema Interpolation](/documentation/schema-interpolation.md) - `{{$.path}}` and `{{input.*}}` templates.
+- [Wildcard Variants Audit](/documentation/wildcard-variants-audit.md) - Wildcard matching, schema-backed variants, precedence, and editor behavior.
+- [Dynamic Wildcard Mocks](../content/docs/guides/dynamic-wildcard-mocks.mdx) - User guide for path captures, required query parameters, and generated responses.
 - [Agent Skills](/documentation/skills.md) - Instruction sets (Creator, Architect).
+- [LLM Documentation (llms.txt)](/documentation/llms-txt.md) - `/llms.txt`, scoped `/llms/docs/<page>.txt`, and `/llms-full.txt` for agents.
+- [Mockzilla CLI](/documentation/cli.md) - Dependency-free terminal client for folders, subfolders, mocks, imports/exports, OpenAPI, variants, and schemas.
 - [Skills Maintenance](/documentation/skills-maintenance.md) - Rules for keeping `.agent/skills/` current.
 - [Release Process](/documentation/release-process.md) - Commit and branch rules for releases and docs-only changes.
 - [AGENTS.md](/AGENTS.md) - Capability catalog.
@@ -30,4 +34,4 @@ High-performance mocking server for JSON and stateful API workflows.
 
 - **Mini-Database (`db.*`)**: Persistent in-memory state. Use `workflow_control` (action: `inspect`) to verify.
 - **Action-Driven**: Trigger endpoints with `effects` rather than manual mutation.
-- **High-Fidelity Mocks**: Use `manage_mocks` (action: `create`) with `jsonSchema` and the [reference guide](/documentation/json-schema-faker.md#High-Fidelity-Patterns) for production-grade data.
+- **High-Fidelity Mocks**: Use `manage_mocks` (action: `create`) with `jsonSchema` and the [reference guide](/documentation/json-schema-faker.md#high-fidelity-patterns) for production-grade data.

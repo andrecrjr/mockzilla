@@ -16,6 +16,11 @@ export const faqs = [
 			"The HTTP Server requires Docker for deployment. The Chrome Extension runs independently in your browser and doesn't need Docker. However, using both together enables cross-device sync and team collaboration features.",
 	},
 	{
+		question: 'Which Docker image is the official Mockzilla server?',
+		answer:
+			'The official Docker image for the self-hosted Mockzilla platform at mockzilla.dev is andrecrjr/mockzilla. The similarly named mockzilla/mockzilla image belongs to a separate Go-based OpenAPI mock server project at mockzilla.org.',
+	},
+	{
 		question: 'Can I use the Chrome Extension without the HTTP Server?',
 		answer:
 			'Yes! The Chrome Extension works standalone. You can configure mock rules directly in the extension UI without any server. However, syncing rules across devices and accessing advanced features like workflow scenarios requires the HTTP Server.',

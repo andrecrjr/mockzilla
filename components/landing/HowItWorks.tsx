@@ -15,8 +15,8 @@ const steps = [
 		number: 2,
 		title: 'Configure Mocks',
 		description:
-			'Define your mock endpoints with static JSON, dynamic schemas with Faker.js, or stateful workflow scenarios.',
-		tools: ['Static JSON', 'JSON Schema + Faker', 'Workflows'],
+			'Define mock endpoints with static JSON, dynamic schemas with Faker.js, and wildcard route matching.',
+		tools: ['Static JSON', 'JSON Schema + Faker', 'Wildcard Variants'],
 	},
 	{
 		number: 3,

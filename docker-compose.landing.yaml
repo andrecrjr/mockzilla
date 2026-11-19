@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.landing
+    # Explicit name so this build never overwrites the dev image (both are service `app`).
+    image: mockzilla-landing:latest
     container_name: mockzilla-landing
     ports:
       - "36666:3000"

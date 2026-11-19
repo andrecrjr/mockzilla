@@ -11,6 +11,16 @@ description: Use when creating stateless Mockzilla mocks, JSON Schema Faker resp
 > This skill is focused on **Stateless Data Generation**.
 > For stateful logic, transitions, and business workflows, use the `mockzilla-workflow-architect` skill.
 
+## Look up docs fast (llms.txt)
+
+The running server publishes LLM-ready Markdown docs (default `http://localhost:36666`, or the configured Mockzilla URL):
+
+1. Fetch `/llms.txt` once: quick reference plus an index of every page.
+2. Fetch only the page you need at `/llms/docs/<page>.txt`. Most useful here: `/llms/docs/reference/json-schema.txt`, `/llms/docs/reference/dynamic-interpolation.txt`, `/llms/docs/guides/dynamic-wildcard-mocks.txt`.
+3. Use `/llms-full.txt` (~90 KB, every page) only when you need the whole manual.
+
+Prefer these over guessing syntax or behavior; they track the shipped server.
+
 ## 📜 External References
 
 - [Manager Tools Contract](../shared/mcp-manager-tools.md): Canonical manager tools and actions.
@@ -48,13 +58,17 @@ description: Use when creating stateless Mockzilla mocks, JSON Schema Faker resp
 > If you use `:id`, `matchType: "wildcard"` will fail to match paths like `/users/123`.
 
 ### 🔀 Advanced Wildcard Variants
-When using multiple `*` characters in a path, Mockzilla forms a **Composite Key** by joining captured segments with a pipe `|`.
+Each `*` produces one capture, in endpoint order. Variants match on the `captures` array (the legacy pipe-joined `key` is generated for older clients).
 - **Path**: `/users/*/orders/*`
-- **Request**: `/users/alice/orders/101` → **Key**: `alice|101`
+- **Request**: `/users/alice/orders/101` → **Captures**: `["alice", "101"]`
 - **Selection Logic**:
-  1. Tries exact match for the composite key (e.g., `alice|101`).
-  2. Falls back **directly** to the catch-all variant `*`.
-  3. **Note**: Partial keys like `alice|*` are NOT currently supported as intermediate fallbacks.
+  1. A variant whose `captures` equal the request captures, position by position (compared after URL-decoding).
+  2. Otherwise the single `isFallback: true` variant (legacy `key: "*"` is normalized to this).
+  3. Otherwise: `wildcardRequireMatch: true` → 404; else the base mock response.
+  4. **Note**: Partial matches like `["alice", "*"]` are NOT supported; a `*` inside `captures` is a literal value.
+- A `*` captures one or more characters and may include `/`. Earlier stars capture as little as possible (`/files/*/*` on `/files/a/b/c` → `["a", "b/c"]`).
+- Wildcard endpoints are anchored to the end of the path only, so `/products/*` also matches `/shop/products/1`. Use the full prefix.
+- The selected variant replaces body, status, body type, schema, and dynamic mode, and disables echo. Variants never influence which mock wins.
 
 
 ## 🛡️ Constraints & Boundaries
@@ -65,13 +79,13 @@ When using multiple `*` characters in a path, Mockzilla forms a **Composite Key*
 - **Strict Schemas**: Always set `additionalProperties: false` on objects to prevent unwanted random data.
 - **Never** use hardcoded data for more than 3 fields; use Faker instead.
 - Call `manage_mocks` (action: `preview`) after creating or changing a mock to verify matching and output.
-- **Syntax Check**: Use `{$.path}` for JSON Schema/Mock interpolation (this skill). Use `{{path}}` ONLY for workflows (Workflow Architect skill).
+- **Syntax Check**: Use double braces, such as `{{$.path}}` or `{{$.query.page}}`, for JSON Schema/Mock interpolation. Single-brace `{$.path}` is not resolved and is returned literally.
 
 ## Core Principles
 
 1.  **Schema First**: Use `manage_mocks` (action: `create`) with `jsonSchema` for the majority of UI development. It provides realistic, varied data without manual maintenance.
 2.  **Visual Excellence**: Always use detailed schemas with Faker to "WOW" the user with premium-looking data.
-3.  **Maximum Flexibility**: Use **Interpolation** (`{$.path}`) to create internal consistency within a single response.
+3.  **Maximum Flexibility**: Use **Interpolation** (`{{$.path}}`) to create internal consistency within a single response.
 4.  **Evaluate before Build**: Use `workflow_control` (action: `evaluate_template`) only for Handlebars templates. For JSON Schema interpolation, use `manage_mocks` (action: `preview`) against a real request context.
 5.  **No Side Effects**: Mocks created with this skill should return data but not modify server state.
 6.  **Verify**: Preview every new or changed mock before handing it off.
@@ -113,14 +127,14 @@ Use the linked reference instead of expanding large examples in this file.
 
 ## 🔗 Internal Interpolation
 
-Reference generated fields within the same object to ensure data consistency. Use the `{$.path}` syntax.
+Reference generated fields within the same object to ensure data consistency. Use the `{{$.path}}` syntax.
 
 ```json
 {
   "firstName": { "type": "string", "faker": "person.firstName" },
   "lastName": { "type": "string", "faker": "person.lastName" },
-  "email": { "const": "{$.firstName}.{$.lastName}@example.com" },
-  "welcomeMessage": { "const": "Hello, {$.firstName}! Welcome back." }
+  "email": { "const": "{{$.firstName}}.{{$.lastName}}@example.com" },
+  "welcomeMessage": { "const": "Hello, {{$.firstName}}! Welcome back." }
 }
 ```
 

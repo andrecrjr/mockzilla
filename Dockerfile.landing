@@ -13,7 +13,7 @@ COPY . .
 RUN rm -rf app/api app/app proxy.ts
 ENV NEXT_DISABLE_ESLINT=true
 ENV DEPLOY_MODE=landing
-RUN bun run build
+RUN bun run app:build
 
 # Keep only the exported landing/docs pages and browser assets. This deliberately
 # excludes dashboard, API, and database server code.
